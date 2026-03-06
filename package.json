@@ -1,0 +1,17 @@
+{
+  "name": "standoff-x",
+  "version": "0.1.0",
+  "description": "By SofterX",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "SofterX",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "multer": "^2.1.1",
+    "socket.io": "^4.8.3"
+  }
+}
