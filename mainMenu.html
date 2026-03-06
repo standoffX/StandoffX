@@ -1,0 +1,1818 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>SofterX Game</title>
+<style>
+    
+/* Красива кнопка повідомлень та пошуку */
+.btn-action {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.3s;
+    text-transform: uppercase;
+    font-size: 12px;
+}
+.btn-action:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+
+/* Список вибору друга для чату */
+#chatFriendSelector {
+    display: none;
+    position: absolute;
+    background: #1a202c;
+    border: 1px solid #3b82f6;
+    border-radius: 10px;
+    padding: 10px;
+    z-index: 2000;
+    width: 250px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+.select-friend-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+.select-friend-item:hover { background: rgba(59, 130, 246, 0.2); }
+    * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', sans-serif; }
+    body { height: 100vh; display: flex; background: url("banner.png") center/cover fixed; color: white; overflow: hidden; }
+    body::before { content: ""; position: fixed; inset: 0; background: rgba(15, 20, 30, 0.9); z-index: -1; backdrop-filter: blur(8px); }
+    .social-tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; border-bottom: 2px solid transparent; opacity: 0.6; }
+.social-tab.active { opacity: 1; border-bottom: 2px solid #3b82f6; background: rgba(59,130,246,0.1); }
+.context-menu { position: fixed; background: #1a202c; border: 1px solid #3b82f6; border-radius: 8px; z-index: 1000; display: flex; flex-direction: column; width: 200px; padding: 5px; }
+.context-menu button { background: transparent; border: none; color: white; padding: 12px; text-align: left; cursor: pointer; border-radius: 4px; }
+.context-menu button:hover { background: rgba(255,255,255,0.1); }
+    /* ЛІВЕ МЕНЮ (Sidebar) - ТЕПЕР 6 КНОПОК */
+    /* ЛІВЕ МЕНЮ (Sidebar) */
+    .left-menu { 
+        width: 80px; 
+        background: rgba(10, 15, 25, 0.95); 
+        display: flex; 
+        flex-direction: column; 
+        padding: 0; /* Прибрали відступи зверху/знизу */
+        border-right: 1px solid rgba(255,255,255,0.05); 
+        z-index: 10; 
+        height: 100vh; /* На всю висоту екрану */
+    }
+    
+    .menu-btn { 
+        width: 100%; 
+        flex: 1; /* Кнопки розтягуються рівномірно */
+        background: transparent; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        cursor: pointer; 
+        transition: 0.3s; 
+        position: relative; 
+        border-left: 3px solid transparent; /* Для індикатора активності */
+    }
+    
+    .menu-btn:hover, .menu-btn.active { 
+        background: rgba(59, 130, 246, 0.2); 
+        border-left: 3px solid #3b82f6; 
+    }
+    .menu-btn img { width: 24px; opacity: 0.7; }
+    .menu-btn.active img { opacity: 1; }
+
+    .main-container { flex: 1; padding: 30px; position: relative; display: flex; flex-direction: column; }
+    .screen { display: none; height: 100%; animation: fadeIn 0.3s ease; }
+    .screen.active { display: block; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* СІТКА ГОЛОВНОГО ЕКРАНУ */
+    .home-layout { display: flex; gap: 30px; height: 100%; }
+    .left-panel { width: 380px; display: flex; flex-direction: column; gap: 15px; }
+    .panel-block { background: rgba(20, 25, 35, 0.7); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 15px; }
+
+    /* ПРОФІЛЬ ТА ГАЛОЧКА */
+    .profile-box { display: flex; align-items: center; gap: 15px; }
+    .avatar-box { width: 80px; height: 80px; border-radius: 8px; border: 2px solid #3b82f6; overflow: hidden; cursor: pointer; flex-shrink: 0; }
+    .avatar-box img { width: 100%; height: 100%; object-fit: cover; }
+    .profile-info { flex: 1; }
+    .profile-info h2 { font-size: 20px; margin-bottom: 2px; display: flex; align-items: center; gap: 5px; }
+    
+    /* СТИЛІ ГАЛОЧКИ */
+    .verified-badge { color: #3b82f6; font-size: 16px; cursor: pointer; transition: 0.3s; margin-left: 4px; }
+    .verified-badge:hover { text-shadow: 0 0 12px #3b82f6; transform: scale(1.1); }
+
+    /* XP ТА РАНГИ */
+    .xp-container { margin-top: 10px; }
+    .xp-bar { width: 100%; height: 6px; background: #1e293b; border-radius: 3px; overflow: hidden; margin-top: 4px; }
+    .xp-fill { height: 100%; background: #eab308; transition: 1s; }
+    .ranks-list { display: flex; flex-direction: column; gap: 10px; }
+    .rank-row { display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; }
+    .rank-row img { width: 40px; }
+    .rank-info { flex: 1; }
+    .rank-info small { opacity: 0.6; font-size: 11px; text-transform: uppercase; }
+    .rank-info div { font-weight: bold; font-size: 14px; }
+
+    /* ДРУЗІ МАЛІ (на головному) */
+    .friends-header { font-size: 12px; opacity: 0.6; margin-bottom: 10px; letter-spacing: 1px; }
+    .friends-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; max-height: 250px; padding-right: 5px; }
+    .friend-item { display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.3); padding: 8px 10px; border-radius: 6px; transition: 0.2s; }
+    .friend-item:hover { background: rgba(0,0,0,0.5); }
+    .friend-item img { width: 36px; height: 36px; border-radius: 6px; }
+    .friend-name { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+    .friend-id { font-size: 11px; opacity: 0.5; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; margin-left: auto; }
+    .online { background: #22c55e; box-shadow: 0 0 5px #22c55e; } 
+    .offline { background: #ef4444; }
+
+    /* ПРАВА КОЛОНКА (Банери та Кнопка) */
+    .right-panel { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .banners-area { display: flex; gap: 20px; height: 200px; }
+    .banner-placeholder { flex: 1; background: linear-gradient(45deg, rgba(59,130,246,0.1), rgba(20,25,35,0.8)); border: 1px solid rgba(59,130,246,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: bold; color: rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 2px; }
+
+    .play-section { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+    .play-btn { background: #3b82f6; color: white; padding: 20px 80px; border: none; border-radius: 4px; font-size: 24px; font-weight: 900; cursor: pointer; transition: 0.3s; text-transform: uppercase; letter-spacing: 2px; box-shadow: 0 0 15px rgba(59,130,246,0.4); clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+    .play-btn:hover { background: #2563eb; transform: scale(1.02); }
+    .play-btn.searching { background: #ef4444; box-shadow: 0 0 20px rgba(239, 68, 68, 0.4); }
+    .mode-card {
+    flex: 1; background: rgba(255,255,255,0.05); border: 2px solid #3b82f6;
+    padding: 20px; border-radius: 12px; cursor: pointer; transition: 0.3s;
+}
+.mode-card:hover { background: rgba(59,130,246,0.1); transform: translateY(-5px); }
+.mode-card.locked { border-color: #334155; opacity: 0.5; cursor: not-allowed; }
+.mode-card.locked:hover { transform: none; background: rgba(255,255,255,0.05); }
+    /* ВНУТРІШНІ ЕКРАНИ (Налаштування, Друзі, Повідомлення) */
+    .screen-header { font-size: 28px; font-weight: bold; margin-bottom: 20px; text-transform: uppercase; border-bottom: 2px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+    
+    .input-field { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px; border-radius: 6px; width: 100%; outline: none; margin-bottom: 10px; }
+    .action-btn { background: #3b82f6; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+    .action-btn:hover { background: #2563eb; }
+    .logout-btn { background: #ef4444; color: white; padding: 12px 30px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 20px; transition: 0.2s; }
+    .logout-btn:hover { background: #dc2626; }
+
+    /* Чат / Повідомлення */
+    .chat-box { background: rgba(20,25,35,0.8); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; height: 400px; display: flex; flex-direction: column; padding: 15px; margin-bottom: 15px; }
+    .msg-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+    .msg-item { background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px; align-self: flex-start; max-width: 80%; }
+    .msg-item.my-msg { background: rgba(59,130,246,0.2); border: 1px solid rgba(59,130,246,0.3); align-self: flex-end; }
+    .msg-sender { font-size: 11px; opacity: 0.6; margin-bottom: 4px; }
+
+    /* Модальне вікно (Галочка) */
+    .custom-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 999; backdrop-filter: blur(5px); }
+    .modal-content { background: #1e293b; padding: 30px; border-radius: 12px; text-align: center; border: 1px solid #3b82f6; box-shadow: 0 0 30px rgba(59,130,246,0.3); transform: scale(0.9); transition: 0.3s; }
+    .modal-content.show { transform: scale(1); }
+    .modal-content h3 { color: #3b82f6; margin-bottom: 10px; font-size: 24px; }
+    .modal-content p { opacity: 0.8; margin-bottom: 20px; }
+
+    /* Налаштування */
+ 
+ .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 6px; margin-bottom: 10px; }
+ .clan-card {
+    background: rgba(0,0,0,0.6);
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    max-width: 400px;
+    margin: 40px auto;
+    border: 1px solid #3b82f6;
+}
+
+.clan-header {
+    margin-bottom: 20px;
+}
+
+.clan-tag {
+    font-size: 22px;
+    color: #3b82f6;
+}
+
+.clan-name {
+    font-size: 26px;
+    font-weight: bold;
+}
+
+.clan-info {
+    margin: 20px 0;
+    opacity: 0.8;
+}
+
+.clan-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.clan-btn {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: #3b82f6;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.clan-btn.red {
+    background: #ef4444;
+}
+</style>
+
+</head>
+<body>
+
+    <div class="left-menu">
+        <div class="menu-btn active" onclick="setScreen('home', this)" title="Main"><img src="icon_play.png" alt="Play"></div>
+        <div class="menu-btn" onclick="setScreen('inv', this)" title="Inventory"><img src="icon_inventory.png" alt="Inv"></div>
+        <div class="menu-btn" onclick="setScreen('stats', this)" title="Statistics"><img src="icon_stats.png" alt="Stats"></div>
+        
+        <div class="menu-btn" onclick="setScreen('clan', this)" title="Clan">
+            <img src="icon_clan.png" alt="Clan" onerror="this.src='data:image/svg+xml;utf8,<svg fill=%22white%22 viewBox=%220 0 24 24%22 xmlns=%22http://www.w3.org/2000/svg%22><path d=%22M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z%22/></svg>'">
+        </div>
+    
+        <div class="menu-btn" onclick="setScreen('social', this)" title="Friends"><img src="icon_social.png" alt="Friends" onerror="this.src='data:image/svg+xml;utf8,<svg fill=%22white%22 viewBox=%220 0 24 24%22 xmlns=%22http://www.w3.org/2000/svg%22><path d=%22M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z%22/></svg>'"></div>
+        <div class="menu-btn" onclick="setScreen('messages', this)" title="Messages"><img src="icon_messages.png" alt="Msgs" onerror="this.src='data:image/svg+xml;utf8,<svg fill=%22white%22 viewBox=%220 0 24 24%22 xmlns=%22http://www.w3.org/2000/svg%22><path d=%22M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z%22/></svg>'"></div>
+        <div class="menu-btn" onclick="setScreen('settings', this)" title="Tools"><img src="icon_settings.png" alt="Settings"></div>
+    </div>
+
+<div class="main-container">
+    <div id="home" class="screen active">
+        <div class="home-layout">
+            <div class="left-panel">
+                <div class="panel-block profile-box">
+                    <div class="avatar-box" onclick="document.getElementById('avaInp').click()">
+                        <img id="uAva" src="avatar.jpg">
+                        <input type="file" id="avaInp" style="display:none" onchange="upload(this)">
+                    </div>
+                    <div class="profile-info">
+                        <h2 id="uNick">Loading... </h2>
+                        <span style="opacity: 0.5; font-size: 12px;" id="uId">ID: 000000</span>
+                        <div class="xp-container">
+                            <div style="display: flex; justify-content: space-between; font-size: 11px; opacity: 0.7;"><span>XP LEVEL</span><span>20000/50000</span></div>
+                            <div class="xp-bar"><div id="uXp" class="xp-fill"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-block ranks-list">
+                    <div class="rank-row">
+                        <img id="rImgC" src="ranks/r1.png" onerror="this.style.display='none'">
+                        <div class="rank-info"><small>Competitive</small><div id="rNameC">Rank</div></div>
+                        <div id="mmrC" style="font-size: 12px; opacity: 0.8;">0 MMR</div>
+                    </div>
+                    <div class="rank-row">
+                        <img id="rImgA" src="ranks/r1.png" onerror="this.style.display='none'">
+                        <div class="rank-info"><small>Allies </small><div id="rNameA">Rank</div></div>
+                        <div id="mmrA" style="font-size: 12px; opacity: 0.8;">0 MMR</div>
+                    </div>
+                </div>
+
+                <div class="panel-block" style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="friends-header">Friends</div>
+                    <div class="friends-container" id="fList"></div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="banners-area">
+                    <div class="banner-placeholder">BATTLE PASS</div>
+                    <div class="banner-placeholder" style="flex: 0.6;">SHOP OFFERS</div>
+                </div>
+                <div class="play-section">
+                    <div id="matchStatus" style="display:none; text-align:right; margin-bottom: 15px;">
+                        <div style="font-size: 20px; color: #3b82f6; font-weight: bold; text-shadow: 0 0 10px rgba(59,130,246,0.5);">Search...</div>
+                        <div id="matchTimer" style="font-size: 24px; font-family: monospace;">00:00</div>
+                        <button class="action-btn" style="background: #ef4444; margin-top: 10px;" onclick="toggleMatchmaking()">Cancel</button>
+                    </div>
+                
+                    <button id="mainPlayBtn" class="play-btn" onclick="openPlayMenu()">PLAY</button>
+                </div>
+                
+                <div id="playMenuModal" class="custom-modal" onclick="this.style.display='none'">
+                    <div class="modal-content" style="width: 800px; max-width: 90%; background: #1a202c; border: 2px solid #3b82f6; box-shadow: 0 0 30px rgba(59,130,246,0.3);" onclick="event.stopPropagation()">
+                        <h2 style="margin-bottom: 20px; color: white; text-shadow: 0 0 10px rgba(59,130,246,0.5);">CHOOSE A MODE</h2>
+                        <div style="display: flex; gap: 20px; justify-content: center;">
+                            
+                            <div class="mode-card" id="mode1" onclick="/* selectMode(1, 0) */" style="opacity: 0.6; cursor: not-allowed; border: 2px dashed #444; filter: grayscale(1);">
+                                <div style="font-weight: 900; font-size: 20px; color: #888;">team fight</div>
+                                <div style="font-size: 12px; color: #ef4444; font-weight: bold; margin-top: 5px;">COMING SOON</div>
+                                <select id="map1" class="input-field" disabled style="margin-top: 10px; font-size: 12px; opacity: 0.5;">
+                                    <option>Sandstone</option>
+                                    <option>Rust</option>
+                                </select>
+                            </div>
+                
+                            <div class="mode-card locked" id="mode2" onclick="/* selectMode(2, 5000) */" style="opacity: 0.6; cursor: not-allowed; border: 2px dashed #444; filter: grayscale(1);">
+                                <div style="font-weight: 900; font-size: 20px; color: #888;">Allies 2х2</div>
+                                <div id="lock2" style="font-size: 12px; color: #ef4444; font-weight: bold; margin-top: 5px;">COMING SOON</div>
+                                <select id="map2" class="input-field" disabled style="margin-top: 10px; font-size: 12px; opacity: 0.5;">
+                                    <option>Training Outside</option>
+                                    <option>Village</option>
+                                </select>
+                            </div>
+                
+                            <div class="mode-card" id="mode3" onclick="selectMode(3, 0)" style="cursor: pointer; border: 2px solid #3b82f6; background: rgba(59,130,246,0.1); transform: scale(1.05); box-shadow: 0 0 15px rgba(59,130,246,0.2);">
+                                <div style="font-weight: 900; font-size: 20px; color: #3b82f6;">Hide and seek</div>
+                                <div id="lock3" style="font-size: 12px; color: #22c55e; font-weight: bold; margin-top: 5px;">AVAILABLE</div>
+                                <select id="map3" class="input-field" style="margin-top: 10px; font-size: 12px; background: #2d3748; color: white; border: 1px solid #4a5568;" onclick="event.stopPropagation()">
+                                    <option value="M3_Maze">M3 Maze</option>
+                                    <option value="Training">Training</option>
+                                </select>
+                                <div style="margin-top: 8px; font-size: 10px; color: #a0aec0; font-style: italic;">Click to play</div>
+                            </div>
+                
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="inv" class="screen" style="padding: 20px; background: #080a0e; color: white; min-height: 100vh; font-family: 'Oswald', sans-serif;">
+    
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(0, 243, 255, 0.1); padding-bottom: 10px;">
+            <div style="display: flex; gap: 20px;">
+                <button class="main-tab active" onclick="switchMainTab('inventory', this)">INVENTORY</button>
+                <button class="main-tab" onclick="switchMainTab('shop', this)">SHOP</button>
+                <button class="main-tab" onclick="switchMainTab('market', this)">MARKET</button>
+            </div>
+    
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <button onclick="showClanCreateModal()" class="neon-btn-yellow">CREATE A CLAN</button>
+                <div class="neon-balance">
+                    <span style="color: #00f3ff; text-shadow: 0 0 10px #00f3ff;">G</span>
+                    <span id="uGoldMarket">0.00</span>
+                </div>
+            </div>
+        </div>
+    
+        <div id="sub-tabs-container" style="display: flex; gap: 10px; margin-bottom: 20px; height: 40px;">
+            </div>
+    
+        <div id="marketGrid" class="custom-scroll" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; height: calc(100vh - 220px); overflow-y: auto;">
+            </div>
+    </div>
+    
+    <style>
+        /* НЕОНОВІ СТИЛІ */
+        .main-tab {
+            background: none; border: none; color: #666; font-weight: 900; 
+            padding: 10px 15px; cursor: pointer; transition: 0.3s; font-size: 16px;
+        }
+        .main-tab.active {
+            color: #fff;
+            text-shadow: 0 0 10px #00f3ff, 0 0 20px #00f3ff;
+            border-bottom: 2px solid #00f3ff;
+        }
+    
+        .sub-tab {
+            background: rgba(0, 243, 255, 0.05); border: 1px solid rgba(0, 243, 255, 0.2);
+            color: #00f3ff; padding: 5px 20px; border-radius: 4px; cursor: pointer; font-size: 12px;
+        }
+        .sub-tab.active {
+            background: #00f3ff; color: #000; box-shadow: 0 0 15px #00f3ff;
+        }
+    
+        .neon-balance {
+            background: rgba(0,0,0,0.6); padding: 8px 15px; border-radius: 4px;
+            border: 1px solid #00f3ff; box-shadow: inset 0 0 10px rgba(0, 243, 255, 0.2);
+            font-weight: bold; font-family: monospace;
+        }
+    
+        .neon-btn-yellow {
+            background: #eab308; color: #000; border: none; padding: 8px 20px;
+            border-radius: 4px; font-weight: bold; cursor: pointer;
+            box-shadow: 0 0 10px rgba(234, 179, 8, 0.5); transition: 0.3s;
+        }
+        .neon-btn-yellow:hover { transform: scale(1.05); box-shadow: 0 0 20px #eab308; }
+    
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #00f3ff; box-shadow: 0 0 10px #00f3ff; }
+    
+        /* Порожній стан */
+        .empty-msg {
+            grid-column: 1/-1; text-align: center; padding-top: 100px;
+            color: #444; font-size: 24px; font-weight: bold; letter-spacing: 5px;
+        }
+    </style>
+
+    <div id="clan" class="screen" style="padding: 20px;">
+        <div id="clanContainer"></div>
+    </div>
+    <div id="stats" class="screen"><h1 class="screen-header">STATS</h1><p style="opacity:0.5">Your detailed statistics...(coming soon)</p></div>
+    <div id="social" class="screen">
+        <div class="social-header">
+            <div class="social-tab active" onclick="setSocialTab(this, 'friends')">FRIENDS</div>
+            <div class="social-tab" onclick="setSocialTab(this, 'find')">SEARCH</div>
+            <div class="social-tab" onclick="setSocialTab(this, 'reqs')">REQUESTS</div>
+            <div class="social-tab" onclick="setSocialTab(this, 'blocked')">BLOCK</div>
+        </div>
+    
+        <div id="socialContent" class="social-list-container">
+            <div id="friendsList"></div> 
+        </div>
+    </div>
+    
+    <div id="friendMenu" class="context-menu" style="display:none;">
+        <div class="menu-header" id="menuTargetName">Nickname</div>
+        <button onclick="interact('invite')">INVITE TO THE LOBBY</button>
+        <button onclick="interact('profile')">VIEW PROFILE</button>
+        <button onclick="interact('remove')" style="color:#ff4d4d;">REMOVE FROM FRIENDS</button>
+        <div class="menu-divider"></div>
+        <button onclick="closeFriendMenu()">CLOSE</button>
+    </div>
+    
+    <style>
+        .social-header { display: flex; background: rgba(0,0,0,0.6); border-radius: 8px 8px 0 0; overflow: hidden; }
+        .social-tab { flex: 1; padding: 15px; text-align: center; cursor: pointer; transition: 0.3s; opacity: 0.6; font-weight: bold; font-size: 13px; }
+        .social-tab.active { opacity: 1; background: rgba(59, 130, 246, 0.2); border-bottom: 3px solid #3b82f6; }
+        .social-tab:hover { background: rgba(255,255,255,0.05); }
+    
+        .social-list-container { height: 450px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 0 0 8px 8px; padding: 10px; }
+        
+        /* Стиль для картки друга (для системи аватарок) */
+        .friend-card { display: flex; align-items: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 6px; margin-bottom: 8px; cursor: pointer; }
+        .friend-card:hover { background: rgba(255,255,255,0.1); }
+        .friend-ava { width: 45px; height: 45px; border-radius: 50%; border: 2px solid #3b82f6; margin-right: 12px; object-fit: cover; }
+        .friend-info { flex-grow: 1; }
+        .friend-name { font-weight: bold; font-size: 16px; }
+        .friend-status { font-size: 12px; opacity: 0.7; }
+    </style>
+
+<div id="messages" class="screen"> <div class="messages-layout" style="display: flex; height: 80vh; gap: 10px;">
+    <div id="dialogs-list" style="width: 30%; background: rgba(0,0,0,0.3); border-radius: 10px; overflow-y: auto; padding: 10px;">
+        <h3 style="color: #3b82f6; font-size: 14px; margin-bottom: 10px;">DIALOGUES</h3>
+        <div id="active-chats-container"></div>
+    </div>
+
+    <div id="chat-window" style="width: 70%; display: flex; flex-direction: column; background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px;">
+        <div id="chat-header" style="padding-bottom: 10px; border-bottom: 1px solid #333; font-weight: bold;">Select a chat...</div>
+        <div id="msgList" style="flex-grow: 1; overflow-y: auto; margin: 10px 0; display: flex; flex-direction: column; gap: 8px;"></div>
+        <div class="chat-input-area" style="display: flex; gap: 5px;">
+            <input type="text" id="msgInput" placeholder="Your message..." style="flex-grow: 1; background: #111; border: 1px solid #333; color: white; padding: 10px; border-radius: 5px;">
+            <button class="btn-action" onclick="sendPrivateMessage()">></button>
+        </div>
+    </div>
+</div>
+</div>
+
+    <div id="settings" class="screen">
+        <h1 class="screen-header">SITTING</h1>
+        <div style="max-width: 500px;">
+            <div class="setting-row">
+                <span>Game volume</span>
+                <input type="range" min="0" max="100" value="80">
+            </div>
+            <div class="setting-row">
+                <span>Graphics quality</span>
+                <select class="input-field" style="width: 150px; margin:0;">
+                    <option>low</option>
+                    <!--<option>medium</option>
+                    <option selected>high</option>
+                    <option>Ultra</option>-->
+                </select>
+            </div>
+            <div class="setting-row">
+                <span>Language</span>
+                <select class="input-field" style="width: 150px; margin:0;">
+                    <!--<option selected>Українська</option>-->
+                    <option>English</option>
+                </select>
+            </div>
+            <button class="logout-btn" onclick="logout()">LOGOUT</button>
+        </div>
+    </div>
+</div>
+
+<div id="verifiedModal" class="custom-modal" onclick="closeVerifiedAlert()">
+    <div class="modal-content" id="vModalContent" onclick="event.stopPropagation()">
+        <h3>✔ Official account</h3>
+        <p>This account is verified by the SofterX</p>
+        <button class="action-btn" onclick="closeVerifiedAlert()">Of course</button>
+    </div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+// 1. Отримуємо дані САМЕ так, як їх зберіг auth.html
+let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    
+    // Якщо гравця немає в пам'яті - викидаємо на логін
+    if (!currentUser || !currentUser.id) {
+        console.error("ID не знайдено! Повертаємо на авторизацію...");
+        window.location.href = "/"; 
+    }
+
+    let myId = currentUser.id;
+    const myNickname = currentUser.nickname || "Гість";
+    // --- ГЛОБАЛЬНІ ЗМІННІ ---
+    const socket = io(); 
+    let currentChatId = null
+// --- ГОЛОВНА ФУНКЦІЯ ПЕРЕМИКАННЯ ЕКРАНІВ ---
+function setScreen(id, btn) {
+    console.log("Перемикання на екран:", id);
+    
+    // 1. Списки всіх екранів та кнопок
+    const screens = document.querySelectorAll('.screen');
+    const buttons = document.querySelectorAll('.menu-btn');
+
+    // 2. Сховати всі екрани
+    screens.forEach(s => s.classList.remove('active'));
+    buttons.forEach(b => b.classList.remove('active'));
+
+    // 3. Показати потрібний екран
+    // Якщо ти раніше використовував ID 'messages', то ця перевірка спрацює
+    const target = document.getElementById(id);
+    if (target) {
+        target.classList.add('active');
+    } else {
+        console.error("Помилка: Екран з ID '" + id + "' не знайдено в HTML!");
+    }
+
+    // 4. Активувати кнопку
+    if (btn) btn.classList.add('active');
+
+    // 5. Логіка завантаження даних
+    if (id === 'messages') {
+        loadDialogs(); 
+    }
+    
+    if (id === 'social' || id === 'messages') {
+        if (typeof syncProfile === "function") syncProfile();
+    }
+
+    if (id === 'clan' && typeof loadClanMenu === "function") {
+        loadClanMenu();
+    }
+}
+
+// --- ЛОГІКА ЧАТУ (ПОВІДОМЛЕННЯ) ---
+
+async function loadDialogs() {
+    const container = document.getElementById('active-chats-container');
+    if (!container) return; // Захист від TypeError
+
+    try {
+        // Отримуємо список активних переписок з сервера
+        const response = await fetch(`/api/chat/active-dialogs/${myId}`);
+        const activeDialogs = await response.json();
+
+        container.innerHTML = activeDialogs.map(u => `
+            <div class="dialog-item" onclick="openChat('${u.id}', '${u.nickname}')" 
+                 style="cursor:pointer; padding: 12px; border-bottom: 1px solid #222; display: flex; align-items: center; gap: 10px; transition: 0.2s;">
+                <img src="${u.playerAvatar || 'default.jpg'}" style="width: 35px; height: 35px; border-radius: 50%; border: 1px solid #3b82f6;">
+                <div style="font-weight: 600;">${u.nickname}</div>
+            </div>
+        `).join('');
+        
+        if (activeDialogs.length === 0) {
+            container.innerHTML = '<div style="padding:10px; opacity:0.5; text-align:center;">Немає активних чатів</div>';
+        }
+    } catch (e) {
+        console.error("Помилка завантаження діалогів:", e);
+    }
+}
+// --- 1. ГОЛОВНА ЛОГІКА ТАБІВ ---
+function switchMainTab(type, el) {
+    const subContainer = document.getElementById('sub-tabs-container');
+    const grid = document.getElementById('marketGrid');
+    
+    // Візуал кнопок
+    document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('active'));
+    if(el) el.classList.add('active');
+
+    if(!subContainer || !grid) return;
+
+    subContainer.innerHTML = ''; 
+    grid.innerHTML = '<div class="empty-state">ПУСТО</div>';
+
+    if (type === 'inventory') {
+        renderSubTabs(['All', 'weapons', 'Knifes'], (choice) => {
+            loadInventoryItems(choice); // Викликаємо нову функцію
+        });
+        loadInventoryItems('All'); 
+    } 
+    else if (type === 'shop') {
+        renderSubTabs(['Cases', 'PROMO'], (choice) => {
+            if(choice === 'PROMO') openPromoMenu();
+            else loadShopItems();
+        });
+        loadShopItems();
+    } 
+    else if (type === 'market') {
+        renderSubTabs(['MARKET', 'MY REQUESTS', 'HISTORY'], (choice) => {
+            if(choice === 'MARKET') {
+                if(typeof loadMarket === 'function') loadMarket();
+                else grid.innerHTML = '<div class="empty-state">COMNG SOON...</div>';
+            } else {
+                grid.innerHTML = '<div class="empty-state"></div>';
+            }
+        });
+    }
+}
+
+// --- 2. СТВОРЮЄМО ФУНКЦІЇ, ЯКИХ НЕ ВИСТАЧАЛО (Виправляє ReferenceError) ---
+
+function loadInventoryItems(filter = 'All') {
+    const grid = document.getElementById('marketGrid');
+    if(!grid) return;
+    
+    // Тут буде логіка завантаження з inventory.json
+    // Поки що просто показуємо, що працює:
+    grid.innerHTML = '<div class="empty-state">INVENTORY EMPTY</div>';
+    console.log("Завантаження інвентарю з фільтром:", filter);
+}
+
+function loadShopItems() {
+    const grid = document.getElementById('marketGrid');
+    if(!grid) return;
+    grid.innerHTML = '<div class="empty-state">THE STORE IS EMPTY</div>';
+}
+
+function openPromoMenu() {
+    const grid = document.getElementById('marketGrid');
+    if(!grid) return;
+    grid.innerHTML = `
+        <div style="grid-column:1/-1; text-align:center; padding: 50px;">
+            <h3 style="color:#00f3ff; text-shadow:0 0 10px #00f3ff; font-family:'Oswald';">ACTIVATION PROMO</h3>
+            <input type="text" id="promoInp" placeholder="ENTER CODE" 
+                style="background:#000; border:1px solid #00f3ff; color:#fff; padding:12px; border-radius:5px; outline:none; text-align:center; margin:20px 0; width: 250px; box-shadow: 0 0 10px rgba(0,243,255,0.2);">
+            <br>
+            <button class="neon-btn-yellow" onclick="usePromo()">USE</button>
+        </div>
+    `;
+}
+
+function usePromo() {
+   /* const code = document.getElementById('promoInp')?.value;
+    if(!code) return alert("Введіть код!");
+    alert("Код " + code + " не знайдено або вже активовано.");*/
+}
+
+// Якщо кнопки клану немає, створимо заглушку
+if (typeof showClanCreateModal !== 'function') {
+    window.showClanCreateModal = function() {
+        
+    };
+}
+
+// --- 3. ХЕЛПЕР ДЛЯ ПІДВКЛАДОК ---
+function renderSubTabs(list, callback) {
+    const container = document.getElementById('sub-tabs-container');
+    if(!container) return;
+    
+    list.forEach((name, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'sub-tab' + (index === 0 ? ' active' : '');
+        btn.innerText = name;
+        btn.onclick = () => {
+            document.querySelectorAll('.sub-tab').forEach(s => s.classList.remove('active'));
+            btn.classList.add('active');
+            if(callback) callback(name);
+        };
+        container.appendChild(btn);
+    });
+}
+
+
+function openChat(friendId, friendName) {
+    currentChatId = friendId;
+    
+    // Переходимо на вкладку повідомлень
+    const msgBtn = document.querySelector('[title="messages"]') || document.querySelector('.menu-btn[onclick*="messages"]');
+    setScreen('messages', msgBtn);
+    
+    // Оновлюємо інтерфейс чату (використовуємо твої ID)
+    const header = document.getElementById('chat-header') || document.getElementById('chat-with-name');
+    if (header) header.innerText = `Чат з: ${friendName}`;
+    
+    const list = document.getElementById('msgList');
+    if (list) list.innerHTML = '<div style="text-align:center; padding:20px; opacity:0.5;">Завантаження історії...</div>';
+    
+    socket.emit('join_chat', { userId: myId, friendId: friendId });
+}
+
+function sendPrivateMessage() {
+    const input = document.getElementById('msgInput');
+    if (!input || !currentChatId) return;
+
+    const text = input.value.trim();
+    if (!text) return;
+
+    socket.emit('send_msg', {
+        fromId: myId,
+        toId: currentChatId,
+        text: text,
+        senderName: myNickname
+    });
+    
+    input.value = '';
+}
+
+// Слухаємо сокети
+socket.on('new_msg', (msg) => {
+    const list = document.getElementById('msgList');
+    if (!list) return;
+
+    // Якщо це перше повідомлення, прибираємо текст завантаження
+    if (list.innerText.includes('Завантаження')) list.innerHTML = '';
+
+    const isMy = msg.senderId == myId;
+    list.innerHTML += `
+        <div style="align-self: ${isMy ? 'flex-end' : 'flex-start'}; 
+                    background: ${isMy ? '#3b82f6' : '#2d3748'}; 
+                    color: white; padding: 8px 15px; border-radius: 12px; 
+                    max-width: 75%; margin-bottom: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+            <div style="font-size: 9px; opacity: 0.7; margin-bottom: 3px;">${msg.senderName} • ${msg.time || ''}</div>
+            <div style="word-break: break-word;">${msg.text}</div>
+        </div>
+    `;
+    list.scrollTop = list.scrollHeight;
+});
+ 
+
+
+
+    async function loadClans() {
+    // 1. Виправляємо ID (було clansContainer, стало clanContainer)
+    const container = document.getElementById("clanContainer");
+    
+    // Перевірка, чи взагалі існує цей блок на сторінці, щоб не було помилки null
+    if (!container) return; 
+
+    try {
+        const res = await fetch("/api/clans");
+        const data = await res.json();
+
+        container.innerHTML = "";
+
+        if (!data.clans || data.clans.length === 0) {
+            container.innerHTML = "<p style='text-align:center; opacity:0.5; padding:20px;'>Немає доступних кланів</p>";
+            return;
+        }
+
+        data.clans.forEach(clan => {
+            const div = document.createElement("div");
+            div.className = "clan-card"; // Використовуємо твій існуючий CSS клас
+            div.innerHTML = `
+                <div class="clan-header">
+                    <div class="clan-tag">[${clan.tag}]</div>
+                    <div class="clan-name">${clan.name}</div>
+                </div>
+                <div class="clan-info">
+                    <div>Рівень: ${clan.level}</div>
+                    <div>XP: ${clan.xp}</div>
+                    <div>Учасники: ${clan.members.length}</div>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+    } catch (err) {
+        console.error("Помилка завантаження кланів:", err);
+        container.innerHTML = "<p style='color:#ef4444;'>Помилка завантаження даних з сервера</p>";
+    }
+}
+
+    </script>
+<script>
+    function checkClanView() {
+    const user = JSON.parse(localStorage.getItem('currentUser'));
+
+    const noClan = document.getElementById('no-clan-view');
+    const clanProfile = document.getElementById('clan-profile-view');
+
+    if (!user.clan) {
+        noClan.style.display = "flex";
+        clanProfile.style.display = "none";
+    } else {
+        noClan.style.display = "none";
+        clanProfile.style.display = "block";
+        clanProfile.innerHTML = `
+            <h1>Клан [${user.clan}]</h1>
+            <button onclick="leaveClan()" class="action-btn" style="background:#ef4444;margin-top:20px;">ПОКИНУТИ</button>
+        `;
+    }
+}
+async function loadMarket() {
+    try {
+        const res = await fetch('/api/market/items');
+        const items = await res.json();
+        const grid = document.getElementById('marketGrid');
+        
+        if (items.length === 0) {
+            grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; opacity: 0.3; margin-top: 50px;">The market is empty.</div>`;
+            return;
+        }
+
+        grid.innerHTML = items.map(item => `
+            <div class="market-item" style="background: rgba(255,255,255,0.03); border-bottom: 4px solid ${getRarityColor(item.rarity)}; border-radius: 4px; padding: 10px; position: relative; cursor: pointer; transition: 0.2s;">
+                <div style="font-size: 10px; color: #666; text-align: right;">${item.sellerNick}</div>
+                <div style="height: 100px; background: url('skins/${item.skinId}.png') center/contain no-repeat; margin: 10px 0;"></div>
+                <div style="font-weight: bold; font-size: 13px;">${item.skinName}</div>
+                <div style="color: #eab308; font-weight: bold; margin-top: 10px;">${item.price} G</div>
+                <button class="action-btn" style="width: 100%; margin-top: 10px; font-size: 10px; padding: 5px;" onclick="buyItem(${item.lotId})">BUY</button>
+            </div>
+        `).join('');
+    } catch (e) { console.error("Market error:", e); }
+}
+
+function getRarityColor(rarity) {
+    const colors = { 'rare': '#3b82f6', 'epic': '#9333ea', 'legendary': '#ec4899', 'arcane': '#ef4444' };
+    return colors[rarity] || '#ccc';
+}
+
+// Викликай loadMarket() коли відкриваєш вкладку ринку
+function renderProfile() {
+    const user = currentUser;
+    if (!user) return;
+
+    // Функція-помічник для безпечного оновлення
+    const setEl = (id, html, isImg = false) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (isImg) el.src = html;
+        else el.innerHTML = html;
+    };
+
+    // 1. Формуємо нікнейм (Клан + Нік + Галочка)
+    const verifiedIcon = user.isVerified ? `<span class="verified-badge" title="Verified" onclick="showVerifiedAlert()" style="cursor:pointer; margin-left:5px; color:#3b82f6;">✔</span>` : '';
+    const clanTag = user.clan ? `<span style="color: #eab308; margin-right: 5px;">[${user.clan}]</span>` : '';
+    
+    setEl('uNick', clanTag + user.nickname + verifiedIcon);
+    setEl('uId', "ID: " + user.id);
+    
+    // 2. Аватарка
+    if (typeof getAvatarUrl === 'function') {
+        setEl('uAva', getAvatarUrl(user.playerAvatar), true);
+    }
+
+    // 3. Змагальний режим (Competitive)
+    if (typeof getRank === 'function') {
+        const rc = getRank(user.MMRCompetitive || 0);
+        setEl('rNameC', rc.n);
+        setEl('rImgC', rc.i, true);
+        setEl('mmrC', user.MMRCompetitive || 0);
+
+        // 4. Союзники (Allies)
+        const ra = getRank(user.MMRAllies || 0);
+        setEl('rNameA', ra.n);
+        setEl('rImgA', ra.i, true);
+        setEl('mmrA', user.MMRAllies || 0);
+    }
+
+    // 5. XP Бар
+    const xpBar = document.getElementById('uXp');
+    if (xpBar) {
+        const progress = (user.XP / 50000 * 100);
+        xpBar.style.width = Math.min(progress, 100) + "%";
+    }
+
+    // Рендеримо друзів та повідомлення
+    // Передаємо масив, який прийшов від сервера (з об'єктами друзів)
+    if (typeof lastFriendsData !== 'undefined') {
+        renderFriends(lastFriendsData);
+    }
+    if (typeof renderMessages === 'function') renderMessages(user.messages || []);
+}
+
+
+
+    // ГЕНЕРАЦІЯ РАНГІВ
+    function getRank(mmr) {
+        if (mmr < 500) return { n: "Bronze", i: "ranks/r1.png" };
+        if (mmr < 1200) return { n: "Silver", i: "ranks/r2.png" };
+        if (mmr < 2000) return { n: "Gold", i: "ranks/r3.png" };
+        return { n: "The Legend", i: "ranks/r6.png" };
+    }
+    // МОДАЛКА ГАЛОЧКИ
+    function showVerifiedAlert() {
+        const modal = document.getElementById('verifiedModal');
+        const content = document.getElementById('vModalContent');
+        modal.style.display = 'flex';
+        setTimeout(() => content.classList.add('show'), 10);
+    }
+    function closeVerifiedAlert() {
+        const modal = document.getElementById('verifiedModal');
+        const content = document.getElementById('vModalContent');
+        content.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+    }
+
+    // ІНІЦІАЛІЗАЦІЯ
+
+window.onload = function() {
+    // 1. Спочатку завантажуємо дані
+    const storedData = localStorage.getItem('currentUser');
+    
+    if (!storedData || storedData === "undefined") { 
+        window.location.href = "/"; 
+        return; 
+    }
+
+    currentUser = JSON.parse(storedData);
+
+    // 2. Малюємо профіль та синхронізуємо з сервером
+    renderProfile();
+    syncProfile(); 
+};
+async function searchUser() {
+    const inputField = document.getElementById('findFriendInput');
+    const query = inputField.value.trim();
+    if (!query) return;
+
+    // МИ НЕ ОБНУЛЯЄМО inputField.value, щоб текст не зникав!
+
+    try {
+        const res = await fetch('/api/search-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query })
+        });
+        const data = await res.json();
+        const list = document.getElementById('friendsList');
+
+        if (data.success) {
+            const u = data.user;
+            const ava = u.playerAvatar ? `/avatars/${u.playerAvatar}` : "/avatars/default_avatar.jpg";
+            
+            list.innerHTML = `
+                <div style="padding:15px; background:rgba(59,130,246,0.1); border:1px solid #3b82f6; border-radius:12px; display:flex; align-items:center; gap:15px; margin-top:10px;">
+                    <img src="${ava}" onerror="this.src='/avatars/default_avatar.jpg'" style="width:45px; height:45px; border-radius:50%; object-fit:cover;">
+                    <div style="flex:1;">
+                        <div style="font-weight:bold; color:white;">${u.nickname}</div>
+                        <div style="font-size:11px; opacity:0.6;">ID: ${u.id}</div>
+                    </div>
+                    <button onclick="sendFriendRequest('${u.id}')" style="background:#3b82f6; color:white; border:none; padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:bold;">ДОДАТИ</button>
+                </div>
+            `;
+        } else {
+            list.innerHTML = `<div style="padding:20px; text-align:center; color:#ff4d4d; font-size:14px;">❌ Гравця "${query}" не знайдено</div>`;
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function sendFriendRequest(targetId) {
+    const userStr = localStorage.getItem('currentUser');
+    if (!userStr) return;
+
+    const currentUser = JSON.parse(userStr);
+
+    try {
+        const res = await fetch('/api/friends/request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fromId: currentUser.id,
+                toId: targetId
+            })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            alert(" Заявка відправлена!");
+        } else {
+            alert("❌ " + (data.message || "Помилка"));
+        }
+    } catch (err) {
+        console.error(err);
+        alert("Помилка з'єднання з сервером");
+    }
+}
+async function loadFriendRequests() {
+    const storedUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!storedUser) return;
+
+    const res = await fetch('/api/sync-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: storedUser.id })
+    });
+
+    const data = await res.json();
+    if (!data.success) return;
+
+    const user = data.user;
+    const list = document.getElementById('friendsList');
+
+    if (!user.incomingRequests || user.incomingRequests.length === 0) {
+        list.innerHTML = "<div style='padding:20px;opacity:0.5;text-align:center;'>Немає заявок</div>";
+        return;
+    }
+
+    list.innerHTML = user.incomingRequests.map(id => `
+        <div class="friend-card">
+            <div class="friend-info">
+                <div class="friend-name">${id}</div>
+            </div>
+            <button onclick="acceptFriend('${id}')" class="action-btn">✔</button>
+            <button onclick="declineFriend('${id}')" style="background:#ef4444" class="action-btn">✖</button>
+        </div>
+    `).join('');
+}
+// Фікс відображення аватарки (щоб не було //avatars/)
+function fixAvatarPath(path) {
+    if (!path) return '/avatars/default.jpg';
+    // Якщо шлях вже містить /avatars/, не додаємо його ще раз
+    if (path.startsWith('/avatars/')) return path;
+    if (path.startsWith('avatars/')) return '/' + path;
+    return '/avatars/' + path;
+}
+
+
+function getAvatarUrl(avatarPath) {
+    // Якщо в базі старий запис або порожньо - даємо дефолт
+    if (!avatarPath || avatarPath === "avatar.jpg") {
+        return "/avatars/default.jpg";
+    }
+    // Додаємо ?t=..., щоб браузер не брав стару картинку з кешу
+    return avatarPath + "?t=" + Date.now();
+}
+
+
+// ВИПРАВЛЕННЯ ТВОЄЇ ПОМИЛКИ (syncProfile)
+function syncProfile(data) {
+    // Перевіряємо чи елемент існує перед тим як писати в нього
+    const goldEl = document.getElementById('uGoldMarket');
+    if (goldEl) {
+        goldEl.innerText = data.gold.toFixed(2);
+    }
+
+    const grid = document.getElementById('marketGrid');
+    if (grid && data.items) {
+        if (data.items.length === 0) {
+            grid.innerHTML = '<div class="empty-msg">ПУСТО</div>';
+        } else {
+            // рендер скінів
+        }
+    }
+}
+
+// Завантаження при старті
+document.addEventListener('DOMContentLoaded', () => {
+    const firstTab = document.querySelector('.main-tab');
+    if(firstTab) switchMainTab('inventory', firstTab);
+});
+// При оновленні інтерфейсу використовуй так:
+document.getElementById('uAva').src = getAvatarUrl(currentUser.playerAvatar);
+async function setSocialTab(element, tab) {
+
+// 🔹 Підсвітка табів
+document.querySelectorAll('.social-tab')
+    .forEach(t => t.classList.remove('active'));
+
+if (element && element.classList) {
+    element.classList.add('active');
+}
+
+const list = document.getElementById('friendsList');
+if (!list) return;
+
+list.innerHTML = `
+    <div style="text-align:center; padding:20px; opacity:0.5;">
+        Завантаження...
+    </div>
+`;
+
+const storedUser = JSON.parse(localStorage.getItem('currentUser'));
+if (!storedUser) return;
+
+try {
+
+    // 🔹 ДРУЗІ
+    if (tab === 'friends') {
+
+        const res = await fetch('/api/sync-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: storedUser.id })
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+            list.innerHTML = "Помилка завантаження";
+            return;
+        }
+
+        renderFriends(data.user.friendsList || []);
+    }
+
+    // 🔹 ЗАЯВКИ
+    else if (tab === 'reqs' || tab === 'requests') {
+        const res = await fetch('/api/friends/incoming', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: storedUser.id }) // ТУТ БУВ БАГ: треба передавати userId, а не id
+        });
+
+        const data = await res.json();
+
+        // Сервер повертає масив data.incoming
+        if (!data.success || !data.incoming || data.incoming.length === 0) {
+            list.innerHTML = `
+                <div style="text-align:center; padding:20px; opacity:0.5;">
+                    Запитів немає
+                </div>
+            `;
+            return;
+        }
+
+        list.innerHTML = data.incoming.map(user => `
+            <div class="friend-card" style="border: 1px solid #3b82f6; background: rgba(59,130,246,0.1);">
+                <img src="${user.playerAvatar || '/avatars/default.jpg'}" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
+                <div class="friend-info">
+                    <div class="friend-name">${user.nickname}</div>
+                </div>
+                <button class="action-btn" onclick="acceptFriend('${user.id}')">✔</button>
+                <button class="action-btn" style="background:#ef4444; margin-left: 5px;" onclick="declineFriend('${user.id}')">✖</button>
+            </div>
+        `).join('');
+    }
+    // 🔹 ЗАБЛОКОВАНІ
+    else if (tab === 'blocked') {
+
+        list.innerHTML = `
+            <div style="text-align:center; padding:20px; opacity:0.5;">
+                Список заблокованих порожній
+            </div>
+        `;
+    }
+
+    // 🔹 ПОШУК
+    else if (tab === 'find') {
+
+        list.innerHTML = `
+            <div style="padding:15px;">
+                <input type="text"
+                       id="findFriendInput"
+                       placeholder="Введіть нік або ID..."
+                       style="width:100%; padding:10px;
+                              background:rgba(255,255,255,0.05);
+                              border:1px solid #3b82f6;
+                              border-radius:8px;
+                              color:white;">
+                <button class="action-btn"
+                        style="width:100%; margin-top:10px;"
+                        onclick="searchUser()">ПОШУК</button>
+            </div>
+        `;
+    }
+
+    else {
+        list.innerHTML = `
+            <div style="text-align:center; padding:20px; opacity:0.5;">
+                Розділ "${tab}" порожній
+            </div>
+        `;
+    }
+
+} catch (err) {
+    console.error(err);
+    list.innerHTML = "Помилка з'єднання з сервером";
+}
+
+console.log("Вкладка змінена на:", tab);
+}
+async function acceptFriend(friendId) {
+    const storedUser = JSON.parse(localStorage.getItem('currentUser'));
+
+    const res = await fetch('/api/friends/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            myId: storedUser.id,
+            friendId: friendId
+        })
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+        alert("Тепер ви друзі!");
+        loadFriendRequests();
+        renderFriends();
+    }
+}
+async function createClan() {
+    if (!currentUser) return;
+
+    const tag = prompt("Введіть тег клану (2-5 символів англ. ВЕЛИКИМИ):");
+    
+    // Валідація
+    if (!tag || tag.length < 2 || tag.length > 5 || !/^[A-Za-z0-9]+$/.test(tag)) {
+        alert("Невірний формат тегу! Тільки англійські літери та цифри (2-5 символів).");
+        return;
+    }
+    
+    if (currentUser.gold < 500) {
+        alert("Недостатньо голди! Потрібно 500.");
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/clans/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                nickname: currentUser.nickname,
+                tag: tag // ВИПРАВЛЕНО: замінили clanTag на tag
+            })
+        })
+
+        const data = await res.json();
+
+        if (data.success) {
+            alert("Клан створено!");
+            currentUser.gold = data.gold;
+            currentUser.clan = data.clan;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            renderProfile(); // Оновлюємо інтерфейс без перезавантаження
+        } else {
+            alert(data.message || "Помилка при створенні клану");
+        }
+    } catch (e) {
+        console.error("Clan error:", e);
+        alert("Помилка з'єднання з сервером");
+    }
+}
+
+    
+    
+    
+    function renderMessages(msgs) {
+        const chat = document.getElementById('chatMsgs');
+        if (!msgs || msgs.length === 0) {
+            chat.innerHTML = "<div style='opacity:0.4; text-align:center; margin-top:20px;'>Немає повідомлень</div>";
+            return;
+        }
+        
+        chat.innerHTML = msgs.map(m => {
+            const isMe = m.fromId === currentUser.id;
+            return `
+            <div class="msg-item ${isMe ? 'my-msg' : ''}">
+                <div class="msg-sender">${m.from} (${m.time})</div>
+                <div>${m.text}</div>
+            </div>`
+        }).join('');
+        chat.scrollTop = chat.scrollHeight; // Прокрутка вниз
+    }
+    async function leaveClan() {
+
+const user = JSON.parse(localStorage.getItem('currentUser'));
+
+await fetch('/api/clans/leave', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ userId: user.id })
+});
+
+loadClanMenu();
+}
+// Знайти і замінити функцію syncProfile() у mainMenu.html
+async function syncProfile() {
+    // 1. Перевірка наявності юзера (якщо немає в пам'яті — беремо з localStorage)
+    if (!currentUser || !currentUser.id) {
+        const stored = localStorage.getItem('currentUser');
+        if (stored) {
+            currentUser = JSON.parse(stored);
+        } else {
+            return; 
+        }
+    }
+
+    try {
+        // 2. Запит до сервера за свіжими даними
+        const res = await fetch('/api/user-data?id=' + currentUser.id);
+        
+        if (!res.ok) throw new Error(`Server Error: ${res.status}`);
+
+        const data = await res.json();
+        
+        if (data.success) {
+            // 3. Оновлюємо глобальний об'єкт (тепер у нас є і user, і масив friends)
+            currentUser = data.user;
+            
+            // Зберігаємо свіжий профіль в браузері
+            localStorage.setItem('currentUser', JSON.stringify(data.user));
+
+            // 4. ОНОВЛЕННЯ ІНТЕРФЕЙСУ
+            // Викликаємо твій renderProfile (той, що з галочкою ✔ та клан-тегом)
+            if (typeof renderProfile === 'function') {
+                renderProfile();
+            }
+
+            // 5. РЕНДЕР ДРУЗІВ
+            // Важливо: передаємо масив об'єктів friends, який сформував сервер
+            if (typeof renderFriends === 'function') {
+                // Якщо сервер прислав детальний список друзів — шлемо його, 
+                // інакше шлемо просто список ID з профілю
+                renderFriends(data.friends || currentUser.friendsList || []);
+            }
+            
+            // 6. РЕНДЕР ПОВІДОМЛЕНЬ
+            if (typeof renderMessages === 'function') {
+                renderMessages(currentUser.messages || []);
+            }
+
+            // 7. ОНОВЛЕННЯ РАНГУ (Змагальний)
+            if (typeof updateRankDisplay === 'function') {
+                updateRankDisplay(currentUser.XP || 0);
+            }
+        }
+    } catch (e) {
+        // Використовуємо warn, щоб не забивати консоль червоним під час звичайних оновлень
+        console.warn("Синхронізація тимчасово недоступна:", e.message);
+    }
+}
+
+    // ДОДАТИ ДРУГА
+    async function addFriend() {
+        const friendId = document.getElementById('addFriendInp').value;
+        if(!friendId) return alert("Введіть ID!");
+        
+        const res = await fetch('/api/add-friend', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ myId: currentUser.id, friendId })
+        });
+        const data = await res.json();
+        alert(data.message);
+        if(data.success) syncProfile();
+    }
+
+    // ВІДПРАВИТИ ПОВІДОМЛЕННЯ
+    async function sendMessage() {
+        const toId = document.getElementById('msgTo').value;
+        const text = document.getElementById('msgText').value;
+        if(!toId || !text) return alert("Заповніть отримувача та текст!");
+
+        const res = await fetch('/api/send-message', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ fromId: currentUser.id, toId, text })
+        });
+        const data = await res.json();
+        
+        if(data.success) {
+            document.getElementById('msgText').value = '';
+            // Локально додаємо собі повідомлення для вигляду
+            if(!currentUser.messages) currentUser.messages = [];
+            currentUser.messages.push({ from: currentUser.nickname, fromId: currentUser.id, text, time: new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) });
+            renderMessages(currentUser.messages);
+        } else { alert(data.message); }
+    }
+
+    async function uploadClanAvatar(input) {
+    if (!input.files[0]) return;
+    const fd = new FormData();
+    fd.append('avatar', input.files[0]);
+    fd.append('userId', currentUser.id);
+    fd.append('clanTag', currentUser.clan);
+
+    const res = await fetch('/api/upload-clan-avatar', { method: 'POST', body: fd });
+    const data = await res.json();
+    
+    if (data.success) {
+        document.getElementById('clanAva').src = data.newPath + "?t=" + Date.now();
+        alert("Аватар клану оновлено!");
+    } else {
+        alert(data.message);
+    }
+}
+async function loadClanMenu() {
+
+const user = JSON.parse(localStorage.getItem('currentUser'));
+const container = document.getElementById('clanContainer');
+
+container.innerHTML = `
+    <div style="text-align:center;padding:40px;opacity:0.6;">
+        Завантаження клану...
+    </div>
+`;
+
+const res = await fetch('/api/clans/my', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ userId: user.id })
+});
+
+const data = await res.json();
+
+// 🟢 Якщо НЕ в клані
+if (!data.clan) {
+
+    container.innerHTML = `
+        <div class="clan-card">
+            <h2>ТИ НЕ В КЛАНІ</h2>
+
+            <button class="clan-btn"
+                onclick="openCreateClan()">СТВОРИТИ КЛАН</button>
+
+            <button class="clan-btn"
+                onclick="openSearchClan()">ЗНАЙТИ КЛАН</button>
+        </div>
+    `;
+    return;
+}
+
+// 🟢 Якщо в клані
+container.innerHTML = `
+    <div class="clan-card">
+
+        <div class="clan-header">
+            <div class="clan-tag">[${data.clan.tag}]</div>
+            <div class="clan-name">${data.clan.name}</div>
+        </div>
+
+        <div class="clan-info">
+            <div>Рівень: ${data.clan.level}</div>
+            <div>Учасники: ${data.members.length}</div>
+            <div>Твоя роль: ${data.myRole}</div>
+        </div>
+
+        <div class="clan-actions">
+            ${data.myRole !== "member" ?
+                `<button class="clan-btn"
+                    onclick="openClanRequests()">ЗАЯВКИ</button>` : ''
+            }
+
+            <button class="clan-btn red"
+                onclick="leaveClan()">ПОКИНУТИ</button>
+        </div>
+    </div>
+`;
+}
+// --- ПОШУК ТА ВІДОБРАЖЕННЯ (Фікс) ---
+async function searchFriend() {
+    const inp = document.getElementById('searchInp');
+    const query = inp.value;
+    const res = await fetch('/api/search-user', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ query })
+    });
+    const data = await res.json();
+    
+    // Отримуємо контейнер, де буде результат (наприклад, під інпутом)
+    const resultsDiv = document.getElementById('fList'); 
+    
+    if (data.success) {
+        resultsDiv.innerHTML = `
+            <div class="friend-item" style="border: 1px solid #3b82f6;">
+                <img src="${data.user.playerAvatar}" width="40" style="border-radius:50%">
+                <div style="flex:1; margin-left:10px;">
+                    <div>${data.user.nickname}</div>
+                    <small>${data.user.id}</small>
+                </div>
+                <button onclick="sendFriendReq('${data.user.id}')" style="background:#3b82f6; border:none; color:white; padding:5px 10px; border-radius:4px; cursor:pointer;">Додати</button>
+            </div>
+            <hr style="margin: 10px 0; opacity: 0.2;">
+        ` + resultsDiv.innerHTML;
+    } else {
+        alert("Гравця не знайдено");
+    }
+}
+
+async function sendFriendReq(targetId) {
+    const res = await fetch('/api/friends/request', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ fromId: currentUser.id, toId: targetId })
+    });
+    const data = await res.json();
+    if (data.success) {
+        alert("Запит надіслано!");
+    } else {
+        alert(data.message);
+    }
+}
+// Функція для відкриття вікна вибору режиму
+let currentChatFriendId = null;
+
+
+
+// Моніторинг нових повідомлень
+socket.on('chat_history', (history) => {
+    const list = document.getElementById('msgList');
+    list.innerHTML = '';
+    history.forEach(msg => renderSingleMsg(msg));
+    list.scrollTop = list.scrollHeight;
+});
+
+
+
+function renderSingleMsg(msg) {
+    const list = document.getElementById('msgList');
+    const isMy = msg.senderId == myId;
+    list.innerHTML += `
+        <div class="msg-item ${isMy ? 'my-msg' : ''}">
+            <div class="msg-sender">${msg.senderName} • ${msg.time}</div>
+            <div class="msg-text">${msg.text}</div>
+        </div>
+    `;
+}
+
+
+
+function renderFriends(friendsArray) {
+    const list = document.getElementById('fList');
+    if (!list) return;
+
+    list.innerHTML = '';
+    if (!friendsArray || friendsArray.length === 0) {
+        list.innerHTML = '<div style="opacity:0.5; padding:10px;">Список друзів порожній</div>';
+        return;
+    }
+
+    friendsArray.forEach(f => {
+        const verified = f.isVerified ? `<span style="color:#3b82f6; margin-left:4px;">✔</span>` : '';
+        const statusClass = f.status ? 'status-online' : 'status-offline';
+
+        list.innerHTML += `
+            <div class="friend-item" oncontextmenu="openFriendMenu(event, '${f.id}', '${f.nickname}')">
+                <img src="${f.playerAvatar || '/avatars/default_avatar.jpg'}" alt="ava">
+                <div class="friend-info">
+                    <div class="friend-name">${f.nickname}${verified}</div>
+                    <div class="friend-status ${statusClass}">${f.status ? 'Online' : 'Offline'}</div>
+                </div>
+            </div>
+        `;
+    });
+}
+// Вибір режиму та запуск пошуку
+function selectMode(modeId, minXP) {
+    if (currentUser.XP < minXP) {
+        alert("Тобі потрібно " + minXP + " XP для цього режиму!");
+        return;
+    }
+
+    if (modeId === 3) {
+        // Отримуємо назву карти з селектора
+        const selectedMap = document.getElementById('map3')?.value || 'M3_Maze';
+
+        // 1. Малюємо інтерфейс пошуку прямо в модальному вікні
+        const modalContent = document.querySelector('#playMenuModal .modal-content');
+        if (modalContent) {
+            modalContent.innerHTML = `
+                <div style="text-align:center; padding: 50px;">
+                    <h2 style="color: #3b82f6; margin-bottom: 20px;">ПОШУК ГРАВЦІВ</h2>
+                    <div id="queueCount" style="font-size: 28px; margin-bottom: 20px;">Гравців у черзі: 1/3</div>
+                    <div class="loader" style="margin: 0 auto 30px auto; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite;"></div>
+                    <button class="btn-action" style="background: #ef4444; padding: 10px 30px;" onclick="location.reload()">СКАСУВАТИ</button>
+                </div>
+                <style>
+                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                </style>
+            `;
+        }
+
+        // 2. Підключаємо сокет (якщо ще не підключено)
+        if (typeof io === 'undefined') {
+            alert("Помилка: Socket.io не завантажено!");
+            return;
+        }
+        
+        const socket = io();
+
+        // 3. Відправляємо сигнал початку пошуку
+        socket.emit('start_search', { 
+            nickname: currentUser.nickname, 
+            userId: currentUser.id 
+        });
+
+        // 4. Слухаємо оновлення черги від сервера
+        socket.on('queue_update', (data) => {
+            const countElem = document.getElementById('queueCount');
+            if (countElem) countElem.innerText = `Гравців у черзі: ${data.count}/3`;
+        });
+
+        // 5. Коли матч знайдено
+        socket.on('match_found', (data) => {
+            console.log("Матч знайдено!", data);
+            
+            // Зберігаємо важливі ID для play2.html
+            sessionStorage.setItem('myPlayerId', data.userId);
+            sessionStorage.setItem('currentMatchId', data.matchId);
+            
+            // Переходимо на сторінку гри з вибраною картою
+            window.location.href = `/play2.html?map=${selectedMap}`;
+        });
+
+    } else {
+        alert("Цей режим поки що в розробці!");
+    }
+}
+// --- ОНОВЛЕННЯ СПИСКУ ДРУЗІВ (Фікс) ---
+async function updateFriendsUI() {
+    const res = await fetch(`/api/get-my-friends?userId=${currentUser.id}`);
+    const data = await res.json();
+    if (data.success) {
+        const container = document.getElementById('fList');
+        if (data.friends.length === 0) {
+            container.innerHTML = '<div style="text-align:center; opacity:0.5; margin-top:20px;">Список порожній</div>';
+            return;
+        }
+        container.innerHTML = data.friends.map(f => `
+            <div class="friend-item" oncontextmenu="openFriendMenu(event, '${f.id}', '${f.nickname}')">
+                <img src="${f.playerAvatar}">
+                <div class="friend-info">
+                    <div class="friend-name">${f.nickname} ${f.clan ? `<span style="color:#3b82f6">[${f.clan}]</span>` : ''}</div>
+                    <div class="friend-id">${f.id}</div>
+                </div>
+                <div class="status-dot ${f.status ? 'online' : 'offline'}"></div>
+            </div>
+        `).join('');
+    }
+}
+
+// Викликати при завантаженні
+window.onload = () => {
+    updateFriendsUI();
+    // Також оновлюємо дані профілю (голду і тд)
+    if(document.getElementById('uGold')) document.getElementById('uGold').innerText = currentUser.gold;
+};
+function checkClan() {
+    if (currentUser.clan) {
+        document.getElementById('clan-no-clan').style.display = 'none';
+        document.getElementById('clan-profile').style.display = 'block';
+        
+        // Якщо ти лідер — показуємо кнопку зміни ави
+        // (Для цього в clans.json треба зберігати leaderId)
+        // if (currentUser.id === clan.leaderId) document.getElementById('changeClanAvaBtn').style.display = 'block';
+    }
+}    
+
+function openPlayMenu() {
+    const modal = document.getElementById('playMenuModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function closePlayMenu() {
+    const modal = document.getElementById('playMenuModal');
+    if (modal) modal.style.display = 'none';
+}
+// Функція для відкриття чату з конкретним другом
+function startChatWithSelected() {
+    if (!selectedFriendId) return;
+    
+    // Знаходимо нікнейм по ID зі списку друзів (припустимо, вони завантажені в масив friendsData)
+    const friend = currentUser.friendsList.find(f => f.id === selectedFriendId);
+    
+    // Перемикаємо вкладку на "Повідомлення"
+    switchTab('social-messages');
+    
+    // Встановлюємо ID отримувача для форми відправки
+    document.getElementById('msgToId').value = selectedFriendId;
+    
+    // Фокусуємося на полі вводу
+    document.getElementById('msgInput').focus();
+    
+    closeFriendMenu();
+}
+
+let matchTimerInterval = null;
+let matchSeconds = 0;
+
+function startInfiniteSearch(modeId, mapName) {
+    document.getElementById('mainPlayBtn').style.display = 'none';
+    document.getElementById('matchStatus').style.display = 'block';
+    
+    matchSeconds = 0;
+    document.getElementById('matchTimer').innerText = "00:00";
+    
+    matchTimerInterval = setInterval(() => {
+        matchSeconds++;
+        let m = Math.floor(matchSeconds / 60).toString().padStart(2, '0');
+        let s = (matchSeconds % 60).toString().padStart(2, '0');
+        document.getElementById('matchTimer').innerText = `${m}:${s}`;
+        
+        // Тепер тут немає умови "if matchSeconds > ...", пошук йде вічно
+    }, 1000);
+    
+    console.log(`Пошук запущено: Режим ${modeId}, Карта ${mapName}`);
+}
+
+function toggleMatchmaking() {
+    clearInterval(matchTimerInterval);
+    document.getElementById('mainPlayBtn').style.display = 'block';
+    document.getElementById('matchStatus').style.display = 'none';
+}
+
+// Авто-оновлення даних кожні 5 секунд (замість кнопки "Оновити")
+setInterval(() => {
+    if (typeof syncProfile === "function") syncProfile();
+}, 5000);
+
+    async function upload(input) {
+        if (!input.files[0]) return;
+        const fd = new FormData();
+        fd.append('avatar', input.files[0]);
+        fd.append('nickname', currentUser.nickname);
+
+        const res = await fetch('/api/upload-avatar', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('uAva').src = data.newPath;
+            currentUser.playerAvatar = data.newPath;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        }
+    }
+
+    function logout() { localStorage.clear(); window.location.href = "/"; }
+    let selectedFriendId = null;
+    // Виклик вибору друга для повідомлення
+function openMessages() {
+    const selector = document.getElementById('chatFriendSelector');
+    selector.style.display = selector.style.display === 'block' ? 'none' : 'block';
+    loadFriendsForChat();
+}
+
+async function loadFriendsForChat() {
+    const res = await fetch(`/api/get-my-friends?userId=${currentUser.id}`);
+    const data = await res.json();
+    const container = document.getElementById('chatFriendSelector');
+    
+    if (data.success && data.friends.length > 0) {
+        container.innerHTML = '<h4>Написати другу:</h4>' + data.friends.map(f => `
+            <div class="select-friend-item" onclick="startChat('${f.id}', '${f.nickname}')">
+                <img src="${f.playerAvatar}" width="25" style="border-radius:50%; margin-right:10px;">
+                <span>${f.nickname}</span>
+            </div>
+        `).join('');
+    } else {
+        container.innerHTML = '<div style="padding:10px;">У вас немає друзів</div>';
+    }
+}
+
+function startChat(id, name) {
+    const text = prompt(`Повідомлення для ${name}:`);
+    if (!text) return;
+    
+    fetch('/api/send-message', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ fromId: currentUser.id, toId: id, text: text })
+    }).then(() => {
+        alert("Відправлено!");
+        document.getElementById('chatFriendSelector').style.display = 'none';
+    });
+}
+
+// Пошук з фіксом кнопки
+async function searchFriend() {
+    const query = document.getElementById('searchInp').value;
+    const res = await fetch('/api/search-user', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ query })
+    });
+    const data = await res.json();
+    const list = document.getElementById('fList');
+
+    if (data.success) {
+        list.innerHTML = `
+            <div class="friend-item" style="background: rgba(59,130,246,0.1); border: 1px solid #3b82f6;">
+                <img src="${data.user.playerAvatar}">
+                <div class="friend-info">
+                    <div class="friend-name">${data.user.nickname}</div>
+                    <div class="friend-id">${data.user.id}</div>
+                </div>
+                <button class="btn-action" onclick="sendFriendReq('${data.user.id}')">Додати</button>
+            </div>
+        ` + list.innerHTML;
+    } else {
+        alert("Гравця не знайдено");
+    }
+}
+
+
+
+// Функція перемикання вкладок
+
+
+// Функція рендеру друзів з серверними аватарками
+
+// Контекстне меню
+function openFriendMenu(event, id, name) {
+    event.preventDefault();
+    selectedFriendId = id;
+    const menu = document.getElementById('friendMenu');
+    document.getElementById('menuTargetName').innerText = name;
+    
+    menu.style.display = 'block';
+    menu.style.left = event.pageX + 'px';
+    menu.style.top = event.pageY + 'px';
+}
+
+function closeFriendMenu() {
+    document.getElementById('friendMenu').style.display = 'none';
+}
+
+// Закриваємо меню при кліку в будь-якому місці
+window.onclick = function(event) {
+    if (!event.target.closest('.friend-card') && !event.target.closest('.context-menu')) {
+        closeFriendMenu();
+    }
+}
+</script>
+</body>
+</html>

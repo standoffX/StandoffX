@@ -1,0 +1,97 @@
+[
+  {
+    "nickname": "SofterX",
+    "id": "Dev_01",
+    "gold": 604,
+    "clan": "67",
+    "password": "soniatop",
+    "playerAvatar": "/avatars/default.jpg",
+    "status": true,
+    "isVerified": true,
+    "XP": 25100,
+    "MMRCompetitive": 1000,
+    "MMRAllies": 1000,
+    "isBanned": false,
+    "isAdmin": false,
+    "incomingRequests": [],
+    "blocked": [],
+    "friendsList": [
+      "30112012",
+      "Dev_02",
+      "Dev_03"
+    ]
+  },
+  {
+    "nickname": "Zlata",
+    "password": "zlata",
+    "id": "30112012",
+    "playerAvatar": "/avatars/1772383866665.jfif",
+    "status": true,
+    "XP": 0,
+    "gold": 0,
+    "clan": null,
+    "MMRCompetitive": 1000,
+    "MMRAllies": 1000,
+    "isVerified": false,
+    "isBanned": false,
+    "isAdmin": false,
+    "friendsList": [
+      "Dev_01"
+    ],
+    "incomingRequests": [
+      "Dev_01"
+    ],
+    "blocked": [],
+    "messages": [
+      {
+        "from": "SofterX",
+        "fromId": "Dev_01",
+        "text": "j",
+        "time": "20:47:55"
+      }
+    ]
+  },
+  {
+    "nickname": "Mark",
+    "password": "Mark",
+    "id": "Dev_02",
+    "playerAvatar": "/avatars/1772474940655.jfif",
+    "status": true,
+    "XP": 33260,
+    "gold": 12,
+    "clan": null,
+    "MMRCompetitive": 1000,
+    "MMRAllies": 1000,
+    "isVerified": true,
+    "isBanned": false,
+    "isAdmin": false,
+    "friendsList": [
+      "Dev_01"
+    ],
+    "incomingRequests": [],
+    "blocked": [],
+    "friendRequests": [
+      "Dev_01"
+    ]
+  },
+  {
+    "nickname": "AlexFunChik",
+    "password": "Alex",
+    "id": "Dev_03",
+    "playerAvatar": "/avatars/1772475205345.jpg",
+    "status": true,
+    "XP": 100,
+    "gold": 4,
+    "clan": null,
+    "MMRCompetitive": 1000,
+    "MMRAllies": 1000,
+    "isVerified": true,
+    "isBanned": false,
+    "isAdmin": false,
+    "friendsList": [
+      "Dev_01"
+    ],
+    "incomingRequests": [],
+    "blocked": []
+  }
+]
