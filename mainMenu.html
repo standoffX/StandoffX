@@ -1405,10 +1405,10 @@ if (!data.clan) {
             <h2>ТИ НЕ В КЛАНІ</h2>
 
             <button class="clan-btn"
-                onclick="openCreateClan()">СТВОРИТИ КЛАН</button>
+                onclick="openCreateClan()">CREATE CLAN</button>
 
             <button class="clan-btn"
-                onclick="openSearchClan()">ЗНАЙТИ КЛАН</button>
+                onclick="openSearchClan()">FIND CLAN</button>
         </div>
     `;
     return;
@@ -1424,19 +1424,19 @@ container.innerHTML = `
         </div>
 
         <div class="clan-info">
-            <div>Рівень: ${data.clan.level}</div>
-            <div>Учасники: ${data.members.length}</div>
-            <div>Твоя роль: ${data.myRole}</div>
+            <div>LEVEL: ${data.clan.level}</div>
+            <div>MEMBERS: ${data.members.length}</div>
+            <div>YOU ROLE: ${data.myRole}</div>
         </div>
 
         <div class="clan-actions">
             ${data.myRole !== "member" ?
                 `<button class="clan-btn"
-                    onclick="openClanRequests()">ЗАЯВКИ</button>` : ''
+                    onclick="openClanRequests()">REQUEST</button>` : ''
             }
 
             <button class="clan-btn red"
-                onclick="leaveClan()">ПОКИНУТИ</button>
+                onclick="leaveClan()">LEAVE</button>
         </div>
     </div>
 `;
