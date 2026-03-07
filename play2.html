@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>StandoffX</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; }
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.8); cursor: pointer; z-index: 100; color: white; text-align: center;
+        }
+        #role-info {
+            font-size: 24px; color: #ffcc00; margin-bottom: 20px;
+            padding: 10px 20px; border: 2px solid #ffcc00; border-radius: 10px;
+            text-transform: uppercase;
+        }
+        #ui-layer { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10; text-align: center; pointer-events: none; }
+        #timer-display { color: white; font-size: 45px; font-weight: 900; text-shadow: 2px 2px 10px #000; }
+        #ui-hint { position: absolute; bottom: 20px; left: 20px; color: white; background: rgba(0,0,0,0.6); padding: 12px; border-radius: 5px; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+    <div id="overlay">
+        <div id="role-info">Синхронізація...</div>
+        <h1 style="margin: 0; font-size: 40px;">КЛІКНИ ДЛЯ ВХОДУ</h1>
+    </div>
+
+    <div id="ui-layer">
+      <div id="status-text" style="color: #3b82f6; font-weight: bold;">МАТЧ У ПРОЦЕСІ</div>
+      <div id="timer-display">00:00</div>
+    </div>
+
+    <div id="ui-hint">WASD - Рух | Space - Стрибок | Shift - Ривок | G - Камера</div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+
+        // --- ДАНІ ТА СОКЕТ ---
+        const socket = io(window.location.origin);
+        const myId = sessionStorage.getItem('myPlayerId');
+        const currentMatchId = sessionStorage.getItem('currentMatchId');
+
+        if (!myId || !currentMatchId) window.location.href = "mainMenu.html";
+        socket.emit('join_room', { userId: myId, matchId: currentMatchId });
+
+        // --- СЦЕНА ТА НЕБО ---
+        const scene = new THREE.Scene();
+        // Робимо гарне блакитне небо
+        scene.background = new THREE.Color(0x87ceeb); 
+        scene.fog = new THREE.Fog(0x87ceeb, 50, 200);
+
+        // Додаємо напівсферичне світло (імітація неба)
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+        scene.add(hemiLight);
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        document.body.appendChild(renderer.domElement);
+
+        // --- ГРАВЕЦЬ ---
+        let playerModel, mixer, actions = {}, activeActionName = 'Idle';
+        let myRole = 'runner';
+        let isThirdPerson = true;
+        const otherPlayers = {};
+        const loader = new GLTFLoader();
+
+        loader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
+            playerModel = gltf.scene;
+            playerModel.scale.set(0.2, 0.2, 0.2);
+            scene.add(playerModel);
+            mixer = new THREE.AnimationMixer(playerModel);
+            gltf.animations.forEach(clip => actions[clip.name] = mixer.clipAction(clip));
+            actions['Idle'].play();
+        });
+
+        // --- КАРТА ТА КОЛІЗІЇ ---
+        const mapObjects = [];
+        loader.load('m3.glb', (gltf) => {
+            const map = gltf.scene;
+            map.scale.set(50, 50, 50);
+            scene.add(map);
+            map.traverse(n => { if(n.isMesh) mapObjects.push(n); });
+        });
+
+        // Промені для колізії (в 4 сторони)
+        const raycaster = new THREE.Raycaster();
+        const collisionDistance = 0.8; 
+
+        // --- КЕРУВАННЯ ---
+        const controls = new PointerLockControls(camera, document.body);
+        document.getElementById('overlay').addEventListener('click', () => controls.lock());
+        controls.addEventListener('lock', () => document.getElementById('overlay').style.display = 'none');
+        controls.addEventListener('unlock', () => document.getElementById('overlay').style.display = 'flex');
+
+        let moveKeys = { w: false, s: false, a: false, d: false };
+        let velocity = new THREE.Vector3();
+        let currentSpeed = 10; 
+        let canJump = false;
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyW') moveKeys.w = true;
+            if (e.code === 'KeyS') moveKeys.s = true;
+            if (e.code === 'KeyA') moveKeys.a = true;
+            if (e.code === 'KeyD') moveKeys.d = true;
+            if (e.code === 'Space' && canJump) { velocity.y = 10; canJump = false; setAnim('Jump'); }
+            if (e.code === 'KeyG') { isThirdPerson = !isThirdPerson; if(playerModel) playerModel.visible = isThirdPerson; }
+            if (e.shiftKey && myRole === 'hunter') currentSpeed = 18;
+        });
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyW') moveKeys.w = false;
+            if (e.code === 'KeyS') moveKeys.s = false;
+            if (e.code === 'KeyA') moveKeys.a = false;
+            if (e.code === 'KeyD') moveKeys.d = false;
+            if (e.code === 'ShiftLeft') currentSpeed = 10;
+        });
+
+        function setAnim(name) {
+            if (activeActionName === name || !actions[name]) return;
+            actions[activeActionName].fadeOut(0.2);
+            actions[name].reset().fadeIn(0.2).play();
+            activeActionName = name;
+        }
+
+        // Функція перевірки чи можна йти в напрямку
+        function canMoveTo(dir) {
+            if (!playerModel) return true;
+            raycaster.set(new THREE.Vector3(playerModel.position.x, playerModel.position.y + 0.5, playerModel.position.z), dir);
+            const intersects = raycaster.intersectObjects(mapObjects);
+            return !(intersects.length > 0 && intersects[0].distance < collisionDistance);
+        }
+
+        // --- ЦИКЛ ГРИ ---
+        let prevTime = performance.now();
+        function animate() {
+    requestAnimationFrame(animate);
+    const time = performance.now();
+    const delta = (time - prevTime) / 1000;
+    prevTime = time;
+
+    if (mixer) mixer.update(delta);
+    Object.values(otherPlayers).forEach(p => p.mixer?.update(delta));
+
+    if (controls.isLocked && playerModel) {
+        // --- ГРАВІТАЦІЯ ТА СТРИБОК ---
+        velocity.y -= 40 * delta; // Трохи посилив гравітацію для "ваги"
+        playerModel.position.y += velocity.y * delta;
+
+        if (playerModel.position.y <= 0) {
+            playerModel.position.y = 0;
+            velocity.y = 0;
+            canJump = true;
+        }
+
+        // --- ЛОГІКА РУХУ ---
+        const camDir = new THREE.Vector3();
+        camera.getWorldDirection(camDir);
+        camDir.y = 0; 
+        camDir.normalize();
+        const sideDir = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), camDir).normalize();
+
+        let desiredMove = new THREE.Vector3(0, 0, 0);
+        if (moveKeys.w) desiredMove.add(camDir);
+        if (moveKeys.s) desiredMove.sub(camDir);
+        if (moveKeys.a) desiredMove.add(sideDir);
+        if (moveKeys.d) desiredMove.sub(sideDir);
+
+        if (desiredMove.length() > 0) {
+            desiredMove.normalize();
+            if (canMoveTo(desiredMove)) {
+                playerModel.position.addScaledVector(desiredMove, currentSpeed * delta);
+                // Плавний поворот за рухом
+                const targetRotation = Math.atan2(desiredMove.x, desiredMove.z);
+                playerModel.rotation.y = targetRotation;
+                
+                if (canJump) setAnim('Running');
+            }
+        } else {
+            if (canJump) setAnim('Idle');
+        }
+
+        // Стрибок
+        if (moveKeys.space && canJump) {
+            velocity.y = 12; // Сила стрибка
+            canJump = false;
+            setAnim('Jump'); // Переконайся, що така анімація є
+        }
+
+        // --- ЛОГІКА ЛОВЛІ (Тільки якщо я Hunter) ---
+        if (window.myRole === 'hunter') {
+            Object.values(otherPlayers).forEach(enemy => {
+                // Рахуємо дистанцію до іншого гравця
+                const dist = playerModel.position.distanceTo(enemy.mesh.position);
+                
+                // Якщо ближче ніж 2 метри і це не інший хантер (якщо командна гра)
+                if (dist < 2.2) {
+                    socket.emit('player_touch', { 
+                        matchId: currentMatchId, 
+                        victimId: enemy.id 
+                    });
+                }
+            });
+        }
+
+        // --- КАМЕРА ---
+        if (isThirdPerson) {
+            const cameraOffset = new THREE.Vector3(0, 2.5, 5).applyQuaternion(camera.quaternion);
+            camera.position.copy(playerModel.position).add(cameraOffset);
+        } else {
+            camera.position.copy(playerModel.position).y += 1.6;
+        }
+
+        // --- ВІДПРАВКА ДАНИХ ---
+        socket.emit("player_moved", {
+            matchId: currentMatchId, userId: myId,
+            x: playerModel.position.x, y: playerModel.position.y, z: playerModel.position.z,
+            rotY: playerModel.rotation.y, anim: activeActionName, role: window.myRole
+        });
+    }
+
+    renderer.render(scene, camera);
+}
+        animate();
+
+        // --- СОКЕТНІ ПОДІЇ ---
+        socket.on('init_player', (data) => {
+            myRole = data.role;
+            const info = document.getElementById('role-info');
+            info.innerText = myRole === 'hunter' ? "ТВОЯ РОЛЬ: МИСЛИВЕЦЬ" : "ТВОЯ РОЛЬ: ЖЕРТВА";
+            info.style.color = myRole === 'hunter' ? "#ff4444" : "#44ff44";
+            if(playerModel) playerModel.position.set(data.spawn.x, 0, data.spawn.z);
+        });
+
+        socket.on('enemy_moved', (data) => {
+            if (!otherPlayers[data.id]) {
+                const group = new THREE.Group();
+                scene.add(group);
+                otherPlayers[data.id] = { mesh: group, mixer: null, actions: {}, currentAnim: '' };
+                loader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
+                    const m = gltf.scene; m.scale.set(0.2, 0.2, 0.2); group.add(m);
+                    if (data.role === 'hunter') m.traverse(c => { if(c.isMesh) { c.material = c.material.clone(); c.material.color.set(0xff0000); } });
+                    const mix = new THREE.AnimationMixer(m);
+                    gltf.animations.forEach(cl => otherPlayers[data.id].actions[cl.name] = mix.clipAction(cl));
+                    otherPlayers[data.id].mixer = mix;
+                });
+            }
+            const p = otherPlayers[data.id];
+            p.mesh.position.set(data.x, data.y, data.z);
+            p.mesh.rotation.y = data.rotY;
+            if (p.actions[data.anim] && p.currentAnim !== data.anim) {
+                if (p.actions[p.currentAnim]) p.actions[p.currentAnim].fadeOut(0.2);
+                p.actions[data.anim].reset().fadeIn(0.2).play();
+                p.currentAnim = data.anim;
+            }
+        });
+
+        socket.on('timer_update', (data) => {
+            let m = Math.floor(data.time / 60), s = data.time % 60;
+            document.getElementById('timer-display').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+        });
+        
+        socket.on('go_to_menu', () => window.location.href = "mainMenu.html");
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+    </script>
+</body>
+</html>
