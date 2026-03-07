@@ -27,8 +27,8 @@ function loadClans() {
   return JSON.parse(data);
 }
 const options = {
-  key: fs.readFileSync('site.local-key.pem'),
-  cert: fs.readFileSync('site.local.pem')
+ // key: fs.readFileSync('site.local-key.pem'),
+//  cert: fs.readFileSync('site.local.pem')
 };
 let server = null;
 const app = express();
@@ -1195,4 +1195,5 @@ server.listen(PORT, () => {
     console.log("ПОСИЛАННЯ: " + host);
     console.log("ПОРТ: " + PORT);
     console.log("--------------------------");
+
 });
