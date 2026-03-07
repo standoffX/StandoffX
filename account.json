@@ -73,6 +73,35 @@
     "friendRequests": [
       "Dev_01"
     ]
+  },{
+    "nickname": "Vadik",
+    "password": "vadik",
+    "id": "ДанилКолбасенко",
+    "playerAvatar": "vadik.jfif",
+    "status": true,
+    "XP": 0,
+    "gold": 0,
+    "clan": null,
+    "MMRCompetitive": 1000,
+    "MMRAllies": 1000,
+    "isVerified": false,
+    "isBanned": false,
+    "isAdmin": false,
+    "friendsList": [
+      "Dev_01"
+    ],
+    "incomingRequests": [
+      "Dev_01"
+    ],
+    "blocked": [],
+    "messages": [
+      {
+        "from": "SofterX",
+        "fromId": "Dev_01",
+        "text": "j",
+        "time": "20:47:55"
+      }
+    ]
   },
   {
     "nickname": "AlexFunChik",
