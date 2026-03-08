@@ -438,6 +438,25 @@
         .friend-info { flex-grow: 1; }
         .friend-name { font-weight: bold; font-size: 16px; }
         .friend-status { font-size: 12px; opacity: 0.7; }
+        :root {
+    --neon-blue: #00f3ff;
+    --neon-glow: 0 0 10px rgba(0, 243, 255, 0.5), 0 0 20px rgba(0, 243, 255, 0.3);
+    --bg-panel: rgba(10, 15, 25, 0.85);
+    --border-main: 1px solid rgba(0, 243, 255, 0.2);
+}
+@import url('https://fonts.googleapis.com');
+* { 
+    margin: 0; padding: 0; box-sizing: border-box; 
+    font-family: 'Nunito', sans-serif; /* Використовуй один агресивний шрифт */
+}
+
+.panel-block, .chat-box, .social-list-container, .modal-content {
+    background: var(--bg-panel) !important;
+    border: var(--border-main) !important;
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+}
     </style>
 
 <div id="messages" class="screen"> <div class="messages-layout" style="display: flex; height: 80vh; gap: 10px;">
@@ -541,13 +560,58 @@ function setScreen(id, btn) {
         if (typeof syncProfile === "function") syncProfile();
     }
 
-    if (id === 'clan' && typeof loadClanMenu === "function") {
-        loadClanMenu();
+    if (id === 'clan') {
+        if (window.currentUser && window.currentUser.clan) {
+            // ТУТ ПОВНИЙ ВИГЛЯД КЛАНУ
+            target.innerHTML = `
+                <div class="clan-header">
+                    <h1>Клан: <span style="color: #3b82f6;">${window.currentUser.clan}</span></h1>
+                    <button class="btn-action" style="background: #ef4444;" onclick="leaveClan()">Leave</button>
+                </div>
+                <div class="clan-stats">
+                    <div class="stat-card">Учасників: 1/50</div>
+                    <div class="stat-card">Рейтинг: ${window.currentUser.MMR || 0}</div>
+                </div>
+                <div class="clan-members-list">
+                    <h3>Список учасників:</h3>
+                    <div class="member-item">${window.currentUser.nickname} (Лідер)</div>
+                </div>
+            `;
+        } else {
+            // ТУТ МЕНЮ СТВОРЕННЯ
+            target.innerHTML = `
+                <div style="text-align: center; margin-top: 50px;">
+                    
+                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                        <button class="btn-action" onclick="openCreateClan()">Create clan</button>
+                        <button class="btn-action" style="background: #10b981;" onclick="openSearchClan()">Find Clan</button>
+                    </div>
+                </div>
+            `;
+        }
     }
 }
 
 // --- ЛОГІКА ЧАТУ (ПОВІДОМЛЕННЯ) ---
+function renderDialogues() {
+    const chatList = document.getElementById('chat-friends-list'); // Перевір, чи є такий ID в HTML
+    if (!chatList || !window.currentUser || !window.currentUser.friendsData) return;
 
+    if (window.currentUser.friendsData.length === 0) {
+        chatList.innerHTML = '<p style="text-align:center; color: #666;">Список друзів порожній</p>';
+        return;
+    }
+
+    chatList.innerHTML = window.currentUser.friendsData.map(f => `
+        <div class="chat-item" onclick="startChat('${f.id}', '${f.nickname}')" style="display: flex; align-items: center; padding: 10px; cursor: pointer; border-bottom: 1px solid #2d3748;">
+            <img src="${f.playerAvatar}" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 15px; border: 2px solid ${f.isVerified ? '#3b82f6' : '#444'};">
+            <div>
+                <div style="font-weight: bold; color: white;">${f.nickname} ${f.isVerified ? '<span title="Verified">✅</span>' : ''}</div>
+                <div style="font-size: 12px; color: #4ade80;">Натисніть, щоб написати</div>
+            </div>
+        </div>
+    `).join('');
+}
 async function loadDialogs() {
     const container = document.getElementById('active-chats-container');
     if (!container) return; // Захист від TypeError
@@ -1030,24 +1094,6 @@ function getAvatarUrl(avatarPath) {
 }
 
 
-// ВИПРАВЛЕННЯ ТВОЄЇ ПОМИЛКИ (syncProfile)
-function syncProfile(data) {
-    // Перевіряємо чи елемент існує перед тим як писати в нього
-    const goldEl = document.getElementById('uGoldMarket');
-    if (goldEl) {
-        goldEl.innerText = data.gold.toFixed(2);
-    }
-
-    const grid = document.getElementById('marketGrid');
-    if (grid && data.items) {
-        if (data.items.length === 0) {
-            grid.innerHTML = '<div class="empty-msg">ПУСТО</div>';
-        } else {
-            // рендер скінів
-        }
-    }
-}
-
 // Завантаження при старті
 document.addEventListener('DOMContentLoaded', () => {
     const firstTab = document.querySelector('.main-tab');
@@ -1272,56 +1318,83 @@ loadClanMenu();
 // Знайти і замінити функцію syncProfile() у mainMenu.html
 async function syncProfile() {
     // 1. Перевірка наявності юзера (якщо немає в пам'яті — беремо з localStorage)
-    if (!currentUser || !currentUser.id) {
+    if (typeof currentUser === 'undefined' || !currentUser || !currentUser.id) {
         const stored = localStorage.getItem('currentUser');
         if (stored) {
             currentUser = JSON.parse(stored);
         } else {
+            console.warn("Користувача не знайдено в системі.");
             return; 
         }
     }
 
     try {
-        // 2. Запит до сервера за свіжими даними
+        // 2. Запит до сервера за свіжими даними (тепер сервер віддає ВСЕ)
         const res = await fetch('/api/user-data?id=' + currentUser.id);
-        
         if (!res.ok) throw new Error(`Server Error: ${res.status}`);
 
         const data = await res.json();
         
         if (data.success) {
-            // 3. Оновлюємо глобальний об'єкт (тепер у нас є і user, і масив friends)
+            // 3. Оновлюємо глобальний об'єкт (user + friends)
             currentUser = data.user;
-            
             // Зберігаємо свіжий профіль в браузері
             localStorage.setItem('currentUser', JSON.stringify(data.user));
 
-            // 4. ОНОВЛЕННЯ ІНТЕРФЕЙСУ
-            // Викликаємо твій renderProfile (той, що з галочкою ✔ та клан-тегом)
-            if (typeof renderProfile === 'function') {
-                renderProfile();
-            }
+            // --- 4. ОНОВЛЕННЯ ЕЛЕМЕНТІВ ІНТЕРФЕЙСУ (Безпечне) ---
+            const updateUI = (id, value, isProperty = 'innerText') => {
+                const el = document.getElementById(id);
+                if (el) el[isProperty] = value;
+            };
 
-            // 5. РЕНДЕР ДРУЗІВ
-            // Важливо: передаємо масив об'єктів friends, який сформував сервер
+            // Золото (і в меню, і на маркеті)
+            const goldValue = (currentUser.gold || 0).toFixed(2);
+            updateUI('user-gold', goldValue);
+            updateUI('uGoldMarket', goldValue); // З твоєї першої функції
+
+            // Досвід та Рівень
+            updateUI('user-xp', currentUser.XP || 0);
+            updateUI('user-level', Math.floor((currentUser.XP || 0) / 1000));
+            updateUI('profile-nickname', currentUser.nickname);
+
+            // Аватарка
+            const ava = document.getElementById('profile-avatar');
+            if (ava) ava.src = currentUser.playerAvatar || 'default-ava.png';
+
+            // --- 5. ВИКЛИК СПЕЦІАЛЬНИХ РЕНДЕРІВ ---
+
+            // Рендер профілю (галочки, клан-теги)
+            if (typeof renderProfile === 'function') renderProfile();
+
+            // Рендер друзів (передаємо масив об'єктів від сервера)
             if (typeof renderFriends === 'function') {
-                // Якщо сервер прислав детальний список друзів — шлемо його, 
-                // інакше шлемо просто список ID з профілю
-                renderFriends(data.friends || currentUser.friendsList || []);
-            }
-            
-            // 6. РЕНДЕР ПОВІДОМЛЕНЬ
-            if (typeof renderMessages === 'function') {
-                renderMessages(currentUser.messages || []);
+                renderFriends(data.friends || []);
             }
 
-            // 7. ОНОВЛЕННЯ РАНГУ (Змагальний)
+            // Рендер діалогів/повідомлень
+            if (typeof renderDialogues === 'function') renderDialogues();
+            if (typeof renderMessages === 'function') renderMessages(currentUser.messages || []);
+
+            // Оновлення рангу
             if (typeof updateRankDisplay === 'function') {
                 updateRankDisplay(currentUser.XP || 0);
             }
+
+            // Логіка клану (показувати або створення, або інфо)
+            if (typeof updateClanUI === 'function') updateClanUI();
+
+            // Рендер маркету (з твоєї першої функції)
+            const marketGrid = document.getElementById('marketGrid');
+            if (marketGrid) {
+                if (!currentUser.items || currentUser.items.length === 0) {
+                    marketGrid.innerHTML = '<div class="empty-msg">ПУСТО</div>';
+                } else {
+                    // Якщо у тебе є функція renderMarketSkins, викликай її тут
+                    if (typeof renderMarketSkins === 'function') renderMarketSkins(currentUser.items);
+                }
+            }
         }
     } catch (e) {
-        // Використовуємо warn, щоб не забивати консоль червоним під час звичайних оновлень
         console.warn("Синхронізація тимчасово недоступна:", e.message);
     }
 }
@@ -1816,4 +1889,3 @@ window.onclick = function(event) {
 </script>
 </body>
 </html>
-
