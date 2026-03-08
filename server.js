@@ -26,10 +26,7 @@ function loadClans() {
   const data = fs.readFileSync(CLANS_PATH);
   return JSON.parse(data);
 }
-const options = {
- // key: fs.readFileSync('site.local-key.pem'),
-//  cert: fs.readFileSync('site.local.pem')
-};
+
 let server = null;
 const app = express();
 // 1. АВТОМАТИЧНИЙ ПОРТ
@@ -37,6 +34,10 @@ let PORT = process.env.PORT;
 if (!PORT) {
     if (SServer === 2) {
         PORT = 443;
+        const options = {
+            key: fs.readFileSync('site.local-key.pem'),
+            cert: fs.readFileSync('site.local.pem')
+          };
     } else {
         PORT = 3000;
     }
@@ -168,34 +169,33 @@ app.get('/api/user-data', (req, res) => {
   const user = users.find(u => u.id === userId);
 
   if (user) {
-      // ЗБИРАЄМО ДАНІ ПРО ДРУЗІВ
-      // Проходимо по списку ID друзів користувача і дістаємо їх об'єкти з бази
-      const friendsData = (user.friendsList || []).map(fId => {
-          const f = users.find(u => u.id === fId);
-          if (f) {
-              return {
-                  id: f.id,
-                  nickname: f.nickname || "Гравець",
-                  playerAvatar: f.playerAvatar || "/avatars/default_avatar.jpg",
-                  status: f.status || false // онлайн/офлайн
-              };
-          }
-          return null;
-      }).filter(f => f !== null); // Видаляємо порожні, якщо друг був видалений з бази
+    // ЗБИРАЄМО ДАНІ ПРО ДРУЗІВ
+    // Шукаємо в роуті app.get('/api/user-data', ...)
+const allUsers = getUsers(); 
 
-      res.json({
-          success: true,
-          user: {
-              id: user.id,
-              nickname: user.nickname || "Гравець",
-              gold: user.gold || 0,
-              XP: user.XP || 0,
-              playerAvatar: user.playerAvatar || "/avatars/default_avatar.jpg",
-              clan: user.clan || null
-          },
-          friends: friendsData // ТЕПЕР ДРУЗІ ПЕРЕДАЮТЬСЯ ТУТ
-      });
-  } else {
+const friendsData = (user.friendsList || []).map(fId => {
+    const friend = allUsers.find(u => u.id === fId);
+    if (friend) {
+        return { 
+            id: friend.id, 
+            nickname: friend.nickname, 
+            playerAvatar: friend.playerAvatar,
+            isVerified: friend.isVerified || false, // Твоя галочка
+            status: friend.status || 'offline'      // Статус (онлайн/офлайн)
+        };
+    }
+    return null;
+}).filter(f => f !== null);
+    // --- НОВИЙ БЛОК ВІДПОВІДІ ---
+    const { password, ...fullUserData } = user; // Відсікаємо пароль, беремо ВСЕ інше
+
+    res.json({
+        success: true,
+        user: fullUserData, // Тепер тут є MMR, інвентар, заявки і все-все-все
+        friends: friendsData 
+    });
+    // ----------------------------
+} else {
       res.status(404).json({ success: false, message: "Користувача не знайдено" });
   }
 });
@@ -755,7 +755,8 @@ io.on('connection', (socket) => {
           const players = matchmakingQueue.splice(0, 3);
           const matchId = 'match_' + Date.now();
           const hunterIndex = Math.floor(Math.random() * players.length);
-          const spawns = [{x: 5, y: 1, z: 5}, {x: 25, y: 1, z: 25}, {x: 15, y: 1, z: 5}];
+         
+            const spawns = [{x: 5, y: 0, z: 5}, {x: 25, y: 0, z: 25}, {x: 15, y: 0, z: 5}];
 
           players.forEach((p, i) => {
               p.role = (i === hunterIndex) ? 'hunter' : 'runner';
@@ -1195,5 +1196,4 @@ server.listen(PORT, () => {
     console.log("ПОСИЛАННЯ: " + host);
     console.log("ПОРТ: " + PORT);
     console.log("--------------------------");
-
 });
