@@ -1588,8 +1588,8 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
   if (!/^[\p{L}\p{N}_-]{3,24}$/u.test(nextNick)) {
     return res.status(400).json({ success: false, message: "Некоректний nickname." });
   }
-  if (!nextIdRaw || nextIdRaw.length > 80) {
-    return res.status(400).json({ success: false, message: "Некоректний ID." });
+  if (!nextIdRaw || !/^\d{6,10}$/.test(nextIdRaw)) {
+    return res.status(400).json({ success: false, message: "Player ID має містити 6–10 цифр." });
   }
   if (nextIdRaw !== u.id && users.some(x => x.id === nextIdRaw)) {
     return res.status(409).json({ success: false, message: "Такий ID вже зайнятий." });
@@ -1663,6 +1663,9 @@ app.post("/api/admin/users/create", requireAdmin, (req, res) => {
   }
   if (password.length < 6 || password.length > 128) {
     return res.status(400).json({ success: false, message: "Пароль: 6–128 символів." });
+  }
+  if (id && !/^\d{6,10}$/.test(id)) {
+    return res.status(400).json({ success: false, message: "Player ID має містити 6–10 цифр." });
   }
   if (id && users.some(u => u.id === id)) return res.status(409).json({ success: false, message: "Такий ID вже зайнятий." });
   if (users.some(u => String(u.nickname).toLowerCase() === nickname.toLowerCase())) {
