@@ -182,26 +182,17 @@ function normalizeId(value) {
   return cleanText(value, 80);
 }
 
-function findUser(idOrNickname) {
+function findUser(idOrNickname, options = {}) {
   const q = normalizeId(idOrNickname);
   const qLower = q.toLowerCase();
-  const fixed = /^\d+$/.test(q) ? "ID_" + q : q;
-  return users.find(u =>
-    String(u.id).toLowerCase() === fixed.toLowerCase() ||
-    String(u.nickname).toLowerCase() === qLower
-  );
-}
+  const candidates = new Set([qLower]);
+  if (/^\d+$/.test(q)) candidates.add(("ID_" + q).toLowerCase());
 
-function isAdmin(user) {
-  return Boolean(user && (user.id === ADMIN_ID || user.isAdmin === true));
-}
-
-function requireAdmin(req, res, next) {
-  const user = requestUser(req);
-  if (!user) return res.status(401).json({ success: false, message: "Авторизація потрібна." });
-  if (!isAdmin(user)) return res.status(403).json({ success: false, message: "Потрібні права адміністратора." });
-  req.user = user;
-  next();
+  return users.find(u => {
+    const uid = String(u.id || "").toLowerCase();
+    if (candidates.has(uid)) return true;
+    return options.allowNickname !== false && String(u.nickname || "").toLowerCase() === qLower;
+  });
 }
 
 function publicUser(user) {
@@ -250,6 +241,10 @@ for (const clan of Object.values(clans)) {
   clan.ownerId = normalizeId(clan.ownerId || clan.owner || "");
   clan.level = Number(clan.level) || 1;
   clan.xp = Number(clan.xp) || 0;
+  clan.description = cleanText(clan.description || "", 120);
+  clan.memberLimit = Math.max(5, Math.min(50, Number(clan.memberLimit) || 30));
+  clan.officers = Array.isArray(clan.officers) ? [...new Set(clan.officers.map(normalizeId))] : [];
+  clan.requests = Array.isArray(clan.requests) ? [...new Set(clan.requests.map(normalizeId))] : [];
 }
 saveClans();
 
@@ -293,6 +288,7 @@ function requireAuth(req, res, next) {
   if (!user) return res.status(401).json({ success: false, message: "Авторизуйся." });
   if (user.isBanned && user.id !== ADMIN_ID) return res.status(403).json({ success: false, message: "Акаунт заблоковано." });
   req.user = user;
+  next();
 }
 
 function isAdmin(user) {
@@ -347,7 +343,7 @@ app.get("/", (_req, res) => res.sendFile(path.join(ROOT, "auth.html")));
 app.get("/game", (_req, res) => res.sendFile(path.join(ROOT, "mainMenu.html")));
 
 app.get("/api/health", (_req, res) => {
-  res.json({ success: true, game: "StandoffX", version: "0.2.0" });
+  res.json({ success: true, game: "StandoffX", version: "0.3.0" });
 });
 
 app.post("/api/register", (req, res) => {
@@ -357,15 +353,16 @@ app.post("/api/register", (req, res) => {
   if (!/^[\p{L}\p{N}_-]{3,24}$/u.test(nickname)) {
     return res.status(400).json({ success: false, message: "Нік: 3–24 символи, літери/цифри/_/-." });
   }
-  if (password.length < 4 || password.length > 128) {
-    return res.status(400).json({ success: false, message: "Пароль має містити 4–128 символів." });
+  if (password.length < 6 || password.length > 128) {
+    return res.status(400).json({ success: false, message: "Пароль має містити 6–128 символів." });
   }
-  if (users.some(u => String(u.nickname).toLowerCase() === nickname.toLowerCase())) {
+  if (users.some(u => String(u.nickname || "").toLowerCase() === nickname.toLowerCase())) {
     return res.status(409).json({ success: false, message: "Такий нік вже зайнятий." });
   }
 
   let id;
-  do id = "ID_" + crypto.randomInt(100000, 1000000); while (users.some(u => u.id === id));
+  do id = "ID_" + crypto.randomInt(100000, 1000000);
+  while (users.some(u => String(u.id) === id));
 
   const user = {
     nickname,
@@ -389,26 +386,39 @@ app.post("/api/register", (req, res) => {
 
   users.push(user);
   inventory[user.id] = inventory[user.id] || [];
+  ensureUserShape(user);
   saveUsers();
   saveInventory();
 
   const token = createSession(user.id);
   setSessionCookie(res, token);
-  res.json({ success: true, redirect: "/game", user: publicUser(user) });
+  res.json({
+    success: true,
+    redirect: "/game",
+    user: publicUser(user),
+    createdId: user.id,
+    message: "Акаунт створено."
+  });
 });
 
 app.post("/api/login", (req, res) => {
-  let nickname = cleanText(req.body.nickname, 80);
+  const id = normalizeId(req.body.id || req.body.userId || "");
   const password = String(req.body.password || "");
-  if (/^\d+$/.test(nickname)) nickname = "ID_" + nickname;
 
-  let user = findUser(nickname);
+  if (!id) {
+    return res.status(400).json({ success: false, message: "Введи свій ID." });
+  }
+  if (!password) {
+    return res.status(400).json({ success: false, message: "Введи пароль." });
+  }
 
-  // Master account: ID завжди Dev_01, пароль задається тільки через Render Secret.
-  if (nickname === ADMIN_ID && ADMIN_PASSWORD && password === ADMIN_PASSWORD) {
+  let user = findUser(id, { allowNickname: false });
+
+  // Master account: exact ID Dev_01 + password.
+  if (id === ADMIN_ID && ADMIN_PASSWORD && password === ADMIN_PASSWORD) {
     user = user || { id: ADMIN_ID, nickname: "SofterX" };
     user.id = ADMIN_ID;
-    user.nickname = "SofterX";
+    user.nickname = user.nickname || "SofterX";
     user.isAdmin = true;
     user.isBanned = false;
     user.passwordHash = hashPassword(ADMIN_PASSWORD);
@@ -418,17 +428,19 @@ app.post("/api/login", (req, res) => {
   }
 
   if (!user || !verifyPassword(password, user.passwordHash || user.password)) {
-    return res.status(401).json({ success: false, message: "Невірний нік/ID або пароль." });
+    return res.status(401).json({ success: false, message: "Невірний ID або пароль." });
   }
-  if (user.isBanned && user.id !== ADMIN_ID) return res.status(403).json({ success: false, message: "Акаунт заблоковано." });
+  if (user.isBanned && user.id !== ADMIN_ID) {
+    return res.status(403).json({ success: false, message: "Акаунт заблоковано." });
+  }
 
   if (!user.passwordHash) {
     user.passwordHash = hashPassword(password);
     delete user.password;
-    saveUsers();
   }
 
   user.status = true;
+  ensureUserShape(user);
   saveUsers();
 
   const token = createSession(user.id);
@@ -565,7 +577,8 @@ app.post("/api/friends/block", requireAuth, (req, res) => {
 app.get("/api/clans", requireAuth, (_req, res) => {
   const list = Object.values(clans).map(c => ({
     ...c,
-    members: users.filter(u => u.clan === c.tag).map(u => u.id)
+    members: users.filter(u => u.clan === c.tag).map(u => u.id).filter(Boolean),
+    memberCount: users.filter(u => u.clan === c.tag).length
   }));
   res.json({ success: true, clans: list });
 });
@@ -573,10 +586,13 @@ app.get("/api/clans", requireAuth, (_req, res) => {
 app.post("/api/clans/search", requireAuth, (req, res) => {
   const q = cleanText(req.body.query, 40).toLowerCase();
   const result = Object.values(clans).filter(c =>
-    c.name.toLowerCase().includes(q) || c.tag.toLowerCase().includes(q)
+    c.name.toLowerCase().includes(q) ||
+    c.tag.toLowerCase().includes(q) ||
+    String(c.description || "").toLowerCase().includes(q)
   ).map(c => ({
     ...c,
-    members: users.filter(u => u.clan === c.tag).length
+    memberCount: users.filter(u => u.clan === c.tag).length,
+    isFull: users.filter(u => u.clan === c.tag).length >= c.memberLimit
   }));
   res.json({ success: true, clans: result });
 });
@@ -587,23 +603,35 @@ app.post("/api/clans/create", requireAuth, (req, res) => {
 
   const tag = cleanText(req.body.tag, 5).toUpperCase();
   const name = cleanText(req.body.name || tag, 24);
+  const description = cleanText(req.body.description || "", 120);
+
   if (!/^[A-Z0-9]{2,5}$/.test(tag)) {
     return res.status(400).json({ success: false, message: "Тег: 2–5 латинських символів/цифр." });
+  }
+  if (!/^[\p{L}\p{N} _-]{3,24}$/u.test(name)) {
+    return res.status(400).json({ success: false, message: "Назва клану: 3–24 символи." });
   }
   if (clans[tag]) return res.status(409).json({ success: false, message: "Такий тег вже зайнятий." });
 
   clans[tag] = {
+    id: tag,
     name,
     tag,
+    description,
     ownerId: req.user.id,
+    officers: [],
+    requests: [],
     level: 1,
     xp: 0,
+    memberLimit: 30,
     createdAt: Date.now()
   };
+
   req.user.gold -= 500;
   req.user.clan = tag;
   saveClans();
   saveUsers();
+
   res.json({ success: true, clan: clans[tag], gold: req.user.gold });
 });
 
@@ -611,17 +639,25 @@ app.post("/api/clans/my", requireAuth, (req, res) => {
   const clan = req.user.clan ? clans[req.user.clan] : null;
   if (!clan) return res.json({ success: true, clan: null, members: [] });
 
-  const members = users.filter(u => u.clan === clan.tag).map(u => ({
-    userId: u.id,
-    nickname: u.nickname,
-    playerAvatar: u.playerAvatar,
-    role: u.id === clan.ownerId ? "owner" : "member"
-  }));
+  const members = users
+    .filter(u => u.clan === clan.tag)
+    .map(u => ({
+      userId: u.id,
+      nickname: u.nickname,
+      playerAvatar: u.playerAvatar,
+      role: u.id === clan.ownerId ? "owner" : (clan.officers || []).includes(u.id) ? "officer" : "member",
+      online: Boolean(u.status)
+    }));
+
   res.json({
     success: true,
-    clan,
+    clan: {
+      ...clan,
+      memberCount: members.length,
+      isFull: members.length >= clan.memberLimit
+    },
     members,
-    myRole: req.user.id === clan.ownerId ? "owner" : "member"
+    myRole: req.user.id === clan.ownerId ? "owner" : (clan.officers || []).includes(req.user.id) ? "officer" : "member"
   });
 });
 
@@ -631,31 +667,46 @@ app.post("/api/clans/request", requireAuth, (req, res) => {
   if (!clan) return res.status(404).json({ success: false, message: "Клан не знайдено." });
   if (req.user.clan) return res.status(400).json({ success: false, message: "Спочатку вийди з поточного клану." });
 
+  const count = users.filter(u => u.clan === clan.tag).length;
+  if (count >= clan.memberLimit) return res.status(400).json({ success: false, message: "Клан заповнений." });
+
   clan.requests = Array.isArray(clan.requests) ? clan.requests : [];
   if (!clan.requests.includes(req.user.id)) clan.requests.push(req.user.id);
   saveClans();
-  res.json({ success: true });
+  res.json({ success: true, message: "Заявку відправлено." });
 });
 
 app.post("/api/clans/requests", requireAuth, (req, res) => {
   if (!req.user.clan) return res.json({ success: true, requests: [] });
   const clan = clans[req.user.clan];
-  if (!clan || clan.ownerId !== req.user.id) return res.status(403).json({ success: false });
+  if (!clan || (clan.ownerId !== req.user.id && !(clan.officers || []).includes(req.user.id))) {
+    return res.status(403).json({ success: false });
+  }
+
   const requests = (clan.requests || [])
     .map(id => users.find(u => u.id === id))
     .filter(Boolean)
     .map(publicUser);
+
   res.json({ success: true, requests });
 });
 
 app.post("/api/clans/accept", requireAuth, (req, res) => {
   const clan = req.user.clan ? clans[req.user.clan] : null;
-  if (!clan || clan.ownerId !== req.user.id) return res.status(403).json({ success: false });
+  if (!clan || (clan.ownerId !== req.user.id && !(clan.officers || []).includes(req.user.id))) {
+    return res.status(403).json({ success: false });
+  }
+
   const targetId = normalizeId(req.body.userId);
   const target = users.find(u => u.id === targetId);
   if (!target || !(clan.requests || []).includes(targetId)) {
     return res.status(404).json({ success: false, message: "Заявку не знайдено." });
   }
+  if (target.clan) return res.status(400).json({ success: false, message: "Гравець вже в клані." });
+  if (users.filter(u => u.clan === clan.tag).length >= clan.memberLimit) {
+    return res.status(400).json({ success: false, message: "Клан вже заповнений." });
+  }
+
   target.clan = clan.tag;
   clan.requests = clan.requests.filter(id => id !== targetId);
   saveUsers();
@@ -665,9 +716,68 @@ app.post("/api/clans/accept", requireAuth, (req, res) => {
 
 app.post("/api/clans/decline", requireAuth, (req, res) => {
   const clan = req.user.clan ? clans[req.user.clan] : null;
-  if (!clan || clan.ownerId !== req.user.id) return res.status(403).json({ success: false });
+  if (!clan || (clan.ownerId !== req.user.id && !(clan.officers || []).includes(req.user.id))) {
+    return res.status(403).json({ success: false });
+  }
   const targetId = normalizeId(req.body.userId);
   clan.requests = (clan.requests || []).filter(id => id !== targetId);
+  saveClans();
+  res.json({ success: true });
+});
+
+app.post("/api/clans/kick", requireAuth, (req, res) => {
+  const clan = req.user.clan ? clans[req.user.clan] : null;
+  if (!clan || (clan.ownerId !== req.user.id && !(clan.officers || []).includes(req.user.id))) {
+    return res.status(403).json({ success: false, message: "Немає прав." });
+  }
+  const targetId = normalizeId(req.body.userId);
+  if (targetId === clan.ownerId || targetId === req.user.id) {
+    return res.status(400).json({ success: false, message: "Не можна виключити власника/себе." });
+  }
+  const target = users.find(u => u.id === targetId && u.clan === clan.tag);
+  if (!target) return res.status(404).json({ success: false, message: "Гравця не знайдено." });
+
+  if ((clan.officers || []).includes(target.id) && clan.ownerId !== req.user.id) {
+    return res.status(403).json({ success: false, message: "Тільки власник може виключати офіцерів." });
+  }
+  target.clan = null;
+  clan.officers = (clan.officers || []).filter(id => id !== target.id);
+  saveUsers();
+  saveClans();
+  res.json({ success: true });
+});
+
+app.post("/api/clans/promote", requireAuth, (req, res) => {
+  const clan = req.user.clan ? clans[req.user.clan] : null;
+  if (!clan || clan.ownerId !== req.user.id) return res.status(403).json({ success: false });
+  const targetId = normalizeId(req.body.userId);
+  const target = users.find(u => u.id === targetId && u.clan === clan.tag);
+  if (!target || target.id === clan.ownerId) return res.status(404).json({ success: false, message: "Гравця не знайдено." });
+
+  clan.officers = Array.isArray(clan.officers) ? clan.officers : [];
+  if (!clan.officers.includes(target.id)) clan.officers.push(target.id);
+  saveClans();
+  res.json({ success: true });
+});
+
+app.post("/api/clans/demote", requireAuth, (req, res) => {
+  const clan = req.user.clan ? clans[req.user.clan] : null;
+  if (!clan || clan.ownerId !== req.user.id) return res.status(403).json({ success: false });
+  const targetId = normalizeId(req.body.userId);
+  clan.officers = (clan.officers || []).filter(id => id !== targetId);
+  saveClans();
+  res.json({ success: true });
+});
+
+app.post("/api/clans/disband", requireAuth, (req, res) => {
+  const clan = req.user.clan ? clans[req.user.clan] : null;
+  if (!clan || clan.ownerId !== req.user.id) return res.status(403).json({ success: false });
+
+  for (const u of users) {
+    if (u.clan === clan.tag) u.clan = null;
+  }
+  delete clans[clan.tag];
+  saveUsers();
   saveClans();
   res.json({ success: true });
 });
@@ -675,15 +785,30 @@ app.post("/api/clans/decline", requireAuth, (req, res) => {
 app.post("/api/clans/leave", requireAuth, (req, res) => {
   if (!req.user.clan) return res.json({ success: true });
   const clan = clans[req.user.clan];
-  if (clan && clan.ownerId === req.user.id) {
-    const members = users.filter(u => u.clan === clan.tag && u.id !== req.user.id);
-    if (members.length) {
-      clan.ownerId = members[0].id;
+  if (!clan) {
+    req.user.clan = null;
+    saveUsers();
+    return res.json({ success: true });
+  }
+
+  if (clan.ownerId === req.user.id) {
+    const candidates = users
+      .filter(u => u.clan === clan.tag && u.id !== req.user.id)
+      .sort((a, b) => ((clan.officers || []).includes(a.id) ? 0 : 1) - ((clan.officers || []).includes(b.id) ? 0 : 1));
+
+    if (candidates.length) {
+      clan.ownerId = candidates[0].id;
+      clan.officers = (clan.officers || []).filter(id => id !== candidates[0].id);
+      req.user.clan = null;
     } else {
       delete clans[clan.tag];
+      req.user.clan = null;
     }
+  } else {
+    req.user.clan = null;
+    clan.officers = (clan.officers || []).filter(id => id !== req.user.id);
   }
-  req.user.clan = null;
+
   saveUsers();
   saveClans();
   res.json({ success: true });
@@ -794,15 +919,37 @@ app.post("/api/upload-avatar", requireAuth, upload.single("avatar"), (req, res) 
 // ---------- MATCHMAKING / GAME ----------
 
 const matchmakingQueue = [];
-const activeMatches = new Map();
+const activeMatches = new Map(); // in-memory only; never written to MongoDB
 const MATCH_SIZE = 3;
 const GAME_SECONDS = 300;
-const WARMUP_SECONDS = 5;
+const WARMUP_SECONDS = 10;
+const COUNTDOWN_SECONDS = 15;
+const JOIN_TIMEOUT_SECONDS = 35;
+
+const MODE_CONFIGS = {
+  hide_seek: {
+    id: "hide_seek",
+    name: "HIDE & SEEK",
+    short: "HS",
+    map: "M3_Maze"
+  },
+  team_fight: {
+    id: "team_fight",
+    name: "TEAM FIGHT",
+    short: "TF",
+    map: "M3_Maze"
+  }
+};
+
 const SPAWNS = [
   { x: 5, y: 0, z: 5 },
   { x: 25, y: 0, z: 25 },
   { x: 15, y: 0, z: 5 }
 ];
+
+function getModeConfig(mode) {
+  return MODE_CONFIGS[mode] || MODE_CONFIGS.hide_seek;
+}
 
 function removeFromQueue(userId) {
   const idx = matchmakingQueue.findIndex(p => p.userId === userId);
@@ -821,34 +968,59 @@ function playerMatch(userId) {
 }
 
 function emitQueueCount(io) {
-  io.emit("queue_update", { count: matchmakingQueue.length });
+  for (const entry of matchmakingQueue) {
+    const modePlayers = matchmakingQueue.filter(p => p.mode === entry.mode);
+    io.to(entry.socketId).emit("queue_update", {
+      count: modePlayers.findIndex(p => p.userId === entry.userId) + 1,
+      required: MATCH_SIZE,
+      mode: entry.mode
+    });
+  }
 }
 
-function createMatch(io) {
-  if (matchmakingQueue.length < MATCH_SIZE) return;
-  const players = matchmakingQueue.splice(0, MATCH_SIZE);
+function createMatch(io, mode) {
+  const candidates = matchmakingQueue.filter(p => p.mode === mode);
+  if (candidates.length < MATCH_SIZE) return;
+
+  const selectedIds = new Set(candidates.slice(0, MATCH_SIZE).map(p => p.userId));
+  const players = matchmakingQueue.filter(p => selectedIds.has(p.userId));
+  for (const p of players) removeFromQueue(p.userId);
+
+  const cfg = getModeConfig(mode);
   const matchId = "match_" + Date.now() + "_" + crypto.randomBytes(2).toString("hex");
-  const hunterIndex = crypto.randomInt(0, players.length);
+  const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
 
   const match = {
     id: matchId,
-    map: players[0].map || "M3_Maze",
+    mode: cfg.id,
+    modeName: cfg.name,
+    map: cfg.map,
     players: players.map((p, i) => ({
       socketId: p.socketId,
       userId: p.userId,
       nickname: p.nickname,
-      role: i === hunterIndex ? "hunter" : "runner",
+      role: mode === "hide_seek" ? (i === hunterIndex ? "hunter" : "runner") : (i % 2 === 0 ? "teamA" : "teamB"),
+      team: mode === "team_fight" ? (i % 2 === 0 ? "A" : "B") : null,
+      hp: 100,
       score: 0,
+      kills: 0,
+      deaths: 0,
       spawn: { ...SPAWNS[i] },
       pos: { ...SPAWNS[i] },
       rotY: 0,
       anim: "Idle",
-      lastMoveAt: 0
+      lastMoveAt: 0,
+      prevMoveTime: 0,
+      ready: false,
+      joinedAt: null
     })),
+    phase: "waiting",
+    phaseRemaining: null,
     started: false,
     finished: false,
     timer: null,
     phaseTimer: null,
+    joinTimer: null,
     remaining: GAME_SECONDS
   };
 
@@ -859,9 +1031,41 @@ function createMatch(io) {
     io.to(p.socketId).emit("match_found", {
       matchId,
       userId: p.userId,
+      mode: cfg.id,
+      modeName: cfg.name,
       map: match.map
     });
   }
+
+  match.joinTimer = setTimeout(() => {
+    const current = activeMatches.get(matchId);
+    if (!current || current.started || current.finished) return;
+    const connected = current.players.filter(p => p.socketId).length;
+    if (connected < MATCH_SIZE) {
+      for (const p of current.players) {
+        if (p.socketId) io.to(p.socketId).emit("search_error", { message: "Не всі гравці підключилися до матчу." });
+      }
+      cleanMatch(io, matchId, true);
+    }
+  }, JOIN_TIMEOUT_SECONDS * 1000);
+}
+
+function emitMatchWaiting(io, match) {
+  const connected = match.players.filter(p => Boolean(p.socketId)).length;
+  const ready = match.players.filter(p => p.ready).length;
+  io.to(match.id).emit("match_waiting", {
+    connected,
+    ready,
+    required: match.players.length,
+    mode: match.mode,
+    modeName: match.modeName,
+    players: match.players.map(p => ({
+      userId: p.userId,
+      nickname: p.nickname,
+      connected: Boolean(p.socketId),
+      ready: Boolean(p.ready)
+    }))
+  });
 }
 
 function cleanMatch(io, matchId, returnToMenu = true) {
@@ -869,60 +1073,158 @@ function cleanMatch(io, matchId, returnToMenu = true) {
   if (!match) return;
   if (match.timer) clearInterval(match.timer);
   if (match.phaseTimer) clearInterval(match.phaseTimer);
-  if (returnToMenu) io.to(matchId).emit("go_to_menu");
+  if (match.joinTimer) clearTimeout(match.joinTimer);
+  if (returnToMenu) io.to(match.id).emit("go_to_menu");
+  for (const p of match.players) p.socketId = null;
   activeMatches.delete(matchId);
 }
 
 function startMatchWhenReady(io, match) {
-  if (match.started || match.players.some(p => !p.socketId)) return;
+  if (match.started || match.phase !== "waiting") return;
+  const allConnected = match.players.every(p => Boolean(p.socketId));
+  const allReady = match.players.every(p => p.ready);
+  if (!allConnected || !allReady) {
+    emitMatchWaiting(io, match);
+    return;
+  }
+
   match.started = true;
+  match.phase = "warmup";
+  if (match.joinTimer) clearTimeout(match.joinTimer);
 
   let warmup = WARMUP_SECONDS;
-  io.to(match.id).emit("match_phase", { phase: "warmup", time: warmup });
+  match.phaseRemaining = warmup;
+  io.to(match.id).emit("match_phase", {
+    phase: "warmup",
+    time: warmup,
+    mode: match.mode,
+    modeName: match.modeName
+  });
+
   match.phaseTimer = setInterval(() => {
     warmup -= 1;
+    match.phaseRemaining = warmup;
     io.to(match.id).emit("timer_update", { time: warmup, phase: "warmup" });
+
     if (warmup <= 0) {
       clearInterval(match.phaseTimer);
-      io.to(match.id).emit("match_start_now");
-      match.remaining = GAME_SECONDS;
-      match.timer = setInterval(() => {
-        match.remaining -= 1;
-        io.to(match.id).emit("timer_update", { time: match.remaining, phase: "game" });
-        if (match.remaining <= 0) finishMatch(io, match.id);
+      match.phase = "countdown";
+      let countdown = COUNTDOWN_SECONDS;
+      match.phaseRemaining = countdown;
+      io.to(match.id).emit("match_phase", {
+        phase: "countdown",
+        time: countdown,
+        mode: match.mode,
+        modeName: match.modeName
+      });
+
+      match.phaseTimer = setInterval(() => {
+        countdown -= 1;
+        match.phaseRemaining = countdown;
+        io.to(match.id).emit("timer_update", { time: countdown, phase: "countdown" });
+
+        if (countdown <= 0) {
+          clearInterval(match.phaseTimer);
+          match.phase = "game";
+          match.remaining = GAME_SECONDS;
+          io.to(match.id).emit("match_start_now", {
+            mode: match.mode,
+            modeName: match.modeName
+          });
+
+          match.timer = setInterval(() => {
+            match.remaining -= 1;
+            io.to(match.id).emit("timer_update", { time: match.remaining, phase: "game" });
+            if (match.remaining <= 0) finishMatch(io, match.id);
+          }, 1000);
+        }
       }, 1000);
     }
   }, 1000);
 }
 
-function finishMatch(io, matchId) {
-  const match = activeMatches.get(matchId);
-  if (!match || match.finished) return;
-  match.finished = true;
+function respawnPlayer(match, player) {
+  player.pos = { ...player.spawn };
+  player.hp = 100;
+  player.rotY = 0;
+  player.anim = "Idle";
+}
 
-  if (match.timer) clearInterval(match.timer);
-  if (match.phaseTimer) clearInterval(match.phaseTimer);
+function handleTeamShot(io, match, shooter, data) {
+  if (match.mode !== "team_fight" || match.phase !== "game") return;
 
-  const ranked = [...match.players].sort((a, b) => b.score - a.score);
-  const maxScore = ranked[0]?.score || 0;
+  const now = Date.now();
+  if (now - (shooter.lastShotAt || 0) < 120) return;
+  shooter.lastShotAt = now;
 
-  for (const p of match.players) {
-    const user = users.find(u => u.id === p.userId);
-    if (!user) continue;
-    const goldReward = maxScore > 0 && p.score === maxScore ? 10 : 2;
-    const xpReward = 50 + p.score * 20;
-    user.gold += goldReward;
-    user.XP += xpReward;
-    io.to(p.socketId).emit("show_results", {
-      xp: xpReward,
-      gold: goldReward,
-      score: p.score,
-      msg: `Матч завершено. +${xpReward} XP / +${goldReward} Gold`
-    });
+  const dx = Number(data?.dx);
+  const dy = Number(data?.dy);
+  const dz = Number(data?.dz);
+  if (![dx, dy, dz].every(Number.isFinite)) return;
+
+  const aim = new THREE_LIKE_VECTOR(dx, dy, dz);
+  if (aim.length() < 0.01) return;
+  aim.normalize();
+
+  let best = null;
+  let bestDistance = Infinity;
+
+  for (const target of match.players) {
+    if (target.userId === shooter.userId || target.team === shooter.team || target.hp <= 0) continue;
+
+    const vx = target.pos.x - shooter.pos.x;
+    const vy = (target.pos.y + 0.9) - (shooter.pos.y + 0.9);
+    const vz = target.pos.z - shooter.pos.z;
+    const dist = Math.hypot(vx, vy, vz);
+    if (dist > 60 || dist < 0.5) continue;
+
+    const inv = 1 / dist;
+    const dot = aim.x * vx * inv + aim.y * vy * inv + aim.z * vz * inv;
+    if (dot < 0.985) continue;
+
+    if (dist < bestDistance) {
+      best = target;
+      bestDistance = dist;
+    }
   }
-  saveUsers();
 
-  setTimeout(() => cleanMatch(io, matchId, true), 7000);
+  if (!best) return;
+
+  best.hp = 0;
+  best.deaths += 1;
+  shooter.kills += 1;
+  shooter.score += 1;
+
+  io.to(match.id).emit("player_hit", {
+    shooterId: shooter.userId,
+    targetId: best.userId,
+    damage: 100,
+    killed: true,
+    hp: 0,
+    score: shooter.score
+  });
+
+  setTimeout(() => {
+    if (!activeMatches.has(match.id) || match.finished) return;
+    respawnPlayer(match, best);
+    io.to(match.id).emit("player_respawn", {
+      userId: best.userId,
+      x: best.pos.x,
+      y: best.pos.y,
+      z: best.pos.z,
+      hp: best.hp
+    });
+  }, 1200);
+}
+
+class THREE_LIKE_VECTOR {
+  constructor(x, y, z) { this.x = x; this.y = y; this.z = z; }
+  length() { return Math.hypot(this.x, this.y, this.z); }
+  normalize() {
+    const len = this.length() || 1;
+    this.x /= len; this.y /= len; this.z /= len;
+    return this;
+  }
 }
 
 function validateMove(player, data) {
@@ -957,7 +1259,7 @@ function validateMove(player, data) {
 }
 
 function handleCatch(io, match, hunter) {
-  if (hunter.role !== "hunter") return;
+  if (match.mode !== "hide_seek" || match.phase !== "game" || hunter.role !== "hunter") return;
 
   for (const target of match.players) {
     if (target.role !== "runner") continue;
@@ -968,9 +1270,7 @@ function handleCatch(io, match, hunter) {
     hunter.score += 1;
     for (const p of match.players) {
       p.role = p.userId === target.userId ? "hunter" : "runner";
-      p.pos = { ...p.spawn };
-      p.rotY = 0;
-      p.anim = "Idle";
+      respawnPlayer(match, p);
     }
 
     io.to(match.id).emit("roles_updated", {
@@ -980,7 +1280,7 @@ function handleCatch(io, match, hunter) {
         score: p.score,
         spawn: p.spawn
       })),
-      message: `${hunter.nickname} спіймав ${target.nickname}! Тепер ${target.nickname} — мисливець.`
+      message: hunter.nickname + " спіймав " + target.nickname + "!"
     });
     break;
   }
@@ -1019,17 +1319,19 @@ io.on("connection", socket => {
     if (playerMatch(user.id)) return socket.emit("search_error", { message: "Ти вже в матчі." });
     if (matchmakingQueue.some(p => p.userId === user.id)) return;
 
+    const mode = Object.prototype.hasOwnProperty.call(MODE_CONFIGS, data?.mode) ? data.mode : "hide_seek";
     removeFromQueue(user.id);
+
     matchmakingQueue.push({
       socketId: socket.id,
       userId: user.id,
       nickname: user.nickname,
-      map: cleanText(data?.map || "M3_Maze", 32)
+      mode
     });
 
-    socket.emit("search_started");
+    socket.emit("search_started", { mode, modeName: MODE_CONFIGS[mode].name });
     emitQueueCount(io);
-    createMatch(io);
+    createMatch(io, mode);
   });
 
   socket.on("cancel_search", () => {
@@ -1044,23 +1346,22 @@ io.on("connection", socket => {
     const player = match.players.find(p => p.userId === socket.user.id);
     if (!player) return socket.emit("kick_to_menu", { reason: "Гравця немає в цьому матчі." });
 
+    // A reconnect replaces the old socket for this user.
     player.socketId = socket.id;
+    player.joinedAt = Date.now();
     socket.join(matchId);
-
-    const connected = match.players.filter(p => p.socketId).length;
-    io.to(matchId).emit("match_waiting", {
-      connected,
-      required: match.players.length,
-      players: match.players.map(p => ({ userId: p.userId, nickname: p.nickname, connected: Boolean(p.socketId) }))
-    });
 
     socket.emit("init_match", {
       matchId,
       map: match.map,
+      mode: match.mode,
+      modeName: match.modeName,
       me: {
         userId: player.userId,
         nickname: player.nickname,
         role: player.role,
+        team: player.team,
+        hp: player.hp,
         score: player.score,
         spawn: player.spawn
       },
@@ -1068,7 +1369,9 @@ io.on("connection", socket => {
         userId: p.userId,
         nickname: p.nickname,
         role: p.role,
+        team: p.team,
         score: p.score,
+        hp: p.hp,
         x: p.pos.x,
         y: p.pos.y,
         z: p.pos.z,
@@ -1077,14 +1380,15 @@ io.on("connection", socket => {
       }))
     });
 
-    // Передаємо клієнту вже підключених суперників для миттєвого рендера.
-    match.players.forEach(other => {
+    for (const other of match.players) {
       if (other.userId !== player.userId && other.socketId) {
         socket.emit("enemy_moved", {
           id: other.socketId,
           userId: other.userId,
           nickname: other.nickname,
           role: other.role,
+          team: other.team,
+          hp: other.hp,
           x: other.pos.x,
           y: other.pos.y,
           z: other.pos.z,
@@ -1093,27 +1397,31 @@ io.on("connection", socket => {
           score: other.score
         });
       }
-    });
+    }
 
-    socket.to(matchId).emit("player_joined", {
-      userId: player.userId,
-      nickname: player.nickname,
-      role: player.role,
-      x: player.pos.x,
-      y: player.pos.y,
-      z: player.pos.z,
-      rotY: player.rotY,
-      anim: player.anim
-    });
-
-    const connectedNow = match.players.filter(p => p.socketId).length;
-    io.to(matchId).emit("match_waiting", {
-      connected: connectedNow,
-      required: match.players.length,
-      players: match.players.map(p => ({ userId: p.userId, nickname: p.nickname, connected: Boolean(p.socketId) }))
-    });
-
+    emitMatchWaiting(io, match);
     startMatchWhenReady(io, match);
+  });
+
+  socket.on("client_ready", data => {
+    const matchId = cleanText(data?.matchId, 100);
+    const match = activeMatches.get(matchId);
+    if (!match) return;
+
+    const player = match.players.find(p => p.userId === socket.user.id);
+    if (!player || player.socketId !== socket.id) return;
+
+    player.ready = true;
+    emitMatchWaiting(io, match);
+    startMatchWhenReady(io, match);
+  });
+
+  socket.on("team_shoot", data => {
+    const match = activeMatches.get(cleanText(data?.matchId, 100));
+    if (!match) return;
+    const player = match.players.find(p => p.userId === socket.user.id && p.socketId === socket.id);
+    if (!player) return;
+    handleTeamShot(io, match, player, data);
   });
 
   socket.on("player_moved", data => {
@@ -1123,13 +1431,15 @@ io.on("connection", socket => {
     if (!player || player.socketId !== socket.id) return;
     if (!validateMove(player, data)) return;
 
-    handleCatch(io, match, player);
+    if (match.phase === "game") handleCatch(io, match, player);
 
     socket.to(match.id).emit("enemy_moved", {
       id: socket.id,
       userId: player.userId,
       nickname: player.nickname,
       role: player.role,
+      team: player.team,
+      hp: player.hp,
       x: player.pos.x,
       y: player.pos.y,
       z: player.pos.z,
@@ -1171,6 +1481,7 @@ io.on("connection", socket => {
 
   socket.on("disconnect", () => {
     removeFromQueue(socket.user?.id);
+
     if (socket.user) {
       socket.user.status = false;
       saveUsers();
@@ -1181,12 +1492,15 @@ io.on("connection", socket => {
       if (!p) continue;
 
       p.socketId = null;
+      p.ready = false;
       io.to(matchId).emit("player_left", { userId: p.userId });
 
       if (!match.started) {
-        cleanMatch(io, matchId, true);
+        emitMatchWaiting(io, match);
+        // Let the remaining players wait for the missing player until the join timeout.
       }
     }
+
     emitQueueCount(io);
   });
 });
