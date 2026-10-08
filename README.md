@@ -1,16 +1,69 @@
-## Hi there 👋
+# StandoffX
 
-<!--
-**standoffX/StandoffX** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
+StandoffX — browser FPS prototype на Three.js + Socket.IO.
 
-Here are some ideas to get you started:
+## Що зараз є
 
-- 🔭 I’m currently working on ...
-- 🌱 I’m currently learning ...
-- 👯 I’m looking to collaborate on ...
-- 🤔 I’m looking for help with ...
-- 💬 Ask me about ...
-- 📫 How to reach me: ...
-- 😄 Pronouns: ...
-- ⚡ Fun fact: ...
--->
+- cookie-based server sessions;
+- scrypt password hashing;
+- реєстрація / логін / logout;
+- профіль;
+- друзі та заявки;
+- кланова система із заявками;
+- інвентар;
+- marketplace із перевіркою ownership;
+- одноразові promo codes;
+- Socket.IO matchmaking;
+- server-side match state;
+- rate-limited movement validation;
+- reconnect-aware player identity;
+- Three.js gameplay client;
+- fallback map, якщо 3D map не завантажилась.
+
+## Запуск
+
+```bash
+npm install
+npm start
+```
+
+За замовчуванням сервер працює на `http://localhost:3000`.
+
+Для Render:
+
+```
+node server.js
+```
+
+Render автоматично передає `PORT`.
+
+## HTTPS
+
+За потреби:
+
+```text
+STANDOFFX_HTTPS=1
+TLS_KEY_PATH=/path/to/key.pem
+TLS_CERT_PATH=/path/to/cert.pem
+```
+
+## Моделі
+
+Клієнт може підхоплювати моделі зброї з кореня:
+
+- `Pistol.glb`
+- `Revolver.glb`
+- `P90.glb`
+- `ak-47.glb`
+- `Shotgun.glb`
+- `SniperRifle.glb`
+
+Якщо конкретної моделі немає, клієнт має залишатися працездатним без неї.
+
+## Перевірка
+
+```bash
+npm test
+```
+
+Команда перевіряє синтаксис серверного JavaScript без запуску сервера.
