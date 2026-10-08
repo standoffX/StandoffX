@@ -8,7 +8,7 @@ const multer = require('multer');
 let matchmakingQueue = [];
 const SServer = 1 // http - 1, https - 2 
 // ----------------------------
-const CLANS_PATH = path.join(__dirname, "data", "clans.json");
+const CLANS_PATH = path.join(__dirname, "clans.json");
 function getClans() {
   try {
       if (!fs.existsSync('clans.json')) fs.writeFileSync('clans.json', JSON.stringify({}, null, 2));
@@ -53,7 +53,14 @@ const io = new Server(server);
 // --- БАЗА ДАНИХ В ПАМ'ЯТІ ---
 // Це оголошення db, щоб твої роути кланів та заявок не падали
 
-let db = { clans: [], friend_requests: [] };
+let db = {
+  clans: [],
+  clanRequests: [],
+  clanMembers: [],
+  clan_requests: [],
+  clan_members: [],
+  friend_requests: []
+};
 app.use(express.json({ limit: '10mb' }));
 
 const storage = multer.diskStorage({
@@ -62,7 +69,14 @@ const storage = multer.diskStorage({
         cb(null, Date.now() + path.extname(file.originalname));
     }
 });
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+    cb(allowed.has(file.mimetype) ? null : new Error('Дозволені тільки зображення'), allowed.has(file.mimetype));
+  }
+});
 
 if (!fs.existsSync('avatars')) {
     fs.mkdirSync('avatars');
@@ -271,7 +285,7 @@ app.post('/api/market/sell', (req, res) => {
         skinId: skinId,
         skinName: skinName,
         rarity: rarity, // 'rare', 'epic', 'arcane'
-        price: parseFloat(price),
+        price: numericPrice,
         date: new Date().toISOString()
     };
 
@@ -1159,6 +1173,40 @@ function finishMatch(matchId) {
       console.log(`[LIFECYCLE] Матч ${matchId} видалено, гравці повернуті в меню.`);
   }, 10000);
 }
+
+app.post('/api/market/buy', (req, res) => {
+  const { userId, lotId } = req.body;
+  const users = getUsers();
+  const market = getMarket();
+  const buyer = users.find(u => u.id === userId);
+  const index = market.findIndex(lot => String(lot.lotId) === String(lotId));
+
+  if (!buyer) return res.status(404).json({ success: false, message: "Покупця не знайдено" });
+  if (index === -1) return res.status(404).json({ success: false, message: "Лот уже недоступний" });
+
+  const lot = market[index];
+  const price = Number(lot.price);
+  if (!Number.isFinite(price) || price <= 0) return res.status(400).json({ success: false, message: "Некоректний лот" });
+  if (lot.sellerId === buyer.id) return res.status(400).json({ success: false, message: "Не можна купити власний лот" });
+  if (Number(buyer.gold || 0) < price) return res.status(400).json({ success: false, message: "Недостатньо голди" });
+
+  const seller = users.find(u => u.id === lot.sellerId);
+  if (!seller) return res.status(404).json({ success: false, message: "Продавця не знайдено" });
+
+  const inventory = getInventory();
+  inventory[buyer.id] = Array.isArray(inventory[buyer.id]) ? inventory[buyer.id] : [];
+  inventory[buyer.id].push(lot.skinId);
+
+  buyer.gold = Number(buyer.gold || 0) - price;
+  seller.gold = Number(seller.gold || 0) + price;
+  market.splice(index, 1);
+
+  fs.writeFileSync(INVENTORY_PATH, JSON.stringify(inventory, null, 2));
+  fs.writeFileSync(MARKET_PATH, JSON.stringify(market, null, 2));
+  saveUsers(users);
+
+  res.json({ success: true, gold: buyer.gold, item: lot });
+});
 
 app.post('/api/match-results', (req, res) => {
     const { userId, caughtCount, isWinner } = req.body;
