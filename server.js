@@ -1534,15 +1534,19 @@ function replaceUserIdReferences(oldId, newId) {
   market = market.map(lot => lot.sellerId === oldId ? { ...lot, sellerId: newId } : lot);
 
   const nextMessages = {};
+  const knownOthers = users.map(u => u.id).filter(id => id && id !== oldId);
+  for (const otherId of knownOthers) {
+    const oldRoom = chatRoom(oldId, otherId);
+    const newRoom = chatRoom(newId, otherId);
+    if (messages[oldRoom] !== undefined) {
+      nextMessages[newRoom] = Array.isArray(messages[oldRoom])
+        ? messages[oldRoom].map(msg => ({ ...msg, senderId: msg.senderId === oldId ? newId : msg.senderId }))
+        : messages[oldRoom];
+    }
+  }
   for (const [room, list] of Object.entries(messages)) {
-    const parts = room.split("_").map(id => id === oldId ? newId : id);
-    const nextRoom = parts.join("_");
-    nextMessages[nextRoom] = Array.isArray(list)
-      ? list.map(msg => ({
-          ...msg,
-          senderId: msg.senderId === oldId ? newId : msg.senderId
-        }))
-      : list;
+    if (knownOthers.some(otherId => room === chatRoom(oldId, otherId))) continue;
+    nextMessages[room] = list;
   }
   messages = nextMessages;
 
@@ -1627,7 +1631,15 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
     u.isBanned = false;
   }
 
-  if (req.body.clan !== undefined) u.clan = nextClan || null;
+  if (req.body.clan !== undefined) {
+    const previousClan = u.clan;
+    const desiredClan = nextClan || null;
+    if (previousClan && previousClan !== desiredClan && clans[previousClan]) {
+      clans[previousClan].officers = (clans[previousClan].officers || []).filter(id => id !== u.id);
+      clans[previousClan].requests = (clans[previousClan].requests || []).filter(id => id !== u.id);
+    }
+    u.clan = desiredClan;
+  }
 
   replaceUserIdReferences(oldId, u.id);
   ensureUserShape(u);
