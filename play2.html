@@ -76,7 +76,7 @@
         // --- ГРАВЕЦЬ ---
         let playerModel, mixer, actions = {}, activeActionName = 'Idle';
         let myRole = 'runner';
-        let isThirdPerson = true;
+        let isThirdPerson = false;
         const otherPlayers = {};
         const loader = new GLTFLoader();
 
@@ -110,14 +110,16 @@
 
         let moveKeys = { w: false, s: false, a: false, d: false, space: false };
         let velocity = new THREE.Vector3();
-        let currentSpeed = 10; 
+        let currentSpeed = 10;
+        const isMobile = window.matchMedia('(max-width: 800px), (pointer: coarse)').matches;
+        const settings = window.SXSettings || { sensitivity: 1, ads: 1, crosshairSize: 20, crosshairGap: 0 };
         let canJump = false;
 
         document.addEventListener('keydown', (e) => {
-            if (e.code === 'KeyW') moveKeys.w = true;
-            if (e.code === 'KeyS') moveKeys.s = true;
-            if (e.code === 'KeyA') moveKeys.a = true;
-            if (e.code === 'KeyD') moveKeys.d = true;
+            if (e.code === 'KeyW' || e.code === 'ArrowUp') moveKeys.w = true;
+            if (e.code === 'KeyS' || e.code === 'ArrowDown') moveKeys.s = true;
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') moveKeys.a = true;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') moveKeys.d = true;
             if (e.code === 'Space') {
     e.preventDefault();
     moveKeys.space = true;
@@ -134,10 +136,10 @@
             if (e.shiftKey && myRole === 'hunter') currentSpeed = 18;
         });
         document.addEventListener('keyup', (e) => {
-            if (e.code === 'KeyW') moveKeys.w = false;
-            if (e.code === 'KeyS') moveKeys.s = false;
-            if (e.code === 'KeyA') moveKeys.a = false;
-            if (e.code === 'KeyD') moveKeys.d = false;
+            if (e.code === 'KeyW' || e.code === 'ArrowUp') moveKeys.w = false;
+            if (e.code === 'KeyS' || e.code === 'ArrowDown') moveKeys.s = false;
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') moveKeys.a = false;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') moveKeys.d = false;
             if (e.code === 'Space') moveKeys.space = false;
             if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') currentSpeed = 10;
         });
