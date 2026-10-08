@@ -44,14 +44,14 @@
     <div>
       <div class="hero">
         <div class="hero-info">
-          <div class="eyebrow">STANDOFFX • CLASSIC UI BUILD</div>
+          <div class="eyebrow">STANDOFFX</div>
           <h1>STANDOFFX</h1>
           <div class="hero-mark">M3</div>
           <div class="actions"><button class="primary" id="playBtn" aria-label="Почати пошук">▶</button><button class="secondary" id="modeBtn" aria-label="Режими">☷</button></div>
         </div>
       </div>
       <div class="bottomplay">
-        <div class="mode"><div id="modeIcon" class="modeicon">HS</div><div><b id="selectedMode">HIDE & SEEK</b><div id="selectedDesc" class="muted">Мисливець проти гравців · M3 Maze</div></div></div>
+        <div class="mode"><div id="modeIcon" class="modeicon">HS</div><div><b id="selectedMode">HIDE & SEEK</b><div id="selectedDesc" class="muted">M3</div></div></div>
         <button id="quickPlay" class="playbig" aria-label="Почати матч">▶</button>
       </div>
     </div>
@@ -111,7 +111,7 @@ function render(){
   $("userName").textContent=me.nickname||"PLAYER";
   $("gold").textContent=(me.gold||0)+" G";
   $("profileNick").textContent=me.nickname||"";
-  $("profileId").textContent=me.id||"";
+  $("profileId").textContent=String(me.id||"").replace(/^ID_/i,"");
   $("pxp").textContent=me.XP||0;
   $("pmmr").textContent=me.MMRCompetitive||1000;
   $("pallies").textContent=me.MMRAllies||1000;
@@ -137,12 +137,12 @@ $("modeApply").onclick=()=>{localStorage.setItem("sx_mode",selectedMode);$("mode
 async function loadFriends(){
   try{
     const f=await api("/api/get-my-friends"),i=await api("/api/friends/incoming",{method:"POST",body:"{}"});
-    $("friendsList").innerHTML=f.friends.map(x=>"<div class='item'><div><b>"+esc(x.nickname)+"</b><div class='muted'>"+esc(x.id)+"</div></div><span class='muted'>"+(x.status?"ONLINE":"OFFLINE")+"</span></div>").join("")||"<span class='muted'>Немає друзів.</span>";
+    $("friendsList").innerHTML=f.friends.map(x=>"<div class='item'><div><b>"+esc(x.nickname)+"</b><div class='muted'>"+esc(String(x.id||"").replace(/^ID_/i,""))+"</div></div><span class='muted'>"+(x.status?"ONLINE":"OFFLINE")+"</span></div>").join("")||"<span class='muted'>Немає друзів.</span>";
     $("incoming").innerHTML=i.incoming.map(x=>"<div class='item'><div><b>"+esc(x.nickname)+"</b><div class='muted'>"+esc(x.id)+"</div></div><div class='actions'><button class='primary' data-action='friend-accept' data-id='"+esc(x.id)+"'>✓</button><button class='secondary' data-action='friend-decline' data-id='"+esc(x.id)+"'>×</button></div></div>").join("")||"<span class='muted'>Немає заявок.</span>";
   }catch(e){}
 }
 async function friendAction(url,id){try{await api(url,{method:"POST",body:JSON.stringify({friendId:id})});loadFriends()}catch(e){alert(e.message)}}
-$("findFriend").onclick=async()=>{try{const d=await api("/api/search-user",{method:"POST",body:JSON.stringify({query:$("friendSearch").value})});$("friendResult").innerHTML="<div class='item'><div><b>"+esc(d.user.nickname)+"</b><div class='muted'>"+esc(d.user.id)+"</div></div><button class='primary' data-action='friend-add' data-id='"+esc(d.user.id)+"'>ДОДАТИ</button></div>"}catch(e){$("friendResult").innerHTML="<div class='muted'>"+esc(e.message)+"</div>"}};
+$("findFriend").onclick=async()=>{try{const d=await api("/api/search-user",{method:"POST",body:JSON.stringify({query:$("friendSearch").value})});$("friendResult").innerHTML="<div class='item'><div><b>"+esc(d.user.nickname)+"</b><div class='muted'>"+esc(String(d.user.id||"").replace(/^ID_/i,""))+"</div></div><button class='primary' data-action='friend-add' data-id='"+esc(d.user.id)+"'>ДОДАТИ</button></div>"}catch(e){$("friendResult").innerHTML="<div class='muted'>"+esc(e.message)+"</div>"}};
 
 function openClanModal(title,body){$("clanModalTitle").textContent=title;$("clanModalBody").innerHTML=body;$("clanModal").classList.add("show")}
 $("clanClose").onclick=()=>$("clanModal").classList.remove("show");
