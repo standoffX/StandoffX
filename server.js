@@ -179,18 +179,23 @@ function cleanText(value, max = 120) {
 }
 
 function normalizeId(value) {
-  return cleanText(value, 80);
+  const q = cleanText(value, 80);
+  if (/^ID_\d+$/i.test(q)) return q.slice(3);
+  return q;
+}
+
+function displayId(id) {
+  const q = normalizeId(id);
+  return q;
 }
 
 function findUser(idOrNickname, options = {}) {
   const q = normalizeId(idOrNickname);
   const qLower = q.toLowerCase();
-  const candidates = new Set([qLower]);
-  if (/^\d+$/.test(q)) candidates.add(("ID_" + q).toLowerCase());
 
   return users.find(u => {
-    const uid = String(u.id || "").toLowerCase();
-    if (candidates.has(uid)) return true;
+    const uid = normalizeId(u.id).toLowerCase();
+    if (uid === qLower) return true;
     return options.allowNickname !== false && String(u.nickname || "").toLowerCase() === qLower;
   });
 }
@@ -361,7 +366,7 @@ app.post("/api/register", (req, res) => {
   }
 
   let id;
-  do id = "ID_" + crypto.randomInt(100000, 1000000);
+  do id = String(crypto.randomInt(1000000, 10000000));
   while (users.some(u => String(u.id) === id));
 
   const user = {
@@ -1506,6 +1511,46 @@ io.on("connection", socket => {
 });
 
 
+function replaceUserIdReferences(oldId, newId) {
+  if (!oldId || !newId || oldId === newId) return;
+
+  for (const u of users) {
+    if (Array.isArray(u.friendsList)) u.friendsList = u.friendsList.map(id => id === oldId ? newId : id);
+    if (Array.isArray(u.incomingRequests)) u.incomingRequests = u.incomingRequests.map(id => id === oldId ? newId : id);
+    if (Array.isArray(u.blocked)) u.blocked = u.blocked.map(id => id === oldId ? newId : id);
+  }
+
+  for (const clan of Object.values(clans)) {
+    if (clan.ownerId === oldId) clan.ownerId = newId;
+    clan.officers = Array.isArray(clan.officers) ? clan.officers.map(id => id === oldId ? newId : id) : [];
+    clan.requests = Array.isArray(clan.requests) ? clan.requests.map(id => id === oldId ? newId : id) : [];
+  }
+
+  if (inventory[oldId] !== undefined) {
+    inventory[newId] = inventory[oldId];
+    delete inventory[oldId];
+  }
+
+  market = market.map(lot => lot.sellerId === oldId ? { ...lot, sellerId: newId } : lot);
+
+  const nextMessages = {};
+  for (const [room, list] of Object.entries(messages)) {
+    const parts = room.split("_").map(id => id === oldId ? newId : id);
+    const nextRoom = parts.join("_");
+    nextMessages[nextRoom] = Array.isArray(list)
+      ? list.map(msg => ({
+          ...msg,
+          senderId: msg.senderId === oldId ? newId : msg.senderId
+        }))
+      : list;
+  }
+  messages = nextMessages;
+
+  for (const [token, data] of sessions.entries()) {
+    if (data.userId === oldId) data.userId = newId;
+  }
+}
+
 app.get("/admin", requireAdmin, (_req, res) => {
   res.sendFile(path.join(ROOT, "admin.html"));
 });
@@ -1526,19 +1571,102 @@ app.get("/api/admin/users", requireAdmin, (_req, res) => {
 });
 
 app.post("/api/admin/users/update", requireAdmin, (req, res) => {
-  const u = findUser(req.body.userId);
+  const lookupId = normalizeId(req.body.userId);
+  const u = findUser(lookupId, { allowNickname: false });
   if (!u) return res.status(404).json({ success: false, message: "User not found" });
-  if (u.id === ADMIN_ID) {
+
+  const isMaster = u.id === ADMIN_ID;
+  const nextIdRaw = normalizeId(req.body.id ?? u.id);
+  const nextNick = cleanText(req.body.nickname ?? u.nickname, 24);
+  const nextClan = cleanText(req.body.clan ?? "", 5).toUpperCase();
+
+  if (!/^[\p{L}\p{N}_-]{3,24}$/u.test(nextNick)) {
+    return res.status(400).json({ success: false, message: "Некоректний nickname." });
+  }
+  if (!nextIdRaw || nextIdRaw.length > 80) {
+    return res.status(400).json({ success: false, message: "Некоректний ID." });
+  }
+  if (nextIdRaw !== u.id && users.some(x => x.id === nextIdRaw)) {
+    return res.status(409).json({ success: false, message: "Такий ID вже зайнятий." });
+  }
+  if (users.some(x => x.id !== u.id && String(x.nickname).toLowerCase() === nextNick.toLowerCase())) {
+    return res.status(409).json({ success: false, message: "Такий nickname вже зайнятий." });
+  }
+  if (nextClan && !clans[nextClan]) {
+    return res.status(404).json({ success: false, message: "Такого клану немає." });
+  }
+
+  const oldId = u.id;
+  if (!isMaster) {
+    if (nextIdRaw === ADMIN_ID) {
+      return res.status(400).json({ success: false, message: "Dev_01 зарезервований для master." });
+    }
+    u.id = nextIdRaw;
+  } else {
+    u.id = ADMIN_ID;
+  }
+
+  u.nickname = nextNick;
+  if (!isMaster && req.body.password !== undefined && String(req.body.password).length) {
+    const password = String(req.body.password);
+    if (password.length < 6 || password.length > 128) {
+      return res.status(400).json({ success: false, message: "Пароль: 6–128 символів." });
+    }
+    u.passwordHash = hashPassword(password);
+    delete u.password;
+  }
+  if (req.body.gold !== undefined) u.gold = Math.max(0, Number(req.body.gold) || 0);
+  if (req.body.XP !== undefined) u.XP = Math.max(0, Number(req.body.XP) || 0);
+  if (req.body.MMRCompetitive !== undefined) u.MMRCompetitive = Math.max(0, Number(req.body.MMRCompetitive) || 0);
+  if (req.body.MMRAllies !== undefined) u.MMRAllies = Math.max(0, Number(req.body.MMRAllies) || 0);
+  if (req.body.isBanned !== undefined) u.isBanned = Boolean(req.body.isBanned);
+  if (req.body.isVerified !== undefined) u.isVerified = Boolean(req.body.isVerified);
+  if (!isMaster && req.body.isAdmin !== undefined) u.isAdmin = Boolean(req.body.isAdmin);
+  if (isMaster) {
     u.isAdmin = true;
     u.isBanned = false;
-  } else {
-    if (req.body.gold !== undefined) u.gold = Math.max(0, Number(req.body.gold) || 0);
-    if (req.body.XP !== undefined) u.XP = Math.max(0, Number(req.body.XP) || 0);
-    if (req.body.isBanned !== undefined) u.isBanned = Boolean(req.body.isBanned);
-    if (req.body.isAdmin !== undefined) u.isAdmin = Boolean(req.body.isAdmin);
   }
+
+  if (req.body.clan !== undefined) u.clan = nextClan || null;
+
+  replaceUserIdReferences(oldId, u.id);
+  ensureUserShape(u);
   saveUsers();
+  saveClans();
+  saveInventory();
+  saveMessages();
+  saveMarket();
+
   res.json({ success: true, user: publicUser(u) });
+});
+
+app.post("/api/admin/users/create", requireAdmin, (req, res) => {
+  const nickname = cleanText(req.body.nickname, 24);
+  const password = String(req.body.password || "");
+  let id = normalizeId(req.body.id || "");
+
+  if (!/^[\p{L}\p{N}_-]{3,24}$/u.test(nickname)) {
+    return res.status(400).json({ success: false, message: "Некоректний nickname." });
+  }
+  if (password.length < 6 || password.length > 128) {
+    return res.status(400).json({ success: false, message: "Пароль: 6–128 символів." });
+  }
+  if (id && users.some(u => u.id === id)) return res.status(409).json({ success: false, message: "Такий ID вже зайнятий." });
+  if (users.some(u => String(u.nickname).toLowerCase() === nickname.toLowerCase())) {
+    return res.status(409).json({ success: false, message: "Такий nickname вже зайнятий." });
+  }
+  if (!id) do id = String(crypto.randomInt(1000000, 10000000)); while (users.some(u => u.id === id));
+
+  const user = {
+    nickname, id, passwordHash: hashPassword(password), playerAvatar: "/avatars/default.jpg",
+    status:false, XP:0, gold:0, clan:null, MMRCompetitive:1000, MMRAllies:1000,
+    isVerified:false, isBanned:false, isAdmin:Boolean(req.body.isAdmin),
+    friendsList:[], incomingRequests:[], blocked:[], usedPromos:[]
+  };
+  users.push(user);
+  inventory[id] = [];
+  saveUsers(); saveInventory();
+  res.json({ success:true, user:publicUser(user) });
 });
 
 app.delete("/api/admin/users/:id", requireAdmin, (req, res) => {
@@ -1548,7 +1676,19 @@ app.delete("/api/admin/users/:id", requireAdmin, (req, res) => {
   if (i < 0) return res.status(404).json({ success: false, message: "User not found" });
   users.splice(i, 1);
   delete inventory[id];
+  for (const u of users) {
+    u.friendsList = (u.friendsList || []).filter(x => x !== id);
+    u.incomingRequests = (u.incomingRequests || []).filter(x => x !== id);
+    u.blocked = (u.blocked || []).filter(x => x !== id);
+  }
+  for (const clan of Object.values(clans)) {
+    clan.requests = (clan.requests || []).filter(x => x !== id);
+    clan.officers = (clan.officers || []).filter(x => x !== id);
+  }
+  for (const [token, data] of sessions.entries()) if (data.userId === id) sessions.delete(token);
+  delete inventory[id];
   saveUsers();
+  saveClans();
   saveInventory();
   res.json({ success: true });
 });
