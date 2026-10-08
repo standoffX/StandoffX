@@ -898,9 +898,10 @@ app.post("/api/use-promo", requireAuth, (req, res) => {
 app.get("/api/chat/active-dialogs/:userId", requireAuth, (req, res) => {
   if (normalizeId(req.params.userId) !== req.user.id) return res.status(403).json({ success: false });
   const partnerIds = new Set();
-  for (const room of Object.keys(messages)) {
-    const ids = room.split("_");
-    if (ids.includes(req.user.id)) ids.filter(id => id !== req.user.id).forEach(id => partnerIds.add(id));
+  for (const other of users) {
+    if (other.id === req.user.id) continue;
+    const room = chatRoom(req.user.id, other.id);
+    if (messages[room]) partnerIds.add(other.id);
   }
   const dialogs = users.filter(u => partnerIds.has(u.id)).map(publicUser);
   res.json(dialogs);
