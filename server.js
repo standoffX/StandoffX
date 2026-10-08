@@ -294,7 +294,18 @@ function requestUser(req) {
 function requireAuth(req, res, next) {
   const user = requestUser(req);
   if (!user) return res.status(401).json({ success: false, message: "Авторизуйся." });
-  if (user.isBanned) return res.status(403).json({ success: false, message: "Акаунт заблоковано." });
+  if (user.isBanned && user.id !== ADMIN_ID) return res.status(403).json({ success: false, message: "Акаунт заблоковано." });
+  req.user = user;
+}
+
+function isAdmin(user) {
+  return Boolean(user && (user.id === ADMIN_ID || user.isAdmin === true));
+}
+
+function requireAdmin(req, res, next) {
+  const user = requestUser(req);
+  if (!user) return res.status(401).json({ success: false, message: "Авторизація потрібна." });
+  if (!isAdmin(user)) return res.status(403).json({ success: false, message: "Тільки адміністратор." });
   req.user = user;
   next();
 }
