@@ -1,29 +1,146 @@
 <!doctype html>
 <html lang="uk">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>StandoffX — Login</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>StandoffX — Авторизація</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#080b12;color:#eef3ff;font-family:Inter,system-ui,sans-serif;min-height:100vh;display:grid;place-items:center}
-body:before{content:"";position:fixed;inset:0;background:radial-gradient(circle at 50% 20%,#1556ff22,transparent 45%);pointer-events:none}
-.card{width:min(430px,92vw);padding:34px;border:1px solid #ffffff12;background:#0d121cdd;border-radius:22px;box-shadow:0 30px 100px #0008;backdrop-filter:blur(20px)}
-.logo{font-size:34px;font-weight:900;letter-spacing:-2px}.logo b{color:#3d8bff}.sub{color:#8491a7;margin:7px 0 28px}
-.tabs{display:flex;gap:6px;background:#070a10;padding:5px;border-radius:12px;margin-bottom:20px}.tab{flex:1;border:0;background:transparent;color:#7f8aa0;padding:11px;border-radius:9px;cursor:pointer}.tab.active{background:#182235;color:white}
-input{width:100%;padding:14px 15px;margin:7px 0;border-radius:11px;border:1px solid #ffffff12;background:#080c14;color:white;outline:none}input:focus{border-color:#397eff}
-button.primary{width:100%;margin-top:12px;padding:14px;border:0;border-radius:11px;background:#2877ff;color:white;font-weight:800;cursor:pointer}button.primary:hover{filter:brightness(1.12)}
-#msg{min-height:22px;color:#ff7180;margin-top:14px;font-size:14px}.hint{font-size:12px;color:#657086;margin-top:18px;text-align:center}
-</style></head>
-<body><main class="card">
-<div class="logo">STANDOFF<b>X</b></div><div class="sub">Тактичний browser FPS</div>
-<div class="tabs"><button class="tab active" id="loginTab">Увійти</button><button class="tab" id="regTab">Реєстрація</button></div>
-<form id="form"><input id="nickname" autocomplete="username" placeholder="Нік або ID"><input id="password" autocomplete="current-password" type="password" placeholder="Пароль"><button class="primary" id="submit">Увійти</button></form>
-<div id="msg"></div><div class="hint">StandoffX Dev Build</div>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f4f7fb;background:#0a0e14}
+body{display:grid;place-items:center;overflow:hidden}
+body:before{content:"";position:fixed;inset:0;background:radial-gradient(circle at 50% 15%,rgba(55,126,255,.22),transparent 42%),linear-gradient(120deg,#080b10,#101823);pointer-events:none}
+.card{position:relative;width:min(470px,92vw);padding:30px;border:1px solid rgba(255,255,255,.1);background:rgba(13,18,27,.94);box-shadow:0 30px 100px rgba(0,0,0,.5);border-radius:18px}
+.brand{display:flex;align-items:end;gap:10px}.brand h1{margin:0;font-size:36px;letter-spacing:-2px}.brand b{color:#4c8dff}.tag{font-size:10px;letter-spacing:2px;color:#7d8ba0;font-weight:800;margin-bottom:6px}
+.subtitle{margin:7px 0 24px;color:#8d9bb0}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:4px;background:#080d14;border-radius:10px;margin-bottom:18px}
+.tab{border:0;background:transparent;color:#77859a;padding:11px;border-radius:8px;font-weight:800;cursor:pointer}.tab.active{background:#1a2739;color:#fff}
+.field{margin-top:12px}.field label{display:block;color:#93a1b6;font-size:12px;font-weight:700;margin-bottom:7px}
+input{width:100%;height:48px;padding:0 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:#080d14;color:#fff;outline:none}
+input:focus{border-color:#377fff;box-shadow:0 0 0 3px rgba(55,127,255,.12)}
+.password-wrap{position:relative}.toggle{position:absolute;right:8px;top:8px;height:32px;padding:0 9px;border:0;border-radius:7px;background:#151e2b;color:#9aa8ba;cursor:pointer}
+button.primary{width:100%;height:50px;margin-top:18px;border:0;border-radius:10px;background:#327cff;color:#fff;font-weight:900;cursor:pointer}
+button.primary:disabled{opacity:.55;cursor:wait}
+.msg{min-height:22px;margin-top:12px;font-size:13px;color:#ff8793}.msg.ok{color:#66d99a}
+.note{margin-top:16px;color:#68768a;font-size:11px;text-align:center;line-height:1.45}
+.success{display:none}.success.show{display:block}.success-id{margin:18px 0;padding:18px;border:1px solid rgba(76,141,255,.25);background:#0b1422;border-radius:12px;text-align:center}.success-id .small{font-size:11px;color:#7d8ca0}.success-id strong{display:block;font-size:28px;letter-spacing:1px;margin-top:5px}
+.copy{margin-top:10px;border:1px solid rgba(255,255,255,.12);background:#121b28;color:#fff;border-radius:9px;padding:10px 14px;cursor:pointer}
+</style>
+</head>
+<body>
+<main class="card">
+  <div id="authView">
+    <div class="brand"><h1>STANDOFF<span style="color:#4c8dff">X</span></h1><div class="tag">DEV BUILD</div></div>
+    <div class="subtitle">Тактичний browser FPS</div>
+
+    <div class="tabs">
+      <button class="tab active" id="loginTab">Вхід</button>
+      <button class="tab" id="regTab">Реєстрація</button>
+    </div>
+
+    <form id="form">
+      <div class="field">
+        <label id="idLabel">PLAYER ID</label>
+        <input id="identity" autocomplete="username" inputmode="text" maxlength="80" placeholder="Наприклад: ID_123456">
+      </div>
+      <div class="field">
+        <label>ПАРОЛЬ</label>
+        <div class="password-wrap">
+          <input id="password" autocomplete="current-password" type="password" minlength="6" maxlength="128" placeholder="Мінімум 6 символів">
+          <button class="toggle" id="togglePass" type="button">Показати</button>
+        </div>
+      </div>
+      <div id="nicknameField" class="field" style="display:none">
+        <label>НІК</label>
+        <input id="nickname" autocomplete="nickname" maxlength="24" placeholder="3–24 символи">
+      </div>
+      <button class="primary" id="submit">УВІЙТИ</button>
+    </form>
+    <div id="msg" class="msg"></div>
+    <div class="note" id="note">Вхід виконується тільки за Player ID + пароль. ID видається автоматично під час реєстрації.</div>
+  </div>
+
+  <div id="successView" class="success">
+    <div class="brand"><h1>АКАУНТ ГОТОВИЙ</h1></div>
+    <div class="subtitle">Збережи цей Player ID — він потрібен для наступного входу.</div>
+    <div class="success-id">
+      <div class="small">PLAYER ID</div>
+      <strong id="createdId">ID_000000</strong>
+      <button class="copy" id="copyId" type="button">СКОПІЮВАТИ ID</button>
+    </div>
+    <button class="primary" id="continueBtn" type="button">ПЕРЕЙТИ В ГРУ</button>
+  </div>
 </main>
+
 <script>
 let mode="login";
 const $=id=>document.getElementById(id);
-function setMode(next){mode=next;$("loginTab").classList.toggle("active",mode==="login");$("regTab").classList.toggle("active",mode==="register");$("submit").textContent=mode==="login"?"Увійти":"Створити акаунт";$("nickname").placeholder=mode==="login"?"Нік або ID":"Нікнейм"}
-$("loginTab").onclick=()=>setMode("login");$("regTab").onclick=()=>setMode("register");
-$("form").onsubmit=async e=>{e.preventDefault();$("msg").textContent="";const endpoint=mode==="login"?"/api/login":"/api/register";try{const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nickname:$("nickname").value,password:$("password").value})});const d=await r.json();if(!r.ok)throw Error(d.message||"Помилка");location.href=d.redirect||"/game"}catch(err){$("msg").textContent=err.message}};
-fetch("/api/me").then(r=>{if(r.ok)location.href="/game"}).catch(()=>{});
-</script></body></html>
+
+function setMode(next){
+  mode=next;
+  $("loginTab").classList.toggle("active",mode==="login");
+  $("regTab").classList.toggle("active",mode==="register");
+  $("nicknameField").style.display=mode==="register"?"block":"none";
+  $("idLabel").textContent=mode==="login"?"PLAYER ID":"АКАУНТ ID (не вводиться)";
+  $("identity").style.display=mode==="login"?"block":"none";
+  $("identity").required=mode==="login";
+  $("identity").placeholder=mode==="login"?"Наприклад: ID_123456":"Реєстрація створить ID автоматично";
+  $("submit").textContent=mode==="login"?"УВІЙТИ":"СТВОРИТИ АКАУНТ";
+  $("note").textContent=mode==="login"
+    ?"Вхід виконується тільки за Player ID + пароль."
+    :"Придумай нік і пароль. Player ID система створить автоматично.";
+  $("msg").textContent="";
+  $("msg").className="msg";
+  if(mode==="register") $("nickname").focus(); else $("identity").focus();
+}
+$("loginTab").onclick=()=>setMode("login");
+$("regTab").onclick=()=>setMode("register");
+
+$("togglePass").onclick=()=>{
+  $("password").type=$("password").type==="password"?"text":"password";
+  $("togglePass").textContent=$("password").type==="password"?"Показати":"Сховати";
+};
+
+$("form").onsubmit=async e=>{
+  e.preventDefault();
+  const btn=$("submit"); btn.disabled=true; $("msg").textContent=""; $("msg").className="msg";
+  try{
+    const payload=mode==="login"
+      ? {id:$("identity").value.trim(),password:$("password").value}
+      : {nickname:$("nickname").value.trim(),password:$("password").value};
+
+    const r=await fetch(mode==="login"?"/api/login":"/api/register",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      credentials:"same-origin",
+      body:JSON.stringify(payload)
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error(d.message||"Не вдалося виконати запит.");
+
+    if(mode==="register"){
+      $("authView").style.display="none";
+      $("successView").classList.add("show");
+      $("createdId").textContent=d.createdId||d.user?.id||"ID_000000";
+      setTimeout(()=>location.href=d.redirect||"/game",1800);
+    }else{
+      location.href=d.redirect||"/game";
+    }
+  }catch(err){
+    $("msg").textContent=err.message;
+  }finally{
+    btn.disabled=false;
+  }
+};
+
+$("copyId").onclick=async()=>{
+  const id=$("createdId").textContent;
+  try{await navigator.clipboard.writeText(id);$("copyId").textContent="СКОПІЙОВАНО ✓"}catch{}
+};
+$("continueBtn").onclick=()=>location.href="/game";
+
+fetch("/api/me",{credentials:"same-origin"})
+  .then(r=>{if(r.ok)location.href="/game"})
+  .catch(()=>{});
+</script>
+</body>
+</html>
