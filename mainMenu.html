@@ -46,19 +46,19 @@
         <div class="hero-info">
           <div class="eyebrow">STANDOFFX • CLASSIC UI BUILD</div>
           <h1>STANDOFFX</h1>
-          <p>Обирай режим, шукай матч і заходь у лобі. Гравці підключаються всі разом — гра не стартує раніше часу.</p>
-          <div class="actions"><button class="primary" id="playBtn">PLAY</button><button class="secondary" id="modeBtn">ВИБРАТИ РЕЖИМ</button></div>
+          <div class="hero-mark">M3</div>
+          <div class="actions"><button class="primary" id="playBtn" aria-label="Почати пошук">▶</button><button class="secondary" id="modeBtn" aria-label="Режими">☷</button></div>
         </div>
       </div>
       <div class="bottomplay">
         <div class="mode"><div id="modeIcon" class="modeicon">HS</div><div><b id="selectedMode">HIDE & SEEK</b><div id="selectedDesc" class="muted">Мисливець проти гравців · M3 Maze</div></div></div>
-        <button id="quickPlay" class="playbig">PLAY</button>
+        <button id="quickPlay" class="playbig" aria-label="Почати матч">▶</button>
       </div>
     </div>
 
     <div class="rightcol">
       <div class="card"><h3>BATTLE PASS</h3><div class="activity"><img src="game1.png"><div><b>Sunstrike Pass</b><span class="muted">Події та нагороди</span></div></div><div class="activity"><img src="game2.png"><div><b>Latest collection</b><span class="muted">Нові предмети</span></div></div></div>
-      <div class="card"><h3>EVENTS</h3><div class="activity"><img src="game3.png"><div><b>StandoffX Event</b><span class="muted">COMING SOON</span></div></div><button class="secondary" style="margin-top:10px;width:100%" onclick="show('inventory')">OPEN INVENTORY</button></div>
+      <div class="card"><h3>EVENTS</h3><div class="activity"><img src="game3.png"><div><b>StandoffX Event</b><span class="muted">COMING SOON</span></div></div><button class="secondary" id="openInventory" style="margin-top:10px;width:100%">INVENTORY</button></div>
     </div>
   </div>
 </section>
@@ -226,6 +226,7 @@ function cancelSearch(){
   if(socket){socket.emit("cancel_search");socket.disconnect();socket=null}
   searching=false;$("playModal").classList.remove("show");
 }
+$("openInventory").onclick=()=>show("inventory");
 $("playBtn").onclick=openSearch;$("quickPlay").onclick=openSearch;$("cancelSearch").onclick=cancelSearch;$("cancelX").onclick=cancelSearch;$("refreshClan").onclick=loadClan;$("refreshMarket").onclick=loadMarket;
 $("logout").onclick=async()=>{try{await api("/api/logout",{method:"POST"})}catch{}location.href="/"};
 
