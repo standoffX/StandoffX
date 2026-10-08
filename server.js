@@ -1,1266 +1,1093 @@
-const express = require('express');
-const https = require('https');
-const http = require('http');
-const fs = require('fs');
-const { Server } = require("socket.io"); // Додаємо сокети
-const path = require('path');
-const multer = require('multer');
-const crypto = require('crypto');
-let matchmakingQueue = [];
-const SServer = 1 // http - 1, https - 2 
-// ----------------------------
-const CLANS_PATH = path.join(__dirname, "clans.json");
-function getClans() {
-  try {
-    if (!fs.existsSync(CLANS_PATH)) fs.writeFileSync(CLANS_PATH, JSON.stringify({}, null, 2));
-    const data = JSON.parse(fs.readFileSync(CLANS_PATH, 'utf8'));
-    return Array.isArray(data) ? {} : (data || {});
-  } catch (err) {
-    console.error("[CLANS]", err.message);
-    return {};
-  }
-}
-function saveClans(clans) {
-  fs.writeFileSync(CLANS_PATH, JSON.stringify(clans || {}, null, 2), 'utf8');
-}
-function loadClans() {
-  return {
-    clans: Object.values(getClans()).map(clan => ({
-      ...clan,
-      tag: clan.tag || clan.name,
-      members: Array.isArray(clan.members) ? clan.members : []
-    }))
-  };
-}
+const express = require("express");
+const http = require("http");
+const https = require("https");
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
+const multer = require("multer");
+const { Server } = require("socket.io");
 
-let server = null;
 const app = express();
-const PORT = Number(process.env.PORT) || (SServer === 2 ? 443 : 3000);
+const SServer = Number(process.env.STANDOFFX_HTTPS || 0); // 0 = HTTP, 1 = HTTPS
+const PORT = Number(process.env.PORT) || (SServer ? 443 : 3000);
 
-if (SServer === 2) {
-  const tlsOptions = {
-    key: fs.readFileSync(path.join(__dirname, 'site.local-key.pem')),
-    cert: fs.readFileSync(path.join(__dirname, 'site.local.pem'))
-  };
-  server = https.createServer(tlsOptions, app);
-} else {
-  server = http.createServer(app);
+const ROOT = __dirname;
+const USERS_PATH = path.join(ROOT, "account.json");
+const CLANS_PATH = path.join(ROOT, "clans.json");
+const MESSAGES_PATH = path.join(ROOT, "messages.json");
+const MARKET_PATH = path.join(ROOT, "marketplace.json");
+const INVENTORY_PATH = path.join(ROOT, "inventory.json");
+const SKINS_PATH = path.join(ROOT, "skins.json");
+const AVATARS_DIR = path.join(ROOT, "avatars");
+
+for (const dir of [AVATARS_DIR, path.join(ROOT, "ranks")]) {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
-const io = new Server(server);
-// --- БАЗА ДАНИХ В ПАМ'ЯТІ ---
-// Це оголошення db, щоб твої роути кланів та заявок не падали
 
-let db = {
-  clans: [],
-  clanRequests: [],
-  clanMembers: [],
-  clan_requests: [],
-  clan_members: [],
-  friend_requests: []
-};
-app.use(express.json({ limit: '10mb' }));
-
-const storage = multer.diskStorage({
-    destination: path.join(__dirname, 'avatars'),
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname).toLowerCase());
+function readJson(file, fallback) {
+  try {
+    if (!fs.existsSync(file)) {
+      fs.writeFileSync(file, JSON.stringify(fallback, null, 2) + "\n", "utf8");
+      return fallback;
     }
-});
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowed = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
-    cb(allowed.has(file.mimetype) ? null : new Error('Дозволені тільки зображення'), allowed.has(file.mimetype));
+    const raw = fs.readFileSync(file, "utf8").trim();
+    if (!raw) return fallback;
+    return JSON.parse(raw);
+  } catch (err) {
+    console.error("[JSON]", path.basename(file), err.message);
+    return fallback;
   }
-});
-
-if (!fs.existsSync('avatars')) {
-    fs.mkdirSync('avatars');
 }
 
-app.use(express.static(__dirname));
-app.use('/avatars', express.static('avatars'));
-
-
-let cachedUsers = null;
-const SKINS_PATH = path.join(__dirname, "skins.json");
-const INVENTORY_PATH = path.join(__dirname, "inventory.json");
-
-// 1. Функція для отримання всіх скінів у грі
-function getSkins() {
-    try {
-        if (!fs.existsSync(SKINS_PATH)) {
-            // Створюємо базовий шаблон, якщо файлу немає
-            const defaultSkins = {
-                "akr_treasure": { 
-                    "name": "AKR 'Treasure'", 
-                    "image": "https://via.placeholder.com/150/dc2626", 
-                    "rarity": "arcane", 
-                    "modelUrl": "models/akr_treasure.gltf" 
-                },
-                "g22_frost": { 
-                    "name": "G22 'Frost'", 
-                    "image": "https://via.placeholder.com/150/3b82f6", 
-                    "rarity": "rare", 
-                    "modelUrl": "models/g22_frost.gltf" 
-                }
-            };
-            fs.writeFileSync(SKINS_PATH, JSON.stringify(defaultSkins, null, 2));
-        }
-        return JSON.parse(fs.readFileSync(SKINS_PATH, 'utf8'));
-    } catch (err) { return {}; }
+function writeJson(file, value) {
+  fs.writeFileSync(file, JSON.stringify(value, null, 2) + "\n", "utf8");
 }
 
-// 2. Функція для отримання інвентарів гравців
-function getInventory() {
-    try {
-        if (!fs.existsSync(INVENTORY_PATH)) {
-            fs.writeFileSync(INVENTORY_PATH, JSON.stringify({}, null, 2));
-        }
-        return JSON.parse(fs.readFileSync(INVENTORY_PATH, 'utf8'));
-    } catch (err) { return {}; }
-}
+const DEFAULT_SKINS = {
+  ak47_default: {
+    name: "AKR",
+    weapon: "AK-47",
+    rarity: "common",
+    type: "weapon",
+    modelUrl: "ak-47.glb"
+  },
+  p90_default: {
+    name: "P90",
+    weapon: "P90",
+    rarity: "rare",
+    type: "weapon",
+    modelUrl: "P90.glb"
+  },
+  revolver_default: {
+    name: "Revolver",
+    weapon: "Revolver",
+    rarity: "epic",
+    type: "weapon",
+    modelUrl: "Revolver.glb"
+  },
+  shotgun_default: {
+    name: "Shotgun",
+    weapon: "Shotgun",
+    rarity: "legendary",
+    type: "weapon",
+    modelUrl: "Shotgun.glb"
+  },
+  sniper_default: {
+    name: "Sniper Rifle",
+    weapon: "Sniper Rifle",
+    rarity: "arcane",
+    type: "weapon",
+    modelUrl: "SniperRifle.glb"
+  },
+  pistol_default: {
+    name: "Pistol",
+    weapon: "Pistol",
+    rarity: "common",
+    type: "weapon",
+    modelUrl: "Pistol.glb"
+  }
+};
 
-// Ендпоінт: Отримати всі існуючі скіни
-app.get('/api/skins', (req, res) => {
-    res.json(getSkins());
-});
+let skins = readJson(SKINS_PATH, DEFAULT_SKINS);
+if (!skins || Array.isArray(skins) || typeof skins !== "object") skins = DEFAULT_SKINS;
+writeJson(SKINS_PATH, skins);
 
-// Ендпоінт: Отримати інвентар конкретного гравця
-app.post('/api/inventory/my', (req, res) => {
-    const { userId } = req.body;
-    const inventoryDB = getInventory();
-    const allSkins = getSkins();
-    
-    // Отримуємо масив ID скінів користувача (або порожній масив, якщо інвентар пустий)
-    const mySkinIds = inventoryDB[userId] || []; 
-    
-    // Об'єднуємо ID скінів з їхніми характеристиками з skins.json
-    const mySkinsData = mySkinIds.map(skinId => {
-        return { skinId: skinId, ...allSkins[skinId] };
-    }).filter(skin => skin.name); // Відфільтровуємо помилкові, якщо скін видалили з бази
+let users = readJson(USERS_PATH, []);
+if (!Array.isArray(users)) users = [];
+let clans = readJson(CLANS_PATH, {});
+if (!clans || Array.isArray(clans) || typeof clans !== "object") clans = {};
+let messages = readJson(MESSAGES_PATH, {});
+if (!messages || typeof messages !== "object" || Array.isArray(messages)) messages = {};
+let inventory = readJson(INVENTORY_PATH, {});
+if (!inventory || typeof inventory !== "object" || Array.isArray(inventory)) inventory = {};
+let market = readJson(MARKET_PATH, []);
+if (!Array.isArray(market)) market = [];
 
-    res.json({ success: true, inventory: mySkinsData });
-});
+function saveUsers() { writeJson(USERS_PATH, users); }
+function saveClans() { writeJson(CLANS_PATH, clans); }
+function saveMessages() { writeJson(MESSAGES_PATH, messages); }
+function saveInventory() { writeJson(INVENTORY_PATH, inventory); }
+function saveMarket() { writeJson(MARKET_PATH, market); }
+
 function hashPassword(password) {
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto.scryptSync(String(password), salt, 64).toString('hex');
-    return `scrypt:${salt}:${hash}`;
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(String(password), salt, 64).toString("hex");
+  return \`scrypt:\${salt}:\${hash}\`;
 }
 
 function verifyPassword(password, stored) {
-    if (typeof stored !== 'string') return false;
-    if (!stored.startsWith('scrypt:')) return stored === String(password);
-    const [, salt, expectedHex] = stored.split(':');
-    if (!salt || !expectedHex) return false;
+  if (typeof stored !== "string") return false;
+  if (!stored.startsWith("scrypt:")) return stored === String(password);
+  const [, salt, expectedHex] = stored.split(":");
+  if (!salt || !expectedHex) return false;
+  try {
     const actual = crypto.scryptSync(String(password), salt, 64);
-    const expected = Buffer.from(expectedHex, 'hex');
+    const expected = Buffer.from(expectedHex, "hex");
     return expected.length === actual.length && crypto.timingSafeEqual(actual, expected);
-}
-
-function getUsers() {
-    if (cachedUsers) return cachedUsers; 
-    try {
-        if (!fs.existsSync('account.json')) {
-            fs.writeFileSync('account.json', JSON.stringify([], null, 2));
-        }
-        const data = fs.readFileSync('account.json', 'utf8');
-        cachedUsers = JSON.parse(data);
-        return cachedUsers;
-    } catch (err) {
-        console.error("Помилка читання бази:", err);
-        return [];
-    }
-}
-
-// Функція тепер ОНОВЛЮЄ кеш і пише файл асинхронно
-function saveUsers(users) {
-    cachedUsers = Array.isArray(users) ? users : [];
-    fs.writeFileSync('account.json', JSON.stringify(cachedUsers, null, 2), 'utf8');
-}
-
-// Знайти і замінити блок app.get('/api/user-data', ...) у server.js
-app.get('/api/user-data', (req, res) => {
-  let userId = req.query.id;
-  if (!userId) return res.status(400).json({ success: false, message: "ID не вказано" });
-
-  // Авто-корекція ID (якщо прийшли тільки цифри)
-  if (/^\d+$/.test(userId)) {
-      userId = "ID_" + userId;
+  } catch {
+    return false;
   }
+}
 
-  const users = getUsers();
-  const user = users.find(u => u.id === userId);
+function cleanText(value, max = 120) {
+  return String(value ?? "").trim().slice(0, max);
+}
 
-  if (user) {
-    // ЗБИРАЄМО ДАНІ ПРО ДРУЗІВ
-    // Шукаємо в роуті app.get('/api/user-data', ...)
-const allUsers = getUsers(); 
+function normalizeId(value) {
+  return cleanText(value, 80);
+}
 
-const friendsData = (user.friendsList || []).map(fId => {
-    const friend = allUsers.find(u => u.id === fId);
-    if (friend) {
-        return { 
-            id: friend.id, 
-            nickname: friend.nickname, 
-            playerAvatar: friend.playerAvatar,
-            isVerified: friend.isVerified || false, // Твоя галочка
-            status: friend.status || 'offline'      // Статус (онлайн/офлайн)
-        };
-    }
+function findUser(idOrNickname) {
+  const q = normalizeId(idOrNickname);
+  const qLower = q.toLowerCase();
+  const fixed = /^\\d+$/.test(q) ? "ID_" + q : q;
+  return users.find(u =>
+    String(u.id).toLowerCase() === fixed.toLowerCase() ||
+    String(u.nickname).toLowerCase() === qLower
+  );
+}
+
+function publicUser(user) {
+  if (!user) return null;
+  const { password, passwordHash, ...safe } = user;
+  safe.friendsList = Array.isArray(user.friendsList) ? user.friendsList : [];
+  safe.incomingRequests = Array.isArray(user.incomingRequests) ? user.incomingRequests : [];
+  safe.blocked = Array.isArray(user.blocked) ? user.blocked : [];
+  safe.usedPromos = Array.isArray(user.usedPromos) ? user.usedPromos : [];
+  return safe;
+}
+
+function ensureUserShape(user) {
+  user.nickname = cleanText(user.nickname, 24);
+  user.id = normalizeId(user.id);
+  if (!Array.isArray(user.friendsList)) user.friendsList = [];
+  if (!Array.isArray(user.incomingRequests)) user.incomingRequests = [];
+  if (!Array.isArray(user.blocked)) user.blocked = [];
+  if (!Array.isArray(user.usedPromos)) user.usedPromos = [];
+  user.XP = Number(user.XP) || 0;
+  user.gold = Number(user.gold) || 0;
+  user.MMRCompetitive = Number(user.MMRCompetitive) || 1000;
+  user.MMRAllies = Number(user.MMRAllies) || 1000;
+  user.status = Boolean(user.status);
+  user.isVerified = Boolean(user.isVerified);
+  user.isBanned = Boolean(user.isBanned);
+  user.isAdmin = Boolean(user.isAdmin);
+}
+
+for (const user of users) ensureUserShape(user);
+
+if (users.some(u => u.clan === "67") && !clans["67"]) {
+  clans["67"] = {
+    name: "67",
+    tag: "67",
+    ownerId: users.find(u => u.clan === "67")?.id || "Dev_01",
+    level: 1,
+    xp: 0,
+    createdAt: Date.now()
+  };
+  saveClans();
+}
+for (const clan of Object.values(clans)) {
+  clan.name = cleanText(clan.name || clan.tag || "Clan", 24);
+  clan.tag = cleanText(clan.tag || clan.name, 5).toUpperCase();
+  clan.ownerId = normalizeId(clan.ownerId || clan.owner || "");
+  clan.level = Number(clan.level) || 1;
+  clan.xp = Number(clan.xp) || 0;
+}
+saveClans();
+
+const sessions = new Map();
+
+function parseCookies(header = "") {
+  const out = {};
+  for (const item of header.split(";")) {
+    const idx = item.indexOf("=");
+    if (idx <= 0) continue;
+    const key = item.slice(0, idx).trim();
+    const value = decodeURIComponent(item.slice(idx + 1).trim());
+    out[key] = value;
+  }
+  return out;
+}
+
+function createSession(userId) {
+  const token = crypto.randomBytes(32).toString("hex");
+  sessions.set(token, { userId, createdAt: Date.now() });
+  return token;
+}
+
+function sessionUserFromToken(token) {
+  const data = token ? sessions.get(token) : null;
+  if (!data) return null;
+  const user = users.find(u => u.id === data.userId);
+  if (!user) {
+    sessions.delete(token);
     return null;
-}).filter(f => f !== null);
-    // --- НОВИЙ БЛОК ВІДПОВІДІ ---
-    const { password, ...fullUserData } = user; // Відсікаємо пароль, беремо ВСЕ інше
+  }
+  return user;
+}
 
-    res.json({
-        success: true,
-        user: fullUserData, // Тепер тут є MMR, інвентар, заявки і все-все-все
-        friends: friendsData 
-    });
-    // ----------------------------
-} else {
-      res.status(404).json({ success: false, message: "Користувача не знайдено" });
+function requestUser(req) {
+  return sessionUserFromToken(parseCookies(req.headers.cookie || "").standoffx_session);
+}
+
+function requireAuth(req, res, next) {
+  const user = requestUser(req);
+  if (!user) return res.status(401).json({ success: false, message: "Авторизуйся." });
+  if (user.isBanned) return res.status(403).json({ success: false, message: "Акаунт заблоковано." });
+  req.user = user;
+  next();
+}
+
+function setSessionCookie(res, token) {
+  res.setHeader(
+    "Set-Cookie",
+    \`standoffx_session=\${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000\`
+  );
+}
+
+function clearSessionCookie(res) {
+  res.setHeader(
+    "Set-Cookie",
+    "standoffx_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0"
+  );
+}
+
+app.disable("x-powered-by");
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+app.use(express.static(ROOT));
+app.use("/avatars", express.static(AVATARS_DIR, { maxAge: "1d" }));
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, AVATARS_DIR),
+  filename: (_req, file, cb) => {
+    cb(null, \`\${Date.now()}-\${crypto.randomBytes(3).toString("hex")}\${path.extname(file.originalname).toLowerCase()}\`);
   }
 });
 
-// 3. ОПТИМІЗАЦІЯ ПОШУКУ ДРУЗІВ (щоб не гальмувало при великій кількості гравців)
-app.all('/api/get-my-friends', (req, res) => {
-    let userId = req.query.userId || req.body.userId;
-    if (!userId) return res.status(400).json({ success: false });
-
-    if (/^\d+$/.test(userId)) userId = "ID_" + userId;
-
-    const users = getUsers();
-    const user = users.find(u => u.id === userId.toString());
-
-    if (!user || !user.friendsList) return res.json({ success: true, friends: [] });
-
-    // Створюємо Map для швидкого пошуку (O(1) замість O(N))
-    const usersMap = new Map(users.map(u => [u.id, u]));
-
-    const friendsData = user.friendsList.map(fId => {
-        const f = usersMap.get(fId);
-        return f ? {
-            id: f.id,
-            nickname: f.nickname,
-            playerAvatar: f.playerAvatar || "/avatars/default.jpg",
-            status: f.status || false
-        } : null;
-    }).filter(f => f !== null);
-
-    res.json({ success: true, friends: friendsData });
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+    cb(null, allowed.has(file.mimetype));
+  }
 });
 
+app.get("/", (_req, res) => res.sendFile(path.join(ROOT, "auth.html")));
+app.get("/game", (_req, res) => res.sendFile(path.join(ROOT, "mainMenu.html")));
 
-// Цей рядок каже серверу: "Якщо просять файл з папки ranks, просто віддай його"
-app.use('/ranks', express.static(path.join(__dirname, 'ranks')));
-app.use('/avatars', express.static(path.join(__dirname, 'avatars')));
-
-// Створимо папку ranks автоматично, якщо її немає, щоб не було помилок
-if (!fs.existsSync('ranks')) {
-    fs.mkdirSync('ranks');
-}
-
-
-const MARKET_PATH = path.join(__dirname, "marketplace.json");
-
-// Функція для читання ринку
-function getMarket() {
-    try {
-        if (!fs.existsSync(MARKET_PATH)) fs.writeFileSync(MARKET_PATH, JSON.stringify([], null, 2));
-        return JSON.parse(fs.readFileSync(MARKET_PATH, 'utf8'));
-    } catch (err) { return []; }
-}
-
-// Отримати всі лоти на ринку
-app.get('/api/market/items', (req, res) => {
-    const items = getMarket();
-    res.json(items);
+app.get("/api/health", (_req, res) => {
+  res.json({ success: true, game: "StandoffX", version: "0.2.0" });
 });
 
-// Виставити скін на ринок
-app.post('/api/market/sell', (req, res) => {
-    const { userId, skinId, price, skinName, rarity } = req.body;
-    let market = getMarket();
-    let users = getUsers();
-    let user = users.find(u => u.id === userId);
+app.post("/api/register", (req, res) => {
+  const nickname = cleanText(req.body.nickname, 24);
+  const password = String(req.body.password || "");
 
-    if (!user) return res.json({ success: false, message: "Юзера не знайдено" });
+  if (!/^[\\p{L}\\p{N}_-]{3,24}$/u.test(nickname)) {
+    return res.status(400).json({ success: false, message: "Нік: 3–24 символи, літери/цифри/_/-." });
+  }
+  if (password.length < 4 || password.length > 128) {
+    return res.status(400).json({ success: false, message: "Пароль має містити 4–128 символів." });
+  }
+  if (users.some(u => String(u.nickname).toLowerCase() === nickname.toLowerCase())) {
+    return res.status(409).json({ success: false, message: "Такий нік вже зайнятий." });
+  }
 
-    const newLot = {
-        lotId: Date.now(),
-        sellerId: userId,
-        sellerNick: user.nickname,
-        skinId: skinId,
-        skinName: skinName,
-        rarity: rarity, // 'rare', 'epic', 'arcane'
-        price: numericPrice,
-        date: new Date().toISOString()
-    };
+  let id;
+  do id = "ID_" + crypto.randomInt(100000, 1000000); while (users.some(u => u.id === id));
 
-    market.push(newLot);
-    fs.writeFileSync(MARKET_PATH, JSON.stringify(market, null, 2));
-    res.json({ success: true, lot: newLot });
+  const user = {
+    nickname,
+    id,
+    passwordHash: hashPassword(password),
+    playerAvatar: "/avatars/default.jpg",
+    status: true,
+    XP: 0,
+    gold: 0,
+    clan: null,
+    MMRCompetitive: 1000,
+    MMRAllies: 1000,
+    isVerified: false,
+    isBanned: false,
+    isAdmin: false,
+    friendsList: [],
+    incomingRequests: [],
+    blocked: [],
+    usedPromos: []
+  };
+
+  users.push(user);
+  inventory[user.id] = inventory[user.id] || [];
+  saveUsers();
+  saveInventory();
+
+  const token = createSession(user.id);
+  setSessionCookie(res, token);
+  res.json({ success: true, redirect: "/game", user: publicUser(user) });
 });
-app.post('/api/clans/search', (req, res) => {
-  const { query } = req.body;
 
-  const results = db.clans.filter(c =>
-      c.name.toLowerCase().includes(query.toLowerCase()) ||
-      c.tag.toLowerCase().includes(query.toLowerCase())
-  );
+app.post("/api/login", (req, res) => {
+  let nickname = cleanText(req.body.nickname, 80);
+  const password = String(req.body.password || "");
+  if (/^\\d+$/.test(nickname)) nickname = "ID_" + nickname;
 
-  res.json({ success: true, clans: results });
+  const user = findUser(nickname);
+  if (!user || !verifyPassword(password, user.passwordHash || user.password)) {
+    return res.status(401).json({ success: false, message: "Невірний нік/ID або пароль." });
+  }
+  if (user.isBanned) return res.status(403).json({ success: false, message: "Акаунт заблоковано." });
+
+  if (!user.passwordHash) {
+    user.passwordHash = hashPassword(password);
+    delete user.password;
+    saveUsers();
+  }
+
+  user.status = true;
+  saveUsers();
+
+  const token = createSession(user.id);
+  setSessionCookie(res, token);
+  res.json({ success: true, redirect: "/game", user: publicUser(user) });
 });
-app.post('/api/clans/request', (req, res) => {
-  const { userId, clanId } = req.body;
 
-  const exists = db.clanRequests.find(r =>
-      r.userId === userId &&
-      r.clanId === clanId &&
-      r.status === "pending"
-  );
-
-  if (exists)
-      return res.json({ success: false, message: "Заявка вже подана" });
-
-  db.clanRequests.push({
-      id: Date.now(),
-      clanId,
-      userId,
-      status: "pending"
-  });
-
+app.post("/api/logout", requireAuth, (req, res) => {
+  const cookies = parseCookies(req.headers.cookie || "");
+  if (cookies.standoffx_session) sessions.delete(cookies.standoffx_session);
+  req.user.status = false;
+  saveUsers();
+  clearSessionCookie(res);
   res.json({ success: true });
 });
-app.post('/api/clans/requests', (req, res) => {
-  const { userId } = req.body;
 
-  const member = db.clanMembers.find(m => m.userId === userId);
-  if (!member) return res.json({ success: false });
+app.get("/api/me", requireAuth, (req, res) => {
+  res.json({ success: true, user: publicUser(req.user) });
+});
 
-  if (!["owner","officer"].includes(member.role))
-      return res.json({ success: false });
+app.get("/api/user-data", requireAuth, (req, res) => {
+  const target = findUser(req.query.id || req.user.id);
+  if (!target) return res.status(404).json({ success: false, message: "Користувача не знайдено." });
+  const friends = (target.friendsList || [])
+    .map(id => users.find(u => u.id === id))
+    .filter(Boolean)
+    .map(publicUser);
+  res.json({ success: true, user: publicUser(target), friends });
+});
 
-  const requests = db.clanRequests.filter(r =>
-      r.clanId === member.clanId &&
-      r.status === "pending"
-  );
+app.post("/api/sync-user", requireAuth, (req, res) => {
+  const id = normalizeId(req.body.id || req.user.id);
+  const target = users.find(u => u.id === id);
+  if (!target) return res.status(404).json({ success: false });
+  res.json({ success: true, user: publicUser(target) });
+});
 
+app.get("/api/get-my-friends", requireAuth, (req, res) => {
+  const friends = (req.user.friendsList || [])
+    .map(id => users.find(u => u.id === id))
+    .filter(Boolean)
+    .map(publicUser);
+  res.json({ success: true, friends });
+});
+
+app.post("/api/search-user", requireAuth, (req, res) => {
+  const query = cleanText(req.body.query, 80);
+  const target = findUser(query);
+  if (!target || target.id === req.user.id) {
+    return res.status(404).json({ success: false, message: "Гравця не знайдено." });
+  }
+  res.json({
+    success: true,
+    user: {
+      id: target.id,
+      nickname: target.nickname,
+      playerAvatar: target.playerAvatar,
+      isVerified: target.isVerified
+    }
+  });
+});
+
+app.post("/api/friends/request", requireAuth, (req, res) => {
+  const from = req.user;
+  const to = users.find(u => u.id === normalizeId(req.body.toId));
+  if (!to) return res.status(404).json({ success: false, message: "Гравця не знайдено." });
+  if (to.id === from.id) return res.status(400).json({ success: false, message: "Не можна додати себе." });
+  if ((from.blocked || []).includes(to.id) || (to.blocked || []).includes(from.id)) {
+    return res.status(403).json({ success: false, message: "Користувач недоступний." });
+  }
+  if ((from.friendsList || []).includes(to.id)) {
+    return res.status(400).json({ success: false, message: "Ви вже друзі." });
+  }
+  to.incomingRequests = to.incomingRequests || [];
+  if (to.incomingRequests.includes(from.id)) {
+    return res.status(400).json({ success: false, message: "Заявка вже відправлена." });
+  }
+  to.incomingRequests.push(from.id);
+  saveUsers();
+  res.json({ success: true });
+});
+
+app.post("/api/friends/incoming", requireAuth, (req, res) => {
+  const incoming = (req.user.incomingRequests || [])
+    .map(id => users.find(u => u.id === id))
+    .filter(Boolean)
+    .map(publicUser);
+  res.json({ success: true, incoming });
+});
+
+app.post("/api/friends/accept", requireAuth, (req, res) => {
+  const friend = users.find(u => u.id === normalizeId(req.body.friendId));
+  if (!friend) return res.status(404).json({ success: false, message: "Гравця не знайдено." });
+  if (!(req.user.incomingRequests || []).includes(friend.id)) {
+    return res.status(400).json({ success: false, message: "Заявку не знайдено." });
+  }
+
+  req.user.friendsList = req.user.friendsList || [];
+  friend.friendsList = friend.friendsList || [];
+  if (!req.user.friendsList.includes(friend.id)) req.user.friendsList.push(friend.id);
+  if (!friend.friendsList.includes(req.user.id)) friend.friendsList.push(req.user.id);
+  req.user.incomingRequests = req.user.incomingRequests.filter(id => id !== friend.id);
+  saveUsers();
+  res.json({ success: true });
+});
+
+app.post("/api/friends/decline", requireAuth, (req, res) => {
+  const friendId = normalizeId(req.body.friendId);
+  req.user.incomingRequests = (req.user.incomingRequests || []).filter(id => id !== friendId);
+  saveUsers();
+  res.json({ success: true });
+});
+
+app.post("/api/friends/remove", requireAuth, (req, res) => {
+  const friendId = normalizeId(req.body.friendId);
+  const friend = users.find(u => u.id === friendId);
+  req.user.friendsList = (req.user.friendsList || []).filter(id => id !== friendId);
+  if (friend) friend.friendsList = (friend.friendsList || []).filter(id => id !== req.user.id);
+  saveUsers();
+  res.json({ success: true });
+});
+
+app.post("/api/friends/block", requireAuth, (req, res) => {
+  const targetId = normalizeId(req.body.userId);
+  if (targetId === req.user.id) return res.status(400).json({ success: false });
+  req.user.blocked = Array.from(new Set([...(req.user.blocked || []), targetId]));
+  req.user.friendsList = (req.user.friendsList || []).filter(id => id !== targetId);
+  const target = users.find(u => u.id === targetId);
+  if (target) target.friendsList = (target.friendsList || []).filter(id => id !== req.user.id);
+  saveUsers();
+  res.json({ success: true });
+});
+
+app.get("/api/clans", requireAuth, (_req, res) => {
+  const list = Object.values(clans).map(c => ({
+    ...c,
+    members: users.filter(u => u.clan === c.tag).map(u => u.id)
+  }));
+  res.json({ success: true, clans: list });
+});
+
+app.post("/api/clans/search", requireAuth, (req, res) => {
+  const q = cleanText(req.body.query, 40).toLowerCase();
+  const result = Object.values(clans).filter(c =>
+    c.name.toLowerCase().includes(q) || c.tag.toLowerCase().includes(q)
+  ).map(c => ({
+    ...c,
+    members: users.filter(u => u.clan === c.tag).length
+  }));
+  res.json({ success: true, clans: result });
+});
+
+app.post("/api/clans/create", requireAuth, (req, res) => {
+  if (req.user.clan) return res.status(400).json({ success: false, message: "Ти вже в клані." });
+  if (req.user.gold < 500) return res.status(400).json({ success: false, message: "Потрібно 500 Gold." });
+
+  const tag = cleanText(req.body.tag, 5).toUpperCase();
+  const name = cleanText(req.body.name || tag, 24);
+  if (!/^[A-Z0-9]{2,5}$/.test(tag)) {
+    return res.status(400).json({ success: false, message: "Тег: 2–5 латинських символів/цифр." });
+  }
+  if (clans[tag]) return res.status(409).json({ success: false, message: "Такий тег вже зайнятий." });
+
+  clans[tag] = {
+    name,
+    tag,
+    ownerId: req.user.id,
+    level: 1,
+    xp: 0,
+    createdAt: Date.now()
+  };
+  req.user.gold -= 500;
+  req.user.clan = tag;
+  saveClans();
+  saveUsers();
+  res.json({ success: true, clan: clans[tag], gold: req.user.gold });
+});
+
+app.post("/api/clans/my", requireAuth, (req, res) => {
+  const clan = req.user.clan ? clans[req.user.clan] : null;
+  if (!clan) return res.json({ success: true, clan: null, members: [] });
+
+  const members = users.filter(u => u.clan === clan.tag).map(u => ({
+    userId: u.id,
+    nickname: u.nickname,
+    playerAvatar: u.playerAvatar,
+    role: u.id === clan.ownerId ? "owner" : "member"
+  }));
+  res.json({
+    success: true,
+    clan,
+    members,
+    myRole: req.user.id === clan.ownerId ? "owner" : "member"
+  });
+});
+
+app.post("/api/clans/request", requireAuth, (req, res) => {
+  const tag = cleanText(req.body.clanId || req.body.tag, 5).toUpperCase();
+  const clan = clans[tag];
+  if (!clan) return res.status(404).json({ success: false, message: "Клан не знайдено." });
+  if (req.user.clan) return res.status(400).json({ success: false, message: "Спочатку вийди з поточного клану." });
+
+  clan.requests = Array.isArray(clan.requests) ? clan.requests : [];
+  if (!clan.requests.includes(req.user.id)) clan.requests.push(req.user.id);
+  saveClans();
+  res.json({ success: true });
+});
+
+app.post("/api/clans/requests", requireAuth, (req, res) => {
+  if (!req.user.clan) return res.json({ success: true, requests: [] });
+  const clan = clans[req.user.clan];
+  if (!clan || clan.ownerId !== req.user.id) return res.status(403).json({ success: false });
+  const requests = (clan.requests || [])
+    .map(id => users.find(u => u.id === id))
+    .filter(Boolean)
+    .map(publicUser);
   res.json({ success: true, requests });
 });
-app.post('/api/clans/accept', (req, res) => {
-  const { requestId } = req.body;
 
-  const request = db.clanRequests.find(r => r.id === requestId);
-  if (!request) return res.json({ success: false });
-
-  request.status = "accepted";
-
-  db.clanMembers.push({
-      clanId: request.clanId,
-      userId: request.userId,
-      role: "member"
-  });
-
+app.post("/api/clans/accept", requireAuth, (req, res) => {
+  const clan = req.user.clan ? clans[req.user.clan] : null;
+  if (!clan || clan.ownerId !== req.user.id) return res.status(403).json({ success: false });
+  const targetId = normalizeId(req.body.userId);
+  const target = users.find(u => u.id === targetId);
+  if (!target || !(clan.requests || []).includes(targetId)) {
+    return res.status(404).json({ success: false, message: "Заявку не знайдено." });
+  }
+  target.clan = clan.tag;
+  clan.requests = clan.requests.filter(id => id !== targetId);
+  saveUsers();
+  saveClans();
   res.json({ success: true });
 });
-app.get("/api/clans", (req, res) => {
-  const clansData = loadClans();
-  res.json(clansData);
+
+app.post("/api/clans/decline", requireAuth, (req, res) => {
+  const clan = req.user.clan ? clans[req.user.clan] : null;
+  if (!clan || clan.ownerId !== req.user.id) return res.status(403).json({ success: false });
+  const targetId = normalizeId(req.body.userId);
+  clan.requests = (clan.requests || []).filter(id => id !== targetId);
+  saveClans();
+  res.json({ success: true });
 });
 
-app.post("/send-friend-request", (req, res) => {
-  const from = req.user.id
-  const to = Number(req.body.userId)
-
-  if (from === to)
-    return res.json({ error: "Нельзя добавить себя" })
-
-  const exists = db.friend_requests.find(r =>
-    r.from === from && r.to === to && r.status === "pending"
-  )
-
-  if (exists)
-    return res.json({ error: "Заявка уже отправлена" })
-
-  db.friend_requests.push({
-    from,
-    to,
-    status: "pending"
-  })
-
-  res.json({ success: true })
-})
-app.post("/decline-friend", (req, res) => {
-  const requestId = req.body.id
-  const request = db.friend_requests.find(r => r.id === requestId)
-
-  if (!request)
-    return res.json({ error: "Не найдена" })
-
-  request.status = "declined"
-  res.json({ success: true })
-})
-app.post("/send-clan-request", (req, res) => {
-  const userId = req.user.id
-  const clanId = Number(req.body.clanId)
-
-  const exists = db.clan_requests.find(r =>
-    r.userId === userId &&
-    r.clanId === clanId &&
-    r.status === "pending"
-  )
-
-  if (exists)
-    return res.json({ error: "Заявка уже отправлена" })
-
-  db.clan_requests.push({
-    clanId,
-    userId,
-    status: "pending"
-  })
-
-  res.json({ success: true })
-})
-app.post("/accept-clan-request", (req, res) => {
-  const requestId = req.body.id
-  const request = db.clan_requests.find(r => r.id === requestId)
-
-  if (!request)
-    return res.json({ error: "Не найдена" })
-
-  request.status = "accepted"
-
-  db.clan_members.push({
-    clanId: request.clanId,
-    userId: request.userId,
-    role: "member"
-  })
-
-  res.json({ success: true })
-})
-// 2. ФІКС API ДЛЯ ДРУЗІВ (Помилка 404)
-// Ми робимо обробник саме для GET, бо в консолі видно: GET .../api/get-my-friends
-
-// 3. ФІКС ВІДПРАВКИ ПОВІДОМЛЕНЬ (якщо раптом не було)
-app.post('/api/send-message', (req, res) => {
-    const { fromId, toId, text } = req.body;
-    let users = getUsers();
-    
-    const targetIndex = users.findIndex(u => u.id === toId);
-    const sender = users.find(u => u.id === fromId);
-
-    if (targetIndex !== -1 && sender) {
-        if (!users[targetIndex].messages) users[targetIndex].messages = [];
-        
-        users[targetIndex].messages.push({
-            from: sender.nickname,
-            fromId: sender.id,
-            text: text,
-            time: new Date().toLocaleTimeString()
-        });
-        
-        saveUsers(users);
-        res.json({ success: true });
+app.post("/api/clans/leave", requireAuth, (req, res) => {
+  if (!req.user.clan) return res.json({ success: true });
+  const clan = clans[req.user.clan];
+  if (clan && clan.ownerId === req.user.id) {
+    const members = users.filter(u => u.clan === clan.tag && u.id !== req.user.id);
+    if (members.length) {
+      clan.ownerId = members[0].id;
     } else {
-        res.status(404).json({ success: false, message: "Гравця не знайдено" });
+      delete clans[clan.tag];
     }
-});
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'auth.html')));
-app.get('/game', (req, res) => res.sendFile(path.join(__dirname, 'mainMenu.html')));
-
-
-// Щоб ранги працювали, додай роздачу папки (якщо вона є)
-app.use('/ranks', express.static('ranks'));
-// ОНОВЛЕНИЙ ЛОГІН
-app.post('/api/login', (req, res) => {
-    let { nickname, password } = req.body;
-    
-    // Якщо ввели просто цифри, автоматично додаємо ID_
-    if (/^\d+$/.test(nickname)) {
-        nickname = "ID_" + nickname;
-    }
-
-    const users = getUsers();
-    const user = users.find(u =>
-        (u.id === nickname || u.nickname === nickname) &&
-        verifyPassword(password, u.passwordHash || u.password)
-    );
-
-    if (user) {
-        if (!user.passwordHash) {
-            user.passwordHash = hashPassword(password);
-            delete user.password;
-            saveUsers(users);
-        }
-        if (user.isBanned) {
-            return res.status(403).json({ success: false, message: "Ваш акаунт заблоковано!" });
-        }
-        const { password, passwordHash, ...userData } = user;
-        res.json({ success: true, redirect: '/game', user: userData });
-    } else {
-        res.status(401).json({ success: false, message: "Невірний нік/ID або пароль!" });
-    }
-});
-
-// НОВА РЕЄСТРАЦІЯ
-app.post('/api/register', (req, res) => {
-    const { nickname, password } = req.body;
-    
-    if (!nickname || !password) {
-        return res.status(400).json({ success: false, message: "Заповніть всі поля!" });
-    }
-
-    const users = getUsers();
-    
-    if (users.find(u => u.nickname.toLowerCase() === nickname.toLowerCase())) {
-        return res.status(400).json({ success: false, message: "Цей нікнейм вже зайнятий!" });
-    }
-
-    // Генеруємо випадковий ID з 6 цифр
-    const newId = "ID_" + Math.floor(100000 + Math.random() * 900000);
-
-    // В середині app.post('/api/register')
-const newUser = {
-  nickname,
-  passwordHash: hashPassword(password),
-  id: newId,
-  playerAvatar: "/avatars/default_avatar.jpg",
-  status: true,
-  XP: 0,
-  gold: 0, // Початковий баланс, щоб вистачило на клан
-  clan: null,
-  MMRCompetitive: 1000,
-  MMRAllies: 1000,
-  isVerified: false,
-  isBanned: false,
-  isAdmin: false,
-  friendsList: [],
-  incomingRequests: [], // Вхідні заявки
-  blocked: []           // Заблоковані
-};
-
-    users.push(newUser);
-    saveUsers(users);
-
-    const { password, passwordHash, ...userData } = newUser;
-    res.json({ success: true, redirect: '/game', user: userData });
-});
-
-// Покращений пошук (виправляє баг "не знайдено")
-app.post('/api/search-user', (req, res) => {
-  const { query } = req.body;
-  const users = getUsers();
-  if (!query) return res.status(400).json({ success: false });
-
-  const q = query.toString().trim();
-  // Шукаємо за ніком або за ID (ігноруючи регістр та префікс)
-  const user = users.find(u => 
-      u.nickname.toLowerCase() === q.toLowerCase() || 
-      u.id.toLowerCase() === q.toLowerCase() ||
-      u.id.toLowerCase() === (q.toLowerCase().startsWith('id_') ? q.toLowerCase() : 'id_' + q.toLowerCase())
-  );
-
-  if (user) {
-      res.json({ success: true, user: { nickname: user.nickname, id: user.id, playerAvatar: user.playerAvatar } });
-  } else {
-      res.json({ success: false, message: "Користувача не знайдено" });
   }
+  req.user.clan = null;
+  saveUsers();
+  saveClans();
+  res.json({ success: true });
 });
 
+app.get("/api/skins", requireAuth, (_req, res) => res.json({ success: true, skins }));
 
-
-// --- ВІДПРАВКА ЗАПИТУ В ДРУЗІ (Фікс) ---
-
-
-// --- СТВОРЕННЯ КЛАНУ (Фікс) ---
-app.post('/api/create-clan', (req, res) => {
-  const { userId, clanTag } = req.body;
-  let users = getUsers();
-  let clans = getClans();
-  const user = users.find(u => u.id === userId);
-
-  if (!user || user.gold < 500) return res.json({ success: false, message: "Недостатньо голди (500)" });
-  if (user.clan) return res.json({ success: false, message: "Ви вже в клані" });
-
-  const cleanTag = clanTag.toUpperCase().trim();
-  if (clans[cleanTag]) return res.json({ success: false, message: "Такий тег зайнятий" });
-
-  // Оновлюємо користувача
-  user.gold -= 500;
-  user.clan = cleanTag;
-
-  // Реєструємо клан у системі
-  clans[cleanTag] = {
-      owner: user.id,
-      members: [user.id],
-      name: clanTag,
-      created: new Date().toISOString()
-  };
-
-  saveUsers(users);
-  saveClans(clans);
-  res.json({ success: true, newGold: user.gold });
-});
-// АКТИВАЦІЯ ПРОМОКОДУ
-app.post('/api/use-promo', (req, res) => {
-  const { nickname, code } = req.body;
-  const users = getUsers();
-  const user = users.find(u => u.nickname === nickname);
-
-  // Приклад промокоду на 1000 голди
-  if (code === "SOFTERX-2024") {
-      user.gold += 1000;
-      saveUsers(users);
-      return res.json({ success: true, message: "Нараховано 1000 голди!", gold: user.gold });
-  }
-  
-  res.status(400).json({ success: false, message: "Невірний або прострочений код" });
-});
-// ВІДПРАВИТИ ЗАПИТ
-
-
-// ПРИЙНЯТИ ЗАПИТ
-
-app.post('/api/sync', (req, res) => {
-  const { nickname } = req.body;
-  const users = getUsers();
-  const user = users.find(u => u.nickname === nickname);
-
-  if (user) {
-      // Создаем копию объекта пользователя, чтобы не портить оригинал
-      const fullUserData = { ...user };
-
-      // ПРЕВРАЩАЕМ МАССИВ ID В МАССИВ ОБЪЕКТОВ
-      if (Array.isArray(user.friendsList)) {
-          fullUserData.friendsList = user.friendsList
-              .map(friendId => {
-                  // Ищем друга в общем списке пользователей по его ID
-                  const foundFriend = users.find(u => u.id === friendId);
-                  
-                  // Если нашли — возвращаем только нужные данные
-                  if (foundFriend) {
-                      return {
-                          id: foundFriend.id,
-                          nickname: foundFriend.nickname,
-                          playerAvatar: foundFriend.playerAvatar,
-                          status: foundFriend.status // статус берем из базы
-                      };
-                  }
-                  return null; // Если не нашли (удален)
-              })
-              .filter(f => f !== null); // Очищаем список от "ненайденных" (null)
-      }
-
-      res.json({ success: true, user: fullUserData });
-  } else {
-      res.status(404).json({ success: false });
-  }
-});
-
-app.post('/api/upload-clan-avatar', upload.single('avatar'), (req, res) => {
-  const { userId, clanTag } = req.body;
-  let clans = getClans();
-  const clan = clans[clanTag];
-
-  if (clan && clan.leaderId === userId && req.file) {
-      clan.avatar = '/avatars/' + req.file.filename;
-      saveClans(clans);
-      res.json({ success: true, newPath: clan.avatar });
-  } else {
-      res.status(403).json({ success: false, message: "Ви не лідер або файл не обрано" });
-  }
-});
-app.get('/api/sync/:nickname', (req, res) => {
-  const users = getUsers();
-  const user = users.find(u => u.nickname === req.params.nickname);
-  if (user) {
-      const { password, ...userData } = user;
-      res.json(userData);
-  } else {
-      res.status(404).send();
-  }
-});
-// ОНОВЛЕННЯ ДАНИХ (щоб підвантажувати нові повідомлення та друзів)
-app.post('/api/sync-user', (req, res) => {
-  const { id } = req.body;
-  const users = getUsers();
-  const user = users.find(u => u.id === id);
-  if (user) {
-      const { password, ...userData } = user;
-      res.json({ success: true, user: userData });
-  } else {
-      res.status(404).json({ success: false });
-  }
-});
-
-// ДОДАВАННЯ ДРУГА
-// Функція для збереження юзерів (переконайся, що вона у тебе є)
-
-
-// --- РОУТ ДОДАВАННЯ В ДРУЗІ ---
-app.post('/api/add-friend', (req, res) => {
-  try {
-      const { fromId, toId } = req.body;
-      let users = getUsers();
-
-      const sender = users.find(u => u.id === fromId);
-      const target = users.find(u => u.id === toId);
-
-      if (!sender || !target) {
-          return res.status(404).json({ success: false, message: "Користувача не знайдено" });
-      }
-
-      // Ініціалізуємо масиви, якщо їх немає
-      if (!sender.friendsList) sender.friendsList = [];
-      if (!target.friendsList) target.friendsList = [];
-
-      // Перевірка, чи вже не друзі
-      if (sender.friendsList.includes(toId)) {
-          return res.json({ success: false, message: "Вже у друзях" });
-      }
-
-      // Додаємо обом (взаємна дружба)
-      sender.friendsList.push(toId);
-      target.friendsList.push(fromId);
-
-      saveUsers(users);
-      console.log(`Успіх: ${sender.nickname} додав ${target.nickname}`);
-      
-      res.json({ success: true });
-  } catch (err) {
-      console.error("Помилка на сервері:", err);
-      res.status(500).json({ success: false, message: "Помилка сервера" });
-  }
-});
-// ВІДПРАВКА ПОВІДОМЛЕННЯ
-
-app.post('/api/upload-avatar', upload.single('avatar'), (req, res) => {
-  const { nickname } = req.body;
-  const users = getUsers();
-  const userIndex = users.findIndex(u => u.nickname === nickname);
-
-  if (userIndex !== -1 && req.file) {
-      // Зберігаємо шлях з початковим слешем для зручності фронтенду
-      const newPath = '/avatars/' + req.file.filename;
-      users[userIndex].playerAvatar = newPath;
-      saveUsers(users);
-      res.json({ success: true, newPath: newPath });
-  } else {
-      res.status(400).json({ success: false, message: "Файл не завантажено" });
-  }
-});
- // Черга гравців
-
- 
-
-// Встав це ПЕРЕД io.on('connection')
-let activeMatches = {}; 
-
-
-
-
-// --- ОБ'ЄДНАНИЙ БЛОК CONNECTION ---
-io.on('connection', (socket) => {
-  console.log(`\x1b[36m[CONN]\x1b[0m Нове підключення: ${socket.id}`);
-
-  // ========================
-  // 1. СИСТЕМА МАТЧМЕЙКІНГУ
-  // ========================
-  socket.on('start_search', (data) => {
-      console.log(`\x1b[33m[QUEUE]\x1b[0m Гравець ${data.nickname} (ID: ${data.userId}) став у чергу.`);
-      
-      const isAlreadyInQueue = matchmakingQueue.some(p => p.userId === data.userId);
-      if (!isAlreadyInQueue) {
-          matchmakingQueue.push({ 
-              socketId: socket.id, 
-              userId: data.userId, 
-              nickname: data.nickname 
-          });
-      }
-      
-      io.emit('queue_update', { count: matchmakingQueue.length });
-
-      if (matchmakingQueue.length >= 3) {
-          const players = matchmakingQueue.splice(0, 3);
-          const matchId = 'match_' + Date.now();
-          const hunterIndex = Math.floor(Math.random() * players.length);
-         
-            const spawns = [{x: 5, y: 0, z: 5}, {x: 25, y: 0, z: 25}, {x: 15, y: 0, z: 5}];
-
-          players.forEach((p, i) => {
-              p.role = (i === hunterIndex) ? 'hunter' : 'runner';
-              p.score = 0;
-              p.spawnPos = spawns[i];
-              p.pos = spawns[i];
-          });
-
-          activeMatches[matchId] = { players, isStarted: false };
-          console.log(`\x1b[32m[MATCH_CREATED]\x1b[0m Матч ${matchId} сформовано!`);
-          
-          players.forEach(p => {
-              io.to(p.socketId).emit('match_found', { matchId: matchId, userId: p.userId });
-          });
-      }
-  });
-
-  // ========================
-  // 2. ВХІД В ІГРОВУ КІМНАТУ
-  // ========================
-  socket.on('join_room', (data) => {
-      const currentId = data.userId ? String(data.userId).trim() : null;
-      const matchId = data.matchId;
-      const match = activeMatches[matchId];
-
-      if (!match) return socket.emit('kick_to_menu', { reason: "Матч не знайдено" });
-
-      const player = match.players.find(p => String(p.userId) === currentId);
-      if (!player) return socket.emit('kick_to_menu');
-
-      player.socketId = socket.id;
-      socket.join(matchId);
-      
-      socket.emit('init_player', {
-          role: player.role,
-          spawn: player.spawnPos,
-          nickname: player.nickname
-      });
-
-      if (!match.isStarted) {
-          match.isStarted = true;
-          startMainMatch(matchId); // Твоя функція таймера
-      }
-  });
-
-  // ========================
-  // 3. РУХ ТА ЛОГІКА ЛОВЛІ
-  // ========================
-  socket.on('player_moved', (data) => {
-      if (!data.matchId || !data.userId) return;
-      const match = activeMatches[data.matchId];
-      if (!match) return;
-
-      const currentPlayer = match.players.find(p => p.userId === data.userId);
-      if (!currentPlayer) return;
-
-      currentPlayer.pos = { x: data.x, y: data.y, z: data.z };
-
-      // ЛОГІКА ЛОВЛІ
-      if (currentPlayer.role === 'hunter') {
-          match.players.forEach(p => {
-              if (p.role === 'runner' && p.pos) {
-                  const dist = Math.sqrt(
-                      Math.pow(currentPlayer.pos.x - p.pos.x, 2) + 
-                      Math.pow(currentPlayer.pos.z - p.pos.z, 2)
-                  );
-
-                  if (dist < 1.8) { // Дистанція лову
-                      console.log(`\x1b[31m[CATCH]\x1b[0m ${currentPlayer.nickname} зловив ${p.nickname}`);
-                      
-                      // 1. Додаємо +1 в статистику хантеру
-                      currentPlayer.score += 1;
-
-                      // 2. ПЕРЕОБИРАННЯ РОЛЕЙ: Зловлений стає новим хантером
-                      match.players.forEach(playerInMatch => {
-                          if (playerInMatch.userId === p.userId) {
-                              playerInMatch.role = 'hunter';
-                          } else {
-                              playerInMatch.role = 'runner';
-                          }
-                          // Респавн всіх на їх початкові точки
-                          playerInMatch.pos = playerInMatch.spawnPos;
-                      });
-
-                      // 3. Відправляємо всім сигнал про оновлення ролей та позицій
-                      io.to(data.matchId).emit('roles_updated', {
-                          players: match.players.map(pl => ({
-                              userId: pl.userId,
-                              role: pl.role,
-                              score: pl.score,
-                              spawn: pl.spawnPos
-                          })),
-                          message: `${currentPlayer.nickname} спіймав ${p.nickname}! Тепер ${p.nickname} - мисливець!`
-                      });
-                  }
-              }
-          });
-      }
-
-      socket.to(data.matchId).emit('enemy_moved', { 
-          id: socket.id,
-          userId: currentPlayer.userId,
-          x: data.x, y: data.y, z: data.z, 
-          rotY: data.rotY,
-          role: currentPlayer.role, 
-          nickname: currentPlayer.nickname 
-      });
-  });
-
-  // ========================
-  // 4. СИСТЕМА ЧАТУ (ПРИВАТ)
-  // ========================
-  socket.on('join_chat', ({ userId, friendId }) => {
-      const roomId = getRoomId(userId, friendId);
-      socket.join(roomId);
-      const allMsgs = getMessages();
-      socket.emit('chat_history', allMsgs[roomId] || []);
-  });
-
-  socket.on('send_msg', ({ fromId, toId, text, senderName }) => {
-      const roomId = getRoomId(fromId, toId);
-      const msgData = {
-          senderId: fromId,
-          senderName: senderName,
-          text: text,
-          time: new Date().toLocaleTimeString()
-      };
-
-      let allMsgs = getMessages();
-      if (!allMsgs[roomId]) allMsgs[roomId] = [];
-      allMsgs[roomId].push(msgData);
-      saveMessages(allMsgs);
-
-      io.to(roomId).emit('new_msg', msgData);
-  });
-
-  socket.on('disconnect', () => {
-      console.log(`\x1b[90m[DISCONN]\x1b[0m Сокет від'єднався: ${socket.id}`);
-      matchmakingQueue = matchmakingQueue.filter(p => p.socketId !== socket.id);
-  });
-});
-// --- ФІКС КЛАНІВ ---
-app.post('/api/clans/create', (req, res) => {
-  const { userId, tag } = req.body; // Використовуємо tag, як у тебе на фронті
-  let users = getUsers();
-  let clans = getClans();
-  const user = users.find(u => u.id === userId || u.nickname === req.body.nickname);
-
-  if (!user || user.gold < 500) return res.json({ success: false, message: "Недостатньо голди (500)" });
-  if (user.clan) return res.json({ success: false, message: "Ви вже в клані" });
-
-  const cleanTag = tag.toUpperCase().trim();
-  if (clans[cleanTag]) return res.json({ success: false, message: "Такий тег вже зайнятий" });
-
-  // Знімаємо голду і прописуємо тег клану
-  user.gold -= 500;
-  user.clan = cleanTag;
-
-  clans[cleanTag] = {
-      name: cleanTag, // Або можна додати окреме поле для повної назви
-      tag: cleanTag,
-      ownerId: user.id,
-      level: 1,
-      exp: 0,
-      createdAt: Date.now()
-  };
-
-  saveUsers(users);
-  saveClans(clans);
-  res.json({ success: true, gold: user.gold, clan: cleanTag });
-});
-
-app.post('/api/clans/my', (req, res) => {
-  const { userId } = req.body;
-  const users = getUsers();
-  const clans = getClans();
-  const user = users.find(u => u.id === userId);
-
-  if (!user || !user.clan) return res.json({ success: true, clan: null });
-
-  const clan = clans[user.clan];
-  if (!clan) return res.json({ success: true, clan: null });
-
-  // Знаходимо всіх учасників клану
-  const members = users.filter(u => u.clan === clan.tag).map(u => ({
-      userId: u.id,
-      nickname: u.nickname,
-      role: clan.ownerId === u.id ? 'owner' : 'member'
-  }));
-
+app.post("/api/inventory/my", requireAuth, (req, res) => {
+  const ids = Array.isArray(inventory[req.user.id]) ? inventory[req.user.id] : [];
   res.json({
-      success: true,
-      clan: clan,
-      members: members,
-      myRole: clan.ownerId === userId ? 'owner' : 'member'
+    success: true,
+    inventory: ids.map(skinId => ({ skinId, ...(skins[skinId] || {}) })).filter(item => item.name)
   });
 });
-// Прийняти запит
-app.post('/api/friends/accept', (req, res) => {
-  const { myId, friendId } = req.body; // Змінено на myId
-  let users = getUsers();
-  let user = users.find(u => u.id == myId);
-  let friend = users.find(u => u.id == friendId);
 
-  if (user && friend) {
-      user.friendsList = user.friendsList || [];
-      friend.friendsList = friend.friendsList || [];
-      
-      if (!user.friendsList.includes(friendId)) user.friendsList.push(friendId);
-      if (!friend.friendsList.includes(myId)) friend.friendsList.push(myId);
-      
-      // Видаляємо із заявок
-      user.incomingRequests = (user.incomingRequests || []).filter(id => id != friendId);
-      
-      saveUsers(users);
-      res.json({ success: true });
-  } else {
-      res.json({ success: false, message: "Гравця не знайдено" });
+app.get("/api/market/items", requireAuth, (_req, res) => res.json({ success: true, items: market }));
+
+app.post("/api/market/sell", requireAuth, (req, res) => {
+  const skinId = cleanText(req.body.skinId, 64);
+  const price = Number(req.body.price);
+  const owned = Array.isArray(inventory[req.user.id]) && inventory[req.user.id].includes(skinId);
+  if (!owned) return res.status(400).json({ success: false, message: "Цього предмета немає в інвентарі." });
+  if (!Number.isFinite(price) || price <= 0 || price > 1000000) {
+    return res.status(400).json({ success: false, message: "Некоректна ціна." });
   }
-});
-app.post('/api/clans/leave', (req, res) => {
-  const { userId } = req.body;
-  let users = getUsers();
-  const userIndex = users.findIndex(u => u.id === userId);
 
-  if (userIndex !== -1 && users[userIndex].clan) {
-      users[userIndex].clan = null; // Видаляємо з клану
-      saveUsers(users);
-      return res.json({ success: true });
+  inventory[req.user.id] = inventory[req.user.id].filter(id => id !== skinId);
+  const lot = {
+    lotId: crypto.randomBytes(8).toString("hex"),
+    sellerId: req.user.id,
+    sellerNick: req.user.nickname,
+    skinId,
+    skinName: skins[skinId]?.name || skinId,
+    rarity: skins[skinId]?.rarity || "common",
+    price,
+    date: Date.now()
+  };
+  market.push(lot);
+  saveInventory();
+  saveMarket();
+  res.json({ success: true, lot });
+});
+
+app.post("/api/market/buy", requireAuth, (req, res) => {
+  const lotIndex = market.findIndex(l => String(l.lotId) === String(req.body.lotId));
+  if (lotIndex === -1) return res.status(404).json({ success: false, message: "Лот уже продано або видалено." });
+  const lot = market[lotIndex];
+  if (lot.sellerId === req.user.id) return res.status(400).json({ success: false, message: "Не можна купити власний лот." });
+  const price = Number(lot.price);
+  if (req.user.gold < price) return res.status(400).json({ success: false, message: "Недостатньо Gold." });
+
+  const seller = users.find(u => u.id === lot.sellerId);
+  if (!seller) return res.status(404).json({ success: false, message: "Продавця не знайдено." });
+
+  req.user.gold -= price;
+  seller.gold += price;
+  inventory[req.user.id] = Array.isArray(inventory[req.user.id]) ? inventory[req.user.id] : [];
+  inventory[req.user.id].push(lot.skinId);
+  market.splice(lotIndex, 1);
+  saveUsers();
+  saveInventory();
+  saveMarket();
+  res.json({ success: true, gold: req.user.gold, item: lot });
+});
+
+app.post("/api/use-promo", requireAuth, (req, res) => {
+  const code = cleanText(req.body.code, 80);
+  const valid = cleanText(process.env.STANDOFFX_PROMO_CODE || "SOFTERX-2024", 80);
+  if (code !== valid) return res.status(400).json({ success: false, message: "Невірний промокод." });
+
+  req.user.usedPromos = Array.isArray(req.user.usedPromos) ? req.user.usedPromos : [];
+  if (req.user.usedPromos.includes(code)) {
+    return res.status(400).json({ success: false, message: "Цей промокод уже використаний." });
   }
-  res.json({ success: false, message: "Ви не в клані" });
-});
-// --- РОБОТА З ПОВІДОМЛЕННЯМИ ---
-const MESSAGES_PATH = path.join(__dirname, 'messages.json');
 
-function getMessages() {
-    try {
-        if (!fs.existsSync(MESSAGES_PATH)) fs.writeFileSync(MESSAGES_PATH, JSON.stringify({}));
-        return JSON.parse(fs.readFileSync(MESSAGES_PATH, 'utf8'));
-    } catch (err) { return {}; }
-}
-
-function saveMessages(msgs) {
-    fs.writeFileSync(MESSAGES_PATH, JSON.stringify(msgs, null, 2));
-}
-
-
-// Отримати список активних діалогів (з ким є історія в messages.json)
-app.get('/api/chat/active-dialogs/:userId', (req, res) => {
-  const userId = req.params.userId;
-  const allMsgs = getMessages();
-  const users = getUsers();
-  let dialogPartners = new Set();
-
-  // Шукаємо всі кімнати, де є ID нашого користувача
-  Object.keys(allMsgs).forEach(roomId => {
-      const ids = roomId.split('_');
-      if (ids.includes(userId)) {
-          const partnerId = ids.find(id => id !== userId);
-          if (partnerId) dialogPartners.add(partnerId);
-      }
-  });
-
-  // Отримуємо дані цих користувачів (нік, аватар)
-  const result = users
-      .filter(u => dialogPartners.has(u.id.toString()))
-      .map(u => ({ id: u.id, nickname: u.nickname, playerAvatar: u.playerAvatar }));
-
-  res.json(result);
-});
-// Функція для створення ID кімнати (завжди однакова для двох гравців)
-function getRoomId(id1, id2) {
-    return [id1.toString(), id2.toString()].sort().join('_');
-}
-
-// --- API ДЛЯ ДРУЗІВ ---
-// --- API ДЛЯ ДРУЗІВ ---
-
-// Надіслати запит
-app.post('/api/friends/request', (req, res) => {
-    const { fromId, toId } = req.body;
-    let users = getUsers();
-    let target = users.find(u => u.id == toId);
-    
-    if (!target) return res.json({ success: false, message: "Гравця не знайдено" });
-    if (fromId == toId) return res.json({ success: false, message: "Не можна додати себе" });
-
-    // Використовуємо incomingRequests, бо ти його задаєш при реєстрації!
-    if (!target.incomingRequests) target.incomingRequests = [];
-    if (target.incomingRequests.includes(fromId)) return res.json({ success: false, message: "Запит уже надіслано" });
-    
-    target.incomingRequests.push(fromId);
-    saveUsers(users);
-    res.json({ success: true });
+  req.user.usedPromos.push(code);
+  req.user.gold += 1000;
+  saveUsers();
+  res.json({ success: true, gold: req.user.gold });
 });
 
-// Отримати вхідні запити
-app.post('/api/friends/incoming', (req, res) => {
-    const { userId } = req.body;
-    const users = getUsers();
-    const user = users.find(u => u.id == userId);
-
-    if (!user) return res.status(404).json({ success: false, message: "Користувача не знайдено" });
-
-    // Отримуємо дані тих, хто надіслав запит (теж incomingRequests)
-    const incomingRequestsData = (user.incomingRequests || []).map(senderId => {
-        const sender = users.find(u => u.id == senderId);
-        return sender ? { id: sender.id, nickname: sender.nickname, playerAvatar: sender.playerAvatar } : null;
-    }).filter(u => u !== null);
-
-    res.json({ success: true, incoming: incomingRequestsData });
+app.get("/api/chat/active-dialogs/:userId", requireAuth, (req, res) => {
+  if (normalizeId(req.params.userId) !== req.user.id) return res.status(403).json({ success: false });
+  const partnerIds = new Set();
+  for (const room of Object.keys(messages)) {
+    const ids = room.split("_");
+    if (ids.includes(req.user.id)) ids.filter(id => id !== req.user.id).forEach(id => partnerIds.add(id));
+  }
+  const dialogs = users.filter(u => partnerIds.has(u.id)).map(publicUser);
+  res.json(dialogs);
 });
 
-
-
-async function runMatchLifecycle(matchId) {
-    console.log(`[LIFECYCLE] Початок розминки для ${matchId}`);
-    
-    // 1. РОЗМИНКА (15 сек)
-    let warmup = 15;
-    let warmupInterval = setInterval(() => {
-        warmup--;
-        io.to(matchId).emit('timer_update', { time: warmup, status: "Розминка" });
-        if (warmup <= 0) {
-            clearInterval(warmupInterval);
-            console.log(`[LIFECYCLE] Розминка закінчена. Починаємо гру!`);
-            startMainMatch(matchId);
-        }
-    }, 1000);
+function chatRoom(a, b) {
+  return [String(a), String(b)].sort().join("_");
 }
 
-function startMainMatch(matchId) {
-  const match = activeMatches[matchId];
+function areFriends(a, b) {
+  return (a.friendsList || []).includes(b.id) || a.id === b.id;
+}
+
+app.post("/api/upload-avatar", requireAuth, upload.single("avatar"), (req, res) => {
+  if (!req.file) return res.status(400).json({ success: false, message: "Немає коректного зображення." });
+  req.user.playerAvatar = "/avatars/" + req.file.filename;
+  saveUsers();
+  res.json({ success: true, newPath: req.user.playerAvatar });
+});
+
+// ---------- MATCHMAKING / GAME ----------
+
+const matchmakingQueue = [];
+const activeMatches = new Map();
+const MATCH_SIZE = 3;
+const GAME_SECONDS = 300;
+const WARMUP_SECONDS = 5;
+const SPAWNS = [
+  { x: 5, y: 0, z: 5 },
+  { x: 25, y: 0, z: 25 },
+  { x: 15, y: 0, z: 5 }
+];
+
+function removeFromQueue(userId) {
+  const idx = matchmakingQueue.findIndex(p => p.userId === userId);
+  if (idx !== -1) {
+    matchmakingQueue.splice(idx, 1);
+    return true;
+  }
+  return false;
+}
+
+function playerMatch(userId) {
+  for (const match of activeMatches.values()) {
+    if (match.players.some(p => p.userId === userId)) return match;
+  }
+  return null;
+}
+
+function emitQueueCount(io) {
+  io.emit("queue_update", { count: matchmakingQueue.length });
+}
+
+function createMatch(io) {
+  if (matchmakingQueue.length < MATCH_SIZE) return;
+  const players = matchmakingQueue.splice(0, MATCH_SIZE);
+  const matchId = "match_" + Date.now() + "_" + crypto.randomBytes(2).toString("hex");
+  const hunterIndex = crypto.randomInt(0, players.length);
+
+  const match = {
+    id: matchId,
+    map: players[0].map || "M3_Maze",
+    players: players.map((p, i) => ({
+      socketId: p.socketId,
+      userId: p.userId,
+      nickname: p.nickname,
+      role: i === hunterIndex ? "hunter" : "runner",
+      score: 0,
+      spawn: { ...SPAWNS[i] },
+      pos: { ...SPAWNS[i] },
+      rotY: 0,
+      anim: "Idle",
+      lastMoveAt: 0
+    })),
+    started: false,
+    finished: false,
+    timer: null,
+    phaseTimer: null,
+    remaining: GAME_SECONDS
+  };
+
+  activeMatches.set(matchId, match);
+  emitQueueCount(io);
+
+  for (const p of match.players) {
+    io.to(p.socketId).emit("match_found", {
+      matchId,
+      userId: p.userId,
+      map: match.map
+    });
+  }
+}
+
+function cleanMatch(io, matchId, returnToMenu = true) {
+  const match = activeMatches.get(matchId);
   if (!match) return;
-
-  let matchTime = 300; // 5 хвилин (300 секунд)
-  io.to(matchId).emit('match_start_now');
-
-  // Очищуємо старий інтервал, якщо він був (профілактика багів)
   if (match.timer) clearInterval(match.timer);
+  if (match.phaseTimer) clearInterval(match.phaseTimer);
+  if (returnToMenu) io.to(matchId).emit("go_to_menu");
+  activeMatches.delete(matchId);
+}
 
-  match.timer = setInterval(() => {
-      matchTime--;
-      
-      // Відправляємо оновлення таймера всім у кімнаті
-      io.to(matchId).emit('timer_update', { 
-          time: matchTime, 
-          status: "ГРА ЙДЕ!" 
-      });
-      
-      if (matchTime <= 0) {
-          clearInterval(match.timer);
-          console.log(`[LIFECYCLE] Час вийшов для матчу ${matchId}`);
-          finishMatch(matchId);
-      }
+function startMatchWhenReady(io, match) {
+  if (match.started || match.players.some(p => !p.socketId)) return;
+  match.started = true;
+
+  let warmup = WARMUP_SECONDS;
+  io.to(match.id).emit("match_phase", { phase: "warmup", time: warmup });
+  match.phaseTimer = setInterval(() => {
+    warmup -= 1;
+    io.to(match.id).emit("timer_update", { time: warmup, phase: "warmup" });
+    if (warmup <= 0) {
+      clearInterval(match.phaseTimer);
+      io.to(match.id).emit("match_start_now");
+      match.remaining = GAME_SECONDS;
+      match.timer = setInterval(() => {
+        match.remaining -= 1;
+        io.to(match.id).emit("timer_update", { time: match.remaining, phase: "game" });
+        if (match.remaining <= 0) finishMatch(io, match.id);
+      }, 1000);
+    }
   }, 1000);
 }
 
-function finishMatch(matchId) {
-  const match = activeMatches[matchId];
-  if (!match) return;
+function finishMatch(io, matchId) {
+  const match = activeMatches.get(matchId);
+  if (!match || match.finished) return;
+  match.finished = true;
 
-  console.log(`[LIFECYCLE] Завершення матчу ${matchId}, розрахунок нагород...`);
+  if (match.timer) clearInterval(match.timer);
+  if (match.phaseTimer) clearInterval(match.phaseTimer);
 
-  let users = getUsers(); // Завантажуємо актуальний список юзерів з файлу
+  const ranked = [...match.players].sort((a, b) => b.score - a.score);
+  const maxScore = ranked[0]?.score || 0;
 
-  // Знаходимо гравця з найбільшим рахунком (переможця)
-  const sortedPlayers = [...match.players].sort((a, b) => b.score - a.score);
-  const maxScore = sortedPlayers[0].score;
+  for (const p of match.players) {
+    const user = users.find(u => u.id === p.userId);
+    if (!user) continue;
+    const goldReward = maxScore > 0 && p.score === maxScore ? 10 : 2;
+    const xpReward = 50 + p.score * 20;
+    user.gold += goldReward;
+    user.XP += xpReward;
+    io.to(p.socketId).emit("show_results", {
+      xp: xpReward,
+      gold: goldReward,
+      score: p.score,
+      msg: \`Матч завершено. +\${xpReward} XP / +\${goldReward} Gold\`
+    });
+  }
+  saveUsers();
 
-  match.players.forEach(playerInMatch => {
-      const userIndex = users.findIndex(u => u.id === playerInMatch.userId);
-      
-      if (userIndex !== -1) {
-          // Логіка нагород:
-          // Переможцю (якщо score > 0) даємо 10 голди, іншим 2.
-          const goldReward = (playerInMatch.score === maxScore && maxScore > 0) ? 10 : 2;
-          const xpReward = playerInMatch.score + 50; // Базові 50 XP + очки за гру
-
-          // Оновлюємо дані в масиві
-          users[userIndex].gold = (users[userIndex].gold || 0) + goldReward;
-          users[userIndex].XP = (users[userIndex].XP || 0) + xpReward;
-
-          // Відправляємо результат конкретному гравцю через його сокет
-          io.to(playerInMatch.socketId).emit('show_results', { 
-              xp: xpReward, 
-              gold: goldReward,
-              msg: `Матч завершено! Ти отримав ${goldReward} Gold та ${xpReward} XP.`
-          });
-      }
-  });
-
-  // Зберігаємо оновлені дані всіх гравців у файл account.json
-  saveUsers(users);
-
-  // Через 10 секунд повертаємо всіх у меню і видаляємо матч з пам'яті
-  setTimeout(() => {
-      io.to(matchId).emit('go_to_menu');
-      delete activeMatches[matchId];
-      console.log(`[LIFECYCLE] Матч ${matchId} видалено, гравці повернуті в меню.`);
-  }, 10000);
+  setTimeout(() => cleanMatch(io, matchId, true), 7000);
 }
 
-app.post('/api/market/buy', (req, res) => {
-  const { userId, lotId } = req.body;
-  const users = getUsers();
-  const market = getMarket();
-  const buyer = users.find(u => u.id === userId);
-  const index = market.findIndex(lot => String(lot.lotId) === String(lotId));
+function validateMove(player, data) {
+  const now = Date.now();
+  if (now - player.lastMoveAt < 33) return false;
+  player.lastMoveAt = now;
 
-  if (!buyer) return res.status(404).json({ success: false, message: "Покупця не знайдено" });
-  if (index === -1) return res.status(404).json({ success: false, message: "Лот уже недоступний" });
+  const x = Number(data.x), y = Number(data.y), z = Number(data.z), rotY = Number(data.rotY);
+  if (![x, y, z, rotY].every(Number.isFinite)) return false;
 
-  const lot = market[index];
-  const price = Number(lot.price);
-  if (!Number.isFinite(price) || price <= 0) return res.status(400).json({ success: false, message: "Некоректний лот" });
-  if (lot.sellerId === buyer.id) return res.status(400).json({ success: false, message: "Не можна купити власний лот" });
-  if (Number(buyer.gold || 0) < price) return res.status(400).json({ success: false, message: "Недостатньо голди" });
+  const prev = player.pos;
+  const elapsed = Math.min(0.25, Math.max(0.033, (now - (player.prevMoveTime || now)) / 1000));
+  player.prevMoveTime = now;
 
-  const seller = users.find(u => u.id === lot.sellerId);
-  if (!seller) return res.status(404).json({ success: false, message: "Продавця не знайдено" });
+  const maxStep = Math.max(0.35, 18 * elapsed);
+  const dx = x - prev.x;
+  const dz = z - prev.z;
+  const planarDistance = Math.hypot(dx, dz);
 
-  const inventory = getInventory();
-  inventory[buyer.id] = Array.isArray(inventory[buyer.id]) ? inventory[buyer.id] : [];
-  inventory[buyer.id].push(lot.skinId);
+  if (planarDistance > maxStep) {
+    const scale = maxStep / planarDistance;
+    player.pos.x += dx * scale;
+    player.pos.z += dz * scale;
+  } else {
+    player.pos.x = x;
+    player.pos.z = z;
+  }
+  player.pos.y = Math.max(-2, Math.min(100, y));
+  player.rotY = rotY;
+  player.anim = ["Idle", "Running", "Jump", "Walking"].includes(data.anim) ? data.anim : "Idle";
+  return true;
+}
 
-  buyer.gold = Number(buyer.gold || 0) - price;
-  seller.gold = Number(seller.gold || 0) + price;
-  market.splice(index, 1);
+function handleCatch(io, match, hunter) {
+  if (hunter.role !== "hunter") return;
 
-  fs.writeFileSync(INVENTORY_PATH, JSON.stringify(inventory, null, 2));
-  fs.writeFileSync(MARKET_PATH, JSON.stringify(market, null, 2));
-  saveUsers(users);
+  for (const target of match.players) {
+    if (target.role !== "runner") continue;
+    const dx = hunter.pos.x - target.pos.x;
+    const dz = hunter.pos.z - target.pos.z;
+    if (Math.hypot(dx, dz) > 2.2) continue;
 
-  res.json({ success: true, gold: buyer.gold, item: lot });
-});
-
-app.post('/api/match-results', (req, res) => {
-    const { userId, caughtCount, isWinner } = req.body;
-    let users = getUsers();
-    let user = users.find(u => u.id === userId);
-
-    if (user) {
-        const earnedXP = caughtCount * 20;
-        user.XP += earnedXP;
-        
-        if (isWinner) {
-            user.gold += 5;
-        }
-
-        saveUsers(users);
-        res.json({ success: true, xp: earnedXP, gold: isWinner ? 5 : 0 });
+    hunter.score += 1;
+    for (const p of match.players) {
+      p.role = p.userId === target.userId ? "hunter" : "runner";
+      p.pos = { ...p.spawn };
+      p.rotY = 0;
+      p.anim = "Idle";
     }
+
+    io.to(match.id).emit("roles_updated", {
+      players: match.players.map(p => ({
+        userId: p.userId,
+        role: p.role,
+        score: p.score,
+        spawn: p.spawn
+      })),
+      message: \`\${hunter.nickname} спіймав \${target.nickname}! Тепер \${target.nickname} — мисливець.\`
+    });
+    break;
+  }
+}
+
+const createServer = () => {
+  if (!SServer) return http.createServer(app);
+  const keyPath = process.env.TLS_KEY_PATH || path.join(ROOT, "site.local-key.pem");
+  const certPath = process.env.TLS_CERT_PATH || path.join(ROOT, "site.local.pem");
+  return https.createServer({
+    key: fs.readFileSync(keyPath),
+    cert: fs.readFileSync(certPath)
+  }, app);
+};
+
+const server = createServer();
+const io = new Server(server, {
+  cors: { origin: true, credentials: true }
 });
 
+io.on("connection", socket => {
+  const cookies = parseCookies(socket.handshake.headers.cookie || "");
+  socket.user = sessionUserFromToken(cookies.standoffx_session);
 
-// 4. ЗАПУСК З АВТО-ПОСИЛАННЯМ
+  if (!socket.user) {
+    socket.emit("auth_required");
+    socket.disconnect(true);
+    return;
+  }
+
+  socket.user.status = true;
+  saveUsers();
+
+  socket.on("start_search", data => {
+    const user = socket.user;
+    if (playerMatch(user.id)) return socket.emit("search_error", { message: "Ти вже в матчі." });
+    if (matchmakingQueue.some(p => p.userId === user.id)) return;
+
+    removeFromQueue(user.id);
+    matchmakingQueue.push({
+      socketId: socket.id,
+      userId: user.id,
+      nickname: user.nickname,
+      map: cleanText(data?.map || "M3_Maze", 32)
+    });
+
+    socket.emit("search_started");
+    emitQueueCount(io);
+    createMatch(io);
+  });
+
+  socket.on("cancel_search", () => {
+    if (removeFromQueue(socket.user.id)) emitQueueCount(io);
+  });
+
+  socket.on("join_room", data => {
+    const matchId = cleanText(data?.matchId, 100);
+    const match = activeMatches.get(matchId);
+    if (!match) return socket.emit("kick_to_menu", { reason: "Матч не знайдено." });
+
+    const player = match.players.find(p => p.userId === socket.user.id);
+    if (!player) return socket.emit("kick_to_menu", { reason: "Гравця немає в цьому матчі." });
+
+    player.socketId = socket.id;
+    socket.join(matchId);
+    socket.emit("init_match", {
+      matchId,
+      map: match.map,
+      me: {
+        userId: player.userId,
+        nickname: player.nickname,
+        role: player.role,
+        score: player.score,
+        spawn: player.spawn
+      },
+      players: match.players.map(p => ({
+        userId: p.userId,
+        nickname: p.nickname,
+        role: p.role,
+        score: p.score,
+        x: p.pos.x,
+        y: p.pos.y,
+        z: p.pos.z,
+        rotY: p.rotY,
+        anim: p.anim
+      }))
+    });
+
+    socket.to(matchId).emit("player_joined", {
+      userId: player.userId,
+      nickname: player.nickname,
+      role: player.role,
+      x: player.pos.x,
+      y: player.pos.y,
+      z: player.pos.z,
+      rotY: player.rotY,
+      anim: player.anim
+    });
+
+    startMatchWhenReady(io, match);
+  });
+
+  socket.on("player_moved", data => {
+    const match = activeMatches.get(cleanText(data?.matchId, 100));
+    if (!match) return;
+    const player = match.players.find(p => p.userId === socket.user.id);
+    if (!player || player.socketId !== socket.id) return;
+    if (!validateMove(player, data)) return;
+
+    handleCatch(io, match, player);
+
+    socket.to(match.id).emit("enemy_moved", {
+      id: socket.id,
+      userId: player.userId,
+      nickname: player.nickname,
+      role: player.role,
+      x: player.pos.x,
+      y: player.pos.y,
+      z: player.pos.z,
+      rotY: player.rotY,
+      anim: player.anim,
+      score: player.score
+    });
+  });
+
+  socket.on("join_chat", ({ friendId } = {}) => {
+    const user = socket.user;
+    const friend = users.find(u => u.id === normalizeId(friendId));
+    if (!friend || !areFriends(user, friend)) return socket.emit("chat_error", { message: "Можна писати лише друзям." });
+
+    const room = chatRoom(user.id, friend.id);
+    socket.join(room);
+    socket.emit("chat_history", messages[room] || []);
+  });
+
+  socket.on("send_msg", ({ toId, text } = {}) => {
+    const user = socket.user;
+    const friend = users.find(u => u.id === normalizeId(toId));
+    const body = cleanText(text, 1000);
+    if (!friend || !body || !areFriends(user, friend)) return;
+
+    const room = chatRoom(user.id, friend.id);
+    const msg = {
+      senderId: user.id,
+      senderName: user.nickname,
+      text: body,
+      time: new Date().toISOString()
+    };
+    messages[room] = Array.isArray(messages[room]) ? messages[room] : [];
+    messages[room].push(msg);
+    if (messages[room].length > 200) messages[room].splice(0, messages[room].length - 200);
+    saveMessages();
+    io.to(room).emit("new_msg", msg);
+  });
+
+  socket.on("disconnect", () => {
+    removeFromQueue(socket.user?.id);
+    if (socket.user) {
+      socket.user.status = false;
+      saveUsers();
+    }
+
+    for (const [matchId, match] of activeMatches.entries()) {
+      const p = match.players.find(x => x.socketId === socket.id);
+      if (!p) continue;
+
+      p.socketId = null;
+      io.to(matchId).emit("player_left", { userId: p.userId });
+
+      if (!match.started) {
+        cleanMatch(io, matchId, true);
+      }
+    }
+    emitQueueCount(io);
+  });
+});
+
+app.use((err, _req, res, _next) => {
+  console.error("[HTTP]", err);
+  if (err instanceof multer.MulterError || err?.message === "Дозволені тільки зображення") {
+    return res.status(400).json({ success: false, message: err.message || "Файл відхилено." });
+  }
+  res.status(500).json({ success: false, message: "Внутрішня помилка сервера." });
+});
+
 server.listen(PORT, () => {
-    let protocol = "http";
-    if (SServer === 2) {
-        protocol = "https";
-    }
-    
-    let host = protocol + "://localhost:" + PORT;
-    if (process.env.RENDER_EXTERNAL_URL) {
-        host = process.env.RENDER_EXTERNAL_URL;
-    }
-
-    console.log("--------------------------");
-    console.log("СЕРВЕР ЗАПУЩЕНО!");
-    console.log("ПОСИЛАННЯ: " + host);
-    console.log("ПОРТ: " + PORT);
-    console.log("--------------------------");
+  console.log("====================================");
+  console.log(" StandoffX server");
+  console.log(\` HTTP : \${SServer ? "HTTPS" : "HTTP"}\`);
+  console.log(\` PORT : \${PORT}\`);
+  console.log("====================================");
 });
