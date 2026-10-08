@@ -108,7 +108,7 @@
         controls.addEventListener('lock', () => document.getElementById('overlay').style.display = 'none');
         controls.addEventListener('unlock', () => document.getElementById('overlay').style.display = 'flex');
 
-        let moveKeys = { w: false, s: false, a: false, d: false };
+        let moveKeys = { w: false, s: false, a: false, d: false, space: false };
         let velocity = new THREE.Vector3();
         let currentSpeed = 10; 
         let canJump = false;
@@ -118,8 +118,19 @@
             if (e.code === 'KeyS') moveKeys.s = true;
             if (e.code === 'KeyA') moveKeys.a = true;
             if (e.code === 'KeyD') moveKeys.d = true;
-            if (e.code === 'Space' && canJump) { velocity.y = 10; canJump = false; setAnim('Jump'); }
-            if (e.code === 'KeyG') { isThirdPerson = !isThirdPerson; if(playerModel) playerModel.visible = isThirdPerson; }
+            if (e.code === 'Space') {
+    e.preventDefault();
+    moveKeys.space = true;
+    if (canJump) {
+        velocity.y = 12;
+        canJump = false;
+        setAnim('Jump');
+    }
+}
+            if (e.code === 'KeyG') {
+    isThirdPerson = !isThirdPerson;
+    if (playerModel) playerModel.visible = isThirdPerson;
+}
             if (e.shiftKey && myRole === 'hunter') currentSpeed = 18;
         });
         document.addEventListener('keyup', (e) => {
@@ -127,7 +138,8 @@
             if (e.code === 'KeyS') moveKeys.s = false;
             if (e.code === 'KeyA') moveKeys.a = false;
             if (e.code === 'KeyD') moveKeys.d = false;
-            if (e.code === 'ShiftLeft') currentSpeed = 10;
+            if (e.code === 'Space') moveKeys.space = false;
+            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') currentSpeed = 10;
         });
 
         function setAnim(name) {
@@ -194,15 +206,11 @@
             if (canJump) setAnim('Idle');
         }
 
-        // Стрибок
-        if (moveKeys.space && canJump) {
-            velocity.y = 12; // Сила стрибка
-            canJump = false;
-            setAnim('Jump'); // Переконайся, що така анімація є
-        }
+        // Стрибок запускається в keydown, а тут лише синхронізуємо стан анімації.
+        if (!canJump && velocity.y > 0) setAnim('Jump');
 
         // --- ЛОГІКА ЛОВЛІ (Тільки якщо я Hunter) ---
-        if (window.myRole === 'hunter') {
+        if (myRole === 'hunter') {
             Object.values(otherPlayers).forEach(enemy => {
                 // Рахуємо дистанцію до іншого гравця
                 const dist = playerModel.position.distanceTo(enemy.mesh.position);
@@ -227,9 +235,14 @@
 
         // --- ВІДПРАВКА ДАНИХ ---
         socket.emit("player_moved", {
-            matchId: currentMatchId, userId: myId,
-            x: playerModel.position.x, y: playerModel.position.y, z: playerModel.position.z,
-            rotY: playerModel.rotation.y, anim: activeActionName, role: window.myRole
+            matchId: currentMatchId,
+            userId: myId,
+            x: playerModel.position.x,
+            y: playerModel.position.y,
+            z: playerModel.position.z,
+            rotY: playerModel.rotation.y,
+            anim: activeActionName,
+            role: myRole
         });
     }
 
@@ -247,19 +260,32 @@
         });
 
         socket.on('enemy_moved', (data) => {
-            if (!otherPlayers[data.id]) {
+            if (!data || data.userId === myId) return;
+
+            // Сервер може перевидати socket.id після реконекту, тому ключуємося за userId.
+            const playerKey = String(data.userId || data.id);
+            if (!otherPlayers[playerKey]) {
                 const group = new THREE.Group();
                 scene.add(group);
-                otherPlayers[data.id] = { mesh: group, mixer: null, actions: {}, currentAnim: '' };
+                otherPlayers[playerKey] = { id: playerKey, mesh: group, mixer: null, actions: {}, currentAnim: '' };
                 loader.load('https://threejs.org/examples/models/gltf/RobotExpressive/RobotExpressive.glb', (gltf) => {
-                    const m = gltf.scene; m.scale.set(0.2, 0.2, 0.2); group.add(m);
-                    if (data.role === 'hunter') m.traverse(c => { if(c.isMesh) { c.material = c.material.clone(); c.material.color.set(0xff0000); } });
+                    const m = gltf.scene;
+                    m.scale.set(0.2, 0.2, 0.2);
+                    group.add(m);
+                    if (data.role === 'hunter') {
+                        m.traverse(c => {
+                            if (c.isMesh) {
+                                c.material = c.material.clone();
+                                c.material.color.set(0xff0000);
+                            }
+                        });
+                    }
                     const mix = new THREE.AnimationMixer(m);
-                    gltf.animations.forEach(cl => otherPlayers[data.id].actions[cl.name] = mix.clipAction(cl));
-                    otherPlayers[data.id].mixer = mix;
+                    gltf.animations.forEach(cl => otherPlayers[playerKey].actions[cl.name] = mix.clipAction(cl));
+                    otherPlayers[playerKey].mixer = mix;
                 });
             }
-            const p = otherPlayers[data.id];
+            const p = otherPlayers[playerKey];
             p.mesh.position.set(data.x, data.y, data.z);
             p.mesh.rotation.y = data.rotY;
             if (p.actions[data.anim] && p.currentAnim !== data.anim) {
@@ -269,12 +295,31 @@
             }
         });
 
+        socket.on('roles_updated', (data) => {
+            const me = data.players?.find(p => String(p.userId) === String(myId));
+            if (me) {
+                myRole = me.role;
+                if (playerModel && me.spawn) {
+                    playerModel.position.set(me.spawn.x, me.spawn.y || 0, me.spawn.z);
+                    velocity.set(0, 0, 0);
+                }
+            }
+
+            for (const [key, p] of Object.entries(otherPlayers)) {
+                const state = data.players?.find(x => String(x.userId) === String(key));
+                if (state) {
+                    p.mesh.position.set(state.spawn.x, state.spawn.y || 0, state.spawn.z);
+                }
+            }
+        });
+
         socket.on('timer_update', (data) => {
             let m = Math.floor(data.time / 60), s = data.time % 60;
             document.getElementById('timer-display').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
         });
         
         socket.on('go_to_menu', () => window.location.href = "mainMenu.html");
+        socket.on('kick_to_menu', () => window.location.href = "mainMenu.html");
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
