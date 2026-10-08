@@ -4,7 +4,6 @@
     "id": "Dev_01",
     "gold": 604,
     "clan": "67",
-    "password": "soniatop",
     "playerAvatar": "/avatars/default.jpg",
     "status": true,
     "isVerified": true,
@@ -19,11 +18,11 @@
       "30112012",
       "Dev_02",
       "Dev_03"
-    ]
+    ],
+    "passwordHash": "scrypt:15fe4e69175cdc428ae5dab8babca209:226b0be4cb367d68c35c10696e89ed521cabdb0d636c5fe696ee708c79fbda8439ce230d0179b000e7dfcf765b2e1e621da785cecce1355be5e017dc9f4b6253"
   },
   {
     "nickname": "Zlata",
-    "password": "zlata",
     "id": "30112012",
     "playerAvatar": "/avatars/1772383866665.jfif",
     "status": true,
@@ -49,11 +48,11 @@
         "text": "j",
         "time": "20:47:55"
       }
-    ]
+    ],
+    "passwordHash": "scrypt:0b4d083e7a9e2aefc04529ee5840cfb2:62187b38791794f348ae63b3f6ad1fd491b6c3d068b0756723be5f114b52535322f9768fea627bc023d82565c492cc94fde4a226923ca91a2250158648e85bc1"
   },
   {
     "nickname": "Mark",
-    "password": "Mark",
     "id": "Dev_02",
     "playerAvatar": "/avatars/1772474940655.jfif",
     "status": true,
@@ -72,10 +71,11 @@
     "blocked": [],
     "friendRequests": [
       "Dev_01"
-    ]
-  },{
+    ],
+    "passwordHash": "scrypt:25da2cab319c439dcb1e4803da40f111:19fc01a03b0ddd749654abb9569ea232c56c6733fab1c626d12e95c5efc9d6f60dfd78b0b2a9151de07febddf4ef28cda7a43a5ac77a743df3bfd98c2d2b1de4"
+  },
+  {
     "nickname": "Vadik",
-    "password": "vadik",
     "id": "ДанилКолбасенко",
     "playerAvatar": "vadik.jfif",
     "status": true,
@@ -101,11 +101,11 @@
         "text": "j",
         "time": "20:47:55"
       }
-    ]
+    ],
+    "passwordHash": "scrypt:037b17a96b14e46bf4e61a0f2eb20ccb:ff231552c0f6f7f240ceb9f8dc864160a283702a2e92550a59743123d22024e84bc4856c886b872523174df11e73efa2aac835c88375c283f12bef49c75dcc43"
   },
   {
     "nickname": "AlexFunChik",
-    "password": "Alex",
     "id": "Dev_03",
     "playerAvatar": "/avatars/1772475205345.jpg",
     "status": true,
@@ -121,6 +121,7 @@
       "Dev_01"
     ],
     "incomingRequests": [],
-    "blocked": []
+    "blocked": [],
+    "passwordHash": "scrypt:c2215f8a3cecf3f6ad49d52037cb2f3c:c23a671b10c193d605abaf8d6d6f81a59facfefa48f24bec6032efe9faee8172424dd96d9991f72d9fbc12b5cd7139eebd0f9d9734cd7444504d3a9b0c2fe0cd"
   }
 ]
