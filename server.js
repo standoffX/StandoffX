@@ -1215,6 +1215,58 @@ app.post("/api/admin/save", requireAdmin, (_req, res) => {
   res.json({ success: true, storage: mongoDb ? "MongoDB Atlas" : "JSON" });
 });
 
+
+app.get("/admin", requireAdmin, (_req, res) => {
+  res.sendFile(path.join(ROOT, "admin.html"));
+});
+
+app.get("/api/admin/overview", requireAdmin, (_req, res) => {
+  res.json({
+    success: true,
+    storage: mongoDb ? "MongoDB Atlas" : "JSON fallback",
+    users: users.length,
+    online: users.filter(u => u.status).length,
+    clans: Object.keys(clans).length,
+    market: market.length
+  });
+});
+
+app.get("/api/admin/users", requireAdmin, (_req, res) => {
+  res.json({ success: true, users: users.map(publicUser) });
+});
+
+app.post("/api/admin/users/update", requireAdmin, (req, res) => {
+  const u = findUser(req.body.userId);
+  if (!u) return res.status(404).json({ success: false, message: "User not found" });
+  if (u.id === ADMIN_ID) {
+    u.isAdmin = true;
+    u.isBanned = false;
+  } else {
+    if (req.body.gold !== undefined) u.gold = Math.max(0, Number(req.body.gold) || 0);
+    if (req.body.XP !== undefined) u.XP = Math.max(0, Number(req.body.XP) || 0);
+    if (req.body.isBanned !== undefined) u.isBanned = Boolean(req.body.isBanned);
+    if (req.body.isAdmin !== undefined) u.isAdmin = Boolean(req.body.isAdmin);
+  }
+  saveUsers();
+  res.json({ success: true, user: publicUser(u) });
+});
+
+app.delete("/api/admin/users/:id", requireAdmin, (req, res) => {
+  const id = normalizeId(req.params.id);
+  if (id === ADMIN_ID) return res.status(400).json({ success: false, message: "Master account cannot be deleted." });
+  const i = users.findIndex(u => u.id === id);
+  if (i < 0) return res.status(404).json({ success: false, message: "User not found" });
+  users.splice(i, 1);
+  delete inventory[id];
+  saveUsers();
+  saveInventory();
+  res.json({ success: true });
+});
+
+app.get("/api/admin/database", requireAdmin, (_req, res) => {
+  res.json({ success: true, storage: mongoDb ? "MongoDB Atlas" : "JSON fallback", users: users.map(publicUser), clans, messages, inventory, market });
+});
+
 app.use((err, _req, res, _next) => {
   console.error("[HTTP]", err);
   if (err instanceof multer.MulterError || err?.message === "Дозволені тільки зображення") {
