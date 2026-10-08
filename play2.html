@@ -251,12 +251,76 @@
         animate();
 
         // --- СОКЕТНІ ПОДІЇ ---
+        socket.on('init_match', (data) => {
+            if (!data) return;
+
+            myRole = data.me?.role || 'runner';
+            const info = document.getElementById('role-info');
+            if (info) {
+                info.innerText = data.me?.nickname
+                    ? "ГОТОВО: " + data.me.nickname
+                    : "МАТЧ ГОТОВИЙ";
+                info.style.color = myRole === 'hunter' ? "#ff4444" : "#44ff44";
+            }
+
+            if (playerModel && data.me?.spawn) {
+                playerModel.position.set(
+                    data.me.spawn.x || 0,
+                    data.me.spawn.y || 0,
+                    data.me.spawn.z || 0
+                );
+            }
+
+            // Створюємо відомих гравців одразу, а не тільки після першого movement packet.
+            (data.players || []).forEach(p => {
+                if (String(p.userId) !== String(myId)) {
+                    socket.emit('ui_player_seen', p);
+                }
+            });
+        });
+
+        socket.on('match_waiting', (data) => {
+            const info = document.getElementById('role-info');
+            const title = document.querySelector('#overlay h1');
+
+            if (info) {
+                info.innerText = `ГРАВЦІ: ${data.connected}/${data.required}`;
+                info.style.color = "#3b82f6";
+            }
+
+            if (title) {
+                title.innerText = data.connected >= data.required
+                    ? "МАТЧ ГОТОВИЙ — КЛІКНИ ДЛЯ ВХОДУ"
+                    : "ОЧІКУВАННЯ ГРАВЦІВ";
+            }
+        });
+
+        socket.on('match_phase', (data) => {
+            const title = document.querySelector('#overlay h1');
+            const info = document.getElementById('role-info');
+
+            if (data.phase === "warmup") {
+                if (info) {
+                    info.innerText = "РОЗМИНКА · " + data.time + "с";
+                    info.style.color = myRole === 'hunter' ? "#ff4444" : "#44ff44";
+                }
+                if (title) title.innerText = "КЛІКНИ ДЛЯ ВХОДУ";
+            }
+        });
+
+        socket.on('ui_player_seen', (data) => {});
+
         socket.on('init_player', (data) => {
             myRole = data.role;
             const info = document.getElementById('role-info');
             info.innerText = myRole === 'hunter' ? "ТВОЯ РОЛЬ: МИСЛИВЕЦЬ" : "ТВОЯ РОЛЬ: ЖЕРТВА";
             info.style.color = myRole === 'hunter' ? "#ff4444" : "#44ff44";
             if(playerModel) playerModel.position.set(data.spawn.x, 0, data.spawn.z);
+        });
+
+        socket.on('player_joined', (data) => {
+            if (!data || data.userId === myId) return;
+            socket.emit('enemy_moved', data);
         });
 
         socket.on('enemy_moved', (data) => {
