@@ -349,5 +349,8 @@ document.addEventListener("touchstart",e=>{if(e.target.closest("#sx-mobile"))ret
 document.addEventListener("touchmove",e=>{if(!last)return;const t=e.touches[0],dx=t.clientX-last.clientX,dy=t.clientY-last.clientY;window.sxLook={x:(window.sxLook?.x||0)+dx,y:(window.sxLook?.y||0)+dy};last=t},{passive:true});
 document.addEventListener("touchend",()=>last=null);
 })();
+</script><script>
+window.SXSettings=(()=>{const d={sensitivity:1,ads:1,crosshairSize:20,crosshairGap:0};try{return Object.assign(d,JSON.parse(localStorage.getItem("sx_settings")||"{}"))}catch{return d}})();
+window.saveSXSettings=o=>{window.SXSettings=Object.assign(window.SXSettings,o);localStorage.setItem("sx_settings",JSON.stringify(window.SXSettings))};
 </script></body>
 </html>
