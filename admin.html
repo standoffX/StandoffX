@@ -9,7 +9,7 @@
 <script>
 const $=x=>document.getElementById(x);let users=[];
 async function api(url,opt){const r=await fetch(url,{credentials:"include",...opt});if(!r.ok)throw Error(await r.text());return r.json()}
-async function load(){const o=await api("/api/admin/overview");$("usersN").textContent=o.users;$("onlineN").textContent=o.online;$("clansN").textContent=o.clans;$("messagesN").textContent=o.messages;$("db").textContent=o.database;users=(await api("/api/admin/users")).users;render()}
+async function load(){const o=await api("/api/admin/overview");$("usersN").textContent=o.users;$("onlineN").textContent=o.online;$("clansN").textContent=o.clans;$("messagesN").textContent=o.messages;$("db").textContent=o.storage;users=(await api("/api/admin/users")).users;render()}
 function render(){const q=$("search").value.toLowerCase();$("rows").innerHTML=users.filter(u=>(u.id+" "+u.nickname).toLowerCase().includes(q)).map(u=>`<tr><td>${u.id}</td><td>${u.nickname}</td><td>${u.gold}</td><td>${u.XP}</td><td>${u.isAdmin?"✓":"—"}</td><td>${u.isBanned?"<span class='warn'>YES</span>":"—"}</td><td><button onclick="editUser('${u.id}')">Edit</button> <button class="danger" onclick="delUser('${u.id}')">Delete</button></td></tr>`).join("")}
 window.editUser=async id=>{const u=users.find(x=>x.id===id);if(!u)return;const gold=prompt("Gold",u.gold),xp=prompt("XP",u.XP),ban=confirm("Заблокировать?");await api("/api/admin/users/update",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({userId:id,gold,XP:xp,isBanned:ban})});load()}
 window.delUser=async id=>{if(confirm("Видалити "+id+"?")){await api("/api/admin/users/"+encodeURIComponent(id),{method:"DELETE"});load()}}
