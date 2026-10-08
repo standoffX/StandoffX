@@ -11,6 +11,8 @@ const { Server } = require("socket.io");
 const app = express();
 const SServer = Number(process.env.STANDOFFX_HTTPS || 0); // 0 = HTTP, 1 = HTTPS
 const PORT = Number(process.env.PORT) || (SServer ? 443 : 3000);
+const ADMIN_ID = "Dev_01";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "sonia";
 
 const ADMIN_ID = "Dev_01";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
@@ -344,7 +346,7 @@ app.post("/api/register", (req, res) => {
   const nickname = cleanText(req.body.nickname, 24);
   const password = String(req.body.password || "");
 
-  if (!/^[\\p{L}\\p{N}_-]{3,24}$/u.test(nickname)) {
+  if (!/^[\p{L}\p{N}_-]{3,24}$/u.test(nickname)) {
     return res.status(400).json({ success: false, message: "Нік: 3–24 символи, літери/цифри/_/-." });
   }
   if (password.length < 4 || password.length > 128) {
@@ -390,7 +392,7 @@ app.post("/api/register", (req, res) => {
 app.post("/api/login", (req, res) => {
   let nickname = cleanText(req.body.nickname, 80);
   const password = String(req.body.password || "");
-  if (/^\\d+$/.test(nickname)) nickname = "ID_" + nickname;
+  if (/^\d+$/.test(nickname)) nickname = "ID_" + nickname;
 
   let user = findUser(nickname);
 
