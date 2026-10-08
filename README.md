@@ -14,6 +14,10 @@ StandoffX — browser FPS prototype на Three.js + Socket.IO.
 - marketplace із перевіркою ownership;
 - одноразові promo codes;
 - Socket.IO matchmaking;
+- два режими: HIDE & SEEK та TEAM FIGHT;
+- лобі очікування всіх гравців + client-ready;
+- 10 с розминки + 15 с стартового відліку;
+- матчі зберігаються тільки в памʼяті Socket.IO, не в MongoDB;
 - server-side match state;
 - rate-limited movement validation;
 - reconnect-aware player identity;
