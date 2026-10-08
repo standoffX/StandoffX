@@ -5,6 +5,7 @@ const fs = require('fs');
 const { Server } = require("socket.io"); // Додаємо сокети
 const path = require('path');
 const multer = require('multer');
+const crypto = require('crypto');
 let matchmakingQueue = [];
 const SServer = 1 // http - 1, https - 2 
 // ----------------------------
@@ -474,13 +475,16 @@ app.post('/api/login', (req, res) => {
     }
 
     const users = getUsers();
-    const user = users.find(u => (u.id === nickname || u.nickname === nickname) && u.password === password);
+    const user = users.find(u =>
+        (u.id === nickname || u.nickname === nickname) &&
+        verifyPassword(password, u.passwordHash || u.password)
+    );
 
     if (user) {
         if (user.isBanned) {
             return res.status(403).json({ success: false, message: "Ваш акаунт заблоковано!" });
         }
-        const { password, ...userData } = user;
+        const { password, passwordHash, ...userData } = user;
         res.json({ success: true, redirect: '/game', user: userData });
     } else {
         res.status(401).json({ success: false, message: "Невірний нік/ID або пароль!" });
@@ -527,7 +531,7 @@ const newUser = {
     users.push(newUser);
     saveUsers(users);
 
-    const { password: _, ...userData } = newUser;
+    const { password, passwordHash, ...userData } = newUser;
     res.json({ success: true, redirect: '/game', user: userData });
 });
 
