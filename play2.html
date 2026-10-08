@@ -129,6 +129,8 @@ let reloading=false;
 let jumpQueued=false;
 let fireHeld=false;
 let lookTouch=null;
+let lastCollisionCheck=0;
+let cachedCollisionClear=true;
 
 const keys={w:false,s:false,a:false,d:false,shift:false};
 
@@ -224,10 +226,14 @@ function updateVisual(){
 }
 function blocked(dir){
   if(!mapObjects.length)return false;
+  const now=performance.now();
+  if(now-lastCollisionCheck<60)return !cachedCollisionClear;
+  lastCollisionCheck=now;
   const origin=new THREE.Vector3(player.position.x,player.position.y+.8,player.position.z);
   raycaster.set(origin,dir);
   const hits=raycaster.intersectObjects(mapObjects,true);
-  return hits.length&&hits[0].distance<.65;
+  cachedCollisionClear=!(hits.length&&hits[0].distance<.65);
+  return !cachedCollisionClear;
 }
 function sendMove(force=false){
   const now=performance.now();
@@ -357,7 +363,11 @@ socket.on("match_start_now",()=>{
 socket.on("enemy_moved",applyEnemy);
 socket.on("roles_updated",data=>{
   const me=data.players?.find(p=>String(p.userId)===String(myId));
-  if(me){myRole=me.role;score=me.score||score;myTeam=me.team||myTeam;player.position.set(me.spawn.x,me.spawn.y||0,me.spawn.z);ensurePlayerVisual();playerVisual.material?.color?.set(colorFor(myRole,myTeam))}
+  if(me){
+  myRole=me.role;score=me.score||score;myTeam=me.team||myTeam;
+  player.position.set(me.spawn.x,me.spawn.y||0,me.spawn.z);ensurePlayerVisual();
+  playerVisual.traverse(x=>{if(x.material?.color)x.material.color.set(colorFor(myRole,myTeam))});
+}
   (data.players||[]).forEach(p=>{if(String(p.userId)!==String(myId)){const e=ensureEnemy(p);if(e){e.role=p.role;e.mesh.traverse(x=>{if(x.material?.color)x.material.color.set(colorFor(p.role,p.team))});}}});
 });
 socket.on("player_hit",data=>{
