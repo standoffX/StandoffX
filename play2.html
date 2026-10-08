@@ -327,5 +327,27 @@
         });
 
     </script>
-</body>
+<div id="sx-mobile"><div id="sx-stick"><i></i></div><button id="sx-fire">FIRE</button><button id="sx-jump">JUMP</button><button id="sx-crouch">CROUCH</button><button id="sx-reload">R</button></div>
+<style>
+#sx-mobile{display:none;position:fixed;inset:0;z-index:40;pointer-events:none}
+#sx-stick{position:absolute;left:22px;bottom:24px;width:126px;height:126px;border-radius:50%;background:#ffffff12;border:1px solid #ffffff25;pointer-events:auto;touch-action:none}
+#sx-stick i{position:absolute;left:36px;top:36px;width:54px;height:54px;border-radius:50%;background:#ffffff30}
+#sx-mobile button{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid #ffffff25;background:#101827d9;color:#fff;font-weight:800;pointer-events:auto;touch-action:none}
+#sx-fire{right:22px;bottom:66px}#sx-jump{right:100px;bottom:142px}#sx-crouch{right:24px;bottom:150px}#sx-reload{right:104px;bottom:64px}
+@media(max-width:800px),(pointer:coarse){#sx-mobile{display:block}}
+</style><script>
+(()=>{const s=document.getElementById("sx-stick"),k=s.querySelector("i");let active=false;
+const move=e=>{const t=e.touches[0],r=s.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let x=t.clientX-cx,y=t.clientY-cy,m=Math.hypot(x,y),max=48;if(m>max){x=x/m*max;y=y/m*max}k.style.transform="translate("+x+"px,"+y+"px)";window.sxMove={x:x/max,y:y/max}};
+s.addEventListener("touchstart",e=>{active=true;move(e);e.preventDefault()},{passive:false});
+s.addEventListener("touchmove",e=>{if(active)move(e);e.preventDefault()},{passive:false});
+s.addEventListener("touchend",()=>{active=false;k.style.transform="translate(0,0)";window.sxMove={x:0,y:0}});
+window.sxMove={x:0,y:0};
+const btn=(id,ev)=>document.getElementById(id).addEventListener("touchstart",e=>{e.preventDefault();window.sxAction=ev;setTimeout(()=>{if(window.sxAction===ev)window.sxAction=""},100)});
+btn("sx-fire","fire");btn("sx-jump","jump");btn("sx-crouch","crouch");btn("sx-reload","reload");
+let last=null;
+document.addEventListener("touchstart",e=>{if(e.target.closest("#sx-mobile"))return;last=e.touches[0]});
+document.addEventListener("touchmove",e=>{if(!last)return;const t=e.touches[0],dx=t.clientX-last.clientX,dy=t.clientY-last.clientY;window.sxLook={x:(window.sxLook?.x||0)+dx,y:(window.sxLook?.y||0)+dy};last=t},{passive:true});
+document.addEventListener("touchend",()=>last=null);
+})();
+</script></body>
 </html>
