@@ -1049,6 +1049,14 @@ io.on("connection", socket => {
 
     player.socketId = socket.id;
     socket.join(matchId);
+
+    const connected = match.players.filter(p => p.socketId).length;
+    io.to(matchId).emit("match_waiting", {
+      connected,
+      required: match.players.length,
+      players: match.players.map(p => ({ userId: p.userId, nickname: p.nickname, connected: Boolean(p.socketId) }))
+    });
+
     socket.emit("init_match", {
       matchId,
       map: match.map,
@@ -1081,6 +1089,13 @@ io.on("connection", socket => {
       z: player.pos.z,
       rotY: player.rotY,
       anim: player.anim
+    });
+
+    const connectedNow = match.players.filter(p => p.socketId).length;
+    io.to(matchId).emit("match_waiting", {
+      connected: connectedNow,
+      required: match.players.length,
+      players: match.players.map(p => ({ userId: p.userId, nickname: p.nickname, connected: Boolean(p.socketId) }))
     });
 
     startMatchWhenReady(io, match);
