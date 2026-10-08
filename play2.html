@@ -170,7 +170,28 @@
     if (mixer) mixer.update(delta);
     Object.values(otherPlayers).forEach(p => p.mixer?.update(delta));
 
-    if (controls.isLocked && playerModel) {
+    const touchMove = window.sxMove || { x: 0, y: 0 };
+    if ((controls.isLocked || isMobile) && playerModel) {
+        if (isMobile) {
+            moveKeys.w = touchMove.y < -0.18;
+            moveKeys.s = touchMove.y > 0.18;
+            moveKeys.a = touchMove.x < -0.18;
+            moveKeys.d = touchMove.x > 0.18;
+
+            if (window.sxLook && (window.sxLook.x || window.sxLook.y)) {
+                camera.rotation.y -= window.sxLook.x * 0.004 * Number(settings.sensitivity || 1);
+                camera.rotation.x -= window.sxLook.y * 0.004 * Number(settings.sensitivity || 1);
+                camera.rotation.x = Math.max(-1.35, Math.min(1.35, camera.rotation.x));
+                window.sxLook = { x: 0, y: 0 };
+            }
+
+            if (window.sxAction === 'jump' && canJump) {
+                velocity.y = 12;
+                canJump = false;
+                setAnim('Jump');
+            }
+        }
+
         // --- ГРАВІТАЦІЯ ТА СТРИБОК ---
         velocity.y -= 40 * delta; // Трохи посилив гравітацію для "ваги"
         playerModel.position.y += velocity.y * delta;
