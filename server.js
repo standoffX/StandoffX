@@ -112,7 +112,7 @@ function saveMarket() { writeJson(MARKET_PATH, market); }
 function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
   const hash = crypto.scryptSync(String(password), salt, 64).toString("hex");
-  return \`scrypt:\${salt}:\${hash}\`;
+  return `scrypt:${salt}:${hash}`;
 }
 
 function verifyPassword(password, stored) {
@@ -242,7 +242,7 @@ function requireAuth(req, res, next) {
 function setSessionCookie(res, token) {
   res.setHeader(
     "Set-Cookie",
-    \`standoffx_session=\${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000\`
+    `standoffx_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
   );
 }
 
@@ -262,7 +262,7 @@ app.use("/avatars", express.static(AVATARS_DIR, { maxAge: "1d" }));
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, AVATARS_DIR),
   filename: (_req, file, cb) => {
-    cb(null, \`\${Date.now()}-\${crypto.randomBytes(3).toString("hex")}\${path.extname(file.originalname).toLowerCase()}\`);
+    cb(null, `${Date.now()}-${crypto.randomBytes(3).toString("hex")}${path.extname(file.originalname).toLowerCase()}`);
   }
 });
 
@@ -835,7 +835,7 @@ function finishMatch(io, matchId) {
       xp: xpReward,
       gold: goldReward,
       score: p.score,
-      msg: \`Матч завершено. +\${xpReward} XP / +\${goldReward} Gold\`
+      msg: `Матч завершено. +${xpReward} XP / +${goldReward} Gold`
     });
   }
   saveUsers();
@@ -898,7 +898,7 @@ function handleCatch(io, match, hunter) {
         score: p.score,
         spawn: p.spawn
       })),
-      message: \`\${hunter.nickname} спіймав \${target.nickname}! Тепер \${target.nickname} — мисливець.\`
+      message: `${hunter.nickname} спіймав ${target.nickname}! Тепер ${target.nickname} — мисливець.`
     });
     break;
   }
@@ -1087,7 +1087,7 @@ app.use((err, _req, res, _next) => {
 server.listen(PORT, () => {
   console.log("====================================");
   console.log(" StandoffX server");
-  console.log(\` HTTP : \${SServer ? "HTTPS" : "HTTP"}\`);
-  console.log(\` PORT : \${PORT}\`);
+  console.log(` HTTP : ${SServer ? "HTTPS" : "HTTP"}`);
+  console.log(` PORT : ${PORT}`);
   console.log("====================================");
 });
