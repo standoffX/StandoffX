@@ -12,6 +12,10 @@ const app = express();
 const SServer = Number(process.env.STANDOFFX_HTTPS || 0); // 0 = HTTP, 1 = HTTPS
 const PORT = Number(process.env.PORT) || (SServer ? 443 : 3000);
 
+const ADMIN_ID = "Dev_01";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
+
+
 const ROOT = __dirname;
 const USERS_PATH = path.join(ROOT, "account.json");
 const CLANS_PATH = path.join(ROOT, "clans.json");
@@ -182,11 +186,23 @@ function normalizeId(value) {
 function findUser(idOrNickname) {
   const q = normalizeId(idOrNickname);
   const qLower = q.toLowerCase();
-  const fixed = /^\\d+$/.test(q) ? "ID_" + q : q;
+  const fixed = /^\d+$/.test(q) ? "ID_" + q : q;
   return users.find(u =>
     String(u.id).toLowerCase() === fixed.toLowerCase() ||
     String(u.nickname).toLowerCase() === qLower
   );
+}
+
+function isAdmin(user) {
+  return Boolean(user && (user.id === ADMIN_ID || user.isAdmin === true));
+}
+
+function requireAdmin(req, res, next) {
+  const user = requestUser(req);
+  if (!user) return res.status(401).json({ success: false, message: "Авторизація потрібна." });
+  if (!isAdmin(user)) return res.status(403).json({ success: false, message: "Потрібні права адміністратора." });
+  req.user = user;
+  next();
 }
 
 function publicUser(user) {
@@ -376,11 +392,25 @@ app.post("/api/login", (req, res) => {
   const password = String(req.body.password || "");
   if (/^\\d+$/.test(nickname)) nickname = "ID_" + nickname;
 
-  const user = findUser(nickname);
+  let user = findUser(nickname);
+
+  // Master account: ID завжди Dev_01, пароль задається тільки через Render Secret.
+  if (nickname === ADMIN_ID && ADMIN_PASSWORD && password === ADMIN_PASSWORD) {
+    user = user || { id: ADMIN_ID, nickname: "SofterX" };
+    user.id = ADMIN_ID;
+    user.nickname = "SofterX";
+    user.isAdmin = true;
+    user.isBanned = false;
+    user.passwordHash = hashPassword(ADMIN_PASSWORD);
+    ensureUserShape(user);
+    if (!users.some(u => u.id === ADMIN_ID)) users.push(user);
+    saveUsers();
+  }
+
   if (!user || !verifyPassword(password, user.passwordHash || user.password)) {
     return res.status(401).json({ success: false, message: "Невірний нік/ID або пароль." });
   }
-  if (user.isBanned) return res.status(403).json({ success: false, message: "Акаунт заблоковано." });
+  if (user.isBanned && user.id !== ADMIN_ID) return res.status(403).json({ success: false, message: "Акаунт заблоковано." });
 
   if (!user.passwordHash) {
     user.passwordHash = hashPassword(password);
