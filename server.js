@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const multer = require("multer");
+const { MongoClient } = require("mongodb");
 const { Server } = require("socket.io");
 
 const app = express();
@@ -103,11 +104,52 @@ if (!inventory || typeof inventory !== "object" || Array.isArray(inventory)) inv
 let market = readJson(MARKET_PATH, []);
 if (!Array.isArray(market)) market = [];
 
-function saveUsers() { writeJson(USERS_PATH, users); }
-function saveClans() { writeJson(CLANS_PATH, clans); }
-function saveMessages() { writeJson(MESSAGES_PATH, messages); }
-function saveInventory() { writeJson(INVENTORY_PATH, inventory); }
-function saveMarket() { writeJson(MARKET_PATH, market); }
+function saveUsers() { writeJson(USERS_PATH, users); mongoSave("state_users", users); }
+function saveClans() { writeJson(CLANS_PATH, clans); mongoSave("state_clans", clans); }
+function saveMessages() { writeJson(MESSAGES_PATH, messages); mongoSave("state_messages", messages); }
+function saveInventory() { writeJson(INVENTORY_PATH, inventory); mongoSave("state_inventory", inventory); }
+let mongoClient = null;
+let mongoDb = null;
+
+async function initMongo() {
+  const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+  if (!uri) return false;
+  try {
+    mongoClient = new MongoClient(uri, { serverSelectionTimeoutMS: 8000, maxPoolSize: 5 });
+    await mongoClient.connect();
+    mongoDb = mongoClient.db(process.env.MONGODB_DB || "standoffx");
+    const load = async (name, fallback) => {
+      const doc = await mongoDb.collection(name).findOne({ _id: "main" });
+      return doc && doc.data !== undefined ? doc.data : fallback;
+    };
+    users = await load("state_users", users);
+    clans = await load("state_clans", clans);
+    messages = await load("state_messages", messages);
+    inventory = await load("state_inventory", inventory);
+    market = await load("state_market", market);
+    for (const user of users) ensureUserShape(user);
+    console.log("[DB] MongoDB connected");
+    return true;
+  } catch (err) {
+    console.error("[DB] MongoDB unavailable:", err.message);
+    mongoDb = null;
+    return false;
+  }
+}
+
+function mongoSave(name, data) {
+  if (!mongoDb) return;
+  mongoDb.collection(name).replaceOne(
+    { _id: "main" },
+    { _id: "main", data },
+    { upsert: true }
+  ).catch(err => console.error("[DB]", err.message));
+}
+
+function saveMarket() {
+  writeJson(MARKET_PATH, market);
+  mongoSave("state_market", market);
+}
 
 function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -1084,10 +1126,15 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ success: false, message: "Внутрішня помилка сервера." });
 });
 
-server.listen(PORT, () => {
-  console.log("====================================");
-  console.log(" StandoffX server");
-  console.log(` HTTP : ${SServer ? "HTTPS" : "HTTP"}`);
-  console.log(` PORT : ${PORT}`);
-  console.log("====================================");
-});
+async function bootstrap() {
+  await initMongo();
+  server.listen(PORT, () => {
+    console.log("====================================");
+    console.log(" StandoffX server");
+    console.log(` HTTP : ${SServer ? "HTTPS" : "HTTP"}`);
+    console.log(` PORT : ${PORT}`);
+    console.log(` DB   : ${mongoDb ? "MongoDB" : "JSON"}`);
+    console.log("====================================");
+  });
+}
+bootstrap().catch(err => { console.error("[BOOT]", err); process.exit(1); });
