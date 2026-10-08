@@ -14,9 +14,6 @@ const PORT = Number(process.env.PORT) || (SServer ? 443 : 3000);
 const ADMIN_ID = "Dev_01";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "sonia";
 
-const ADMIN_ID = "Dev_01";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "";
-
 
 const ROOT = __dirname;
 const USERS_PATH = path.join(ROOT, "account.json");
