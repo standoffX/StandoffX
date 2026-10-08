@@ -12,43 +12,39 @@ const SServer = 1 // http - 1, https - 2
 const CLANS_PATH = path.join(__dirname, "clans.json");
 function getClans() {
   try {
-      if (!fs.existsSync('clans.json')) fs.writeFileSync('clans.json', JSON.stringify({}, null, 2));
-      return JSON.parse(fs.readFileSync('clans.json', 'utf8'));
-  } catch (err) { return {}; }
+    if (!fs.existsSync(CLANS_PATH)) fs.writeFileSync(CLANS_PATH, JSON.stringify({}, null, 2));
+    const data = JSON.parse(fs.readFileSync(CLANS_PATH, 'utf8'));
+    return Array.isArray(data) ? {} : (data || {});
+  } catch (err) {
+    console.error("[CLANS]", err.message);
+    return {};
+  }
 }
 function saveClans(clans) {
-  fs.writeFileSync('clans.json', JSON.stringify(clans, null, 2));
+  fs.writeFileSync(CLANS_PATH, JSON.stringify(clans || {}, null, 2), 'utf8');
 }
 function loadClans() {
-  if (!fs.existsSync(CLANS_PATH)) {
-      fs.writeFileSync(CLANS_PATH, JSON.stringify({ clans: [] }, null, 2));
-  }
-
-  const data = fs.readFileSync(CLANS_PATH);
-  return JSON.parse(data);
+  return {
+    clans: Object.values(getClans()).map(clan => ({
+      ...clan,
+      tag: clan.tag || clan.name,
+      members: Array.isArray(clan.members) ? clan.members : []
+    }))
+  };
 }
 
 let server = null;
 const app = express();
-// 1. АВТОМАТИЧНИЙ ПОРТ
-let PORT = process.env.PORT; 
-if (!PORT) {
-    if (SServer === 2) {
-        PORT = 443;
-        const options = {
-            key: fs.readFileSync('site.local-key.pem'),
-            cert: fs.readFileSync('site.local.pem')
-          };
-    } else {
-        PORT = 3000;
-    }
-}
+const PORT = Number(process.env.PORT) || (SServer === 2 ? 443 : 3000);
 
-// 2. СТВОРЕННЯ СЕРВЕРА
 if (SServer === 2) {
-    server = https.createServer(options, app);
+  const tlsOptions = {
+    key: fs.readFileSync(path.join(__dirname, 'site.local-key.pem')),
+    cert: fs.readFileSync(path.join(__dirname, 'site.local.pem'))
+  };
+  server = https.createServer(tlsOptions, app);
 } else {
-    server = http.createServer(app);
+  server = http.createServer(app);
 }
 const io = new Server(server);
 // --- БАЗА ДАНИХ В ПАМ'ЯТІ ---
@@ -65,9 +61,9 @@ let db = {
 app.use(express.json({ limit: '10mb' }));
 
 const storage = multer.diskStorage({
-    destination: 'avatars/',
+    destination: path.join(__dirname, 'avatars'),
     filename: (req, file, cb) => {
-        cb(null, Date.now() + path.extname(file.originalname));
+        cb(null, Date.now() + path.extname(file.originalname).toLowerCase());
     }
 });
 const upload = multer({
@@ -164,10 +160,8 @@ function getUsers() {
 
 // Функція тепер ОНОВЛЮЄ кеш і пише файл асинхронно
 function saveUsers(users) {
-    cachedUsers = [...users]; // Обов'язково оновлюємо кеш
-    fs.writeFile('account.json', JSON.stringify(users, null, 2), (err) => {
-        if (err) console.error("Помилка збереження файлу:", err);
-    });
+    cachedUsers = Array.isArray(users) ? users : [];
+    fs.writeFileSync('account.json', JSON.stringify(cachedUsers, null, 2), 'utf8');
 }
 
 // Знайти і замінити блок app.get('/api/user-data', ...) у server.js
