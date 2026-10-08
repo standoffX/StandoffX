@@ -491,6 +491,11 @@ app.post('/api/login', (req, res) => {
     );
 
     if (user) {
+        if (!user.passwordHash) {
+            user.passwordHash = hashPassword(password);
+            delete user.password;
+            saveUsers(users);
+        }
         if (user.isBanned) {
             return res.status(403).json({ success: false, message: "Ваш акаунт заблоковано!" });
         }
@@ -521,7 +526,7 @@ app.post('/api/register', (req, res) => {
     // В середині app.post('/api/register')
 const newUser = {
   nickname,
-  password,
+  passwordHash: hashPassword(password),
   id: newId,
   playerAvatar: "/avatars/default_avatar.jpg",
   status: true,
