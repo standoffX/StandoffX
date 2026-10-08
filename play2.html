@@ -274,7 +274,7 @@
             // Створюємо відомих гравців одразу, а не тільки після першого movement packet.
             (data.players || []).forEach(p => {
                 if (String(p.userId) !== String(myId)) {
-                    socket.emit('ui_player_seen', p);
+                    // Сервер уже надсилає enemy_moved для всіх підключених.
                 }
             });
         });
@@ -307,8 +307,6 @@
                 if (title) title.innerText = "КЛІКНИ ДЛЯ ВХОДУ";
             }
         });
-
-        socket.on('ui_player_seen', (data) => {});
 
         socket.on('init_player', (data) => {
             myRole = data.role;
