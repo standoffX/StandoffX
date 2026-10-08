@@ -1080,6 +1080,24 @@ io.on("connection", socket => {
       }))
     });
 
+    // Передаємо клієнту вже підключених суперників для миттєвого рендера.
+    match.players.forEach(other => {
+      if (other.userId !== player.userId && other.socketId) {
+        socket.emit("enemy_moved", {
+          id: other.socketId,
+          userId: other.userId,
+          nickname: other.nickname,
+          role: other.role,
+          x: other.pos.x,
+          y: other.pos.y,
+          z: other.pos.z,
+          rotY: other.rotY,
+          anim: other.anim,
+          score: other.score
+        });
+      }
+    });
+
     socket.to(matchId).emit("player_joined", {
       userId: player.userId,
       nickname: player.nickname,
