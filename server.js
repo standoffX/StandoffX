@@ -143,6 +143,22 @@ app.post('/api/inventory/my', (req, res) => {
 
     res.json({ success: true, inventory: mySkinsData });
 });
+function hashPassword(password) {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.scryptSync(String(password), salt, 64).toString('hex');
+    return `scrypt:${salt}:${hash}`;
+}
+
+function verifyPassword(password, stored) {
+    if (typeof stored !== 'string') return false;
+    if (!stored.startsWith('scrypt:')) return stored === String(password);
+    const [, salt, expectedHex] = stored.split(':');
+    if (!salt || !expectedHex) return false;
+    const actual = crypto.scryptSync(String(password), salt, 64);
+    const expected = Buffer.from(expectedHex, 'hex');
+    return expected.length === actual.length && crypto.timingSafeEqual(actual, expected);
+}
+
 function getUsers() {
     if (cachedUsers) return cachedUsers; 
     try {
