@@ -1,183 +1,29 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <title>Login</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        
-        body {
-            height: 100vh;
-            background: url("banner.png") no-repeat center center fixed;
-            background-size: cover;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end; /* Кнопки внизу */
-            padding-bottom: 80px;
-            color: white;
-            overflow: hidden;
-        }
-
-        /* Затемнение и размытие фона */
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(5px);
-            z-index: -1;
-        }
-
-        .main-title { font-size: 48px; font-weight: 900; margin-bottom: 150px; text-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-
-        /* Контейнер кнопок */
-        .auth-methods { display: flex; gap: 20px; }
-
-        .method-btn {
-            width: 70px;
-            height: 70px;
-            border-radius: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: 0.3s;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: rgba(255,255,255,0.05);
-            backdrop-filter: blur(10px);
-        }
-
-        .method-btn:hover { transform: translateY(-5px); background: rgba(255,255,255,0.15); }
-        
-        /* Кнопка SofterID (особенная) */
-        .method-btn.softer { width: 220px; font-weight: bold; font-size: 18px; background: #3b82f6; border: none; }
-        .method-btn.softer:hover { box-shadow: 0 0 25px rgba(59,130,246,0.6); }
-
-        /* МОДАЛЬНЫЕ ОКНА */
-        .modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.8);
-            display: none; /* Скрыто по умолчанию */
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-        }
-
-        .modal {
-            background: #151b26;
-            width: 380px;
-            padding: 40px;
-            border-radius: 24px;
-            border: 1px solid rgba(255,255,255,0.1);
-            position: relative;
-        }
-
-        input {
-            width: 100%;
-            padding: 14px;
-            margin: 10px 0;
-            background: #1e2533;
-            border: 1px solid #2d364a;
-            border-radius: 12px;
-            color: white;
-            outline: none;
-        }
-
-        .submit-btn {
-            width: 100%;
-            padding: 14px;
-            background: #3b82f6;
-            border: none;
-            border-radius: 12px;
-            color: white;
-            font-weight: bold;
-            margin-top: 15px;
-            cursor: pointer;
-        }
-
-        .close-btn { position: absolute; top: 20px; right: 20px; cursor: pointer; opacity: 0.5; }
-
-        .toggle-link { font-size: 13px; opacity: 0.6; margin-top: 20px; cursor: pointer; text-align: center; }
-        .toggle-link b { color: #3b82f6; }
-    </style>
-</head>
-<body>
-
-    <h1 class="main-title">Standoff<span style="color:#3b82f6">X</span></h1>
-
-    <div class="auth-methods">
-       <!-- <div class="method-btn" onclick="alert('Google login is temporarily unavailable')">G</div>-->
-        <div class="method-btn softer" onclick="openModal('loginModal')">Sign in with SofterID</div>
-        <!--<div class="method-btn" onclick="alert('Facebook login is temporarily unavailable')">F</div>-->
-    </div>
-
-    <div id="loginModal" class="modal-overlay">
-        <div class="modal">
-            <span class="close-btn" onclick="closeModals()">✕</span>
-            <h2>Sign In</h2>
-            <input type="text" id="logNick" placeholder="id">
-            <input type="password" id="logPass" placeholder="Password">
-            <button class="submit-btn" onclick="authAction('/api/login', 'logNick', 'logPass')">ENTER GAME</button>
-            <div class="toggle-link" onclick="openModal('regModal')">New player? <b>Create Account</b></div>
-        </div>
-    </div>
-
-    <div id="regModal" class="modal-overlay">
-        <div class="modal">
-            <span class="close-btn" onclick="closeModals()">✕</span>
-            <h2>Create SofterID</h2>
-            <input type="text" id="regNick" placeholder="Choose Nickname">
-            <input type="password" id="regPass" placeholder="Create Password">
-            <button class="submit-btn" style="background:#22c55e" onclick="authAction('/api/register', 'regNick', 'regPass')">REGISTER</button>
-            <div class="toggle-link" onclick="openModal('loginModal')">Already have account? <b>Login</b></div>
-        </div>
-    </div>
-
-    <script>
-      function openModal(id) {
-          closeModals();
-          document.getElementById(id).style.display = 'flex';
-      }
-  
-      function closeModals() {
-          document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
-      }
-  
-      async function authAction(url, nickId, passId) {
-          const nickname = document.getElementById(nickId).value;
-          const password = document.getElementById(passId).value;
-  
-          if (!nickname || !password) {
-              alert("Будь ласка, заповніть всі поля!");
-              return;
-          }
-  
-          try {
-              const res = await fetch(url, {
-                  method: 'POST',
-                  headers: {'Content-Type': 'application/json'},
-                  body: JSON.stringify({ nickname, password })
-              });
-  
-              const data = await res.json();
-              if (data.success) {
-                  // Зберігаємо дані профілю
-                  if(data.user) {
-                      localStorage.setItem('currentUser', JSON.stringify(data.user));
-                  }
-                  window.location.href = data.redirect;
-              } else {
-                  alert(data.message);
-              }
-          } catch (err) {
-              console.error(err);
-              alert("Помилка з'єднання з сервером.");
-          }
-      }
-  </script>
-    
-</body>
-
-</html>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>StandoffX — Login</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#080b12;color:#eef3ff;font-family:Inter,system-ui,sans-serif;min-height:100vh;display:grid;place-items:center}
+body:before{content:"";position:fixed;inset:0;background:radial-gradient(circle at 50% 20%,#1556ff22,transparent 45%);pointer-events:none}
+.card{width:min(430px,92vw);padding:34px;border:1px solid #ffffff12;background:#0d121cdd;border-radius:22px;box-shadow:0 30px 100px #0008;backdrop-filter:blur(20px)}
+.logo{font-size:34px;font-weight:900;letter-spacing:-2px}.logo b{color:#3d8bff}.sub{color:#8491a7;margin:7px 0 28px}
+.tabs{display:flex;gap:6px;background:#070a10;padding:5px;border-radius:12px;margin-bottom:20px}.tab{flex:1;border:0;background:transparent;color:#7f8aa0;padding:11px;border-radius:9px;cursor:pointer}.tab.active{background:#182235;color:white}
+input{width:100%;padding:14px 15px;margin:7px 0;border-radius:11px;border:1px solid #ffffff12;background:#080c14;color:white;outline:none}input:focus{border-color:#397eff}
+button.primary{width:100%;margin-top:12px;padding:14px;border:0;border-radius:11px;background:#2877ff;color:white;font-weight:800;cursor:pointer}button.primary:hover{filter:brightness(1.12)}
+#msg{min-height:22px;color:#ff7180;margin-top:14px;font-size:14px}.hint{font-size:12px;color:#657086;margin-top:18px;text-align:center}
+</style></head>
+<body><main class="card">
+<div class="logo">STANDOFF<b>X</b></div><div class="sub">Тактичний browser FPS</div>
+<div class="tabs"><button class="tab active" id="loginTab">Увійти</button><button class="tab" id="regTab">Реєстрація</button></div>
+<form id="form"><input id="nickname" autocomplete="username" placeholder="Нік або ID"><input id="password" autocomplete="current-password" type="password" placeholder="Пароль"><button class="primary" id="submit">Увійти</button></form>
+<div id="msg"></div><div class="hint">StandoffX Dev Build</div>
+</main>
+<script>
+let mode="login";
+const $=id=>document.getElementById(id);
+function setMode(next){mode=next;$("loginTab").classList.toggle("active",mode==="login");$("regTab").classList.toggle("active",mode==="register");$("submit").textContent=mode==="login"?"Увійти":"Створити акаунт";$("nickname").placeholder=mode==="login"?"Нік або ID":"Нікнейм"}
+$("loginTab").onclick=()=>setMode("login");$("regTab").onclick=()=>setMode("register");
+$("form").onsubmit=async e=>{e.preventDefault();$("msg").textContent="";const endpoint=mode==="login"?"/api/login":"/api/register";try{const r=await fetch(endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nickname:$("nickname").value,password:$("password").value})});const d=await r.json();if(!r.ok)throw Error(d.message||"Помилка");location.href=d.redirect||"/game"}catch(err){$("msg").textContent=err.message}};
+fetch("/api/me").then(r=>{if(r.ok)location.href="/game"}).catch(()=>{});
+</script></body></html>
