@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <title>StandoffX</title>
     <style>
+        #sx-crosshair{position:fixed;left:50%;top:50%;width:20px;height:20px;transform:translate(-50%,-50%);z-index:30;pointer-events:none}
+        #sx-crosshair:before,#sx-crosshair:after{content:"";position:absolute;background:#fff;opacity:.9}
+        #sx-crosshair:before{width:2px;height:20px;left:9px;top:0}
+        #sx-crosshair:after{width:20px;height:2px;left:0;top:9px}
         body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; }
         #overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -21,6 +25,7 @@
     </style>
 </head>
 <body>
+<div id="sx-crosshair"></div>
 
     <div id="overlay">
         <div id="role-info">Синхронізація...</div>
@@ -272,6 +277,16 @@
     renderer.render(scene, camera);
 }
         animate();
+
+        function applyCrosshairSettings() {
+            const cross = document.getElementById('sx-crosshair');
+            if (!cross) return;
+            const size = Math.max(8, Math.min(40, Number(settings.crosshairSize || 20)));
+            cross.style.width = size + 'px';
+            cross.style.height = size + 'px';
+            cross.style.setProperty('--sx-size', size + 'px');
+        }
+        applyCrosshairSettings();
 
         // --- СОКЕТНІ ПОДІЇ ---
         socket.on('init_match', (data) => {
