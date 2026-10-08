@@ -1148,6 +1148,60 @@ io.on("connection", socket => {
   });
 });
 
+
+app.get("/admin", requireAdmin, (_req, res) => {
+  res.sendFile(path.join(ROOT, "admin.html"));
+});
+
+app.get("/api/admin/overview", requireAdmin, (_req, res) => {
+  res.json({
+    success: true,
+    database: mongoDb ? "MongoDB Atlas" : "JSON",
+    users: users.length,
+    online: users.filter(u => u.status).length,
+    clans: Object.keys(clans).length,
+    market: market.length,
+    messages: Object.values(messages).reduce((n, x) => n + (Array.isArray(x) ? x.length : 0), 0)
+  });
+});
+
+app.get("/api/admin/users", requireAdmin, (_req, res) => {
+  res.json({ success: true, users: users.map(publicUser) });
+});
+
+app.post("/api/admin/users/update", requireAdmin, (req, res) => {
+  const u = findUser(req.body.userId);
+  if (!u) return res.status(404).json({ success: false, message: "User not found" });
+  if (u.id !== ADMIN_ID) {
+    if (req.body.gold != null) u.gold = Math.max(0, Number(req.body.gold) || 0);
+    if (req.body.XP != null) u.XP = Math.max(0, Number(req.body.XP) || 0);
+    if (req.body.isBanned != null) u.isBanned = Boolean(req.body.isBanned);
+    if (req.body.isAdmin != null) u.isAdmin = Boolean(req.body.isAdmin);
+  }
+  u.isAdmin = u.id === ADMIN_ID ? true : Boolean(u.isAdmin);
+  saveUsers();
+  res.json({ success: true, user: publicUser(u) });
+});
+
+app.delete("/api/admin/users/:id", requireAdmin, (req, res) => {
+  if (req.params.id === ADMIN_ID) return res.status(400).json({ success: false, message: "Master account cannot be deleted." });
+  const i = users.findIndex(u => u.id === req.params.id);
+  if (i < 0) return res.status(404).json({ success: false, message: "User not found" });
+  users.splice(i, 1);
+  delete inventory[req.params.id];
+  saveUsers(); saveInventory();
+  res.json({ success: true });
+});
+
+app.get("/api/admin/database", requireAdmin, (_req, res) => {
+  res.json({ success: true, storage: mongoDb ? "MongoDB Atlas" : "JSON", users: users.map(publicUser), clans, messages, inventory, market });
+});
+
+app.post("/api/admin/save", requireAdmin, (_req, res) => {
+  saveUsers(); saveClans(); saveMessages(); saveInventory(); saveMarket();
+  res.json({ success: true, storage: mongoDb ? "MongoDB Atlas" : "JSON" });
+});
+
 app.use((err, _req, res, _next) => {
   console.error("[HTTP]", err);
   if (err instanceof multer.MulterError || err?.message === "Дозволені тільки зображення") {
