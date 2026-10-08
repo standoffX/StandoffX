@@ -1,34 +1,73 @@
 <!doctype html>
-<html lang="uk"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>StandoffX</title>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>StandoffX</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#10151d;color:#eef3fb;font-family:Arial,Helvetica,sans-serif}button,input,select{font:inherit}
-body{background:linear-gradient(120deg,#0d1118,#161d27);overflow:hidden}.app{height:100vh;display:flex}.rail{width:76px;background:#0a0f15e8;border-right:1px solid #ffffff12;display:flex;flex-direction:column;z-index:4}.brand{height:76px;display:grid;place-items:center;font-weight:900;font-size:23px;color:#fff;border-bottom:1px solid #ffffff10}.brand b{color:#58a0ff}.railnav{flex:1;display:flex;flex-direction:column}.rail button{height:72px;border:0;background:transparent;color:#718096;display:grid;place-items:center;cursor:pointer;border-left:3px solid transparent;transition:.2s}.rail button:hover,.rail button.active{color:#fff;background:#1a2736;border-left-color:#58a0ff}.rail svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.rail .admin{color:#ffc857}.shell{flex:1;min-width:0;display:flex;flex-direction:column}.topbar{height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:#111822cc;border-bottom:1px solid #ffffff10}.top-title{font-size:16px;font-weight:800;letter-spacing:1px}.top-right{display:flex;gap:10px;align-items:center}.pill{padding:9px 14px;border:1px solid #ffffff12;border-radius:8px;background:#0a0f16;color:#c4cfde}.content{flex:1;overflow:auto;padding:24px}.screen{display:none;max-width:1380px;margin:auto}.screen.active{display:block}.home{display:grid;grid-template-columns:minmax(0,1.7fr) 360px;gap:16px}.hero{min-height:390px;border:1px solid #ffffff12;border-radius:8px;overflow:hidden;position:relative;background:linear-gradient(90deg,#070a0fbb,#070a0f22),url("banner.png") center/cover}.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,#080b11e8)}.hero-info{position:absolute;left:30px;bottom:28px;z-index:1}.eyebrow{font-size:11px;letter-spacing:2px;color:#6ca7ff;font-weight:800}.hero h1{margin:8px 0 10px;font-size:54px;line-height:.95}.hero p{color:#a7b2c2;max-width:560px;line-height:1.4}.actions{display:flex;gap:8px;flex-wrap:wrap}.primary{border:0;background:#2f7fff;color:#fff;padding:13px 20px;border-radius:5px;font-weight:900;cursor:pointer}.primary:hover{filter:brightness(1.08)}.secondary{border:1px solid #ffffff12;background:#141c27;color:#dce6f4;padding:12px 17px;border-radius:5px;cursor:pointer}.rightcol{display:grid;gap:16px;grid-template-rows:1fr 1fr}.card{background:#111821ed;border:1px solid #ffffff0d;border-radius:8px;padding:16px}.card h3,.card h2{margin:0 0 12px}.activity{display:flex;gap:12px;align-items:center;padding:11px;background:#0b1119;border:1px solid #ffffff08;margin-top:8px;border-radius:5px}.activity img{width:78px;height:55px;object-fit:cover;border-radius:4px}.activity b{display:block;font-size:13px}.muted{color:#7e8b9e;font-size:12px}.bottomplay{margin-top:16px;background:#0e141d;border:1px solid #ffffff0d;border-radius:8px;padding:12px;display:flex;align-items:center;justify-content:space-between;gap:10px}.mode{display:flex;align-items:center;gap:12px}.modeicon{width:45px;height:45px;border-radius:5px;background:#172338;display:grid;place-items:center;color:#67a5ff;font-weight:900}.playbig{min-width:210px;padding:18px 36px;border:0;background:#38a852;color:#fff;font-size:23px;font-weight:900;border-radius:4px;cursor:pointer}.playbig:hover{filter:brightness(1.08)}.statsgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.num{font-size:28px;font-weight:900;margin-top:6px}.list{display:grid;gap:8px}.item{background:#111925;border:1px solid #ffffff0c;padding:13px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;gap:12px}.search{display:flex;gap:8px;margin:14px 0}.search input,.modal input,.modal select{flex:1;background:#080d14;color:#fff;border:1px solid #ffffff15;border-radius:6px;padding:11px;outline:none}.modal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:20;padding:18px}.modal.show{display:flex}.modalbox{width:min(520px,100%);background:#111820;border:1px solid #ffffff18;border-radius:9px;padding:20px;box-shadow:0 20px 70px #0008}.queue{font-size:28px;font-weight:900;margin:18px 0}.close{float:right;background:transparent;border:0;color:#8190a5;font-size:20px;cursor:pointer}.mobilebar{display:none}
-@media(max-width:900px){.home{grid-template-columns:1fr}.rightcol{grid-template-columns:1fr 1fr;grid-template-rows:none}.statsgrid{grid-template-columns:repeat(2,1fr)}}@media(max-width:650px){body{overflow:hidden}.app{flex-direction:column}.shell{padding-bottom:66px}.rail{position:fixed;bottom:0;left:0;right:0;width:auto;height:66px;display:flex;flex-direction:row;border-right:0;border-top:1px solid #ffffff12}.brand{display:none}.railnav{display:flex;flex-direction:row;overflow:auto}.rail button{height:66px;min-width:64px;border-left:0;border-top:3px solid transparent}.rail button:hover,.rail button.active{border-left:0;border-top-color:#58a0ff}.content{padding:12px}.topbar{height:58px;padding:0 14px}.hero{min-height:340px}.hero h1{font-size:39px}.hero-info{left:18px;bottom:20px}.rightcol{grid-template-columns:1fr}.bottomplay{position:sticky;bottom:0}.playbig{min-width:130px;padding:15px 18px}.statsgrid{grid-template-columns:1fr 1fr}.home{gap:12px}}
-</style></head>
-<body><div class="app">
-<aside class="rail"><div class="brand">SX<b>+</b></div><div class="railnav">
-<button class="active" data-view="home" title="Play"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg></button>
-<button data-view="profile" title="Profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1-4 3-6 7-6s6 2 7 6"/></svg></button>
-<button data-view="inventory" title="Inventory"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4zM7 7V4h10v3M8 12h8"/></svg></button>
-<button data-view="clan" title="Clan"><svg viewBox="0 0 24 24"><path d="m12 3 8 3v5c0 5-3.2 8-8 10-4.8-2-8-5-8-10V6z"/></svg></button>
-<button data-view="friends" title="Friends"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.4"/><path d="M3 20c.8-4 2.7-6 6-6s5.2 2 6 6M15 15c2.7 0 4.4 1.7 5 5"/></svg></button>
-<button data-view="market" title="Market"><svg viewBox="0 0 24 24"><path d="M5 9h14l-1 11H6zM8 9V7a4 4 0 0 1 8 0v2"/></svg></button>
-<button data-view="stats" title="Stats"><svg viewBox="0 0 24 24"><path d="M5 19V9M12 19V5M19 19v-8"/></svg></button>
-<button data-view="settings" title="Settings"><svg viewBox="0 0 24 24"><path d="m9 3 .6 2.1a7.4 7.4 0 0 1 4.8 0L15 3l2 1.2-.9 2a7.3 7.3 0 0 1 3.4 3.4l2-.9 1.1 2-2.1.7a7.4 7.4 0 0 1 0 4.8l2.1.7-1.1 2-2-.9a7.3 7.3 0 0 1-3.4 3.4l.9 2-2 1.2-.7-2.1a7.4 7.4 0 0 1-4.8 0L9 21l-2-1.2.9-2a7.3 7.3 0 0 1-3.4-3.4l-2 .9-1.1-2 2.1-.7a7.4 7.4 0 0 1 0-4.8L1.4 7.1l1.1-2 2 .9A7.3 7.3 0 0 1 7.9 2l-.9-2z"/></svg></button>
-<button id="adminBtn" class="admin" data-view="admin" title="Admin" style="display:none"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="m8 12 2.5 2.5L16 9"/></svg></button>
-</div></aside>
-<div class="shell"><header class="topbar"><div id="title" class="top-title">PLAY</div><div class="top-right"><div id="gold" class="pill">0 G</div><div id="userName" class="pill">...</div></div></header>
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#0d1218;color:#f1f5f9;font-family:Inter,Arial,sans-serif}body{overflow:hidden}button,input{font:inherit}
+.app{height:100%;display:flex}.rail{width:78px;background:#090e14;border-right:1px solid #ffffff0d;display:flex;flex-direction:column;z-index:5}.brand{height:74px;display:grid;place-items:center;font-weight:950;font-size:23px;border-bottom:1px solid #ffffff0d}.brand b{color:#4c8dff}.railnav{flex:1}.rail button{width:100%;height:70px;border:0;border-left:3px solid transparent;background:transparent;color:#708096;cursor:pointer;display:grid;place-items:center;transition:.15s}.rail button:hover,.rail button.active{background:#151f2c;color:#fff;border-left-color:#4c8dff}.rail svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.rail .admin{color:#f6c85f}.shell{flex:1;min-width:0;display:flex;flex-direction:column}.topbar{height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:#111821;border-bottom:1px solid #ffffff0d}.top-title{font-size:15px;font-weight:900;letter-spacing:1.5px}.top-right{display:flex;gap:8px;align-items:center}.pill{padding:9px 12px;background:#0a1017;border:1px solid #ffffff10;border-radius:7px;color:#cbd5e1;font-size:12px}.content{flex:1;overflow:auto;padding:24px}.screen{display:none;max-width:1400px;margin:auto}.screen.active{display:block}.home{display:grid;grid-template-columns:minmax(0,1.7fr) 360px;gap:16px}.hero{min-height:380px;border:1px solid #ffffff0e;border-radius:9px;overflow:hidden;position:relative;background:linear-gradient(90deg,#05080cdd,#05080c30),url("banner.png") center/cover}.hero:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 42%,#070a10ec)}.hero-info{position:absolute;left:30px;bottom:28px;z-index:1;max-width:650px}.eyebrow{font-size:11px;letter-spacing:2px;color:#6ea8ff;font-weight:900}.hero h1{margin:8px 0 10px;font-size:56px;line-height:.92;letter-spacing:-3px}.hero p{margin:0 0 18px;color:#a7b1bf;line-height:1.45}.actions{display:flex;gap:8px;flex-wrap:wrap}.primary{border:0;background:#327cff;color:#fff;padding:12px 18px;border-radius:5px;font-weight:900;cursor:pointer}.primary:hover{filter:brightness(1.08)}.secondary{border:1px solid #ffffff12;background:#141d28;color:#dce6f3;padding:11px 16px;border-radius:5px;cursor:pointer}.secondary:hover{background:#192535}.rightcol{display:grid;gap:16px}.card{background:#111821;border:1px solid #ffffff0e;border-radius:8px;padding:16px}.card h2,.card h3{margin:0 0 12px}.activity{display:flex;gap:11px;align-items:center;padding:10px;background:#0a1017;border:1px solid #ffffff08;margin-top:8px;border-radius:5px}.activity img{width:76px;height:54px;object-fit:cover;border-radius:4px}.activity b{display:block;font-size:13px}.muted{color:#78879a;font-size:12px}.bottomplay{margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#0e151e;border:1px solid #ffffff0e;border-radius:8px;padding:12px}.mode{display:flex;align-items:center;gap:12px}.modeicon{width:46px;height:46px;background:#162338;border-radius:5px;display:grid;place-items:center;color:#6ea8ff;font-weight:950}.playbig{min-width:220px;padding:17px 30px;background:#38a852;border:0;border-radius:4px;color:#fff;font-size:22px;font-weight:950;cursor:pointer}.playbig:hover{filter:brightness(1.08)}
+.statsgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.num{font-size:27px;font-weight:950;margin-top:5px}.item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px;border:1px solid #ffffff08;background:#101822;border-radius:6px}.list{display:grid;gap:8px}.search{display:flex;gap:8px;margin:12px 0}.search input,.form input,.modal select{width:100%;background:#080d14;color:#fff;border:1px solid #ffffff12;border-radius:6px;padding:11px;outline:none}.search input:focus,.form input:focus,.modal select:focus{border-color:#4c8dff}.avatar{border:1px solid #ffffff15}.modecards{display:grid;grid-template-columns:1fr 1fr;gap:12px}.modecard{border:1px solid #ffffff10;background:#0b1118;padding:16px;border-radius:8px;cursor:pointer}.modecard.active{border-color:#4c8dff;background:#10203a}.modecard .big{font-size:19px;font-weight:950}.modecard p{color:#7f8da0;font-size:12px;line-height:1.45}.badge{display:inline-block;margin-top:7px;padding:5px 8px;border-radius:4px;background:#162338;color:#79acff;font-size:10px;font-weight:900}
+.modal{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;z-index:20;padding:18px}.modal.show{display:flex}.modalbox{width:min(620px,100%);background:#111821;border:1px solid #ffffff16;border-radius:10px;padding:20px;box-shadow:0 30px 100px #000a}.close{float:right;border:0;background:transparent;color:#8a98aa;font-size:24px;cursor:pointer}.queue{font-size:34px;font-weight:950;margin:14px 0}.waitcards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}.waitcard{padding:11px;border-radius:6px;background:#0a1017;border:1px solid #ffffff0b}.waitcard .dot{width:7px;height:7px;border-radius:50%;background:#394657;display:inline-block;margin-right:6px}.waitcard.online .dot{background:#48ce7c}.waitcard.ready .dot{background:#4c8dff}
+.form{display:grid;gap:8px}.form textarea{min-height:86px;resize:vertical;width:100%;background:#080d14;color:#fff;border:1px solid #ffffff12;border-radius:6px;padding:11px;outline:none}
+.danger{border:0;background:#8d3040;color:#fff;padding:10px 14px;border-radius:5px;cursor:pointer}.success{color:#63dc98}.warning{color:#f5c76a}
+@media(max-width:900px){.home{grid-template-columns:1fr}.statsgrid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:650px){.app{flex-direction:column}.shell{padding-bottom:62px}.rail{position:fixed;left:0;right:0;bottom:0;width:auto;height:62px;display:flex;border-right:0;border-top:1px solid #ffffff0d}.brand{display:none}.railnav{display:flex;overflow:auto}.rail button{height:62px;min-width:64px;border-left:0;border-top:3px solid transparent}.rail button:hover,.rail button.active{border-left:0;border-top-color:#4c8dff}.content{padding:12px}.topbar{height:58px;padding:0 14px}.hero{min-height:330px}.hero h1{font-size:40px}.hero-info{left:18px;bottom:20px}.bottomplay{position:sticky;bottom:0}.playbig{min-width:130px;padding:14px 18px}.modecards{grid-template-columns:1fr}.waitcards{grid-template-columns:1fr}.rightcol{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="rail">
+  <div class="brand">SX<b>+</b></div>
+  <div class="railnav">
+    <button class="active" data-view="home" title="Play"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg></button>
+    <button data-view="profile" title="Profile"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1-4 3-6 7-6s6 2 7 6"/></svg></button>
+    <button data-view="inventory" title="Inventory"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4zM7 7V4h10v3M8 12h8"/></svg></button>
+    <button data-view="clan" title="Clan"><svg viewBox="0 0 24 24"><path d="m12 3 8 3v5c0 5-3.2 8-8 10-4.8-2-8-5-8-10V6z"/></svg></button>
+    <button data-view="friends" title="Friends"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.4"/><path d="M3 20c.8-4 2.7-6 6-6s5.2 2 6 6M15 15c2.7 0 4.4 1.7 5 5"/></svg></button>
+    <button data-view="market" title="Market"><svg viewBox="0 0 24 24"><path d="M5 9h14l-1 11H6zM8 9V7a4 4 0 0 1 8 0v2"/></svg></button>
+    <button data-view="stats" title="Stats"><svg viewBox="0 0 24 24"><path d="M5 19V9M12 19V5M19 19v-8"/></svg></button>
+    <button data-view="settings" title="Settings"><svg viewBox="0 0 24 24"><path d="m9 3 .6 2.1a7.4 7.4 0 0 1 4.8 0L15 3l2 1.2-.9 2a7.3 7.3 0 0 1 3.4 3.4l2-.9 1.1 2-2.1.7a7.4 7.4 0 0 1 0 4.8l2.1.7-1.1 2-2-.9a7.3 7.3 0 0 1-3.4 3.4l.9 2-2 1.2-.7-2.1a7.4 7.4 0 0 1-4.8 0L9 21l-2-1.2.9-2a7.3 7.3 0 0 1-3.4-3.4l-2 .9-1.1-2 2.1-.7a7.4 7.4 0 0 1 0-4.8L1.4 7.1l1.1-2 2 .9A7.3 7.3 0 0 1 7.9 2l-.9-2z"/></svg></button>
+    <button id="adminBtn" class="admin" data-view="admin" title="Admin" style="display:none"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="m8 12 2.5 2.5L16 9"/></svg></button>
+  </div>
+</aside>
+
+<div class="shell">
+<header class="topbar">
+  <div id="title" class="top-title">PLAY</div>
+  <div class="top-right"><div id="gold" class="pill">0 G</div><div id="userName" class="pill">...</div><button id="logout" class="secondary" style="padding:8px 10px">Вийти</button></div>
+</header>
+
 <main class="content">
-<section id="home" class="screen active"><div class="home"><div>
-<div class="hero"><div class="hero-info"><div class="eyebrow">STANDOFFX • SEASON BUILD</div><h1>STANDOFFX</h1><p>Тактичний browser FPS без зайвого. Обирай режим і заходь у матч.</p><div class="actions"><button class="primary" id="playBtn">PLAY</button><button class="secondary" id="modeBtn">Вибрати режим</button></div></div></div>
-<div class="bottomplay"><div class="mode"><div class="modeicon">HS</div><div><b id="selectedMode">HIDE & SEEK</b><div class="muted">M3 Maze · 3 players</div></div></div><button id="quickPlay" class="playbig">PLAY</button></div></div>
-<div class="rightcol"><div class="card"><h3>BATTLE PASS</h3><div class="activity"><img src="game1.png"><div><b>Sunstrike Pass</b><span class="muted">Події та нагороди</span></div></div><div class="activity"><img src="game2.png"><div><b>Latest collection</b><span class="muted">Нові предмети</span></div></div></div><div class="card"><h3>EVENTS</h3><div class="activity"><img src="game3.png"><div><b>StandoffX Event</b><span class="muted">COMING SOON</span></div></div><button class="secondary" style="margin-top:10px;width:100%" onclick="show('inventory')">OPEN INVENTORY</button></div></div></div></section>
+<section id="home" class="screen active">
+  <div class="home">
+    <div>
+      <div class="hero">
+        <div class="hero-info">
+          <div class="eyebrow">STANDOFFX • CLASSIC UI BUILD</div>
+          <h1>STANDOFFX</h1>
+          <p>Обирай режим, шукай матч і заходь у лобі. Гравці підключаються всі разом — гра не стартує раніше часу.</p>
+          <div class="actions"><button class="primary" id="playBtn">PLAY</button><button class="secondary" id="modeBtn">ВИБРАТИ РЕЖИМ</button></div>
+        </div>
+      </div>
+      <div class="bottomplay">
+        <div class="mode"><div id="modeIcon" class="modeicon">HS</div><div><b id="selectedMode">HIDE & SEEK</b><div id="selectedDesc" class="muted">Мисливець проти гравців · M3 Maze</div></div></div>
+        <button id="quickPlay" class="playbig">PLAY</button>
+      </div>
+    </div>
 
-<section id="profile" class="screen"><div class="card"><h2>PROFILE</h2><div class="row item"><div><div id="profileNick" class="num"></div><div id="profileId" class="muted"></div></div><img id="avatar" class="avatar" style="width:78px;height:78px;border-radius:5px;object-fit:cover"></div><div class="statsgrid" style="margin-top:12px"><div class="card"><div class="muted">XP</div><div id="pxp" class="num"></div></div><div class="card"><div class="muted">COMPETITIVE</div><div id="pmmr" class="num"></div></div><div class="card"><div class="muted">ALLIES</div><div id="pallies" class="num"></div></div><div class="card"><div class="muted">CLAN</div><div id="pclan" class="num"></div></div></div></div></section>
+    <div class="rightcol">
+      <div class="card"><h3>BATTLE PASS</h3><div class="activity"><img src="game1.png"><div><b>Sunstrike Pass</b><span class="muted">Події та нагороди</span></div></div><div class="activity"><img src="game2.png"><div><b>Latest collection</b><span class="muted">Нові предмети</span></div></div></div>
+      <div class="card"><h3>EVENTS</h3><div class="activity"><img src="game3.png"><div><b>StandoffX Event</b><span class="muted">COMING SOON</span></div></div><button class="secondary" style="margin-top:10px;width:100%" onclick="show('inventory')">OPEN INVENTORY</button></div>
+    </div>
+  </div>
+</section>
 
-<section id="friends" class="screen"><div class="card"><h2>FRIENDS</h2><div class="search"><input id="friendSearch" placeholder="Нік або ID"><button id="findFriend" class="primary">ЗНАЙТИ</button></div><div id="friendResult"></div><h3>Друзі</h3><div id="friendsList" class="list"></div><h3>Заявки</h3><div id="incoming" class="list"></div></div></section>
+<section id="profile" class="screen"><div class="card"><h2>PROFILE</h2><div class="item"><div><div id="profileNick" class="num"></div><div id="profileId" class="muted"></div></div><img id="avatar" class="avatar" style="width:78px;height:78px;border-radius:5px;object-fit:cover"></div><div class="statsgrid" style="margin-top:12px"><div class="card"><div class="muted">XP</div><div id="pxp" class="num"></div></div><div class="card"><div class="muted">COMPETITIVE</div><div id="pmmr" class="num"></div></div><div class="card"><div class="muted">ALLIES</div><div id="pallies" class="num"></div></div><div class="card"><div class="muted">CLAN</div><div id="pclan" class="num"></div></div></div></div></section>
 
-<section id="clan" class="screen"><div class="card"><div class="actions" style="justify-content:space-between"><h2>CLAN</h2><button class="secondary" id="refreshClan">ОНОВИТИ</button></div><div id="clanBody"></div></div></section>
+<section id="friends" class="screen"><div class="card"><h2>FRIENDS</h2><div class="search"><input id="friendSearch" placeholder="Нік або ID"><button id="findFriend" class="primary">ЗНАЙТИ</button></div><div id="friendResult"></div><h3 style="margin-top:18px">Друзі</h3><div id="friendsList" class="list"></div><h3 style="margin-top:18px">Вхідні заявки</h3><div id="incoming" class="list"></div></div></section>
+
+<section id="clan" class="screen"><div class="card"><div style="display:flex;justify-content:space-between;gap:10px;align-items:center"><h2>CLAN</h2><button class="secondary" id="refreshClan">ОНОВИТИ</button></div><div id="clanBody"></div></div></section>
 
 <section id="inventory" class="screen"><div class="card"><div class="actions" style="justify-content:space-between"><h2>INVENTORY</h2><span class="pill" id="invCount">0 ITEMS</span></div><div id="inventoryList" class="statsgrid" style="grid-template-columns:repeat(3,1fr);margin-top:12px"></div></div></section>
 
@@ -36,33 +75,166 @@ body{background:linear-gradient(120deg,#0d1118,#161d27);overflow:hidden}.app{hei
 
 <section id="stats" class="screen"><div class="statsgrid"><div class="card"><div class="muted">MMR</div><div id="sm" class="num"></div></div><div class="card"><div class="muted">XP</div><div id="sx" class="num"></div></div><div class="card"><div class="muted">GOLD</div><div id="sg" class="num"></div></div><div class="card"><div class="muted">STATUS</div><div class="num">ONLINE</div></div></div></section>
 
-<section id="settings" class="screen"><div class="card"><h2>SETTINGS</h2><label>Sensitivity <input id="sens" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:18px">ADS Sensitivity <input id="ads" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:18px">Crosshair Size <input id="crossSize" type="range" min="8" max="36" step="1" style="width:100%"></label><label style="display:block;margin-top:18px">Crosshair Gap <input id="crossGap" type="range" min="0" max="12" step="1" style="width:100%"></label><p class="muted">Налаштування зберігаються локально на пристрої.</p></div></section>
-</main></div></div>
+<section id="settings" class="screen"><div class="card"><h2>SETTINGS</h2><label>Sensitivity <input id="sens" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:18px">ADS Sensitivity <input id="ads" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:18px">Crosshair Size <input id="crossSize" type="range" min="8" max="36" step="1" style="width:100%"></label><label style="display:block;margin-top:18px">Crosshair Gap <input id="crossGap" type="range" min="0" max="12" step="1" style="width:100%"></label><p class="muted">Налаштування зберігаються тільки на цьому пристрої.</p></div></section>
+</main>
+</div>
+</div>
 
-<div id="playModal" class="modal"><div class="modalbox"><button class="close" id="cancelX">×</button><h2>Пошук матчу</h2><div class="muted">Режим: HIDE & SEEK · M3 Maze</div><div id="queue" class="queue">0 / 3</div><div class="muted">Ти залишаєшся в лоббі, поки сервер не збере всіх гравців.</div><button id="cancelSearch" class="danger" style="margin-top:18px;padding:11px 18px;border:0;border-radius:5px;cursor:pointer;background:#9b2c3c;color:#fff">СКАСУВАТИ</button></div></div>
+<div id="modeModal" class="modal"><div class="modalbox"><button class="close" id="modeClose">×</button><h2>ВИБІР РЕЖИМУ</h2><div class="modecards"><div class="modecard active" data-mode="hide_seek"><div class="big">HIDE & SEEK</div><p>Один мисливець шукає інших. Після захвату роль переходить до спійманого.</p><span class="badge">3 PLAYERS</span></div><div class="modecard" data-mode="team_fight"><div class="big">TEAM FIGHT</div><p>Командний режим. Синя та червона сторони, стрілянина, респавн і рахунок.</p><span class="badge">3 PLAYERS</span></div></div><button class="primary" style="margin-top:14px" id="modeApply">ГОТОВО</button></div></div>
 
-<script src="/socket.io/socket.io.js"></script><script>
-const $=id=>document.getElementById(id);let me=null,socket=null,searching=false;
+<div id="playModal" class="modal"><div class="modalbox"><button class="close" id="cancelX">×</button><h2 id="searchTitle">ПОШУК МАТЧУ</h2><div id="searchMode" class="muted">HIDE & SEEK</div><div id="queue" class="queue">1 / 3</div><div class="muted" id="searchHint">Коли знайдено 3 гравців, усі переходять у лобі. Матч не стартує, доки всі не підключаться та не завантажать карту.</div><div class="waitcards" id="searchPlayers"></div><button id="cancelSearch" class="danger" style="margin-top:14px">СКАСУВАТИ</button></div></div>
+
+<div id="clanModal" class="modal"><div class="modalbox"><button class="close" id="clanClose">×</button><h2 id="clanModalTitle">КЛАН</h2><div id="clanModalBody"></div></div></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let me=null,socket=null,searching=false;
+let selectedMode=localStorage.getItem("sx_mode")||"hide_seek";
+const MODE={
+  hide_seek:{name:"HIDE & SEEK",icon:"HS",desc:"Мисливець проти гравців · M3 Maze"},
+  team_fight:{name:"TEAM FIGHT",icon:"TF",desc:"Командний бій · M3 Maze"}
+};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-async function api(u,o={}){o.credentials="same-origin";o.headers=Object.assign({"Content-Type":"application/json"},o.headers||{});const r=await fetch(u,o);let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.message||"Помилка");return d}
+async function api(url,opt={}){
+  const o={...opt,credentials:"same-origin"};
+  o.headers=Object.assign({},o.headers||{});
+  if(o.body && typeof o.body==="string") o.headers["Content-Type"]="application/json";
+  const r=await fetch(url,o);
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.message||"Помилка запиту");
+  return d;
+}
 function show(v){document.querySelectorAll(".screen").forEach(x=>x.classList.toggle("active",x.id===v));document.querySelectorAll(".rail button").forEach(x=>x.classList.toggle("active",x.dataset.view===v));$("title").textContent=v.toUpperCase()}
-function render(){if(!me)return;$("userName").textContent=me.nickname;$("gold").textContent=(me.gold||0)+" G";$("profileNick").textContent=me.nickname;$("profileId").textContent=me.id;$("pxp").textContent=me.XP||0;$("pmmr").textContent=me.MMRCompetitive||1000;$("pallies").textContent=me.MMRAllies||1000;$("pclan").textContent=me.clan||"—";$("sm").textContent=me.MMRCompetitive||1000;$("sx").textContent=me.XP||0;$("sg").textContent=me.gold||0;$("avatar").src=me.playerAvatar||"/avatars/default.jpg";if(me.isAdmin||me.id==="Dev_01")$("adminBtn").style.display="grid"}
+function render(){
+  if(!me)return;
+  $("userName").textContent=me.nickname||"PLAYER";
+  $("gold").textContent=(me.gold||0)+" G";
+  $("profileNick").textContent=me.nickname||"";
+  $("profileId").textContent=me.id||"";
+  $("pxp").textContent=me.XP||0;
+  $("pmmr").textContent=me.MMRCompetitive||1000;
+  $("pallies").textContent=me.MMRAllies||1000;
+  $("pclan").textContent=me.clan||"—";
+  $("sm").textContent=me.MMRCompetitive||1000;
+  $("sx").textContent=me.XP||0;
+  $("sg").textContent=me.gold||0;
+  $("avatar").src=me.playerAvatar||"/avatars/default.jpg";
+  $("adminBtn").style.display=(me.isAdmin||me.id==="Dev_01")?"grid":"none";
+}
+function renderMode(){
+  const cfg=MODE[selectedMode]||MODE.hide_seek;
+  $("selectedMode").textContent=cfg.name;
+  $("selectedDesc").textContent=cfg.desc;
+  $("modeIcon").textContent=cfg.icon;
+  document.querySelectorAll(".modecard").forEach(x=>x.classList.toggle("active",x.dataset.mode===selectedMode));
+}
 document.querySelectorAll(".rail button[data-view]").forEach(b=>b.onclick=()=>{if(b.dataset.view==="admin")location.href="/admin";else show(b.dataset.view)});
-async function loadFriends(){try{const f=await api("/api/get-my-friends"),i=await api("/api/friends/incoming",{method:"POST",body:"{}"});$("friendsList").innerHTML=f.friends.map(x=>"<div class='item'><b>"+esc(x.nickname)+"</b><span class='muted'>"+esc(x.id)+"</span></div>").join("")||"<span class='muted'>Немає друзів.</span>";$("incoming").innerHTML=i.incoming.map(x=>"<div class='item'><b>"+esc(x.nickname)+"</b><div class='actions'><button class='primary' onclick=\"friendAction('/api/friends/accept','"+esc(x.id)+"')\">✓</button><button class='secondary' onclick=\"friendAction('/api/friends/decline','"+esc(x.id)+"')\">×</button></div></div>").join("")||"<span class='muted'>Немає заявок.</span>"}catch{}}
+document.querySelectorAll(".modecard").forEach(c=>c.onclick=()=>{selectedMode=c.dataset.mode;renderMode()});
+$("modeBtn").onclick=()=>$("modeModal").classList.add("show");
+$("modeClose").onclick=()=>$("modeModal").classList.remove("show");
+$("modeApply").onclick=()=>{localStorage.setItem("sx_mode",selectedMode);$("modeModal").classList.remove("show");renderMode()};
+async function loadFriends(){
+  try{
+    const f=await api("/api/get-my-friends"),i=await api("/api/friends/incoming",{method:"POST",body:"{}"});
+    $("friendsList").innerHTML=f.friends.map(x=>"<div class='item'><div><b>"+esc(x.nickname)+"</b><div class='muted'>"+esc(x.id)+"</div></div><span class='muted'>"+(x.status?"ONLINE":"OFFLINE")+"</span></div>").join("")||"<span class='muted'>Немає друзів.</span>";
+    $("incoming").innerHTML=i.incoming.map(x=>"<div class='item'><div><b>"+esc(x.nickname)+"</b><div class='muted'>"+esc(x.id)+"</div></div><div class='actions'><button class='primary' onclick="friendAction('/api/friends/accept','"+esc(x.id)+"')">✓</button><button class='secondary' onclick="friendAction('/api/friends/decline','"+esc(x.id)+"')">×</button></div></div>").join("")||"<span class='muted'>Немає заявок.</span>";
+  }catch(e){}
+}
 async function friendAction(url,id){try{await api(url,{method:"POST",body:JSON.stringify({friendId:id})});loadFriends()}catch(e){alert(e.message)}}
-$("findFriend").onclick=async()=>{try{const d=await api("/api/search-user",{method:"POST",body:JSON.stringify({query:$("friendSearch").value})});$("friendResult").innerHTML="<div class='item'><div><b>"+esc(d.user.nickname)+"</b><div class='muted'>"+esc(d.user.id)+"</div></div><button class='primary' onclick=\"friendAction('/api/friends/request','"+esc(d.user.id)+"')\">ДОДАТИ</button></div>"}catch(e){$("friendResult").innerHTML="<div class='muted'>"+esc(e.message)+"</div>"}};
-async function loadClan(){try{const d=await api("/api/clans/my");if(!d.clan){$("clanBody").innerHTML="<p class='muted'>Ти не в клані.</p><div class='actions'><button class='primary' onclick='createClan()'>CREATE CLAN — 500 G</button><button class='secondary' onclick='searchClans()'>FIND CLAN</button></div>";return}$("clanBody").innerHTML="<div class='card'><div class='num'>"+esc(d.clan.name)+"</div><div class='muted'>["+esc(d.clan.tag)+"] · LEVEL "+d.clan.level+" · "+d.members.length+" MEMBERS</div></div><div class='list'>"+d.members.map(x=>"<div class='item'><b>"+esc(x.nickname)+"</b><span class='muted'>"+x.role+"</span></div>").join("")+"</div><button class='secondary' style='margin-top:12px' onclick='leaveClan()'>LEAVE CLAN</button>"}catch(e){}} 
-function createClan(){const n=prompt("Назва клану"),t=prompt("TAG (2-5)");if(!n||!t)return;api("/api/clans/create",{method:"POST",body:JSON.stringify({name:n,tag:t})}).then(async()=>{me=(await api("/api/me")).user;render();loadClan()}).catch(e=>alert(e.message))}
-async function leaveClan(){try{await api("/api/clans/leave",{method:"POST"});me=(await api("/api/me")).user;render();loadClan()}catch(e){alert(e.message)}}
-function searchClans(){const q=prompt("Назва або TAG");if(q===null)return;api("/api/clans/search",{method:"POST",body:JSON.stringify({query:q})}).then(d=>alert(d.clans.map(c=>c.name+" ["+c.tag+"] · "+c.members+" members").join("\n")||"Не знайдено")).catch(e=>alert(e.message))}
-async function loadInventory(){try{const d=await api("/api/inventory/my",{method:"POST",body:"{}"});$("invCount").textContent=d.inventory.length+" ITEMS";$("inventoryList").innerHTML=d.inventory.map(x=>"<div class='card'><b>"+esc(x.name)+"</b><div class='muted'>"+esc(x.rarity||"common")+"</div><button class='secondary' style='margin-top:10px' onclick=\"sellItem('"+esc(x.skinId)+"')\">SELL</button></div>").join("")||"<div class='muted'>Порожньо.</div>"}catch{}}
+$("findFriend").onclick=async()=>{try{const d=await api("/api/search-user",{method:"POST",body:JSON.stringify({query:$("friendSearch").value})});$("friendResult").innerHTML="<div class='item'><div><b>"+esc(d.user.nickname)+"</b><div class='muted'>"+esc(d.user.id)+"</div></div><button class='primary' onclick="friendAction('/api/friends/request','"+esc(d.user.id)+"')">ДОДАТИ</button></div>"}catch(e){$("friendResult").innerHTML="<div class='muted'>"+esc(e.message)+"</div>"}};
+
+function openClanModal(title,body){$("clanModalTitle").textContent=title;$("clanModalBody").innerHTML=body;$("clanModal").classList.add("show")}
+$("clanClose").onclick=()=>$("clanModal").classList.remove("show");
+
+async function loadClan(){
+  try{
+    const d=await api("/api/clans/my");
+    if(!d.clan){
+      $("clanBody").innerHTML="<p class='muted'>Ти ще не в клані.</p><div class='actions'><button class='primary' onclick='openCreateClan()'>СТВОРИТИ — 500 G</button><button class='secondary' onclick='openClanSearch()'>ЗНАЙТИ КЛАН</button></div>";
+      return;
+    }
+    const role=d.myRole;
+    const members=d.members.map(x=>"<div class='item'><div><b>"+esc(x.nickname)+"</b><div class='muted'>"+esc(x.userId)+" · "+(x.online?"ONLINE":"OFFLINE")+"</div></div><span class='muted'>"+x.role+"</span></div>").join("");
+    $("clanBody").innerHTML="<div class='card'><div class='num'>"+esc(d.clan.name)+"</div><div class='muted'>["+esc(d.clan.tag)+"] · LVL "+d.clan.level+" · "+d.clan.memberCount+"/"+d.clan.memberLimit+"</div><p class='muted'>"+esc(d.clan.description||"Без опису")+"</p><div class='actions'><span class='pill'>"+role.toUpperCase()+"</span>"+(role==="owner"?"<button class='secondary' onclick='loadClanRequests()'>ЗАЯВКИ</button><button class='secondary' onclick='openClanTools()'>КЕРУВАННЯ</button>":"")+"<button class='danger' onclick='leaveClan()'>ВИЙТИ</button></div></div><div class='list'>"+members+"</div>";
+  }catch(e){$("clanBody").innerHTML="<div class='muted'>Не вдалося завантажити клан.</div>"}
+}
+function openCreateClan(){
+  openClanModal("СТВОРИТИ КЛАН","<div class='form'><input id='cnName' maxlength='24' placeholder='Назва клану'><input id='cnTag' maxlength='5' placeholder='TAG 2–5 латинських символів'><textarea id='cnDesc' maxlength='120' placeholder='Опис'></textarea><button class='primary' onclick='createClan()'>СТВОРИТИ ЗА 500 G</button></div>");
+}
+async function createClan(){
+  try{
+    await api("/api/clans/create",{method:"POST",body:JSON.stringify({name:$("cnName").value,tag:$("cnTag").value,description:$("cnDesc").value})});
+    $("clanModal").classList.remove("show");me=(await api("/api/me")).user;render();loadClan();
+  }catch(e){alert(e.message)}
+}
+function openClanSearch(){openClanModal("ЗНАЙТИ КЛАН","<div class='search'><input id='cq' placeholder='Назва або TAG'><button class='primary' onclick='searchClans()'>ЗНАЙТИ</button></div><div id='clanResults' class='list'></div>")}
+async function searchClans(){
+  try{
+    const d=await api("/api/clans/search",{method:"POST",body:JSON.stringify({query:$("cq").value})});
+    $("clanResults").innerHTML=d.clans.map(c=>"<div class='item'><div><b>"+esc(c.name)+"</b><div class='muted'>["+esc(c.tag)+"] · "+c.memberCount+"/"+c.memberLimit+"</div></div><button class='primary' "+(c.isFull?"disabled":"")+" onclick="joinClan('"+esc(c.tag)+"')">ЗАЯВКА</button></div>").join("")||"<span class='muted'>Не знайдено.</span>";
+  }catch(e){$("clanResults").innerHTML="<span class='muted'>"+esc(e.message)+"</span>"}
+}
+async function joinClan(tag){try{await api("/api/clans/request",{method:"POST",body:JSON.stringify({tag})});alert("Заявку відправлено.");$("clanModal").classList.remove("show")}catch(e){alert(e.message)}}
+async function loadClanRequests(){
+  try{
+    const d=await api("/api/clans/requests",{method:"POST",body:"{}"});
+    openClanModal("ЗАЯВКИ КЛАНУ",d.requests.map(x=>"<div class='item'><div><b>"+esc(x.nickname)+"</b><div class='muted'>"+esc(x.id)+"</div></div><div class='actions'><button class='primary' onclick="clanDecision('/api/clans/accept','"+esc(x.id)+"')">✓</button><button class='secondary' onclick="clanDecision('/api/clans/decline','"+esc(x.id)+"')">×</button></div></div>").join("")||"<span class='muted'>Заявок немає.</span>");
+  }catch(e){alert(e.message)}
+}
+async function clanDecision(url,id){try{await api(url,{method:"POST",body:JSON.stringify({userId:id})});loadClanRequests();loadClan()}catch(e){alert(e.message)}}
+function openClanTools(){openClanModal("КЕРУВАННЯ КЛАНОМ","<div class='actions'><button class='danger' onclick='disbandClan()'>РОЗПУСТИТИ КЛАН</button></div>")}
+async function disbandClan(){if(!confirm("Розпустити клан?"))return;try{await api("/api/clans/disband",{method:"POST"});$("clanModal").classList.remove("show");me=(await api("/api/me")).user;render();loadClan()}catch(e){alert(e.message)}}
+async function leaveClan(){if(!confirm("Вийти з клану?"))return;try{await api("/api/clans/leave",{method:"POST"});me=(await api("/api/me")).user;render();loadClan()}catch(e){alert(e.message)}}
+
+async function loadInventory(){
+  try{const d=await api("/api/inventory/my",{method:"POST",body:"{}"});$("invCount").textContent=d.inventory.length+" ITEMS";$("inventoryList").innerHTML=d.inventory.map(x=>"<div class='card'><b>"+esc(x.name)+"</b><div class='muted'>"+esc(x.rarity||"common")+"</div><button class='secondary' style='margin-top:10px' onclick="sellItem('"+esc(x.skinId)+"')">SELL</button></div>").join("")||"<div class='muted'>Порожньо.</div>"}catch{}
+}
 function sellItem(id){const p=Number(prompt("Ціна в Gold"));if(!p)return;api("/api/market/sell",{method:"POST",body:JSON.stringify({skinId:id,price:p})}).then(()=>{loadInventory();loadMarket()}).catch(e=>alert(e.message))}
-async function loadMarket(){try{const d=await api("/api/market/items");$("marketList").innerHTML=d.items.map(x=>"<div class='item'><div><b>"+esc(x.skinName)+"</b><div class='muted'>"+esc(x.sellerNick)+" · "+esc(x.rarity)+"</div></div><div class='actions'><b>"+x.price+" G</b><button class='primary' onclick=\"buy('"+esc(x.lotId)+"')\">BUY</button></div></div>").join("")||"<span class='muted'>Ринок порожній.</span>"}catch{}}
+async function loadMarket(){try{const d=await api("/api/market/items");$("marketList").innerHTML=d.items.map(x=>"<div class='item'><div><b>"+esc(x.skinName)+"</b><div class='muted'>"+esc(x.sellerNick)+" · "+esc(x.rarity)+"</div></div><div class='actions'><b>"+x.price+" G</b><button class='primary' onclick="buy('"+esc(x.lotId)+"')">BUY</button></div></div>").join("")||"<span class='muted'>Ринок порожній.</span>"}catch{}}
 async function buy(id){try{await api("/api/market/buy",{method:"POST",body:JSON.stringify({lotId:id})});me=(await api("/api/me")).user;render();loadMarket();loadInventory()}catch(e){alert(e.message)}}
-function settings(){const raw=localStorage.getItem("sx_settings");let d={sensitivity:1,ads:1,crosshairSize:20,crosshairGap:0};try{d=Object.assign(d,JSON.parse(raw||"{}"))}catch{};["sens","ads","crossSize","crossGap"].forEach((id,i)=>$(id).value=[d.sensitivity,d.ads,d.crosshairSize,d.crosshairGap][i]);["sens","ads","crossSize","crossGap"].forEach(id=>$(id).oninput=saveSettings)}
+function settings(){let d={sensitivity:1,ads:1,crosshairSize:20,crosshairGap:0};try{d=Object.assign(d,JSON.parse(localStorage.getItem("sx_settings")||"{}"))}catch{};["sens","ads","crossSize","crossGap"].forEach((id,i)=>$(id).value=[d.sensitivity,d.ads,d.crosshairSize,d.crosshairGap][i]);["sens","ads","crossSize","crossGap"].forEach(id=>$(id).oninput=saveSettings)}
 function saveSettings(){localStorage.setItem("sx_settings",JSON.stringify({sensitivity:Number($("sens").value),ads:Number($("ads").value),crosshairSize:Number($("crossSize").value),crosshairGap:Number($("crossGap").value)}))}
-function openSearch(){if(searching)return;const modal=$("playModal");modal.classList.add("show");searching=true;socket=io({withCredentials:true});socket.on("queue_update",d=>{$("queue").textContent=d.count+" / 3"});socket.on("search_started",()=>{$("queue").textContent="1 / 3"});socket.on("match_found",d=>{sessionStorage.setItem("myPlayerId",d.userId);sessionStorage.setItem("currentMatchId",d.matchId);sessionStorage.setItem("selectedMap",d.map||"M3_Maze");location.href="/play2.html"});socket.on("search_error",d=>{searching=false;modal.classList.remove("show");alert(d.message||"Помилка")});socket.on("connect_error",()=>{searching=false;modal.classList.remove("show");alert("Не вдалося підключитися до сервера")});socket.emit("start_search",{map:"M3_Maze"})}
-function cancelSearch(){if(socket){socket.emit("cancel_search");socket.disconnect();socket=null}searching=false;$("playModal").classList.remove("show")}
+
+function renderSearchPlayers(players){
+  $("searchPlayers").innerHTML=(players||[]).map(p=>"<div class='waitcard "+(p.connected?"online ":"")+(p.ready?"ready":"")+"'><span class='dot'></span><b>"+esc(p.nickname)+"</b><div class='muted'>"+(p.ready?"ГОТОВ":"ПІДКЛЮЧАЄТЬСЯ")+"</div></div>").join("");
+}
+function warmMapCache(){fetch("m3.glb",{cache:"force-cache"}).catch(()=>{})}
+function openSearch(){
+  if(searching)return;
+  const cfg=MODE[selectedMode]||MODE.hide_seek;
+  warmMapCache();
+  $("playModal").classList.add("show");searching=true;
+  $("searchMode").textContent=cfg.name+" · M3 Maze";
+  $("queue").textContent="1 / 3";$("searchTitle").textContent="ПОШУК "+cfg.name;
+  renderSearchPlayers([{nickname:me?.nickname||"Ти",connected:true,ready:false}]);
+  socket=io({withCredentials:true});
+  socket.on("connect_error",()=>{cancelSearch();alert("Не вдалося підключитися до сервера.")});
+  socket.on("search_error",d=>{cancelSearch();alert(d?.message||"Пошук завершено.")});
+  socket.on("queue_update",d=>{$("queue").textContent=(d.count||1)+" / "+(d.required||3)});
+  socket.on("match_found",d=>{
+    sessionStorage.setItem("myPlayerId",d.userId);
+    sessionStorage.setItem("currentMatchId",d.matchId);
+    sessionStorage.setItem("selectedMap",d.map||"M3_Maze");
+    sessionStorage.setItem("selectedMode",d.mode||selectedMode);
+    location.href="/play2.html";
+  });
+  socket.on("search_started",d=>{$("searchMode").textContent=(d.modeName||cfg.name)+" · M3 Maze"});
+  socket.emit("start_search",{mode:selectedMode});
+}
+function cancelSearch(){
+  if(socket){socket.emit("cancel_search");socket.disconnect();socket=null}
+  searching=false;$("playModal").classList.remove("show");
+}
 $("playBtn").onclick=openSearch;$("quickPlay").onclick=openSearch;$("cancelSearch").onclick=cancelSearch;$("cancelX").onclick=cancelSearch;$("refreshClan").onclick=loadClan;$("refreshMarket").onclick=loadMarket;
-(async()=>{try{me=(await api("/api/me")).user;render();loadFriends();loadClan();loadInventory();loadMarket();settings()}catch{location.href="/"}})();
-</script></body></html>
+$("logout").onclick=async()=>{try{await api("/api/logout",{method:"POST"})}catch{}location.href="/"};
+
+(async()=>{
+  try{
+    me=(await api("/api/me")).user;
+    render();renderMode();loadFriends();loadClan();loadInventory();loadMarket();settings();
+  }catch{location.href="/"}
+})();
+</script>
+</body>
+</html>
