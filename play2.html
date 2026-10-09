@@ -975,20 +975,31 @@ socket.on("kick_to_menu",()=>location.href="/game");
 socket.on("auth_required",()=>location.href="/");
 socket.on("disconnect",()=>{if(matchPhase==="game")$("overlayText").textContent="З'єднання перервано..."});
 
-// mobile joystick
+// mobile controls: track each touch independently so move/look/fire can be used together.
 const stick=$("stick"),thumb=stick.querySelector("i");
-let stickActive=false;
+let stickActive=false,stickTouchId=null;
 window.sxMove={x:0,y:0};
+function touchById(list,id){
+  return Array.from(list||[]).find(t=>t.identifier===id)||null;
+}
 function moveStick(e){
-  const t=e.touches[0],r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+  const t=touchById(e.touches,stickTouchId)||touchById(e.changedTouches,stickTouchId);
+  if(!t)return;
+  const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
   let x=t.clientX-cx,y=t.clientY-cy,len=Math.hypot(x,y),max=48;
   if(len>max){x=x/len*max;y=y/len*max}
   thumb.style.transform="translate("+x+"px,"+y+"px)";
   window.sxMove={x:x/max,y:y/max};
 }
-stick.addEventListener("touchstart",e=>{stickActive=true;moveStick(e);e.preventDefault()},{passive:false});
-stick.addEventListener("touchmove",e=>{if(stickActive)moveStick(e);e.preventDefault()},{passive:false});
-const releaseStick=()=>{stickActive=false;thumb.style.transform="translate(0,0)";window.sxMove={x:0,y:0};keys.w=keys.a=keys.s=keys.d=false};
+stick.addEventListener("touchstart",e=>{
+  if(!stickActive){const t=e.changedTouches[0];stickTouchId=t?t.identifier:null}
+  stickActive=true;moveStick(e);e.preventDefault();
+},{passive:false});
+stick.addEventListener("touchmove",e=>{if(stickActive){moveStick(e);e.preventDefault()}},{passive:false});
+const releaseStick=e=>{
+  if(stickTouchId!==null&&!Array.from(e?.changedTouches||[]).some(t=>t.identifier===stickTouchId))return;
+  stickActive=false;stickTouchId=null;thumb.style.transform="translate(0,0)";window.sxMove={x:0,y:0};keys.w=keys.a=keys.s=keys.d=false;
+};
 stick.addEventListener("touchend",releaseStick);
 stick.addEventListener("touchcancel",releaseStick);
 $("jumpBtn").addEventListener("touchstart",e=>{e.preventDefault();queueJump()},{passive:false});
@@ -996,16 +1007,34 @@ $("reloadBtn").addEventListener("touchstart",e=>{e.preventDefault();startReload(
 $("fireBtn").addEventListener("touchstart",e=>{e.preventDefault();fireHeld=true;fireLoop()},{passive:false});
 $("fireBtn").addEventListener("touchend",()=>fireHeld=false);
 $("fireBtn").addEventListener("touchcancel",()=>fireHeld=false);
-document.addEventListener("touchstart",e=>{if(e.target.closest("#mobile"))return;lookTouch=e.touches[0]});
+let lookTouch=null,lookTouchId=null;
+document.addEventListener("touchstart",e=>{
+  if(e.target.closest("#mobile")||lookTouchId!==null)return;
+  const t=e.changedTouches[0];if(!t)return;
+  lookTouchId=t.identifier;lookTouch={x:t.clientX,y:t.clientY};
+},{passive:true});
 document.addEventListener("touchmove",e=>{
-  if(!lookTouch)return;
-  const t=e.touches[0],dx=t.clientX-lookTouch.clientX,dy=t.clientY-lookTouch.clientY;
+  if(lookTouchId===null||!lookTouch)return;
+  const t=touchById(e.touches,lookTouchId);if(!t)return;
+  const dx=t.clientX-lookTouch.x,dy=t.clientY-lookTouch.y;
   camera.rotation.y-=dx*.004;
   camera.rotation.x-=dy*.004;
   camera.rotation.x=Math.max(-1.35,Math.min(1.35,camera.rotation.x));
-  lookTouch=t;
+  lookTouch={x:t.clientX,y:t.clientY};
 },{passive:true});
-document.addEventListener("touchend",()=>lookTouch=null);
+const releaseLookTouch=e=>{
+  if(lookTouchId===null||!Array.from(e?.changedTouches||[]).some(t=>t.identifier===lookTouchId))return;
+  lookTouch=null;lookTouchId=null;
+};
+document.addEventListener("touchend",releaseLookTouch);
+document.addEventListener("touchcancel",releaseLookTouch);
+function clearHeldInputs(){
+  keys.w=keys.a=keys.s=keys.d=keys.shift=false;jumpQueued=false;fireHeld=false;
+  stickActive=false;stickTouchId=null;window.sxMove={x:0,y:0};thumb.style.transform="translate(0,0)";
+  lookTouch=null;lookTouchId=null;
+}
+window.addEventListener("blur",clearHeldInputs);
+document.addEventListener("visibilitychange",()=>{if(document.hidden)clearHeldInputs()});
 
 let previous=performance.now();
 function animate(){
