@@ -228,4 +228,6 @@ assert.match(game, /if\(victim&&data\.killed\)/, "the kill event must update the
 assert.match(game, /hitConfirmTimer=setTimeout\(\(\)=>crosshair\.classList\.remove\("hit"\),150\)/, "the shooter must receive visual hit confirmation");
 assert.match(game, /setSoldierDown\(e\.mesh,false\);setSoldierTint\(e\.mesh,colorFor\(e\.role,e\.team\)\)/, "respawning enemies must return to their normal pose and team colors");
 
+assert.match(game, /if\(p\.hp<=0\)\{p\.anim="Dead";setSoldierDown\(p\.mesh,true\)\}/, "rejoining clients must render eliminated players as down until respawn");
+
 console.log("OK project invariants, tester-only tools, Atlas endpoint, and unique HTTP routes");
