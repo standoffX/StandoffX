@@ -396,7 +396,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
   });
   toggle.addEventListener("click",()=>setEditing(!editing));
   size.addEventListener("input",()=>{sizeInputs.forEach(input=>input.value=size.value);const data=read();data.size=Number(size.value);data.sizes={};try{localStorage.setItem(key,JSON.stringify(data))}catch{}apply();save()});
-  sizeInputs.forEach(input=>input.addEventListener("input",()=>{apply();save()}));
+  sizeInputs.forEach(input=>input.addEventListener("input",()=>{save();apply();save()}));
   opacity.addEventListener("input",()=>{apply();save()});
   document.getElementById("layoutReset").addEventListener("click",()=>{try{localStorage.removeItem(key)}catch{}controls.forEach(el=>{el.style.left="";el.style.top=""});size.value=100;opacity.value=82;sizeInputs.forEach(input=>input.value=100);apply();save();status.textContent="Розкладку скинуто."});
   apply();
