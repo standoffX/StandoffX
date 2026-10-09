@@ -24,6 +24,12 @@
 #leaveGameDesktop{position:fixed;right:14px;top:14px;z-index:25;pointer-events:auto;border:1px solid #ffffff28;background:#0b111bd9;color:#fff;border-radius:6px;padding:10px 13px;font-size:11px;font-weight:900;cursor:pointer}
 @media(max-width:800px),(pointer:coarse){#leaveGameDesktop{display:none}}.stick{position:absolute;left:20px;bottom:25px;width:125px;height:125px;border-radius:50%;background:#ffffff0d;border:1px solid #ffffff1c;pointer-events:auto;touch-action:none}.stick i{position:absolute;left:35px;top:35px;width:55px;height:55px;border-radius:50%;background:#ffffff22}.mbtn{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid #ffffff1d;background:#0b111bd9;color:#fff;font-size:10px;font-weight:950;pointer-events:auto;touch-action:none}.fire{right:20px;bottom:64px;background:#3e6fb3e6}.jump{right:100px;bottom:145px}.reload{right:102px;bottom:64px}.leave{right:20px;top:20px;width:48px;height:40px;border-radius:6px}
 #trainingControls button:hover{filter:brightness(1.15)}
+.training-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.training-action-grid button{display:flex;align-items:center;justify-content:space-between;gap:5px;min-width:0;min-height:32px;padding:6px 7px;border:1px solid #1de9ff35;border-radius:4px;background:#101e2de8;color:#eaf8ff;font-size:9px;font-weight:900;letter-spacing:.2px;text-align:left;cursor:pointer;touch-action:manipulation}
+.training-action-grid button:hover{border-color:#1de9ff99;background:#143145}
+.training-action-grid kbd{flex:0 0 auto;display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 4px;border:1px solid #1de9ff60;border-radius:3px;background:#071520;color:#1de9ff;font:900 9px ui-monospace,monospace}
+#trainingControls{overscroll-behavior:contain;touch-action:pan-y}
+@media(max-width:800px){#trainingControls{top:auto;left:8px;right:auto;bottom:190px;width:196px;max-height:46vh;padding:8px}.training-action-grid button{min-height:29px;padding:5px;font-size:8px}.training-action-grid kbd{min-width:17px;height:17px}.fire{bottom:44px}}
 @media(max-width:800px){#trainingControls{top:auto;left:8px;right:auto;bottom:190px;width:185px;padding:8px}.fire{bottom:44px}}
 @media(max-width:800px),(pointer:coarse){#mobile{display:block}#hint{display:none}.top{top:8px}.players{grid-template-columns:1fr}.panel{max-height:90vh;overflow:auto}}
 </style>
@@ -54,11 +60,19 @@
 
 <div id="results"><div class="resultBox"><h2 id="resultTitle">МАТЧ ЗАВЕРШЕНО</h2><div id="resultText" class="reward"></div><button id="menuResult">У МЕНЮ</button></div></div>
 <button id="leaveGameDesktop" type="button">← МЕНЮ</button>
-<div id="trainingControls" style="display:none;position:fixed;right:14px;top:72px;width:220px;z-index:15;padding:12px;background:#090f1cdd;border:1px solid #1de9ff55;border-radius:8px;pointer-events:none;backdrop-filter:blur(8px)">
-  <b style="font-size:11px;letter-spacing:1px;color:#1de9ff">TRAINING · KEYBOARD</b>
+<div id="trainingControls" style="display:none;position:fixed;right:14px;top:72px;width:min(270px,calc(100vw - 24px));max-height:72vh;overflow:auto;z-index:25;padding:12px;background:#090f1cf2;border:1px solid #1de9ff66;border-radius:8px;pointer-events:auto;backdrop-filter:blur(8px);color:#eef7ff">
+  <b style="font-size:11px;letter-spacing:1px;color:#1de9ff">ТРЕНУВАННЯ · КЕРУВАННЯ</b>
   <div id="botStatus" style="margin:8px 0;color:#d7e4f5;font-size:11px">Бота ще немає</div>
-  <div id="trainingKeyHints" style="display:grid;grid-template-columns:1fr auto;gap:6px;color:#aebdd0;font-size:10px;line-height:1.4"></div>
-  <div style="margin-top:9px;color:#71849b;font-size:9px">Зміни клавіші в меню → Налаштування → Клавіші тренування</div>
+  <div class="training-action-grid" aria-label="Дії тренування">
+    <button type="button" data-training-action="spawnBot" title="N — створити бота">СТВОРИТИ БОТА <kbd>N</kbd></button>
+    <button type="button" data-training-action="resetBot" title="U — скинути бота">СКИНУТИ БОТА <kbd>U</kbd></button>
+    <button type="button" data-training-action="push" title="J — відштовхнути">PUSH <kbd>J</kbd></button>
+    <button type="button" data-training-action="kick" title="K — удар">KICK <kbd>K</kbd></button>
+    <button type="button" data-training-action="boost" title="L — підкинути">BOOST <kbd>L</kbd></button>
+    <button type="button" data-training-action="resetSession" title="I — скинути сесію">СКИНУТИ ВСЕ <kbd>I</kbd></button>
+  </div>
+  <div id="trainingKeyHints" style="display:grid;grid-template-columns:1fr auto;gap:5px;margin-top:10px;padding-top:9px;border-top:1px solid #ffffff18;color:#aebdd0;font-size:10px;line-height:1.4"></div>
+  <div style="margin-top:9px;color:#71849b;font-size:9px;line-height:1.45">Клавіші можна змінити в лобі: Налаштування → Клавіші тренування. ESC — одразу в лобі.</div>
 </div>
 <div id="pauseMenu" style="display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;background:#020611c9;backdrop-filter:blur(8px);pointer-events:auto">
   <div style="width:min(360px,calc(100vw - 36px));padding:24px;background:#091323;border:1px solid #1de9ff88;border-radius:14px;box-shadow:0 0 45px #00cfff22;color:#edf7ff;text-align:center">
@@ -919,6 +933,16 @@ function togglePauseMenu(force){
 $("resumeGame").addEventListener("click",()=>togglePauseMenu(false));
 $("pauseLeave").addEventListener("click",leaveGame);
 renderTrainingKeyHints();
+$("trainingControls").addEventListener("click",e=>{
+  const button=e.target.closest("[data-training-action]");
+  if(!button||!isTrainingMode)return;
+  e.preventDefault();
+  e.stopPropagation();
+  runTrainingAction(button.dataset.trainingAction);
+});
+$("trainingControls").addEventListener("pointerdown",e=>e.stopPropagation());
+$("trainingControls").addEventListener("mousedown",e=>e.stopPropagation());
+$("trainingControls").addEventListener("touchstart",e=>e.stopPropagation(),{passive:true});
 
 socket.on("training_init",data=>{
   if(!isTrainingMode)return;
