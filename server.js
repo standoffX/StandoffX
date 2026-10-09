@@ -193,11 +193,27 @@ async function initMongo() {
       const doc = await mongoDb.collection(name).findOne({ _id: "main" });
       return doc && doc.data !== undefined ? doc.data : fallback;
     };
-    users = await load("state_users", users);
-    clans = await load("state_clans", clans);
-    messages = await load("state_messages", messages);
-    inventory = await load("state_inventory", inventory);
-    market = await load("state_market", market);
+    const atlasUsers = await load("state_users", users);
+    if (Array.isArray(atlasUsers)) {
+      users = atlasUsers.filter(user => user && typeof user === "object" && !Array.isArray(user));
+    }
+
+    const atlasClans = await load("state_clans", clans);
+    if (atlasClans && typeof atlasClans === "object" && !Array.isArray(atlasClans)) {
+      clans = Object.fromEntries(
+        Object.entries(atlasClans).filter(([, clan]) => clan && typeof clan === "object" && !Array.isArray(clan))
+      );
+    }
+
+    const atlasMessages = await load("state_messages", messages);
+    if (atlasMessages && typeof atlasMessages === "object" && !Array.isArray(atlasMessages)) messages = atlasMessages;
+
+    const atlasInventory = await load("state_inventory", inventory);
+    if (atlasInventory && typeof atlasInventory === "object" && !Array.isArray(atlasInventory)) inventory = atlasInventory;
+
+    const atlasMarket = await load("state_market", market);
+    if (Array.isArray(atlasMarket)) market = atlasMarket.filter(lot => lot && typeof lot === "object" && !Array.isArray(lot));
+
     for (const user of users) ensureUserShape(user);
     console.log("[DB] MongoDB Atlas connected:", mongoStatus.database);
     return true;
