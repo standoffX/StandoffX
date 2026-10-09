@@ -145,7 +145,9 @@ document.addEventListener("pointerlockchange",()=>{
   }
 });
 controls.addEventListener("lock",()=>{if(matchPhase==="game")$("overlay").style.display="none"});
-controls.addEventListener("unlock",()=>{if(matchPhase==="game")$("overlay").style.display="flex"});
+controls.addEventListener("unlock",()=>{
+  if(matchPhase==="game"&&$("pauseMenu")?.style.display!=="flex")$("overlay").style.display="flex";
+});
 
 const loader=new GLTFLoader();
 const mapObjects=[];
@@ -660,6 +662,7 @@ function queueJump(){if(matchPhase==="game")jumpQueued=true}
 
 addEventListener("keydown",e=>{
   if(e.repeat)return;
+  if(e.code==="Escape"&&matchPhase==="game"){e.preventDefault();togglePauseMenu();return}
   const binds=readTrainingBinds();
   if(e.code===binds.menu){e.preventDefault();togglePauseMenu();return}
   if(isTrainingMode&&matchPhase==="game"){
@@ -687,7 +690,7 @@ addEventListener("mousedown",e=>{if(e.button===0&&$("pauseMenu")?.style.display!
 
 function setOverlayGame(){
   $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":mode==="training"?"ТРЕНУВАННЯ":"HIDE & SEEK";
-  $("clickHint").textContent="Клікни для огляду мишкою. WASD — рух · ESC — курсор";
+  $("clickHint").textContent="Клікни для огляду мишкою. WASD — рух · ESC — меню паузи";
   if(/Android|iPhone|iPad/i.test(navigator.userAgent)) $("overlay").style.display="none";
 }
 function leaveGame(){
