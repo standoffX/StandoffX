@@ -1413,9 +1413,9 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const matchId = "match_" + Date.now() + "_" + crypto.randomBytes(2).toString("hex");
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
   const MATCH_SPAWNS = {
-    HILL_TOWN: [{x:-36,y:0,z:-34},{x:36,y:0,z:-34},{x:-36,y:0,z:34},{x:36,y:0,z:34}],
-    NEON_YARD: [{x:-72,y:0,z:-72},{x:72,y:0,z:-72},{x:-72,y:0,z:72},{x:72,y:0,z:72}],
-    FIELD_ARENA: [{x:-100,y:0,z:-100},{x:100,y:0,z:-100},{x:-100,y:0,z:100},{x:100,y:0,z:100}]
+    HILL_TOWN: [{x:-42,y:0,z:-40},{x:42,y:0,z:-40},{x:-42,y:0,z:40},{x:42,y:0,z:40}],
+    NEON_YARD: [{x:-82,y:0,z:-82},{x:82,y:0,z:-82},{x:-82,y:0,z:82},{x:82,y:0,z:82}],
+    FIELD_ARENA: [{x:-110,y:0,z:-110},{x:110,y:0,z:-110},{x:-110,y:0,z:110},{x:110,y:0,z:110}]
   };
   const matchSpawns = MATCH_SPAWNS[safeMapId] || (safeMapId === "HILL_TOWN" ? HILL_TOWN_SPAWNS : SPAWNS);
 
@@ -1828,8 +1828,8 @@ io.on("connection", socket => {
     const previous = trainingSessions.get(user.id);
     const sessionMap = ["field_test", "training"].includes(mode) ? normalizeMapId(data?.map) : cfg.map;
     const TRAINING_SPAWNS = {
-      HILL_TOWN: {x:0,y:0,z:38},
-      NEON_YARD: {x:0,y:0,z:70},
+      HILL_TOWN: {x:0,y:0,z:42},
+      NEON_YARD: {x:0,y:0,z:115},
       FIELD_ARENA: {x:0,y:0,z:0},
       M3_Maze: {x:5,y:0,z:5}
     };
