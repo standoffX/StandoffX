@@ -164,4 +164,14 @@ const routes = [...server.matchAll(/app\.(get|post|put|patch|delete)\(["']([^"']
 const duplicates = routes.filter((route, index) => routes.indexOf(route) !== index);
 assert.deepEqual([...new Set(duplicates)], [], "HTTP routes must not be duplicated");
 
+assert.match(server, /HILL_TOWN: \\{ id: "HILL_TOWN"/, "server must allow the Hill Town map");
+assert.match(server, /id: "allies"[\\s\\S]*?requiredPlayers: 4/, "Allies must have a four-player server queue");
+assert.match(server, /!\\["team_fight", "allies"\\]\\.includes\\(match\\.mode\\)/, "team combat handler must accept Allies");
+assert.match(menu, /data-mode="allies"/, "menu must offer Allies");
+assert.match(menu, /data-mode="team_fight"/, "menu must offer Team Fight");
+assert.match(menu, /data-map="HILL_TOWN"/, "menu must offer Hill Town");
+assert.match(game, /async function buildHillTownMap\\(\\)/, "game must assemble the new map from modular assets");
+assert.match(game, /HILL_TOWN_MANIFEST_URL/, "game must load the public CC0 map asset manifest");
+assert.match(game, /async function loadHeldWeapon\\(\\)/, "game must load a first-person weapon model");
+assert.match(game, /e\\.code==="Escape"&&matchPhase==="game"/, "Escape must open the in-game pause menu");
 console.log("OK project invariants, tester-only tools, Atlas endpoint, and unique HTTP routes");
