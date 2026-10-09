@@ -206,7 +206,7 @@ assert.match(game, /if\(selectedMap==="FIELD_ARENA"\)\{/, "prototype must honor 
 assert.doesNotMatch(game, / · UUID "\+uuid/, "the match lobby must not display UUIDs");
 
 assert.match(game, /function makeVisual\(color\)[\s\S]*?new THREE\.CylinderGeometry[\s\S]*?function setSoldierTint/, "soldiers must have a multi-part procedural 3D model");
-assert.match(game, /function animateSoldier\(model,dt,now,moving=false,inAir=false\)/, "player models must animate without relying on external model downloads");
+assert.match(game, /function animateSoldier\(model,dt,now,moving=false,inAir=false,crouching=false\)/, "player models must animate and crouch without relying on external model downloads");
 assert.match(game, /animateSoldier\(e\.mesh,dt,now,e\.anim==="Running"\|\|e\.anim==="Walking",e\.anim==="Jump",e\.anim==="Crouch"\)/, "remote player movement must also animate crouching");
 assert.match(game, /if\(e\.code===binds\.menu\)\{e\.preventDefault\(\);if\(matchPhase==="game"\)togglePauseMenu\(\);return\}/, "M opens the in-game pause menu instead of accidentally leaving the match");
 assert.match(game, /stick\.addEventListener\("touchcancel",releaseStick\)/, "cancelled mobile joystick touches must release movement");
