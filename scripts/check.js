@@ -41,6 +41,7 @@ const menu = read("mainMenu.html");
 const admin = read("admin.html");
 const game = read("play2.html");
 const ui = read("ui.css");
+const ui = read("ui.css");
 assert.match(server, /function requireAuth\(req, res, next\)[\s\S]*?req\.user = user;\s*next\(\);/);
 assert.match(server, /function finishMatch\(io, matchId\)/, "game timer must have a finish handler");
 assert.match(server, /const ADMIN_PASSWORD = String\(process\.env\.ADMIN_PASSWORD \|\| ""\)/, "admin password must only come from the environment");
@@ -100,6 +101,8 @@ assert.match(server, /isBot: Boolean\(p\.isBot\)/, "match roster includes bot st
 assert.match(server, /isTester/);
 assert.match(menu, /data-test-gameplay="prototype"/, "testers can launch the prototype");
 assert.match(menu, /data-test-gameplay="real"/, "testers can play a full team match with bots");
+assert.match(menu, /data-test-gameplay="training"/, "testers can launch a dedicated training session");
+assert.match(menu, /mode:testGameplayMode==="training"\?"training":"field_test"/, "training selector must start the actual training session");
 assert.match(menu, /class="tester-mode-switch"/, "tester mode must use a compact switch instead of large cards");
 assert.match(menu, /class="tester-mode-segment"/, "prototype/test options must share one compact segmented control");
 assert.match(menu, /createRealtimeSocket\(\)[\s\S]{0,260}transports:\["websocket"\]/, "menu sockets must avoid polling session IDs on Render");
@@ -204,13 +207,30 @@ assert.doesNotMatch(game, / · UUID "\+uuid/, "the match lobby must not display 
 
 assert.match(game, /function makeVisual\(color\)[\s\S]*?new THREE\.CylinderGeometry[\s\S]*?function setSoldierTint/, "soldiers must have a multi-part procedural 3D model");
 assert.match(game, /function animateSoldier\(model,dt,now,moving=false,inAir=false\)/, "player models must animate without relying on external model downloads");
-assert.match(game, /animateSoldier\(e\.mesh,dt,now,e\.anim==="Running"\|\|e\.anim==="Walking",e\.anim==="Jump"\)/, "remote player movement must drive the walk/jump animation");
+assert.match(game, /animateSoldier\(e\.mesh,dt,now,e\.anim==="Running"\|\|e\.anim==="Walking",e\.anim==="Jump",e\.anim==="Crouch"\)/, "remote player movement must also animate crouching");
 assert.match(game, /if\(e\.code===binds\.menu\)\{e\.preventDefault\(\);if\(matchPhase==="game"\)togglePauseMenu\(\);return\}/, "M opens the in-game pause menu instead of accidentally leaving the match");
 assert.match(game, /stick\.addEventListener\("touchcancel",releaseStick\)/, "cancelled mobile joystick touches must release movement");
 assert.match(game, /\$\("fireBtn"\)\.addEventListener\("touchcancel",\(\)=>fireHeld=false\)/, "cancelled mobile fire touches must stop shooting");
 assert.match(game, /socket\.on\("player_left"/, "departed players must be removed from the scene");
 assert.match(game, /e\.pos\.set\(data\.x,data\.y,data\.z\);e\.mesh\.position\.copy\(e\.pos\);e\.anim="Idle"/, "a respawn must update both the displayed and authoritative remote position");
 assert.match(game, /let connectedToGameplay=socket\.connected/, "the client must rejoin the match after a Socket.IO reconnection");
+assert.match(game, /const HILL_TOWN_SCALE=2\.25/, "Hill Town must be dramatically larger than its original footprint");
+assert.match(game, /const NEON_YARD_SCALE=2/, "Neon Yard must have an enlarged play area");
+assert.match(game, /const FIELD_ARENA_SCALE=2/, "Field Arena must have an enlarged play area");
+assert.match(game, /map\.scale\.setScalar\(75\)/, "the M3 map must be enlarged too");
+assert.match(game, /function rebuildCollisionIndex\(\)/, "map geometry must be registered for solid collision");
+assert.match(game, /function blockedAt\(x,z\)/, "the player must be blocked by solid map objects");
+assert.match(game, /function moveWithCollision\(direction,distance\)/, "movement must use small collision-tested steps instead of crossing walls at sprint speed");
+assert.match(game, /if\(!blockedAt\(nx,player\.position\.z\)\)player\.position\.x=nx/, "collision must permit sliding along the X axis");
+assert.match(game, /if\(!blockedAt\(player\.position\.x,nz\)\)player\.position\.z=nz/, "collision must permit sliding along the Z axis");
+assert.match(game, /e\.code==="ControlLeft"\|\|e\.code==="ControlRight"/, "desktop Ctrl must control crouching");
+assert.match(game, /keys\.shift\?14\.5:8\.5/, "sprint must be faster than walking");
+assert.match(game, /id="crouchBtn"/, "mobile HUD must include crouching");
+assert.match(game, /id="sprintBtn"/, "mobile HUD must include sprinting");
+assert.match(game, /sprintBtn\.addEventListener\("touchstart"/, "mobile sprint must be hold-to-run");
+assert.match(game, /crouchBtn\.addEventListener\("touchstart"/, "mobile crouch must be supported");
+assert.match(game, /function addTownFallbackArch\(/, "fallback town doors must preserve walkable archways");
+assert.match(ui, /grid-template-columns:minmax\(260px,1fr\) minmax\(250px,\.95fr\) minmax\(300px,1\.12fr\)/, "lobby layout must stay roomy on desktop");
 assert.match(game, /matchPhase="finished"/, "the player must stop moving and shooting after match results");
 
 assert.match(server, /const mode = \["allies", "team_fight"\]\.includes\(data\?\.mode\) \? data\.mode : "allies"/, "public matchmaking must reject obsolete/private modes");
@@ -256,6 +276,10 @@ assert.match(server, /players\.some\(candidate => candidate\.isBot\) \? \(p\.isB
 
 assert.match(server, /player\.pos\.y = Math\.max\(0, Math\.min\(2\.25, y\)\)/, "match movement must reject impossible fly heights");
 assert.match(server, /previous\.y = Math\.max\(0, Math\.min\(2\.25, y\)\)/, "training movement must reject impossible fly heights");
+assert.match(server, /const sessionMap = \["field_test", "training"\]\.includes\(mode\) \? normalizeMapId\(data\?\.map\) : cfg\.map;/, "training must use whichever map the tester selected");
+assert.match(server, /bot: \["field_test", "training"\]\.includes\(mode\)/, "full training must begin with a target");
+assert.match(server, /const maxStep = 0\.9;/, "training movement must support the faster sprint speed");
+assert.match(server, /player\.anim = \["Idle", "Running", "Jump", "Walking", "Crouch"\]/, "the server must retain the crouch animation state");
 
 const validateMoveFunction = server.match(/function validateMove\(player, data\) \{[\s\S]*?\n\}/);
 assert.ok(validateMoveFunction, "the server movement validator must be available for behavioral tests");
