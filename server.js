@@ -11,8 +11,10 @@ const { Server } = require("socket.io");
 const app = express();
 const SServer = Number(process.env.STANDOFFX_HTTPS || 0); // 0 = HTTP, 1 = HTTPS
 const PORT = Number(process.env.PORT) || (SServer ? 443 : 3000);
-const ADMIN_ID = "Dev_01";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "sonia";
+const ADMIN_ID = String(process.env.ADMIN_ID || "Dev_01").trim() || "Dev_01";
+const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || "");
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+if (!ADMIN_PASSWORD) console.warn("[AUTH] ADMIN_PASSWORD is not set; master account login is disabled.");
 
 
 const ROOT = __dirname;
@@ -200,9 +202,7 @@ async function initMongo() {
 
     const atlasClans = await load("state_clans", clans);
     if (atlasClans && typeof atlasClans === "object" && !Array.isArray(atlasClans)) {
-      clans = Object.fromEntries(
-        Object.entries(atlasClans).filter(([, clan]) => clan && typeof clan === "object" && !Array.isArray(clan))
-      );
+      clans = normalizeClanState(atlasClans);
     }
 
     const atlasMessages = await load("state_messages", messages);
@@ -214,7 +214,12 @@ async function initMongo() {
     const atlasMarket = await load("state_market", market);
     if (Array.isArray(atlasMarket)) market = atlasMarket.filter(lot => lot && typeof lot === "object" && !Array.isArray(lot));
 
-    for (const user of users) ensureUserShape(user);
+    for (const user of users) {
+      ensureUserShape(user);
+      if (user.clan && !clans[user.clan]) user.clan = null;
+    }
+    saveUsers();
+    saveClans();
     console.log("[DB] MongoDB Atlas connected:", mongoStatus.database);
     return true;
   } catch (err) {
@@ -318,10 +323,35 @@ function ensureUserShape(user) {
   user.MMRCompetitive = Number(user.MMRCompetitive) || 1000;
   user.MMRAllies = Number(user.MMRAllies) || 1000;
   user.status = Boolean(user.status);
+  user.clan = user.clan ? cleanText(user.clan, 5).toUpperCase() : null;
   user.isVerified = Boolean(user.isVerified);
   user.isBanned = user.id === ADMIN_ID ? false : Boolean(user.isBanned);
   user.isAdmin = user.id === ADMIN_ID ? true : Boolean(user.isAdmin);
   user.isTester = user.id === ADMIN_ID ? true : Boolean(user.isTester);
+}
+
+function normalizeClanState(rawClans) {
+  const source = rawClans && typeof rawClans === "object" && !Array.isArray(rawClans) ? rawClans : {};
+  const normalized = {};
+  for (const [key, raw] of Object.entries(source)) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const tag = cleanText(raw.tag || key, 5).toUpperCase();
+    if (!/^[A-Z0-9]{2,5}$/.test(tag)) continue;
+    normalized[tag] = {
+      ...raw,
+      id: cleanText(raw.id || tag, 40),
+      name: cleanText(raw.name || tag, 24),
+      tag,
+      ownerId: normalizeId(raw.ownerId || raw.owner || ""),
+      description: cleanText(raw.description || "", 120),
+      level: Math.max(1, Number(raw.level) || 1),
+      xp: Math.max(0, Number(raw.xp) || 0),
+      memberLimit: Math.max(5, Math.min(50, Number(raw.memberLimit) || 30)),
+      officers: Array.isArray(raw.officers) ? [...new Set(raw.officers.map(normalizeId).filter(Boolean))] : [],
+      requests: Array.isArray(raw.requests) ? [...new Set(raw.requests.map(normalizeId).filter(Boolean))] : []
+    };
+  }
+  return normalized;
 }
 
 for (const user of users) ensureUserShape(user);
@@ -337,17 +367,11 @@ if (users.some(u => u.clan === "67") && !clans["67"]) {
   };
   saveClans();
 }
-for (const clan of Object.values(clans)) {
-  clan.name = cleanText(clan.name || clan.tag || "Clan", 24);
-  clan.tag = cleanText(clan.tag || clan.name, 5).toUpperCase();
-  clan.ownerId = normalizeId(clan.ownerId || clan.owner || "");
-  clan.level = Number(clan.level) || 1;
-  clan.xp = Number(clan.xp) || 0;
-  clan.description = cleanText(clan.description || "", 120);
-  clan.memberLimit = Math.max(5, Math.min(50, Number(clan.memberLimit) || 30));
-  clan.officers = Array.isArray(clan.officers) ? [...new Set(clan.officers.map(normalizeId))] : [];
-  clan.requests = Array.isArray(clan.requests) ? [...new Set(clan.requests.map(normalizeId))] : [];
+clans = normalizeClanState(clans);
+for (const user of users) {
+  if (user.clan && !clans[user.clan]) user.clan = null;
 }
+
 saveClans();
 
 const sessions = new Map();
@@ -358,7 +382,12 @@ function parseCookies(header = "") {
     const idx = item.indexOf("=");
     if (idx <= 0) continue;
     const key = item.slice(0, idx).trim();
-    const value = decodeURIComponent(item.slice(idx + 1).trim());
+    let value = item.slice(idx + 1).trim();
+    try {
+      value = decodeURIComponent(value);
+    } catch {
+      continue;
+    }
     out[key] = value;
   }
   return out;
@@ -366,13 +395,17 @@ function parseCookies(header = "") {
 
 function createSession(userId) {
   const token = crypto.randomBytes(32).toString("hex");
-  sessions.set(token, { userId, createdAt: Date.now() });
+  const now = Date.now();
+  sessions.set(token, { userId, createdAt: now, expiresAt: now + SESSION_TTL_MS });
   return token;
 }
 
 function sessionUserFromToken(token) {
   const data = token ? sessions.get(token) : null;
-  if (!data) return null;
+  if (!data || !Number.isFinite(data.expiresAt) || data.expiresAt <= Date.now()) {
+    if (token) sessions.delete(token);
+    return null;
+  }
   const user = users.find(u => u.id === data.userId);
   if (!user) {
     sessions.delete(token);
@@ -400,35 +433,122 @@ function isAdmin(user) {
 function requireAdmin(req, res, next) {
   const user = requestUser(req);
   if (!user) return res.status(401).json({ success: false, message: "Авторизація потрібна." });
+  if (user.isBanned && user.id !== ADMIN_ID) return res.status(403).json({ success: false, message: "Акаунт заблоковано." });
   if (!isAdmin(user)) return res.status(403).json({ success: false, message: "Тільки адміністратор." });
   req.user = user;
   next();
 }
 
 function setSessionCookie(res, token) {
+  const secureFlag = process.env.NODE_ENV === "production" || process.env.RENDER ? "; Secure" : "";
   res.setHeader(
     "Set-Cookie",
-    `standoffx_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
+    `standoffx_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax${secureFlag}; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`
   );
 }
 
 function clearSessionCookie(res) {
+  const secureFlag = process.env.NODE_ENV === "production" || process.env.RENDER ? "; Secure" : "";
   res.setHeader(
     "Set-Cookie",
-    "standoffx_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0"
+    `standoffx_session=; Path=/; HttpOnly; SameSite=Lax${secureFlag}; Max-Age=0`
   );
 }
 
 app.disable("x-powered-by");
+app.set("trust proxy", process.env.RENDER ? 1 : false);
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: false, limit: "1mb" }));
-app.use(express.static(ROOT));
+
+// Never expose server code, account JSON, database snapshots, or admin/menu HTML via static hosting.
+const BLOCKED_STATIC_DIRS = new Set([".git", ".github", "node_modules", "scripts", "data"]);
+const PROTECTED_STATIC_PAGES = new Set(["admin.html", "mainmenu.html"]);
+app.use((req, res, next) => {
+  let pathname = req.path;
+  try {
+    // Decode repeatedly so double-encoded filenames cannot bypass the static-file guard.
+    for (let i = 0; i < 4; i += 1) {
+      const decoded = decodeURIComponent(pathname);
+      if (decoded === pathname) break;
+      pathname = decoded;
+    }
+    if (/%[0-9a-f]{2}/i.test(pathname)) return res.status(400).end();
+  } catch {
+    return res.status(400).end();
+  }
+  const normalized = path.posix.normalize("/" + pathname.replace(/\\/g, "/")).replace(/^\/+/, "");
+  const segments = normalized.split("/").filter(Boolean);
+  const rootName = (segments[0] || "").toLowerCase();
+  const privateRootFile = segments.length === 1 && /\.(?:json|js|md|lock|ya?ml|env)$/i.test(rootName);
+  const blockedDirectory = segments.some(segment => BLOCKED_STATIC_DIRS.has(segment.toLowerCase()));
+  const protectedPage = segments.length === 1 && PROTECTED_STATIC_PAGES.has(rootName);
+  if (privateRootFile || blockedDirectory || protectedPage) return res.status(404).end();
+  next();
+});
+app.use(express.static(ROOT, { index: false, dotfiles: "deny" }));
+
+const rateLimitBuckets = new Map();
+function createRateLimit({ windowMs, max, message }) {
+  return (req, res, next) => {
+    const now = Date.now();
+    const identity = String(req.ip || req.socket?.remoteAddress || "unknown");
+    const key = identity + ":" + req.method + ":" + req.path;
+    let bucket = rateLimitBuckets.get(key);
+    if (!bucket || bucket.resetAt <= now) {
+      bucket = { count: 0, resetAt: now + windowMs };
+      rateLimitBuckets.set(key, bucket);
+    }
+    bucket.count += 1;
+
+    res.setHeader("RateLimit-Limit", String(max));
+    res.setHeader("RateLimit-Remaining", String(Math.max(0, max - bucket.count)));
+    res.setHeader("RateLimit-Reset", String(Math.ceil(bucket.resetAt / 1000)));
+
+    if (rateLimitBuckets.size > 1000) {
+      for (const [bucketKey, value] of rateLimitBuckets) {
+        if (value.resetAt <= now) rateLimitBuckets.delete(bucketKey);
+      }
+    }
+    while (rateLimitBuckets.size > 5000) {
+      rateLimitBuckets.delete(rateLimitBuckets.keys().next().value);
+    }
+
+    if (bucket.count > max) {
+      res.setHeader("Retry-After", String(Math.max(1, Math.ceil((bucket.resetAt - now) / 1000))));
+      return res.status(429).json({ success: false, message });
+    }
+    next();
+  };
+}
+const loginRateLimit = createRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: "Забагато спроб входу. Спробуй пізніше."
+});
+const registrationRateLimit = createRateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 6,
+  message: "Забагато реєстрацій із цієї адреси. Спробуй пізніше."
+});
+const transactionRateLimit = createRateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: "Забагато запитів. Спробуй трохи пізніше."
+});
 app.use("/avatars", express.static(AVATARS_DIR, { maxAge: "1d" }));
 
+const IMAGE_EXTENSIONS = Object.freeze({
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif"
+});
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, AVATARS_DIR),
   filename: (_req, file, cb) => {
-    cb(null, `${Date.now()}-${crypto.randomBytes(3).toString("hex")}${path.extname(file.originalname).toLowerCase()}`);
+    const extension = IMAGE_EXTENSIONS[file.mimetype];
+    if (!extension) return cb(new Error("Дозволені тільки зображення"));
+    cb(null, `${Date.now()}-${crypto.randomBytes(3).toString("hex")}${extension}`);
   }
 });
 
@@ -436,13 +556,17 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-    cb(null, allowed.has(file.mimetype));
+    if (!IMAGE_EXTENSIONS[file.mimetype]) return cb(new Error("Дозволені тільки зображення"));
+    cb(null, true);
   }
 });
 
 app.get("/", (_req, res) => res.sendFile(path.join(ROOT, "auth.html")));
-app.get("/game", (_req, res) => res.sendFile(path.join(ROOT, "mainMenu.html")));
+app.get("/game", (req, res) => {
+  const user = requestUser(req);
+  if (!user || (user.isBanned && user.id !== ADMIN_ID)) return res.redirect("/");
+  res.sendFile(path.join(ROOT, "mainMenu.html"));
+});
 
 app.get("/api/health", (_req, res) => {
   res.json({
@@ -456,7 +580,7 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-app.post("/api/register", (req, res) => {
+app.post("/api/register", registrationRateLimit, (req, res) => {
   const nickname = cleanText(req.body.nickname, 24);
   const password = String(req.body.password || "");
 
@@ -512,7 +636,7 @@ app.post("/api/register", (req, res) => {
   });
 });
 
-app.post("/api/login", (req, res) => {
+app.post("/api/login", loginRateLimit, (req, res) => {
   const id = normalizeId(req.body.id || req.body.userId || "");
   const password = String(req.body.password || "");
 
@@ -523,11 +647,19 @@ app.post("/api/login", (req, res) => {
     return res.status(400).json({ success: false, message: "Введи пароль." });
   }
 
-  let user = findUser(id, { allowNickname: false });
+  let user = null;
+  if (id === ADMIN_ID) {
+    if (!ADMIN_PASSWORD) {
+      return res.status(503).json({
+        success: false,
+        message: "Вхід master-акаунта вимкнено: задай ADMIN_PASSWORD у Render Environment."
+      });
+    }
+    if (password !== ADMIN_PASSWORD) {
+      return res.status(401).json({ success: false, message: "Невірний ID або пароль." });
+    }
 
-  // Master account: exact ID Dev_01 + password.
-  if (id === ADMIN_ID && ADMIN_PASSWORD && password === ADMIN_PASSWORD) {
-    user = user || { id: ADMIN_ID, nickname: "SofterX" };
+    user = findUser(id, { allowNickname: false }) || { id: ADMIN_ID, nickname: "SofterX" };
     user.id = ADMIN_ID;
     user.nickname = user.nickname || "SofterX";
     user.isAdmin = true;
@@ -537,6 +669,8 @@ app.post("/api/login", (req, res) => {
     ensureUserShape(user);
     if (!users.some(u => u.id === ADMIN_ID)) users.push(user);
     saveUsers();
+  } else {
+    user = findUser(id, { allowNickname: false });
   }
 
   if (!user || !verifyPassword(password, user.passwordHash || user.password)) {
@@ -615,7 +749,7 @@ app.post("/api/search-user", requireAuth, (req, res) => {
   });
 });
 
-app.post("/api/friends/request", requireAuth, (req, res) => {
+app.post("/api/friends/request", transactionRateLimit, requireAuth, (req, res) => {
   const from = req.user;
   const to = users.find(u => u.id === normalizeId(req.body.toId));
   if (!to) return res.status(404).json({ success: false, message: "Гравця не знайдено." });
@@ -709,7 +843,7 @@ app.post("/api/clans/search", requireAuth, (req, res) => {
   res.json({ success: true, clans: result });
 });
 
-app.post("/api/clans/create", requireAuth, (req, res) => {
+app.post("/api/clans/create", transactionRateLimit, requireAuth, (req, res) => {
   if (req.user.clan) return res.status(400).json({ success: false, message: "Ти вже в клані." });
   if (req.user.gold < 500) return res.status(400).json({ success: false, message: "Потрібно 500 Gold." });
 
@@ -773,7 +907,51 @@ app.post("/api/clans/my", requireAuth, (req, res) => {
   });
 });
 
-app.post("/api/clans/request", requireAuth, (req, res) => {
+app.post("/api/clans/update", transactionRateLimit, requireAuth, (req, res) => {
+  const clan = req.user.clan ? clans[req.user.clan] : null;
+  if (!clan || clan.ownerId !== req.user.id) {
+    return res.status(403).json({ success: false, message: "Редагувати клан може лише власник." });
+  }
+
+  const name = cleanText(req.body.name ?? clan.name, 24);
+  const description = cleanText(req.body.description ?? clan.description, 120);
+  const limit = req.body.memberLimit === undefined ? clan.memberLimit : Number(req.body.memberLimit);
+  const memberCount = users.filter(user => user.clan === clan.tag).length;
+
+  if (!/^[\p{L}\p{N} _-]{3,24}$/u.test(name)) {
+    return res.status(400).json({ success: false, message: "Назва клану: 3–24 символи." });
+  }
+  if (!Number.isInteger(limit) || limit < 5 || limit > 50 || limit < memberCount) {
+    return res.status(400).json({ success: false, message: "Ліміт має бути 5–50 і не меншим за кількість учасників." });
+  }
+
+  clan.name = name;
+  clan.description = description;
+  clan.memberLimit = limit;
+  saveClans();
+  res.json({ success: true, clan });
+});
+
+app.post("/api/clans/transfer", transactionRateLimit, requireAuth, (req, res) => {
+  const clan = req.user.clan ? clans[req.user.clan] : null;
+  if (!clan || clan.ownerId !== req.user.id) {
+    return res.status(403).json({ success: false, message: "Передати клан може лише власник." });
+  }
+
+  const targetId = normalizeId(req.body.userId);
+  const target = users.find(user => user.id === targetId && user.clan === clan.tag);
+  if (!target) return res.status(404).json({ success: false, message: "Новий власник має бути учасником клану." });
+  if (target.id === req.user.id) return res.status(400).json({ success: false, message: "Ти вже власник клану." });
+
+  const previousOwnerId = clan.ownerId;
+  clan.ownerId = target.id;
+  clan.officers = Array.isArray(clan.officers) ? clan.officers.filter(id => id !== target.id) : [];
+  if (!clan.officers.includes(previousOwnerId)) clan.officers.push(previousOwnerId);
+  saveClans();
+  res.json({ success: true, clan });
+});
+
+app.post("/api/clans/request", transactionRateLimit, requireAuth, (req, res) => {
   const tag = cleanText(req.body.clanId || req.body.tag, 5).toUpperCase();
   const clan = clans[tag];
   if (!clan) return res.status(404).json({ success: false, message: "Клан не знайдено." });
@@ -785,6 +963,19 @@ app.post("/api/clans/request", requireAuth, (req, res) => {
   clan.requests = Array.isArray(clan.requests) ? clan.requests : [];
   if (!clan.requests.includes(req.user.id)) clan.requests.push(req.user.id);
   saveClans();
+
+  const recipientIds = new Set([clan.ownerId, ...(clan.officers || [])]);
+  for (const client of io.sockets.sockets.values()) {
+    if (client.user && recipientIds.has(client.user.id)) {
+      client.emit("clan_request_notification", {
+        tag: clan.tag,
+        clanName: clan.name,
+        userId: req.user.id,
+        nickname: req.user.nickname
+      });
+    }
+  }
+
   res.json({ success: true, message: "Заявку відправлено." });
 });
 
@@ -854,6 +1045,12 @@ app.post("/api/clans/kick", requireAuth, (req, res) => {
   }
   target.clan = null;
   clan.officers = (clan.officers || []).filter(id => id !== target.id);
+  for (const client of io.sockets.sockets.values()) {
+    if (client.user?.id === target.id) {
+      client.leave("clan:" + clan.tag);
+      client.emit("clan_chat_error", { message: "Тебе виключили з клану." });
+    }
+  }
   saveUsers();
   saveClans();
   res.json({ success: true });
@@ -885,18 +1082,29 @@ app.post("/api/clans/disband", requireAuth, (req, res) => {
   const clan = req.user.clan ? clans[req.user.clan] : null;
   if (!clan || clan.ownerId !== req.user.id) return res.status(403).json({ success: false });
 
+  const dissolvedTag = clan.tag;
+  const affectedIds = new Set(users.filter(user => user.clan === dissolvedTag).map(user => user.id));
   for (const u of users) {
-    if (u.clan === clan.tag) u.clan = null;
+    if (affectedIds.has(u.id)) u.clan = null;
   }
-  delete clans[clan.tag];
+  for (const client of io.sockets.sockets.values()) {
+    if (client.user && affectedIds.has(client.user.id)) {
+      client.leave("clan:" + dissolvedTag);
+      client.emit("clan_chat_error", { message: "Клан розпущено." });
+    }
+  }
+  delete clans[dissolvedTag];
+  delete messages["clan:" + dissolvedTag];
   saveUsers();
   saveClans();
+  saveMessages();
   res.json({ success: true });
 });
 
 app.post("/api/clans/leave", requireAuth, (req, res) => {
   if (!req.user.clan) return res.json({ success: true });
-  const clan = clans[req.user.clan];
+  const leavingTag = req.user.clan;
+  const clan = clans[leavingTag];
   if (!clan) {
     req.user.clan = null;
     saveUsers();
@@ -921,6 +1129,9 @@ app.post("/api/clans/leave", requireAuth, (req, res) => {
     clan.officers = (clan.officers || []).filter(id => id !== req.user.id);
   }
 
+  for (const client of io.sockets.sockets.values()) {
+    if (client.user?.id === req.user.id) client.leave("clan:" + leavingTag);
+  }
   saveUsers();
   saveClans();
   res.json({ success: true });
@@ -938,7 +1149,7 @@ app.post("/api/inventory/my", requireAuth, (req, res) => {
 
 app.get("/api/market/items", requireAuth, (_req, res) => res.json({ success: true, items: market }));
 
-app.post("/api/market/sell", requireAuth, (req, res) => {
+app.post("/api/market/sell", transactionRateLimit, requireAuth, (req, res) => {
   const skinId = cleanText(req.body.skinId, 64);
   const price = Number(req.body.price);
   const owned = Array.isArray(inventory[req.user.id]) && inventory[req.user.id].includes(skinId);
@@ -964,7 +1175,7 @@ app.post("/api/market/sell", requireAuth, (req, res) => {
   res.json({ success: true, lot });
 });
 
-app.post("/api/market/buy", requireAuth, (req, res) => {
+app.post("/api/market/buy", transactionRateLimit, requireAuth, (req, res) => {
   const lotIndex = market.findIndex(l => String(l.lotId) === String(req.body.lotId));
   if (lotIndex === -1) return res.status(404).json({ success: false, message: "Лот уже продано або видалено." });
   const lot = market[lotIndex];
@@ -986,7 +1197,7 @@ app.post("/api/market/buy", requireAuth, (req, res) => {
   res.json({ success: true, gold: req.user.gold, item: lot });
 });
 
-app.post("/api/use-promo", requireAuth, (req, res) => {
+app.post("/api/use-promo", transactionRateLimit, requireAuth, (req, res) => {
   const code = cleanText(req.body.code, 80);
   const valid = cleanText(process.env.STANDOFFX_PROMO_CODE || "SOFTERX-2024", 80);
   if (code !== valid) return res.status(400).json({ success: false, message: "Невірний промокод." });
@@ -1034,7 +1245,7 @@ app.post("/api/upload-avatar", requireAuth, upload.single("avatar"), (req, res) 
 const matchmakingQueue = [];
 const activeMatches = new Map(); // in-memory only; never written to MongoDB
 const trainingSessions = new Map(); // private tester sessions; never written to MongoDB
-const MATCH_SIZE = 3;
+const DEFAULT_MATCH_SIZE = 3;
 const GAME_SECONDS = 300;
 const WARMUP_SECONDS = 10;
 const COUNTDOWN_SECONDS = 15;
@@ -1045,13 +1256,15 @@ const MODE_CONFIGS = {
     id: "hide_seek",
     name: "HIDE & SEEK",
     short: "HS",
-    map: "M3_Maze"
+    map: "M3_Maze",
+    requiredPlayers: 3
   },
   team_fight: {
     id: "team_fight",
     name: "TEAM FIGHT",
     short: "TF",
-    map: "M3_Maze"
+    map: "M3_Maze",
+    requiredPlayers: 4
   }
 };
 
@@ -1067,11 +1280,16 @@ function canUseTesterModes(user) {
 const SPAWNS = [
   { x: 5, y: 0, z: 5 },
   { x: 25, y: 0, z: 25 },
-  { x: 15, y: 0, z: 5 }
+  { x: 15, y: 0, z: 5 },
+  { x: 15, y: 0, z: 25 }
 ];
 
 function getModeConfig(mode) {
   return MODE_CONFIGS[mode] || MODE_CONFIGS.hide_seek;
+}
+
+function getRequiredPlayers(mode) {
+  return Number(getModeConfig(mode).requiredPlayers) || DEFAULT_MATCH_SIZE;
 }
 
 function removeFromQueue(userId) {
@@ -1094,18 +1312,25 @@ function emitQueueCount(io) {
   for (const entry of matchmakingQueue) {
     const modePlayers = matchmakingQueue.filter(p => p.mode === entry.mode);
     io.to(entry.socketId).emit("queue_update", {
-      count: modePlayers.findIndex(p => p.userId === entry.userId) + 1,
-      required: MATCH_SIZE,
-      mode: entry.mode
+      count: modePlayers.length,
+      required: getRequiredPlayers(entry.mode),
+      mode: entry.mode,
+      players: modePlayers.map(p => ({
+        userId: p.userId,
+        nickname: p.nickname,
+        connected: true,
+        ready: false
+      }))
     });
   }
 }
 
 function createMatch(io, mode) {
   const candidates = matchmakingQueue.filter(p => p.mode === mode);
-  if (candidates.length < MATCH_SIZE) return;
+  const requiredPlayers = getRequiredPlayers(mode);
+  if (candidates.length < requiredPlayers) return;
 
-  const selectedIds = new Set(candidates.slice(0, MATCH_SIZE).map(p => p.userId));
+  const selectedIds = new Set(candidates.slice(0, requiredPlayers).map(p => p.userId));
   const players = matchmakingQueue.filter(p => selectedIds.has(p.userId));
   for (const p of players) removeFromQueue(p.userId);
 
@@ -1480,7 +1705,7 @@ io.on("connection", socket => {
   const cookies = parseCookies(socket.handshake.headers.cookie || "");
   socket.user = sessionUserFromToken(cookies.standoffx_session);
 
-  if (!socket.user) {
+  if (!socket.user || (socket.user.isBanned && socket.user.id !== ADMIN_ID)) {
     socket.emit("auth_required");
     socket.disconnect(true);
     return;
@@ -1880,6 +2105,52 @@ io.on("connection", socket => {
     });
   });
 
+  socket.on("join_clan_chat", ({ tag } = {}) => {
+    const user = socket.user;
+    const clanTag = cleanText(tag || user.clan, 5).toUpperCase();
+    const clan = clans[clanTag];
+    if (!clan || user.clan !== clanTag) {
+      return socket.emit("clan_chat_error", { message: "Чат доступний лише учасникам свого клану." });
+    }
+
+    const room = "clan:" + clanTag;
+    socket.join(room);
+    socket.emit("clan_chat_history", {
+      tag: clanTag,
+      messages: Array.isArray(messages[room]) ? messages[room] : []
+    });
+  });
+
+  socket.on("leave_clan_chat", ({ tag } = {}) => {
+    const clanTag = cleanText(tag, 5).toUpperCase();
+    if (clanTag) socket.leave("clan:" + clanTag);
+  });
+
+  socket.on("send_clan_msg", ({ tag, text } = {}) => {
+    const user = socket.user;
+    const clanTag = cleanText(tag || user.clan, 5).toUpperCase();
+    const clan = clans[clanTag];
+    const body = cleanText(text, 1000);
+    if (!clan || user.clan !== clanTag) {
+      return socket.emit("clan_chat_error", { message: "Ти більше не учасник цього клану." });
+    }
+    if (!body) return;
+
+    const room = "clan:" + clanTag;
+    const msg = {
+      senderId: user.id,
+      senderName: user.nickname,
+      text: body,
+      time: new Date().toISOString(),
+      clanTag
+    };
+    messages[room] = Array.isArray(messages[room]) ? messages[room] : [];
+    messages[room].push(msg);
+    if (messages[room].length > 200) messages[room].splice(0, messages[room].length - 200);
+    saveMessages();
+    io.to(room).emit("clan_chat_message", msg);
+  });
+
   socket.on("join_chat", ({ friendId } = {}) => {
     const user = socket.user;
     const friend = users.find(u => u.id === normalizeId(friendId));
@@ -2043,6 +2314,10 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
   const nextIdRaw = normalizeId(req.body.id ?? u.id);
   const nextNick = cleanText(req.body.nickname ?? u.nickname, 24);
   const nextClan = cleanText(req.body.clan ?? "", 5).toUpperCase();
+  const nextPassword = req.body.password === undefined ? "" : String(req.body.password);
+  if (!isMaster && req.body.password !== undefined && nextPassword.length && (nextPassword.length < 6 || nextPassword.length > 128)) {
+    return res.status(400).json({ success: false, message: "Пароль: 6–128 символів." });
+  }
 
   if (!/^[\p{L}\p{N}_-]{3,24}$/u.test(nextNick)) {
     return res.status(400).json({ success: false, message: "Некоректний nickname." });
@@ -2076,12 +2351,8 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
   }
 
   u.nickname = nextNick;
-  if (!isMaster && req.body.password !== undefined && String(req.body.password).length) {
-    const password = String(req.body.password);
-    if (password.length < 6 || password.length > 128) {
-      return res.status(400).json({ success: false, message: "Пароль: 6–128 символів." });
-    }
-    u.passwordHash = hashPassword(password);
+  if (!isMaster && req.body.password !== undefined && nextPassword.length) {
+    u.passwordHash = hashPassword(nextPassword);
     delete u.password;
   }
   if (req.body.gold !== undefined) u.gold = Math.max(0, Number(req.body.gold) || 0);
@@ -2164,6 +2435,9 @@ app.post("/api/admin/users/create", requireAdmin, (req, res) => {
 app.delete("/api/admin/users/:id", requireAdmin, (req, res) => {
   const id = normalizeId(req.params.id);
   if (id === ADMIN_ID) return res.status(400).json({ success: false, message: "Master account cannot be deleted." });
+  for (const client of io.sockets.sockets.values()) {
+    if (client.user?.id === id) client.disconnect(true);
+  }
   const i = users.findIndex(u => u.id === id);
   if (i < 0) return res.status(404).json({ success: false, message: "User not found" });
   users.splice(i, 1);
@@ -2173,15 +2447,72 @@ app.delete("/api/admin/users/:id", requireAdmin, (req, res) => {
     u.incomingRequests = (u.incomingRequests || []).filter(x => x !== id);
     u.blocked = (u.blocked || []).filter(x => x !== id);
   }
-  for (const clan of Object.values(clans)) {
+  for (const [tag, clan] of Object.entries(clans)) {
     clan.requests = (clan.requests || []).filter(x => x !== id);
     clan.officers = (clan.officers || []).filter(x => x !== id);
+    if (clan.ownerId === id) {
+      const members = users
+        .filter(user => user.clan === tag)
+        .sort((a, b) => ((clan.officers || []).includes(a.id) ? 0 : 1) - ((clan.officers || []).includes(b.id) ? 0 : 1));
+      if (members.length) {
+        clan.ownerId = members[0].id;
+        clan.officers = (clan.officers || []).filter(memberId => memberId !== members[0].id);
+      } else {
+        delete clans[tag];
+        delete messages["clan:" + tag];
+      }
+    }
   }
   for (const [token, data] of sessions.entries()) if (data.userId === id) sessions.delete(token);
   delete inventory[id];
   saveUsers();
   saveClans();
   saveInventory();
+  saveMessages();
+  res.json({ success: true });
+});
+
+app.post("/api/admin/clans/update", transactionRateLimit, requireAdmin, (req, res) => {
+  const tag = cleanText(req.body.tag, 5).toUpperCase();
+  const clan = clans[tag];
+  if (!clan) return res.status(404).json({ success: false, message: "Клан не знайдено." });
+
+  const name = cleanText(req.body.name ?? clan.name, 24);
+  const description = cleanText(req.body.description ?? clan.description, 120);
+  const limit = req.body.memberLimit === undefined ? clan.memberLimit : Number(req.body.memberLimit);
+  const memberCount = users.filter(user => user.clan === tag).length;
+  if (!/^[\p{L}\p{N} _-]{3,24}$/u.test(name)) {
+    return res.status(400).json({ success: false, message: "Назва клану: 3–24 символи." });
+  }
+  if (!Number.isInteger(limit) || limit < 5 || limit > 50 || limit < memberCount) {
+    return res.status(400).json({ success: false, message: "Ліміт має бути 5–50 і не меншим за кількість учасників." });
+  }
+
+  clan.name = name;
+  clan.description = description;
+  clan.memberLimit = limit;
+  saveClans();
+  res.json({ success: true, clan });
+});
+
+app.post("/api/admin/clans/delete", transactionRateLimit, requireAdmin, (req, res) => {
+  const tag = cleanText(req.body.tag, 5).toUpperCase();
+  const clan = clans[tag];
+  if (!clan) return res.status(404).json({ success: false, message: "Клан не знайдено." });
+
+  const affectedIds = new Set(users.filter(user => user.clan === tag).map(user => user.id));
+  for (const user of users) if (affectedIds.has(user.id)) user.clan = null;
+  for (const client of io.sockets.sockets.values()) {
+    if (client.user && affectedIds.has(client.user.id)) {
+      client.leave("clan:" + tag);
+      client.emit("clan_chat_error", { message: "Клан було видалено адміністрацією." });
+    }
+  }
+  delete clans[tag];
+  delete messages["clan:" + tag];
+  saveUsers();
+  saveClans();
+  saveMessages();
   res.json({ success: true });
 });
 
