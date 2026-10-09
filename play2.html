@@ -21,6 +21,8 @@
 #clickHint{margin-top:16px;color:#9aa7b8;font-size:11px}
 #results{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;background:#05080def}.resultBox{padding:28px;width:min(420px,90vw);background:#111821;border:1px solid #ffffff14;border-radius:11px;text-align:center}.resultBox h2{margin:0 0 12px}.resultBox .reward{font-size:20px;font-weight:900}.resultBox button{margin-top:18px;width:100%;height:44px;border:0;border-radius:6px;background:#327cff;color:white;font-weight:900}
 #mobile{display:none;position:fixed;inset:0;z-index:20;pointer-events:none}.stick{position:absolute;left:20px;bottom:25px;width:125px;height:125px;border-radius:50%;background:#ffffff0d;border:1px solid #ffffff1c;pointer-events:auto;touch-action:none}.stick i{position:absolute;left:35px;top:35px;width:55px;height:55px;border-radius:50%;background:#ffffff22}.mbtn{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid #ffffff1d;background:#0b111bd9;color:#fff;font-size:10px;font-weight:950;pointer-events:auto;touch-action:none}.fire{right:20px;bottom:64px;background:#3e6fb3e6}.jump{right:100px;bottom:145px}.reload{right:102px;bottom:64px}.leave{right:20px;top:20px;width:48px;height:40px;border-radius:6px}
+#trainingControls button:hover{filter:brightness(1.15)}
+@media(max-width:800px){#trainingControls{top:auto;right:8px;bottom:220px;width:155px;padding:8px}.fire{bottom:44px}}
 @media(max-width:800px),(pointer:coarse){#mobile{display:block}#hint{display:none}.top{top:8px}.players{grid-template-columns:1fr}.panel{max-height:90vh;overflow:auto}}
 </style>
 </head>
@@ -47,7 +49,19 @@
   <div id="hint">WASD — рух · Space — стрибок · Shift — швидкість · G — камера · LMB — вогонь · R — перезарядка</div>
 </div>
 
-<div id="results"><div class="resultBox"><h2 id="resultTitle">МАТЧ ЗАВЕРШЕНО</h2><div id="resultText" class="reward"></div><button onclick="location.href='/game'">У МЕНЮ</button></div></div>
+<div id="results"><div class="resultBox"><h2 id="resultTitle">МАТЧ ЗАВЕРШЕНО</h2><div id="resultText" class="reward"></div><button id="menuResult">У МЕНЮ</button></div></div>
+<div id="trainingControls" style="display:none;position:fixed;right:14px;top:72px;width:190px;z-index:15;padding:12px;background:#090f1cdd;border:1px solid #ffffff20;border-radius:8px;pointer-events:auto">
+  <b style="font-size:11px;letter-spacing:1px">TEST LAB</b>
+  <div id="botStatus" style="margin:8px 0;color:#9baac0;font-size:10px">Бота ще немає</div>
+  <button id="spawnBot" style="width:100%;margin:3px 0;padding:9px;background:#327cff;color:#fff;border:0;border-radius:5px;font-weight:900">SPAWN BOT</button>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+    <button data-bot-action="push" style="padding:8px;background:#182538;border:1px solid #ffffff18;color:#fff;border-radius:5px">PUSH</button>
+    <button data-bot-action="kick" style="padding:8px;background:#182538;border:1px solid #ffffff18;color:#fff;border-radius:5px">KICK</button>
+    <button data-bot-action="boost" style="padding:8px;background:#182538;border:1px solid #ffffff18;color:#fff;border-radius:5px">BOOST</button>
+    <button data-bot-action="reset" style="padding:8px;background:#182538;border:1px solid #ffffff18;color:#fff;border-radius:5px">RESET BOT</button>
+  </div>
+  <button id="resetTraining" style="width:100%;margin-top:7px;padding:8px;background:#632e40;color:#fff;border:0;border-radius:5px">RESET SESSION</button>
+</div>
 
 <div id="mobile">
   <div id="stick" class="stick"><i></i></div>
@@ -72,7 +86,9 @@ const socket=io({withCredentials:true});
 const myId=sessionStorage.getItem("myPlayerId");
 const matchId=sessionStorage.getItem("currentMatchId");
 const mode=sessionStorage.getItem("selectedMode")||"hide_seek";
-if(!myId||!matchId){location.href="/game";throw new Error("No active match")}
+const isTrainingMode=mode==="training"||mode==="field_test";
+const trainingId=sessionStorage.getItem("trainingId")||matchId;
+if(!myId||(!matchId&&!isTrainingMode)){location.href="/game";throw new Error("No active match")}
 
 THREE.Cache.enabled=true;
 
@@ -134,6 +150,26 @@ let cachedCollisionClear=true;
 
 const keys={w:false,s:false,a:false,d:false,shift:false};
 
+function buildFieldArena(){
+  if(mapLoadFinished)return;
+  mapLoadFinished=true;
+  scene.background=new THREE.Color(0x91a6b9);
+  scene.fog=new THREE.Fog(0x91a6b9,120,420);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(300,300),new THREE.MeshStandardMaterial({color:0x5c6e62,roughness:1}));
+  floor.rotation.x=-Math.PI/2;floor.position.y=-.04;scene.add(floor);
+  const grid=new THREE.GridHelper(300,60,0x879987,0x748575);grid.position.y=.01;scene.add(grid);
+  const wallMat=new THREE.MeshStandardMaterial({color:0x4e5965,roughness:1});
+  const boxMat=new THREE.MeshStandardMaterial({color:0x626a70,roughness:.9});
+  const addBox=(x,y,z,w,h,d,mat)=>{
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);mesh.position.set(x,y,z);mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
+  };
+  addBox(0,4,-150,300,8,3,wallMat);addBox(0,4,150,300,8,3,wallMat);
+  addBox(-150,4,0,3,8,300,wallMat);addBox(150,4,0,3,8,300,wallMat);
+  addBox(-16,1,7,6,2,5,boxMat);addBox(12,1,18,7,2,5,boxMat);
+  addBox(22,1,-12,8,2,5,boxMat);addBox(-25,1,-18,8,2,5,boxMat);
+  addBox(0,1,35,12,2,5,boxMat);addBox(38,1,28,5,2,12,boxMat);
+  $("progress").style.width="100%";
+}
 function addFallbackArena(){
   if(mapLoadFinished)return;
   mapLoadFinished=true;
@@ -148,6 +184,11 @@ function addFallbackArena(){
 
 function loadMap(){
   $("phase").textContent="ЗАВАНТАЖЕННЯ КАРТИ";
+  if(mode==="field_test"){
+    buildFieldArena();
+    finishClientReady();
+    return;
+  }
   let done=false;
   const timer=setTimeout(()=>{if(!done){addFallbackArena();finishClientReady()}},9000);
   loader.load("m3.glb",g=>{
@@ -239,15 +280,23 @@ function sendMove(force=false){
   const now=performance.now();
   if(!force&&now-lastMoveSend<50)return;
   lastMoveSend=now;
-  socket.emit("player_moved",{
-    matchId,myId,userId:myId,
-    x:player.position.x,y:player.position.y,z:player.position.z,
-    rotY:player.rotationY,anim:(keys.w||keys.s||keys.a||keys.d)?"Running":"Idle"
-  });
+  const data={x:player.position.x,y:player.position.y,z:player.position.z,rotY:player.rotationY,anim:(keys.w||keys.s||keys.a||keys.d)?"Running":"Idle"};
+  if(isTrainingMode)socket.emit("training_move",{trainingId,...data});
+  else socket.emit("player_moved",{matchId,myId,userId:myId,...data});
 }
 function finishClientReady(){
   if(!mapLoadFinished)return;
   ensurePlayerVisual();
+  if(isTrainingMode){
+    matchPhase="game";
+    $("overlayTitle").textContent=mode==="field_test"?"FIELD TEST":"TRAINING";
+    $("phase").textContent="ГОТОВО";
+    $("overlayText").textContent="Тестовий режим";
+    $("trainingControls").style.display="block";
+    $("ammo").style.display="block";
+    $("overlay").style.display="none";
+    return;
+  }
   $("overlayText").textContent="Карта готова. Чекаємо інших гравців...";
   socket.emit("client_ready",{matchId});
 }
@@ -266,18 +315,19 @@ function updateWaiting(data){
 }
 
 function startReload(){
-  if(mode!=="team_fight"||reloading||ammo>=30||matchPhase!=="game")return;
+  if((mode!=="team_fight"&&!isTrainingMode)||reloading||ammo>=30||matchPhase!=="game")return;
   reloading=true;$("ammoNum").textContent="—";
   setTimeout(()=>{ammo=30;reloading=false;$("ammoNum").textContent=ammo},900);
 }
 function shoot(){
-  if(mode!=="team_fight"||matchPhase!=="game"||reloading)return;
+  if((mode!=="team_fight"&&!isTrainingMode)||matchPhase!=="game"||reloading)return;
   const now=performance.now();
   if(now-lastShot<125||ammo<=0){if(ammo<=0)startReload();return}
   lastShot=now;ammo--; $("ammoNum").textContent=ammo;
   const dir=new THREE.Vector3();
   camera.getWorldDirection(dir);dir.normalize();
-  socket.emit("team_shoot",{matchId,dx:dir.x,dy:dir.y,dz:dir.z});
+  if(isTrainingMode)socket.emit("training_shoot",{trainingId,dx:dir.x,dy:dir.y,dz:dir.z,damage:34});
+  else socket.emit("team_shoot",{matchId,dx:dir.x,dy:dir.y,dz:dir.z});
 }
 function fireLoop(){
   if(fireHeld){shoot();requestAnimationFrame(fireLoop)}
@@ -309,6 +359,44 @@ function setOverlayGame(){
   $("clickHint").textContent="Клікни для мишки. W A S D — рух.";
   if(/Android|iPhone|iPad/i.test(navigator.userAgent)) $("overlay").style.display="none";
 }
+$("menuResult").onclick=()=>location.href="/game";
+$("spawnBot").addEventListener("click",()=>socket.emit("training_spawn_bot",{trainingId}));
+$("resetTraining").addEventListener("click",()=>{
+  player.position.set(0,0,0);player.rotationY=0;velocityY=0;jumping=false;
+  socket.emit("training_reset",{trainingId});
+});
+document.querySelectorAll("[data-bot-action]").forEach(b=>b.addEventListener("click",()=>socket.emit("training_bot_action",{trainingId,action:b.dataset.botAction})));
+
+socket.on("training_init",data=>{
+  if(!isTrainingMode)return;
+  $("modeName").textContent=data.modeName||mode.toUpperCase();
+  matchPhase="game";canControl=true;
+  ensurePlayerVisual();
+  if(data.spawn)player.position.set(data.spawn.x||0,data.spawn.y||0,data.spawn.z||0);
+  $("trainingControls").style.display="block";
+  $("overlay").style.display="none";
+  $("phase").textContent="TRAINING";
+  if(data.bot)applyTrainingBot(data.bot);else removeTrainingBot();
+});
+function applyTrainingBot(bot){
+  if(!bot){removeTrainingBot();return}
+  applyEnemy({userId:"training_bot",id:"training_bot",nickname:bot.nickname||"Training Bot",role:"runner",team:"B",hp:bot.hp,x:bot.x,y:bot.y,z:bot.z,rotY:bot.rotY||0,score:0});
+  $("botStatus").textContent="BOT · HP "+bot.hp+"/"+(bot.maxHp||100)+" · HITS "+(bot.hits||0);
+  const enemy=enemies["training_bot"];
+  if(enemy)enemy.mesh.traverse(n=>{if(n.material?.color)n.material.color.set(bot.hp<=0?0x777777:0xffbd67)});
+}
+function removeTrainingBot(){
+  const bot=enemies["training_bot"];
+  if(bot){scene.remove(bot.mesh);delete enemies["training_bot"];}
+  $("botStatus").textContent="Бота ще немає";
+}
+socket.on("training_state",data=>{
+  if(!isTrainingMode)return;
+  if(data.reset||data.bot===null)removeTrainingBot();
+  else if(data.bot)applyTrainingBot(data.bot);
+  if(data.message==="HIT")$("botStatus").textContent="ПОПАДАННЯ · "+$("botStatus").textContent;
+});
+
 socket.on("init_match",data=>{
   if(data.mode)sessionStorage.setItem("selectedMode",data.mode);
   myRole=data.me?.role||"runner";myTeam=data.me?.team||null;score=data.me?.score||0;hp=data.me?.hp||100;
@@ -457,7 +545,8 @@ addEventListener("resize",()=>{
 
 $("progress").style.width="4%";
 loadMap();
-socket.emit("join_room",{matchId,userId:myId});
+if(isTrainingMode)socket.emit("join_training",{trainingId});
+else socket.emit("join_room",{matchId,userId:myId});
 animate();
 </script>
 </body>
