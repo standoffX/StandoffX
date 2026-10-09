@@ -1751,7 +1751,7 @@ function validateMove(player, data) {
   }
   player.pos.y = Math.max(0, Math.min(2.25, y));
   player.rotY = rotY;
-  player.anim = ["Idle", "Running", "Jump", "Walking"].includes(data.anim) ? data.anim : "Idle";
+  player.anim = ["Idle", "Running", "Jump", "Walking", "Crouch"].includes(data.anim) ? data.anim : "Idle";
   return true;
 }
 
