@@ -32,6 +32,34 @@
 @media(max-width:800px){#trainingControls{top:auto;left:8px;right:auto;bottom:190px;width:196px;max-height:46vh;padding:8px}.training-action-grid button{min-height:29px;padding:5px;font-size:8px}.training-action-grid kbd{min-width:17px;height:17px}.fire{bottom:44px}}
 @media(max-width:800px){#trainingControls{top:54px;left:auto;right:8px;bottom:auto;width:min(205px,52vw);max-height:39vh;padding:8px}.fire{bottom:44px}.crouch{bottom:112px}.jump{bottom:112px}.sprint{bottom:190px}}
 @media(max-width:800px),(pointer:coarse){#mobile{display:block}#hint{display:none}.top{top:8px}.players{grid-template-columns:1fr}.panel{max-height:90vh;overflow:auto}}
+
+#radarWrap{position:fixed;top:14px;right:14px;width:154px;z-index:12;pointer-events:none;display:grid;justify-items:center;gap:3px;color:#bdeaff;font-size:8px;font-weight:900;letter-spacing:1.4px;text-shadow:0 1px 5px #000}
+#radarCanvas{width:150px;height:150px;border:1px solid #9bdcff77;border-radius:50%;background:#08141ddb;box-shadow:0 4px 24px #0008,0 0 18px #58c8ff18}
+#fullMapOverlay{position:fixed;inset:0;z-index:16;display:flex;align-items:center;justify-content:center;padding:22px;background:#020711e8;backdrop-filter:blur(7px);pointer-events:none}
+#fullMapPanel{width:min(1000px,94vw);max-height:92dvh;padding:14px;border:1px solid #8bd8ff5c;border-radius:8px;background:#071521ef;box-shadow:0 25px 90px #000b}
+#fullMapTitle{display:flex;justify-content:space-between;gap:10px;margin-bottom:9px;color:#d9f4ff;font-size:12px;font-weight:950;letter-spacing:2px}
+#fullMapTitle span{color:#8eafc6;font-size:9px;letter-spacing:1px}
+#fullMapCanvas{display:block;width:100%;height:auto;max-height:76dvh;object-fit:contain;border:1px solid #9bdcff2c;background:#081721}
+#fullMapLegend{display:flex;flex-wrap:wrap;gap:14px;margin-top:9px;font-size:10px;font-weight:900;color:#bed5e4}
+.legend-me{color:#5af0bd}.legend-team{color:#71b9ff}.legend-wall{color:#9eabb8}
+.mapButton{left:162px;bottom:32px;width:50px;height:42px;border-radius:10px;background:#183446ee}
+#reconnectBtn{align-items:center;justify-content:center;min-width:220px}
+body.device-desktop #mobile{display:none!important}
+body.device-desktop #leaveGameDesktop{display:block!important}
+body.device-mobile #mobile{display:block!important}
+body.device-mobile #leaveGameDesktop{display:none!important}
+body.device-mobile #hint{display:none!important}
+body.device-mobile #radarWrap{top:6px;right:6px;width:94px}
+body.device-mobile #radarCanvas{width:88px;height:88px}
+body.device-mobile #radarWrap>span{font-size:6px;letter-spacing:.8px}
+body.device-mobile #fullMapOverlay{padding:7px}
+body.device-mobile #fullMapPanel{width:100%;padding:8px}
+body.device-mobile #fullMapCanvas{max-height:78dvh}
+body.device-mobile #fullMapTitle{font-size:10px}
+body.device-mobile #fullMapTitle span{font-size:7px}
+body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
+@media(max-width:800px){#radarWrap{top:6px;right:6px;width:94px}#radarCanvas{width:88px;height:88px}}
+
 </style>
 </head>
 <body>
@@ -533,6 +561,7 @@ let lookTouch=null;
 let collisionBoxes=[];
 let collisionIndexReady=false;
 let isCrouching=false;
+let isFullMapOpen=false;
 
 const keys={w:false,s:false,a:false,d:false,shift:false};
 const DEFAULT_TRAINING_BINDS={spawnBot:"KeyN",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
@@ -866,6 +895,70 @@ function moveWithCollision(direction,distance){
     if(penaltyZ===0||penaltyZ<currentAfterX-.001)player.position.z=nz;
   }
 }
+function drawTacticalMaps(){
+  if(!player)return;
+  const limit=worldLimit();
+  const draw=(canvas,full)=>{
+    if(!canvas)return;
+    const ctx=canvas.getContext("2d"),w=canvas.width,h=canvas.height;
+    ctx.clearRect(0,0,w,h);
+    ctx.fillStyle="#081722";ctx.fillRect(0,0,w,h);
+    const cx=w/2,cy=h/2,margin=full?36:0,range=full?limit:44;
+    const mapX=x=>full?margin+(x+limit)/(2*limit)*(w-margin*2):cx+(x-player.position.x)/range*(w*.9);
+    const mapY=z=>full?margin+(z+limit)/(2*limit)*(h-margin*2):cy+(z-player.position.z)/range*(h*.9);
+    ctx.save();
+    if(!full){ctx.beginPath();ctx.arc(cx,cy,Math.min(w,h)*.47,0,Math.PI*2);ctx.clip()}
+    ctx.strokeStyle="#a4cde018";ctx.lineWidth=1;
+    const gridN=full?10:8;
+    for(let i=0;i<=gridN;i++){
+      const x=margin+(w-margin*2)*i/gridN,y=margin+(h-margin*2)*i/gridN;
+      ctx.beginPath();ctx.moveTo(x,margin);ctx.lineTo(x,h-margin);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(margin,y);ctx.lineTo(w-margin,y);ctx.stroke();
+    }
+    ctx.fillStyle="#a4b6c34a";
+    for(const bounds of collisionBoxes){
+      const centerX=(bounds.min.x+bounds.max.x)/2,centerZ=(bounds.min.z+bounds.max.z)/2;
+      let x,y,bw,bh;
+      if(full){
+        x=mapX(bounds.min.x);y=mapY(bounds.min.z);
+        bw=Math.max(1,(bounds.max.x-bounds.min.x)/(2*limit)*(w-margin*2));
+        bh=Math.max(1,(bounds.max.z-bounds.min.z)/(2*limit)*(h-margin*2));
+      }else{
+        if(Math.abs(centerX-player.position.x)>range+12||Math.abs(centerZ-player.position.z)>range+12)continue;
+        x=mapX(bounds.min.x);y=mapY(bounds.min.z);
+        bw=Math.max(1,(bounds.max.x-bounds.min.x)/range*(w*.9));
+        bh=Math.max(1,(bounds.max.z-bounds.min.z)/range*(h*.9));
+      }
+      ctx.fillRect(x,y,bw,bh);
+    }
+    // Radar reveals own position and teammates only; enemies are intentionally hidden.
+    for(const e of Object.values(enemies)){
+      if(!e||e.hp<=0||!myTeam||e.team!==myTeam)continue;
+      if(!full&&(Math.abs(e.pos.x-player.position.x)>range||Math.abs(e.pos.z-player.position.z)>range))continue;
+      const x=full?mapX(e.pos.x):mapX(e.pos.x),y=full?mapY(e.pos.z):mapY(e.pos.z);
+      ctx.beginPath();ctx.arc(x,y,full?7:5,0,Math.PI*2);
+      ctx.fillStyle=e.connected===false?"#a2adbb":"#6eb5ff";ctx.fill();
+      if(full){ctx.fillStyle="#d7efff";ctx.font="bold 14px Arial";ctx.fillText("ALLY",x+10,y+4)}
+    }
+    let px=full?mapX(player.position.x):cx,py=full?mapY(player.position.z):cy;
+    ctx.save();ctx.translate(px,py);ctx.rotate(player.rotationY+Math.PI);
+    ctx.beginPath();ctx.moveTo(0,-(full?12:9));ctx.lineTo(full?7:5,full?8:6);ctx.lineTo(0,full?5:4);ctx.lineTo(full?-7:-5,full?8:6);ctx.closePath();
+    ctx.fillStyle="#57f1bd";ctx.shadowColor="#57f1bd";ctx.shadowBlur=full?12:8;ctx.fill();ctx.restore();
+    if(full){ctx.strokeStyle="#5af0bd";ctx.lineWidth=2;ctx.strokeRect(margin,margin,w-margin*2,h-margin*2)}
+    ctx.restore();
+  };
+  draw($("radarCanvas"),false);
+  if(isFullMapOpen)draw($("fullMapCanvas"),true);
+}
+function setFullMapOpen(open){
+  isFullMapOpen=Boolean(open);
+  $("fullMapOverlay").style.display=isFullMapOpen?"flex":"none";
+  if(isFullMapOpen)drawTacticalMaps();
+}
+$("mapBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();setFullMapOpen(!isFullMapOpen)});
+document.addEventListener("keydown",e=>{if(e.code==="KeyF"&&!e.repeat){e.preventDefault();setFullMapOpen(true)}});
+document.addEventListener("keyup",e=>{if(e.code==="KeyF")setFullMapOpen(false)});
+document.addEventListener("visibilitychange",()=>{if(document.hidden)setFullMapOpen(false)});
 function sendMove(force=false){
   const now=performance.now();
   if(!force&&now-lastMoveSend<50)return;
@@ -1309,6 +1402,7 @@ function animate(){
     weaponKick=Math.max(0,weaponKick-dt*.58);
     heldWeaponRoot.rotation.x=reloading?-.07:0;
   }
+  drawTacticalMaps();
   renderer.render(scene,camera);
 }
 
