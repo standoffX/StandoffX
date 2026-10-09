@@ -759,12 +759,12 @@ function updateWaiting(data){
 }
 
 function startReload(){
-  if((!isTeamCombat&&!isTrainingMode)||reloading||ammo>=30||matchPhase!=="game"||hp<=0)return;
+  if((!isTeamCombat&&!isTrainingMode)||reloading||ammo>=30||matchPhase!=="game"||hp<=0||!mapLoadFinished)return;
   reloading=true;$("ammoNum").textContent="—";
   setTimeout(()=>{ammo=30;reloading=false;$("ammoNum").textContent=ammo},900);
 }
 function shoot(){
-  if($("pauseMenu")?.style.display==="flex"||(!isTeamCombat&&!isTrainingMode)||matchPhase!=="game"||reloading||hp<=0)return;
+  if($("pauseMenu")?.style.display==="flex"||(!isTeamCombat&&!isTrainingMode)||matchPhase!=="game"||reloading||hp<=0||!mapLoadFinished)return;
   const now=performance.now();
   if(now-lastShot<125||ammo<=0){if(ammo<=0)startReload();return}
   lastShot=now;weaponKick=Math.min(.09,weaponKick+.045);ammo--; $("ammoNum").textContent=ammo;
@@ -860,8 +860,10 @@ socket.on("training_init",data=>{
   if(data.spawn)player.position.set(data.spawn.x||0,data.spawn.y||0,data.spawn.z||0);
   $("trainingControls").style.display="block";
   renderTrainingKeyHints();
-  $("overlay").style.display="none";
-  $("phase").textContent="TRAINING";
+  $("overlayTitle").textContent=mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":"ТРЕНУВАННЯ";
+  $("overlayText").textContent=mapLoadFinished?"Готово.":"Завантажуємо карту…";
+  $("overlay").style.display=mapLoadFinished?"none":"flex";
+  $("phase").textContent=mapLoadFinished?"ГОТОВО":"ЗАВАНТАЖЕННЯ КАРТИ";
   if(data.bot)applyTrainingBot(data.bot);else removeTrainingBot();
 });
 function applyTrainingBot(bot){
@@ -1064,7 +1066,7 @@ function animate(){
   const now=performance.now(),dt=Math.min(.05,(now-previous)/1000);previous=now;
   const mv=window.sxMove||{x:0,y:0};
 
-  if(matchPhase==="game"&&player&&hp>0&&$("pauseMenu")?.style.display!=="flex"){
+  if(matchPhase==="game"&&player&&hp>0&&mapLoadFinished&&$("pauseMenu")?.style.display!=="flex"){
     if(mv.x||mv.y){keys.a=mv.x<-.18;keys.d=mv.x>.18;keys.w=mv.y<-.18;keys.s=mv.y>.18}
     const dir=new THREE.Vector3();
     camera.getWorldDirection(dir);dir.y=0;dir.normalize();
