@@ -661,7 +661,7 @@ function queueJump(){if(matchPhase==="game")jumpQueued=true}
 
 addEventListener("keydown",e=>{
   if(e.repeat)return;
-  if(e.code==="Escape"&&matchPhase==="game"){e.preventDefault();leaveGame();return}
+  if(e.code==="Escape"){e.preventDefault();leaveGame();return}
   const binds=readTrainingBinds();
   if(e.code===binds.menu){e.preventDefault();leaveGame();return}
   if(isTrainingMode&&matchPhase==="game"){
