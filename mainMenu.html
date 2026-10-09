@@ -419,6 +419,22 @@ const MODES={allies:"СОЮЗНИКИ",team_fight:"КОМАНДНИЙ БІЙ"};
 let testGameplayMode=["prototype","training","real"].includes(localStorage.getItem("sx_test_gameplay"))?localStorage.getItem("sx_test_gameplay"):"prototype";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const cleanId=id=>String(id||"").replace(/^ID_/i,"");
+function readActiveMatch(){
+  try{
+    const data=JSON.parse(localStorage.getItem("sx_active_match")||"null");
+    if(!data?.matchId)return null;
+    if(Date.now()-(Number(data.updatedAt)||0)>15*60*1000){localStorage.removeItem("sx_active_match");return null}
+    return data;
+  }catch{return null}
+}
+function updateReconnectButton(){
+  const button=$("resumeMatchBtn");
+  if(!button)return;
+  const data=readActiveMatch();
+  button.style.display=data?"inline-flex":"none";
+  button.title=data?"Повернутися до незавершеного матчу":"";
+}
+
 async function api(url,opt={}){
   const o={...opt,credentials:"same-origin",headers:{...(opt.headers||{})}};
   if(o.body&&typeof o.body==="string")o.headers["Content-Type"]="application/json";
@@ -496,6 +512,7 @@ function render(){
   $("passXp").textContent=(me.XP||0)%1000+" / 1000 XP";
   $("passProgress").style.width=((me.XP||0)%1000)/10+"%";
   renderMode();
+  updateReconnectButton();
 }
 function renderMode(){
   document.querySelectorAll(".modebtn[data-mode]").forEach(b=>b.classList.toggle("active",b.dataset.mode===selectedMode));
@@ -523,6 +540,16 @@ document.querySelectorAll("[data-test-gameplay]").forEach(b=>b.addEventListener(
   renderMode();
 }));
 $("playBtn").addEventListener("click",()=>$("modeModal").classList.add("show"));
+$("resumeMatchBtn").addEventListener("click",()=>{
+  const saved=readActiveMatch();
+  if(!saved){updateReconnectButton();notifyToast("Незавершений матч уже недоступний.");return}
+  sessionStorage.setItem("myPlayerId",String(saved.userId||me?.id||""));
+  sessionStorage.setItem("myPlayerUUID",String(saved.uuid||me?.uuid||""));
+  sessionStorage.setItem("currentMatchId",String(saved.matchId));
+  sessionStorage.setItem("selectedMap",String(saved.map||"HILL_TOWN"));
+  sessionStorage.setItem("selectedMode",String(saved.mode||"allies"));
+  location.href="/play2.html";
+});
 $("confirmModeBtn").addEventListener("click",()=>{
   $("modeModal").classList.remove("show");
   openPlay();
@@ -588,6 +615,7 @@ function openPlay(){
   socket.on("match_found",d=>{
     sessionStorage.setItem("myPlayerId",d.userId);sessionStorage.setItem("myPlayerUUID",d.uuid||me.uuid||"");sessionStorage.setItem("currentMatchId",d.matchId);
     sessionStorage.setItem("selectedMap",d.map||selectedMap);sessionStorage.setItem("selectedMode",d.mode||selectedMode);
+    try{localStorage.setItem("sx_active_match",JSON.stringify({matchId:d.matchId,userId:d.userId,uuid:d.uuid||me.uuid||"",map:d.map||selectedMap,mode:d.mode||selectedMode,updatedAt:Date.now()}))}catch{}
     location.href="/play2.html";
   });
   sessionStorage.setItem("selectedMap",selectedMap);
