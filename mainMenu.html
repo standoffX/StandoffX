@@ -445,7 +445,6 @@ async function loadClan(){
       actions+="<button class='danger' data-clan-action='disband'>РОЗПУСТИТИ</button>";
     }else if(officer){
       actions+="<button class='secondary' data-clan-action='requests'>ЗАЯВКИ</button>";
-      actions+="<button class='secondary' data-clan-action='edit'>РЕДАГУВАТИ</button>";
     }
     actions+="<button class='danger' data-clan-action='leave'>ВИЙТИ</button>";
     $("clanBody").innerHTML="<div class='listcard'><h2 style='margin:0 0 6px'>"+esc(d.clan.name)+" ["+esc(d.clan.tag)+"]</h2><div class='muted'>"+d.clan.memberCount+"/"+d.clan.memberLimit+" учасників · рівень "+d.clan.level+"</div><p class='muted'>"+esc(d.clan.description||"")+"</p><div class='actions'>"+actions+"</div></div><h3 style='margin-top:17px'>УЧАСНИКИ</h3><div class='clan-members'>"+members+"</div><section class='clanchat'><div class='clanchat-head'>КЛАНОВИЙ ЧАТ · ["+esc(d.clan.tag)+"]</div><div id='clanChatMessages' class='clan-chat-messages'></div><div class='clan-chat-send'><input id='clanChatInput' maxlength='1000' placeholder='Повідомлення клану…' autocomplete='off'><button class='primary' data-clan-action='send-chat'>НАДІСЛАТИ</button></div></section>";
