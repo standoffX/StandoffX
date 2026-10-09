@@ -211,7 +211,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
 <section id="profile" class="screen">
   <div class="sectionhead"><h2>ПРОФІЛЬ</h2></div>
-  <div class="panel panelbody"><div class="profiletop"><img id="profileAvatar" class="avatar" src="/avatars/default.jpg" alt=""><div><div class="nick" id="profilePageNick"></div><div class="playerid">PLAYER ID: <b id="profilePageId"></b></div><button id="copyId" class="secondary" style="margin-top:8px">СКОПІЮВАТИ ID</button></div></div>
+  <div class="panel panelbody"><div class="profiletop"><img id="profileAvatar" class="avatar" src="/avatars/default.jpg" alt=""><div><div class="nick" id="profilePageNick"></div><div class="playerid">PLAYER ID: <b id="profilePageId"></b></div><button id="copyId" class="secondary" style="margin-top:8px">СКОПІЮВАТИ ID</button><div class="playerid" style="margin-top:12px">UUID: <b id="profilePageUuid" style="overflow-wrap:anywhere"></b></div><button id="copyUuid" class="secondary" style="margin-top:8px">СКОПІЮВАТИ UUID</button></div></div>
   <div class="cardgrid" style="margin-top:14px"><div class="statcard"><small>XP</small><strong id="profileXP">0</strong></div><div class="statcard"><small>GOLD</small><strong id="profileGold">0</strong></div><div class="statcard"><small>COMPETITIVE</small><strong id="profileComp">1000</strong></div><div class="statcard"><small>ALLIES</small><strong id="profileAllies">1000</strong></div></div></div>
 </section>
 
@@ -300,6 +300,7 @@ function render(){
   $("profileAvatar").src=me.playerAvatar||"/avatars/default.jpg";
   $("profilePageNick").textContent=me.nickname||"PLAYER";
   $("profilePageId").textContent=id;
+  $("profilePageUuid").textContent=me.uuid||"UUID відсутній";
   $("profileXP").textContent=me.XP||0;$("profileGold").textContent=me.gold||0;
   $("profileComp").textContent=me.MMRCompetitive||1000;$("profileAllies").textContent=me.MMRAllies||1000;
   $("statsXP").textContent=me.XP||0;$("statsGold").textContent=me.gold||0;
@@ -340,6 +341,7 @@ $("cancelSearch").addEventListener("click",cancelSearch);
 $("refreshClan").addEventListener("click",loadClan);
 $("refreshMarket").addEventListener("click",loadMarket);
 $("copyId").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(cleanId(me.id));$("copyId").textContent="СКОПІЙОВАНО ✓"}catch{}});
+$("copyUuid").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(me.uuid||"");$("copyUuid").textContent="СКОПІЙОВАНО ✓"}catch{}});
 $("findFriend").addEventListener("click",findFriend);
 
 function openPlay(){
@@ -351,6 +353,7 @@ function openPlay(){
     socket.on("training_started",d=>{
       sessionStorage.setItem("myPlayerId",d.userId);
       sessionStorage.setItem("selectedMode",d.mode);
+      sessionStorage.setItem("selectedMap",d.map||"FIELD_ARENA");
       sessionStorage.setItem("trainingId",d.trainingId);
       sessionStorage.setItem("currentMatchId",d.trainingId);
       location.href="/play2.html";
@@ -384,7 +387,8 @@ function cancelSearch(){if(socket){socket.emit("cancel_search");socket.disconnec
 function renderWaitPlayers(players){
   $("searchPlayers").innerHTML=(players||[]).map(p=>{
     const playerId=esc(cleanId(p.userId||p.id||"—"));
-    return "<div class='waitplayer "+(p.connected?"online":"")+"'><div class='waitplayer-main'><span class='dot'></span><b>"+esc(p.nickname||"PLAYER")+"</b></div><small>ID "+playerId+"</small></div>";
+    const uuid=esc(String(p.uuid||"").slice(0,8));
+    return "<div class='waitplayer "+(p.connected?"online":"")+"'><div class='waitplayer-main'><span class='dot'></span><b>"+esc(p.nickname||"PLAYER")+"</b></div><small>ID "+playerId+(uuid?" · UUID "+uuid+"…":"")+"</small></div>";
   }).join("")||"<div class='muted'>Поки що немає гравців у черзі.</div>";
 }
 async function loadFriends(){
