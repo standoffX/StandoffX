@@ -819,13 +819,13 @@ socket.on("match_start_now",()=>{
 });
 socket.on("enemy_moved",applyEnemy);
 socket.on("roles_updated",data=>{
-  const me=data.players?.find(p=>myUuid?String(p.uuid||"")===myUuid:String(p.userId)===String(myId));
+  const me=data.players?.find(p=>String(p.userId)===String(myId));
   if(me){
   myRole=me.role;score=me.score||score;myTeam=me.team||myTeam;
   player.position.set(me.spawn.x,me.spawn.y||0,me.spawn.z);ensurePlayerVisual();
   playerVisual.traverse(x=>{if(x.material?.color)x.material.color.set(colorFor(myRole,myTeam))});
 }
-  (data.players||[]).forEach(p=>{if(myUuid?String(p.uuid||"")!==myUuid:String(p.userId)!==String(myId)){const e=ensureEnemy(p);if(e){e.role=p.role;e.mesh.traverse(x=>{if(x.material?.color)x.material.color.set(colorFor(p.role,p.team))});}}});
+  (data.players||[]).forEach(p=>{if(String(p.userId)!==String(myId)){const e=ensureEnemy(p);if(e){e.role=p.role;e.mesh.traverse(x=>{if(x.material?.color)x.material.color.set(colorFor(p.role,p.team))});}}});
 });
 socket.on("player_hit",data=>{
   if(String(data.targetId)===String(myId)){hp=0}
