@@ -197,4 +197,12 @@ assert.match(game, /e\.pos\.set\(data\.x,data\.y,data\.z\);e\.mesh\.position\.co
 assert.match(game, /let connectedToGameplay=socket\.connected/, "the client must rejoin the match after a Socket.IO reconnection");
 assert.match(game, /matchPhase="finished"/, "the player must stop moving and shooting after match results");
 
+assert.match(server, /const mode = \["allies", "team_fight"\]\.includes\(data\?\.mode\) \? data\.mode : "allies"/, "public matchmaking must reject obsolete/private modes");
+assert.match(server, /current\.players\.filter\(p => !p\.isBot\)\.length === 0 \|\| current\.players\.length < 2/, "bot matches must be cleaned after the last human disconnects");
+assert.match(menu, /if\(!\["allies","team_fight"\]\.includes\(selectedMode\)\)\{selectedMode="allies";localStorage\.setItem\("sx_mode",selectedMode\)\}/, "obsolete local storage mode values must not break the lobby");
+assert.match(game, /let lookTouchId=null/, "mobile look must use independent touch IDs");
+assert.match(game, /document\.addEventListener\("touchcancel",releaseLookTouch\)/, "cancelled look touches must clear their state");
+assert.match(game, /window\.addEventListener\("blur",clearHeldInputs\)/, "focus loss must release all held controls");
+assert.match(game, /document\.addEventListener\("visibilitychange",\(\)=>\{if\(document\.hidden\)clearHeldInputs\(\)\}\)/, "backgrounding the tab must release held controls");
+
 console.log("OK project invariants, tester-only tools, Atlas endpoint, and unique HTTP routes");
