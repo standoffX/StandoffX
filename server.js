@@ -1734,7 +1734,7 @@ function validateMove(player, data) {
     player.pos.x = x;
     player.pos.z = z;
   }
-  player.pos.y = Math.max(-2, Math.min(100, y));
+  player.pos.y = Math.max(0, Math.min(2.25, y));
   player.rotY = rotY;
   player.anim = ["Idle", "Running", "Jump", "Walking"].includes(data.anim) ? data.anim : "Idle";
   return true;
@@ -1876,7 +1876,7 @@ io.on("connection", socket => {
       previous.x = x;
       previous.z = z;
     }
-    previous.y = Math.max(0, Math.min(20, y));
+    previous.y = Math.max(0, Math.min(2.25, y));
     session.playerRotY = Number.isFinite(viewY) ? viewY : rotY;
   });
 
