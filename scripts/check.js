@@ -50,6 +50,18 @@ assert.match(server, /expiresAt: now \+ SESSION_TTL_MS/, "sessions must expire")
 assert.match(server, /SameSite=Lax/);
 assert.match(server, /BLOCKED_STATIC_DIRS/, "private directories must not be served statically");
 assert.match(server, /const privateRootFile = segments\.length === 1/, "root data/code files must be private");
+const rootPrivatePatternMatch = server.match(/const privateRootFile = segments\.length === 1 && (\/.*?\/i)\.test\(rootName\)/);
+assert.ok(rootPrivatePatternMatch, "static guard must contain an extension denylist");
+const rootPrivatePatternBody = rootPrivatePatternMatch[1].slice(1, rootPrivatePatternMatch[1].lastIndexOf("/"));
+const blocksPrivateRootFile = new RegExp(rootPrivatePatternBody, "i");
+assert.ok(blocksPrivateRootFile.test("account.json"), "static guard must block account.json");
+assert.ok(blocksPrivateRootFile.test("server.js"), "static guard must block server.js");
+assert.match(server, /for \(let i = 0; i < 4; i \+= 1\)/, "static path guard must decode nested escapes");
+assert.match(server, /IMAGE_EXTENSIONS = Object\.freeze/, "uploaded image extension must be based on validated MIME type");
+assert.match(server, /if \(!socket\.user \|\| \(socket\.user\.isBanned/, "banned users must be rejected by Socket.IO");
+assert.match(server, /if \(user\.isBanned && user\.id !== ADMIN_ID\) return res\.status\(403\)/, "banned admins must not use protected APIs");
+assert.ok(server.indexOf("const nextPassword =") < server.indexOf("const oldId = u.id"), "admin password validation must happen before mutating the user");
+
 assert.match(server, /app\.use\(express\.static\(ROOT, \{ index: false, dotfiles: "deny" \}\)\)/);
 assert.match(server, /RateLimit-Limit/, "critical endpoints must have rate limiting");
 assert.match(server, /requiredPlayers: 3/, "hide and seek requires three players");
