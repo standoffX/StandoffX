@@ -194,7 +194,7 @@ function findHillTownAssetUrl(root,needles){
       for(let i=0;i<node.length;i++){const found=walk(node[i],path+" "+i);if(found)return found}
       return null;
     }
-    const direct=Object.entries(node).filter(([,v])=>typeof v==="string").map(([k,v])=>k+":"+v).join(" ").toLowerCase();
+    const direct=Object.entries(node).filter(([k,v])=>typeof v==="string"&&!/(url|uri|image|thumb|license|description|prompt|readme|source|download)/i.test(k)).map(([k,v])=>k+":"+v).join(" ").toLowerCase();
     const identity=(path+" "+direct).toLowerCase();
     if(list.some(needle=>identity.includes(String(needle).toLowerCase()))){
       const urls=subtreeStrings(node).filter(value=>/^https?:\/\//i.test(value)&&/\.glb(?:[?#]|$)/i.test(value));
