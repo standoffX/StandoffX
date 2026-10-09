@@ -87,6 +87,19 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .list{display:grid;gap:7px}.avatarSmall{height:30px;width:30px;object-fit:cover;border-radius:3px}
 .modal{display:none;position:fixed;inset:0;z-index:30;background:#080b20d9;align-items:center;justify-content:center;padding:15px}.modal.show{display:flex}.modalbox{width:min(580px,100%);max-height:88vh;overflow:auto;background:#171b43;border:1px solid #bfcaff43;box-shadow:0 20px 60px #05071c85;border-radius:4px;padding:16px}.modalhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:13px;font-weight:950;letter-spacing:1px}.close{border:0;background:transparent;color:#dbe2ff;font-size:22px}
 .queuecount{font-size:35px;font-weight:1000;margin:12px 0}.waitplayers{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:12px 0}.waitplayer{padding:10px;background:#101638;border:1px solid #c3ccff20;font-size:10px}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#6d789f;margin-right:6px}.waitplayer.online .dot{background:#79d8a5}.waitplayer.ready .dot{background:#8fb5f6}
+.clan-members{display:grid;gap:7px}
+.clan-member-actions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.clanchat{margin-top:18px;border:1px solid #c3ccff24;background:#0b1030;border-radius:4px;overflow:hidden}
+.clanchat-head{padding:10px 12px;border-bottom:1px solid #c3ccff1b;font-size:11px;font-weight:900;letter-spacing:.5px}
+.clan-chat-messages{height:190px;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:10px}
+.clan-chat-item{padding:8px 9px;background:#161b40;border:1px solid #c3ccff14;border-radius:4px;overflow-wrap:anywhere}
+.clan-chat-item header{display:flex;justify-content:space-between;gap:8px;font-size:10px;font-weight:800}
+.clan-chat-item time{color:#7e8bb7;font-weight:500;font-size:9px;white-space:nowrap}
+.clan-chat-item p{margin:5px 0 0;font-size:11px;line-height:1.45;white-space:pre-wrap}
+.clan-chat-send{display:flex;gap:7px;padding:9px;border-top:1px solid #c3ccff1b}
+.clan-chat-send input{min-width:0;flex:1;background:#080e2a;border:1px solid #c3ccff28;color:#fff;padding:10px;border-radius:3px}
+#appToast{position:fixed;top:82px;right:16px;z-index:100;max-width:min(360px,calc(100vw - 32px));padding:12px 15px;background:#172644;border:1px solid #9bbfff55;border-radius:5px;color:#ecf3ff;font-size:12px;box-shadow:0 12px 36px #0006;opacity:0;transform:translateY(-8px);pointer-events:none;transition:opacity .18s,transform .18s}
+#appToast.show{opacity:1;transform:translateY(0)}
 @media(max-width:1120px){.home-layout{grid-template-columns:minmax(240px,300px) minmax(150px,190px) minmax(270px,1fr)}.content{padding:12px}.promo{height:180px}}
 @media(max-width:850px){.home-layout{grid-template-columns:minmax(240px,1fr) minmax(280px,1.1fr)}.promo-col{display:none}.playarea{min-height:220px}}
 @media(max-width:600px){.rail{width:48px;flex-basis:48px}.rail button{height:50px}.topbar{padding:0 8px;gap:5px}.topbrand{font-size:10px}.content{padding:8px}.home-layout{grid-template-columns:1fr}.profile-col{display:none}.passhero{height:90px}.playarea{min-height:140px}.playbutton{width:180px;height:44px}.waitplayers{grid-template-columns:1fr}.pill{padding:6px;font-size:9px}}
@@ -197,11 +210,13 @@ button:disabled{opacity:.45;cursor:not-allowed}
 </div><button class="primary" id="confirmModeBtn">ПОЧАТИ ПОШУК МАТЧУ</button></div></div>
 <div id="searchModal" class="modal"><div class="modalbox"><div class="modalhead"><span id="searchTitle">ПОШУК МАТЧУ</span><button class="close" data-close="searchModal">×</button></div><div id="searchMode" class="muted">HIDE &amp; SEEK</div><div id="queue" class="queuecount">1 / 3</div><div id="searchText" class="muted">Очікування гравців...</div><div id="searchPlayers" class="waitplayers"></div><button class="danger" id="cancelSearch">СКАСУВАТИ</button></div></div>
 <div id="clanModal" class="modal"><div class="modalbox"><div class="modalhead"><span id="clanModalTitle">КЛАН</span><button class="close" data-close="clanModal">×</button></div><div id="clanModalBody"></div></div></div>
+<div id="appToast" role="status" aria-live="polite"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const $=id=>document.getElementById(id);
 let me=null,socket=null,searching=false;
+let socialSocket=null,currentClanTag=null,clanChatHistory=[],toastTimer=null;
 let selectedMode=localStorage.getItem("sx_mode")||"hide_seek";
 const MODES={hide_seek:"HIDE & SEEK",team_fight:"TEAM FIGHT",training:"ТРЕНИРОВКА",field_test:"FIELD TEST"};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -339,32 +354,168 @@ async function findFriend(){
 $("incoming").addEventListener("click",e=>{const b=e.target.closest("[data-friend-action]");if(b)friendAction(b.dataset.friendAction,b.dataset.id)});
 $("friendResult").addEventListener("click",e=>{const b=e.target.closest("[data-friend-add]");if(b)api("/api/friends/request",{method:"POST",body:JSON.stringify({toId:b.dataset.friendAdd})}).then(()=>{b.textContent="ВІДПРАВЛЕНО";b.disabled=true}).catch(err=>alert(err.message))});
 
+function notifyToast(message){
+  const toast=$("appToast");
+  if(!toast)return;
+  toast.textContent=String(message||"Повідомлення");
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>toast.classList.remove("show"),4200);
+}
+function initSocialSocket(){
+  if(socialSocket)return;
+  socialSocket=io({withCredentials:true});
+  socialSocket.on("connect",()=>{
+    if(currentClanTag)socialSocket.emit("join_clan_chat",{tag:currentClanTag});
+  });
+  socialSocket.on("clan_chat_history",data=>{
+    if(data.tag!==currentClanTag)return;
+    clanChatHistory=Array.isArray(data.messages)?data.messages:[];
+    renderClanChat();
+  });
+  socialSocket.on("clan_chat_message",message=>{
+    if(!message||message.clanTag!==currentClanTag)return;
+    clanChatHistory.push(message);
+    if(clanChatHistory.length>200)clanChatHistory.splice(0,clanChatHistory.length-200);
+    renderClanChat();
+  });
+  socialSocket.on("clan_chat_error",data=>notifyToast(data?.message||"Помилка кланового чату."));
+  socialSocket.on("clan_request_notification",data=>{
+    if(!data)return;
+    notifyToast("Нова заявка до клану ["+String(data.tag||"")+"]: "+String(data.nickname||"Гравець"));
+    if(currentClanTag===data.tag&&document.getElementById("clan")?.classList.contains("active"))loadClan();
+  });
+  socialSocket.on("auth_required",()=>{socialSocket?.disconnect();socialSocket=null;});
+}
+function renderClanChat(){
+  const box=$("clanChatMessages");
+  if(!box)return;
+  box.innerHTML=clanChatHistory.map(message=>{
+    const name=esc(message.senderName||"PLAYER");
+    const body=esc(message.text||"");
+    let time="";
+    try{time=new Date(message.time).toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"})}catch{}
+    return "<article class='clan-chat-item'><header><span>"+name+"</span><time>"+esc(time)+"</time></header><p>"+body+"</p></article>";
+  }).join("")||"<div class='muted'>Повідомлень поки немає. Напиши першим.</div>";
+  box.scrollTop=box.scrollHeight;
+}
+function sendClanChat(){
+  const input=$("clanChatInput");
+  const message=String(input?.value||"").trim();
+  if(!message||!currentClanTag||!socialSocket?.connected)return;
+  socialSocket.emit("send_clan_msg",{tag:currentClanTag,text:message});
+  input.value="";
+  input.focus();
+}
 function openClanModal(title,body){$("clanModalTitle").textContent=title;$("clanModalBody").innerHTML=body;$("clanModal").classList.add("show")}
 async function loadClan(){
   try{
     const d=await api("/api/clans/my",{method:"POST",body:"{}"});
+    const previousTag=currentClanTag;
     if(!d.clan){
+      currentClanTag=null;
+      clanChatHistory=[];
+      if(previousTag&&socialSocket?.connected)socialSocket.emit("leave_clan_chat",{tag:previousTag});
       $("clanBody").innerHTML="<div class='muted'>Ви ще не в клані.</div><div class='actions' style='margin-top:12px'><button class='primary' data-clan-action='create'>СТВОРИТИ · 500 G</button><button class='secondary' data-clan-action='search'>ЗНАЙТИ КЛАН</button></div>";
       return;
     }
-    const members=d.members.map(x=>"<div class='row'><div><b>"+esc(x.nickname)+"</b><div class='muted'>ID "+esc(cleanId(x.userId))+" · "+(x.online?"ONLINE":"OFFLINE")+"</div></div><span class='pill'>"+esc(x.role.toUpperCase())+"</span></div>").join("");
+    currentClanTag=d.clan.tag;
+    if(previousTag&&previousTag!==currentClanTag&&socialSocket?.connected)socialSocket.emit("leave_clan_chat",{tag:previousTag});
     const owner=d.myRole==="owner";
-    const actions=(owner?"<button class='secondary' data-clan-action='requests'>ЗАЯВКИ</button><button class='danger' data-clan-action='disband'>РОЗПУСТИТИ</button>":"")+"<button class='danger' data-clan-action='leave'>ВИЙТИ</button>";
-    $("clanBody").innerHTML="<div class='listcard'><h2 style='margin:0 0 6px'>"+esc(d.clan.name)+" ["+esc(d.clan.tag)+"]</h2><div class='muted'>"+d.clan.memberCount+"/"+d.clan.memberLimit+" учасників · рівень "+d.clan.level+"</div><p class='muted'>"+esc(d.clan.description||"")+" </p><div class='actions'>"+actions+"</div></div><h3 style='margin-top:17px'>УЧАСНИКИ</h3><div class='list'>"+members+"</div>";
-  }catch(e){$("clanBody").innerHTML="<div class='muted'>Не вдалося завантажити клан.</div>"}
+    const officer=d.myRole==="officer";
+    const members=d.members.map(member=>{
+      const memberIsOwner=member.role==="owner";
+      const memberIsOfficer=member.role==="officer";
+      let controls="";
+      if(owner&&!memberIsOwner){
+        controls+=memberIsOfficer
+          ?"<button class='secondary' data-clan-action='demote' data-id='"+esc(member.userId)+"'>ЗНЯТИ ОФІЦЕРА</button>"
+          :"<button class='secondary' data-clan-action='promote' data-id='"+esc(member.userId)+"'>ЗРОБИТИ ОФІЦЕРОМ</button>";
+        controls+="<button class='secondary' data-clan-action='transfer' data-id='"+esc(member.userId)+"'>ПЕРЕДАТИ КЛАН</button>";
+        controls+="<button class='danger' data-clan-action='kick' data-id='"+esc(member.userId)+"'>ВИКЛЮЧИТИ</button>";
+      }else if(officer&&!memberIsOwner&&!memberIsOfficer){
+        controls+="<button class='danger' data-clan-action='kick' data-id='"+esc(member.userId)+"'>ВИКЛЮЧИТИ</button>";
+      }
+      return "<div class='row'><div><b>"+esc(member.nickname)+"</b><div class='muted'>ID "+esc(cleanId(member.userId))+" · "+(member.online?"ONLINE":"OFFLINE")+"</div></div><span class='pill'>"+esc(member.role.toUpperCase())+"</span>"+(controls?"<div class='clan-member-actions'>"+controls+"</div>":"")+"</div>";
+    }).join("");
+    let actions="";
+    if(owner){
+      actions+="<button class='secondary' data-clan-action='requests'>ЗАЯВКИ</button>";
+      actions+="<button class='secondary' data-clan-action='edit'>РЕДАГУВАТИ</button>";
+      actions+="<button class='danger' data-clan-action='disband'>РОЗПУСТИТИ</button>";
+    }else if(officer){
+      actions+="<button class='secondary' data-clan-action='requests'>ЗАЯВКИ</button>";
+      actions+="<button class='secondary' data-clan-action='edit'>РЕДАГУВАТИ</button>";
+    }
+    actions+="<button class='danger' data-clan-action='leave'>ВИЙТИ</button>";
+    $("clanBody").innerHTML="<div class='listcard'><h2 style='margin:0 0 6px'>"+esc(d.clan.name)+" ["+esc(d.clan.tag)+"]</h2><div class='muted'>"+d.clan.memberCount+"/"+d.clan.memberLimit+" учасників · рівень "+d.clan.level+"</div><p class='muted'>"+esc(d.clan.description||"")+"</p><div class='actions'>"+actions+"</div></div><h3 style='margin-top:17px'>УЧАСНИКИ</h3><div class='clan-members'>"+members+"</div><section class='clanchat'><div class='clanchat-head'>КЛАНОВИЙ ЧАТ · ["+esc(d.clan.tag)+"]</div><div id='clanChatMessages' class='clan-chat-messages'></div><div class='clan-chat-send'><input id='clanChatInput' maxlength='1000' placeholder='Повідомлення клану…' autocomplete='off'><button class='primary' data-clan-action='send-chat'>НАДІСЛАТИ</button></div></section>";
+    renderClanChat();
+    if(socialSocket?.connected)socialSocket.emit("join_clan_chat",{tag:currentClanTag});
+    const input=$("clanChatInput");
+    input?.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();sendClanChat()}});
+  }catch(e){$("clanBody").innerHTML="<div class='muted'>Не вдалося завантажити клан: "+esc(e.message)+"</div>"}
 }
 function openCreateClan(){openClanModal("СТВОРИТИ КЛАН","<div class='form'><input id='cnName' maxlength='24' placeholder='Назва клану'><input id='cnTag' maxlength='5' placeholder='TAG, 2–5 символів'><textarea id='cnDesc' maxlength='120' placeholder='Опис'></textarea><button class='primary' data-clan-action='submit-create'>СТВОРИТИ</button></div>")}
-async function createClan(){try{await api("/api/clans/create",{method:"POST",body:JSON.stringify({name:$("cnName").value,tag:$("cnTag").value,description:$("cnDesc").value})});$("clanModal").classList.remove("show");me=(await api("/api/me")).user;render();loadClan()}catch(e){alert(e.message)}}
+async function createClan(){try{await api("/api/clans/create",{method:"POST",body:JSON.stringify({name:$("cnName").value,tag:$("cnTag").value,description:$("cnDesc").value})});$("clanModal").classList.remove("show");me=(await api("/api/me")).user;render();await loadClan();notifyToast("Клан створено.")}catch(e){notifyToast(e.message)}}
 function openClanSearch(){openClanModal("ЗНАЙТИ КЛАН","<div class='inputrow'><input id='clanQuery' placeholder='Назва або TAG'><button class='primary' data-clan-action='submit-search'>ЗНАЙТИ</button></div><div class='list' id='clanResults'></div>")}
-async function searchClans(){try{const d=await api("/api/clans/search",{method:"POST",body:JSON.stringify({query:$("clanQuery").value})});$("clanResults").innerHTML=d.clans.map(c=>"<div class='row'><div><b>"+esc(c.name)+" ["+esc(c.tag)+"]</b><div class='muted'>"+c.memberCount+"/"+c.memberLimit+"</div></div><button class='primary' data-clan-action='join' data-tag='"+esc(c.tag)+"' "+(c.isFull?"disabled":"")+">ЗАЯВКА</button></div>").join("")||"<div class='muted'>Не знайдено.</div>"}catch(e){alert(e.message)}}
-async function joinClan(tag){try{await api("/api/clans/request",{method:"POST",body:JSON.stringify({tag})});alert("Заявку відправлено.")}catch(e){alert(e.message)}}
-async function loadClanRequests(){try{const d=await api("/api/clans/requests",{method:"POST",body:"{}"});openClanModal("ЗАЯВКИ КЛАНУ",d.requests.map(x=>"<div class='row'><div><b>"+esc(x.nickname)+"</b><div class='muted'>ID "+esc(cleanId(x.id))+"</div></div><div class='actions'><button class='primary' data-clan-action='accept' data-id='"+esc(x.id)+"'>✓</button><button class='secondary' data-clan-action='decline' data-id='"+esc(x.id)+"'>×</button></div></div>").join("")||"<div class='muted'>Заявок немає.</div>")}catch(e){alert(e.message)}}
-async function clanDecision(type,id){try{await api(type==="accept"?"/api/clans/accept":"/api/clans/decline",{method:"POST",body:JSON.stringify({userId:id})});loadClanRequests();loadClan()}catch(e){alert(e.message)}}
-async function leaveClan(){if(!confirm("Вийти з клану?"))return;try{await api("/api/clans/leave",{method:"POST"});me=(await api("/api/me")).user;render();loadClan()}catch(e){alert(e.message)}}
-async function disbandClan(){if(!confirm("Розпустити клан?"))return;try{await api("/api/clans/disband",{method:"POST"});$("clanModal").classList.remove("show");me=(await api("/api/me")).user;render();loadClan()}catch(e){alert(e.message)}}
-$("clanBody").addEventListener("click",e=>{const b=e.target.closest("[data-clan-action]");if(!b)return;const a=b.dataset.clanAction;if(a==="create")openCreateClan();else if(a==="search")openClanSearch();else if(a==="requests")loadClanRequests();else if(a==="disband")disbandClan();else if(a==="leave")leaveClan()});
-$("clanModalBody").addEventListener("click",e=>{const b=e.target.closest("[data-clan-action]");if(!b)return;const a=b.dataset.clanAction;if(a==="submit-create")createClan();else if(a==="submit-search")searchClans();else if(a==="join")joinClan(b.dataset.tag);else if(a==="accept")clanDecision("accept",b.dataset.id);else if(a==="decline")clanDecision("decline",b.dataset.id)});
-
+async function searchClans(){try{const d=await api("/api/clans/search",{method:"POST",body:JSON.stringify({query:$("clanQuery").value})});$("clanResults").innerHTML=d.clans.map(c=>"<div class='row'><div><b>"+esc(c.name)+" ["+esc(c.tag)+"]</b><div class='muted'>"+c.memberCount+"/"+c.memberLimit+" · "+esc(c.description||"")+"</div></div><button class='primary' data-clan-action='join' data-tag='"+esc(c.tag)+"' "+(c.isFull?"disabled":"")+">ЗАЯВКА</button></div>").join("")||"<div class='muted'>Не знайдено.</div>"}catch(e){notifyToast(e.message)}}
+async function joinClan(tag){try{await api("/api/clans/request",{method:"POST",body:JSON.stringify({tag})});$("clanModal").classList.remove("show");notifyToast("Заявку відправлено. Власник або офіцер отримає сповіщення.")}catch(e){notifyToast(e.message)}}
+async function loadClanRequests(){try{const d=await api("/api/clans/requests",{method:"POST",body:"{}"});openClanModal("ЗАЯВКИ КЛАНУ",d.requests.map(x=>"<div class='row'><div><b>"+esc(x.nickname)+"</b><div class='muted'>ID "+esc(cleanId(x.id))+"</div></div><div class='actions'><button class='primary' data-clan-action='accept' data-id='"+esc(x.id)+"'>✓</button><button class='secondary' data-clan-action='decline' data-id='"+esc(x.id)+"'>×</button></div></div>").join("")||"<div class='muted'>Заявок немає.</div>")}catch(e){notifyToast(e.message)}}
+async function clanDecision(type,id){try{await api(type==="accept"?"/api/clans/accept":"/api/clans/decline",{method:"POST",body:JSON.stringify({userId:id})});await loadClan();await loadClanRequests()}catch(e){notifyToast(e.message)}}
+async function manageClanMember(action,id){
+  const prompts={
+    promote:"Надати гравцю роль офіцера?",
+    demote:"Зняти роль офіцера?",
+    kick:"Виключити гравця з клану?",
+    transfer:"Передати гравцю право власності на клан?"
+  };
+  if(!confirm(prompts[action]||"Підтвердити дію?"))return;
+  const endpoints={promote:"promote",demote:"demote",kick:"kick",transfer:"transfer"};
+  try{
+    await api("/api/clans/"+endpoints[action],{method:"POST",body:JSON.stringify({userId:id})});
+    await loadClan();
+    notifyToast(action==="transfer"?"Власника клану змінено.":"Дані клану оновлено.");
+  }catch(e){notifyToast(e.message)}
+}
+async function editClan(){
+  try{
+    const data=await api("/api/clans/my",{method:"POST",body:"{}"});
+    if(!data.clan)return;
+    openClanModal("РЕДАГУВАТИ КЛАН","<div class='form'><label>НАЗВА</label><input id='editClanName' maxlength='24' value='"+esc(data.clan.name)+"'><label>ОПИС</label><textarea id='editClanDescription' maxlength='120'>"+esc(data.clan.description||"")+"</textarea><label>ЛІМІТ УЧАСНИКІВ (5–50)</label><input id='editClanLimit' type='number' min='5' max='50' value='"+Number(data.clan.memberLimit||30)+"'><button class='primary' data-clan-action='save-edit'>ЗБЕРЕГТИ</button></div>");
+  }catch(e){notifyToast(e.message)}
+}
+async function saveClanEdit(){
+  try{
+    await api("/api/clans/update",{method:"POST",body:JSON.stringify({name:$("editClanName").value,description:$("editClanDescription").value,memberLimit:Number($("editClanLimit").value)})});
+    $("clanModal").classList.remove("show");
+    await loadClan();
+    notifyToast("Клан оновлено.");
+  }catch(e){notifyToast(e.message)}
+}
+async function leaveClan(){if(!confirm("Вийти з клану?"))return;try{await api("/api/clans/leave",{method:"POST"});me=(await api("/api/me")).user;currentClanTag=null;clanChatHistory=[];render();await loadClan();notifyToast("Ти вийшов із клану.")}catch(e){notifyToast(e.message)}}
+async function disbandClan(){if(!confirm("Розпустити клан?"))return;try{await api("/api/clans/disband",{method:"POST"});$("clanModal").classList.remove("show");me=(await api("/api/me")).user;currentClanTag=null;clanChatHistory=[];render();await loadClan();notifyToast("Клан розпущено.")}catch(e){notifyToast(e.message)}}
+$("clanBody").addEventListener("click",e=>{
+  const b=e.target.closest("[data-clan-action]");if(!b)return;
+  const a=b.dataset.clanAction;
+  if(a==="create")openCreateClan();
+  else if(a==="search")openClanSearch();
+  else if(a==="requests")loadClanRequests();
+  else if(a==="edit")editClan();
+  else if(a==="disband")disbandClan();
+  else if(a==="leave")leaveClan();
+  else if(["promote","demote","kick","transfer"].includes(a))manageClanMember(a,b.dataset.id);
+  else if(a==="send-chat")sendClanChat();
+});
+$("clanModalBody").addEventListener("click",e=>{
+  const b=e.target.closest("[data-clan-action]");if(!b)return;
+  const a=b.dataset.clanAction;
+  if(a==="submit-create")createClan();
+  else if(a==="submit-search")searchClans();
+  else if(a==="join")joinClan(b.dataset.tag);
+  else if(a==="accept")clanDecision("accept",b.dataset.id);
+  else if(a==="decline")clanDecision("decline",b.dataset.id);
+  else if(a==="save-edit")saveClanEdit();
+});
 async function loadInventory(){try{const d=await api("/api/inventory/my",{method:"POST",body:"{}"});$("invCount").textContent=d.inventory.length+" ITEMS";$("inventoryList").innerHTML=d.inventory.map(x=>"<div class='listcard'><b>"+esc(x.name)+"</b><div class='muted'>"+esc(x.rarity||"common")+"</div><button class='secondary' data-sell='"+esc(x.skinId)+"' style='margin-top:10px'>ПРОДАТИ</button></div>").join("")||"<div class='muted'>Порожньо.</div>"}catch{}}
 $("inventoryList").addEventListener("click",e=>{const b=e.target.closest("[data-sell]");if(!b)return;const price=Number(prompt("Ціна в Gold"));if(!price)return;api("/api/market/sell",{method:"POST",body:JSON.stringify({skinId:b.dataset.sell,price})}).then(()=>{loadInventory();loadMarket()}).catch(err=>alert(err.message))});
 async function loadMarket(){try{const d=await api("/api/market/items");$("marketList").innerHTML=d.items.map(x=>"<div class='row'><div><b>"+esc(x.skinName)+"</b><div class='muted'>"+esc(x.sellerNick)+" · "+esc(x.rarity)+"</div></div><div class='actions'><b>"+x.price+" G</b><button class='primary' data-buy='"+esc(x.lotId)+"'>КУПИТИ</button></div></div>").join("")||"<div class='muted'>Ринок порожній.</div>"}catch{}}
@@ -388,7 +539,7 @@ async function refreshAtlasIndicator(){
     if(!canTest()&&(selectedMode==="training"||selectedMode==="field_test")){
       selectedMode="hide_seek";localStorage.setItem("sx_mode",selectedMode);
     }
-    render();settings();loadFriends();loadClan();loadInventory();loadMarket();refreshAtlasIndicator();
+    render();settings();initSocialSocket();loadFriends();loadClan();loadInventory();loadMarket();refreshAtlasIndicator();
   }catch{location.href="/"}
 })();
 </script>
