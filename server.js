@@ -1432,7 +1432,7 @@ io.on("connection", socket => {
       modeName: cfg.name,
       map: cfg.map,
       socketId: socket.id,
-      playerPos: { x: 0, y: 0, z: 0 },
+      playerPos: mode === "training" ? { x: 5, y: 0, z: 5 } : { x: 0, y: 0, z: 0 },
       playerRotY: 0,
       bot: null,
       lastMoveAt: 0,
@@ -1464,7 +1464,7 @@ io.on("connection", socket => {
       mode: session.mode,
       modeName: session.modeName,
       map: session.map,
-      spawn: { x: 0, y: 0, z: 0 },
+      spawn: { ...session.playerPos },
       bot: session.bot
     });
     if (session.bot) socket.emit("training_state", { bot: session.bot });
@@ -1618,7 +1618,7 @@ io.on("connection", socket => {
   socket.on("training_reset", data => {
     const session = trainingSessions.get(socket.user?.id);
     if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
-    session.playerPos = { x: 0, y: 0, z: 0 };
+    session.playerPos = session.mode === "training" ? { x: 5, y: 0, z: 5 } : { x: 0, y: 0, z: 0 };
     session.playerRotY = 0;
     session.bot = null;
     io.to(session.id).emit("training_state", { bot: null, reset: true, message: "Тренування скинуто." });
