@@ -1511,9 +1511,22 @@ function startMatchWhenReady(io, match) {
   }
 
   match.started = true;
-  match.phase = "warmup";
   if (match.joinTimer) clearTimeout(match.joinTimer);
 
+  if (match.players.some(p => p.isBot)) {
+    match.phase = "game";
+    match.remaining = GAME_SECONDS;
+    io.to(match.id).emit("match_phase", { phase: "game", time: match.remaining, mode: match.mode, modeName: match.modeName });
+    io.to(match.id).emit("match_start_now", { mode: match.mode, modeName: match.modeName, testerBots: true });
+    match.timer = setInterval(() => {
+      match.remaining -= 1;
+      io.to(match.id).emit("timer_update", { time: match.remaining, phase: "game" });
+      if (match.remaining <= 0) finishMatch(io, match.id);
+    }, 1000);
+    return;
+  }
+
+  match.phase = "warmup";
   let warmup = WARMUP_SECONDS;
   match.phaseRemaining = warmup;
   io.to(match.id).emit("match_phase", {
