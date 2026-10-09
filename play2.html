@@ -1007,7 +1007,7 @@ $("reloadBtn").addEventListener("touchstart",e=>{e.preventDefault();startReload(
 $("fireBtn").addEventListener("touchstart",e=>{e.preventDefault();fireHeld=true;fireLoop()},{passive:false});
 $("fireBtn").addEventListener("touchend",()=>fireHeld=false);
 $("fireBtn").addEventListener("touchcancel",()=>fireHeld=false);
-let lookTouch=null,lookTouchId=null;
+let lookTouchId=null;
 document.addEventListener("touchstart",e=>{
   if(e.target.closest("#mobile")||lookTouchId!==null)return;
   const t=e.changedTouches[0];if(!t)return;
