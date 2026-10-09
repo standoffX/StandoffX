@@ -121,7 +121,7 @@ scene.add(new THREE.HemisphereLight(0xffffff,0x344252,1.15));
 const keyLight=new THREE.DirectionalLight(0xffffff,.7);
 keyLight.position.set(30,60,20);scene.add(keyLight);
 
-const controls=new PointerLockControls(camera,document.body);
+const controls=new PointerLockControls(camera,renderer.domElement);
 let canControl=false;
 let mouseSensitivity=1;
 try{mouseSensitivity=Number(JSON.parse(localStorage.getItem("sx_settings")||"{}").sensitivity)||1}catch{}
