@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>document.documentElement.dataset.sxDevice=(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||((navigator.maxTouchPoints>1)&&matchMedia("(pointer: coarse)").matches)||(innerWidth<=760&&navigator.maxTouchPoints>0))?"mobile":"desktop";</script>
 <title>StandoffX</title>
 <style>
 *{box-sizing:border-box}
@@ -246,6 +247,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
   <div class="playarea">
     <div class="playwrap">
       <button class="playbutton" id="playBtn"><span>▶ &nbsp; ГРАТИ</span></button>
+      <button class="secondary" id="resumeMatchBtn" type="button" style="display:none;min-width:220px;min-height:38px;border-color:#91d8fb;color:#dff6ff;font-weight:900">↻ ПЕРЕПІДКЛЮЧИТИСЯ ДО МАТЧУ</button>
       <div class="muted" id="selectedModeText">СОЮЗНИКИ</div><div class="muted" id="selectedMapText" style="font-size:9px;letter-spacing:1px">HILL TOWN</div>
     </div>
   </div>
@@ -268,7 +270,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
 
 <section id="stats" class="screen"><div class="sectionhead"><h2>СТАТИСТИКА</h2></div><div class="cardgrid"><div class="statcard"><small>XP</small><strong id="statsXP">0</strong></div><div class="statcard"><small>GOLD</small><strong id="statsGold">0</strong></div><div class="statcard"><small>COMPETITIVE MMR</small><strong id="statsComp">1000</strong></div><div class="statcard"><small>ALLIES MMR</small><strong id="statsAllies">1000</strong></div></div></section>
 
-<section id="settings" class="screen"><div class="sectionhead"><h2>НАЛАШТУВАННЯ</h2></div><div class="panel panelbody"><h3 style="margin:0 0 8px">ТЕМА ІНТЕРФЕЙСУ</h3><div class="muted">Обери один із трьох неонових стилів. Вибір зберігається на цьому пристрої.</div><div class="theme-picker"><button class="theme-option" data-theme-choice="cyan">01 · CYBER CYAN</button><button class="theme-option" data-theme-choice="violet">02 · NEON VIOLET</button><button class="theme-option" data-theme-choice="red">03 · RED ALERT</button></div><h3>КЕРУВАННЯ</h3><label>Чутливість миші <input id="sens" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">ADS <input id="ads" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">Crosshair <input id="crossSize" type="range" min="8" max="36" step="1" style="width:100%"></label><label style="display:block;margin-top:16px">Gap <input id="crossGap" type="range" min="0" max="12" step="1" style="width:100%"></label>
+<section id="settings" class="screen"><div class="sectionhead"><h2>НАЛАШТУВАННЯ</h2></div><div class="panel panelbody"><h3 style="margin:0 0 8px">ТЕМА ІНТЕРФЕЙСУ</h3><div class="muted">Обери один із трьох неонових стилів. Вибір зберігається на цьому пристрої.</div><div class="theme-picker"><button class="theme-option" data-theme-choice="cyan">01 · CYBER CYAN</button><button class="theme-option" data-theme-choice="violet">02 · NEON VIOLET</button><button class="theme-option" data-theme-choice="red">03 · RED ALERT</button></div><div id="desktopControlsSettings"><h3>КЕРУВАННЯ ПК</h3><label>Чутливість миші <input id="sens" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">ADS <input id="ads" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">Crosshair <input id="crossSize" type="range" min="8" max="36" step="1" style="width:100%"></label><label style="display:block;margin-top:16px">Gap <input id="crossGap" type="range" min="0" max="12" step="1" style="width:100%"></label></div>
 <section class="layout-editor" id="mobileLayoutEditor">
   <div class="layout-editor-head">
     <div><h3>МОБІЛЬНЕ КЕРУВАННЯ</h3><div class="layout-help">Увімкни редагування та перетягуй кнопки на макеті. Позиції зберігаються на цьому пристрої.</div></div>
@@ -283,12 +285,23 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
         <button type="button" class="layout-control" data-layout-control="fire" aria-label="Вогонь">ВОГОНЬ</button>
         <button type="button" class="layout-control" data-layout-control="jump" aria-label="Стрибок">↑</button>
         <button type="button" class="layout-control" data-layout-control="reload" aria-label="Перезаряджання">R</button>
-        <button type="button" class="layout-control" data-layout-control="weapon" aria-label="Зброя">ЗБРОЯ</button>
+        <button type="button" class="layout-control" data-layout-control="crouch" aria-label="Присідання">CTRL</button>
+        <button type="button" class="layout-control" data-layout-control="sprint" aria-label="Біг">SPRINT</button>
+        <button type="button" class="layout-control" data-layout-control="map" aria-label="Карта">MAP</button>
       </div>
       <div class="layout-status" id="layoutStatus" role="status">Редактор вимкнений. Натисни «Редагувати», щоб переміщати кнопки.</div>
     </div>
     <div class="layout-options">
-      <label>РОЗМІР КНОПОК <output id="layoutSizeValue">100%</output><input id="layoutSize" type="range" min="70" max="140" step="5" value="100"></label>
+      <label>БАЗОВИЙ РОЗМІР <output id="layoutSizeValue">100%</output><input id="layoutSize" type="range" min="50" max="150" step="5" value="100"></label>
+      <div class="individual-size-list"><b>РОЗМІР КОЖНОЇ КНОПКИ</b>
+        <label>Джойстик <output id="sizeMoveValue">100%</output><input data-size-control="move" id="sizeMove" type="range" min="50" max="150" step="5" value="100"></label>
+        <label>Вогонь <output id="sizeFireValue">100%</output><input data-size-control="fire" id="sizeFire" type="range" min="50" max="150" step="5" value="100"></label>
+        <label>Стрибок <output id="sizeJumpValue">100%</output><input data-size-control="jump" id="sizeJump" type="range" min="50" max="150" step="5" value="100"></label>
+        <label>Перезарядка <output id="sizeReloadValue">100%</output><input data-size-control="reload" id="sizeReload" type="range" min="50" max="150" step="5" value="100"></label>
+        <label>Присідання <output id="sizeCrouchValue">100%</output><input data-size-control="crouch" id="sizeCrouch" type="range" min="50" max="150" step="5" value="100"></label>
+        <label>Біг <output id="sizeSprintValue">100%</output><input data-size-control="sprint" id="sizeSprint" type="range" min="50" max="150" step="5" value="100"></label>
+        <label>Карта <output id="sizeMapValue">100%</output><input data-size-control="map" id="sizeMap" type="range" min="50" max="150" step="5" value="100"></label>
+      </div>
       <label>ПРОЗОРІСТЬ <output id="layoutOpacityValue">82%</output><input id="layoutOpacity" type="range" min="35" max="100" step="5" value="82"></label>
       <div class="layout-help">Перетягни кнопки та налаштуй їхній розмір і прозорість.</div>
       <button type="button" class="secondary layout-reset" id="layoutReset">СКИНУТИ РОЗКЛАДКУ</button>
@@ -338,22 +351,39 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
   const status=document.getElementById("layoutStatus");
   const size=document.getElementById("layoutSize");
   const opacity=document.getElementById("layoutOpacity");
+  const sizeInputs=[...root.querySelectorAll("[data-size-control]")];
   const controls=[...root.querySelectorAll("[data-layout-control]")];
-  const defaults={move:[14,70],aim:[50,50],fire:[85,68],jump:[86,39],reload:[73,83],weapon:[86,18]};
+  const defaults={move:[14,70],aim:[50,50],fire:[85,68],jump:[86,39],reload:[73,83],crouch:[86,55],sprint:[76,28],map:[18,26],weapon:[86,18]};
   const key="sx_mobile_hud_layout_v1";
   let editing=false, active=null;
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   function read(){try{return JSON.parse(localStorage.getItem(key)||"{}")}catch{return {}}}
-  function save(){const data={size:Number(size.value),opacity:Number(opacity.value),positions:{}};controls.forEach(el=>{data.positions[el.dataset.layoutControl]=[parseFloat(el.style.left)||defaults[el.dataset.layoutControl][0],parseFloat(el.style.top)||defaults[el.dataset.layoutControl][1]]});try{localStorage.setItem(key,JSON.stringify(data))}catch{}}
+  function save(){
+    const data={size:Number(size.value),opacity:Number(opacity.value),sizes:{},positions:{}};
+    sizeInputs.forEach(input=>{data.sizes[input.dataset.sizeControl]=Number(input.value)});
+    controls.forEach(el=>{const id=el.dataset.layoutControl;data.positions[id]=[Number.isFinite(parseFloat(el.style.left))?parseFloat(el.style.left):defaults[id][0],Number.isFinite(parseFloat(el.style.top))?parseFloat(el.style.top):defaults[id][1]]});
+    try{localStorage.setItem(key,JSON.stringify(data))}catch{}
+  }
   function apply(){
     const data=read();
-    if(data.size)size.value=clamp(Number(data.size),70,140);
+    if(data.size)size.value=clamp(Number(data.size),50,150);
     if(data.opacity)opacity.value=clamp(Number(data.opacity),35,100);
     stage.style.setProperty("--control-scale",Number(size.value)/100);
     stage.style.setProperty("--control-opacity",Number(opacity.value)/100);
     document.getElementById("layoutSizeValue").textContent=size.value+"%";
     document.getElementById("layoutOpacityValue").textContent=opacity.value+"%";
-    controls.forEach(el=>{const p=data.positions?.[el.dataset.layoutControl];if(p&&p.length===2){el.style.left=clamp(Number(p[0]),5,95)+"%";el.style.top=clamp(Number(p[1]),8,92)+"%"}});
+    sizeInputs.forEach(input=>{
+      const id=input.dataset.sizeControl;
+      input.value=clamp(Number(data.sizes?.[id]??input.value),50,150);
+      const output=document.getElementById("size"+id[0].toUpperCase()+id.slice(1)+"Value");
+      if(output)output.textContent=input.value+"%";
+    });
+    controls.forEach(el=>{
+      const id=el.dataset.layoutControl,p=data.positions?.[id];
+      el.style.setProperty("--control-scale",Number(data.sizes?.[id]??size.value)/100);
+      el.style.opacity=Number(opacity.value)/100;
+      if(p&&p.length===2){el.style.left=clamp(Number(p[0]),5,95)+"%";el.style.top=clamp(Number(p[1]),8,92)+"%"}
+    });
   }
   function setEditing(value){editing=value;root.classList.toggle("editing",editing);toggle.textContent=editing?"ГОТОВО":"РЕДАГУВАТИ";toggle.setAttribute("aria-pressed",String(editing));controls.forEach(el=>el.tabIndex=editing?0:-1);status.textContent=editing?"Перетягни кнопку мишкою або пальцем. Натисни «Готово», щоб завершити.":"Редактор вимкнений. Натисни «Редагувати», щоб переміщати кнопки."}
   controls.forEach(el=>{
@@ -366,8 +396,9 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
   });
   toggle.addEventListener("click",()=>setEditing(!editing));
   size.addEventListener("input",()=>{apply();save()});
+  sizeInputs.forEach(input=>input.addEventListener("input",()=>{apply();save()}));
   opacity.addEventListener("input",()=>{apply();save()});
-  document.getElementById("layoutReset").addEventListener("click",()=>{try{localStorage.removeItem(key)}catch{}controls.forEach(el=>{el.style.left="";el.style.top=""});size.value=100;opacity.value=82;apply();save();status.textContent="Розкладку скинуто."});
+  document.getElementById("layoutReset").addEventListener("click",()=>{try{localStorage.removeItem(key)}catch{}controls.forEach(el=>{el.style.left="";el.style.top=""});size.value=100;opacity.value=82;sizeInputs.forEach(input=>input.value=100);apply();save();status.textContent="Розкладку скинуто."});
   apply();
 })();
 </script>
