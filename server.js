@@ -385,6 +385,7 @@ function normalizeClanState(rawClans) {
 
 for (const user of users) ensureUserShape(user);
 migratePlayerIds();
+saveUsers();
 
 if (users.some(u => u.clan === "67") && !clans["67"]) {
   clans["67"] = {
@@ -2476,6 +2477,7 @@ app.post("/api/admin/users/create", requireAdmin, (req, res) => {
     isVerified:false, isBanned:false, isAdmin:Boolean(req.body.isAdmin), isTester:Boolean(req.body.isTester),
     friendsList:[], incomingRequests:[], blocked:[], usedPromos:[]
   };
+  ensureUserShape(user);
   users.push(user);
   inventory[id] = [];
   saveUsers(); saveInventory();
