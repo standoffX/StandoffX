@@ -113,7 +113,9 @@ assert.match(server, /user\.uuid = crypto\.randomUUID\(\)/, "legacy accounts mus
 assert.match(server, /users\.find\(candidate => candidate\.uuid === id\)/, "login must accept the unique UUID");
 assert.match(server, /createSession\(user\.uuid \|\| user\.id\)/, "sessions must use UUID where available");
 assert.doesNotMatch(server, /Такий нік вже зайнятий/, "nicknames must be allowed to repeat");
-assert.match(server, /while \(users\.some\(u => String\(u\.id\) === id\)\)/, "new public IDs must be unique");
+assert.match(server, /function newPlayerId\(\)/, "new public IDs must be generated uniquely");
+assert.match(server, /function migratePlayerIds\(\)/, "legacy duplicate player IDs must be repaired");
+assert.match(server, /playerIdExists\(nextIdRaw\)/, "admin edits must not create duplicate player IDs");
 assert.match(server, /const PLAYABLE_MAPS = Object\.freeze/, "matchmaking must validate map selections");
 assert.match(server, /p\.mode === entry\.mode && p\.map === entry\.map/, "players on different maps must not be mixed into one queue");
 assert.match(server, /createMatch\(io, mode, map\)/, "the selected map must reach the match");
