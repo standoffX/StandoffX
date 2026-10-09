@@ -1330,9 +1330,15 @@ const SPAWNS = [
   { x: 15, y: 0, z: 5 },
   { x: 15, y: 0, z: 25 }
 ];
+const HILL_TOWN_SPAWNS = [
+  { x: -20, y: 0, z: -14 },
+  { x: 20, y: 0, z: -14 },
+  { x: -20, y: 0, z: 14 },
+  { x: 20, y: 0, z: 14 }
+];
 
 function getModeConfig(mode) {
-  return MODE_CONFIGS[mode] || MODE_CONFIGS.hide_seek;
+  return MODE_CONFIGS[mode] || MODE_CONFIGS.allies;
 }
 
 function getRequiredPlayers(mode) {
@@ -1387,6 +1393,7 @@ function createMatch(io, mode, mapId = "M3_Maze") {
   const cfg = getModeConfig(mode);
   const matchId = "match_" + Date.now() + "_" + crypto.randomBytes(2).toString("hex");
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
+  const matchSpawns = safeMapId === "HILL_TOWN" ? HILL_TOWN_SPAWNS : SPAWNS;
 
   const match = {
     id: matchId,
@@ -1405,8 +1412,8 @@ function createMatch(io, mode, mapId = "M3_Maze") {
       score: 0,
       kills: 0,
       deaths: 0,
-      spawn: { ...SPAWNS[i] },
-      pos: { ...SPAWNS[i] },
+      spawn: { ...matchSpawns[i % matchSpawns.length] },
+      pos: { ...matchSpawns[i % matchSpawns.length] },
       rotY: 0,
       anim: "Idle",
       lastMoveAt: 0,
@@ -1990,7 +1997,7 @@ io.on("connection", socket => {
     if (playerMatch(user.uuid || user.id)) return socket.emit("search_error", { message: "Ти вже в матчі." });
     if (matchmakingQueue.some(p => p.userId === user.id)) return;
 
-    const mode = Object.prototype.hasOwnProperty.call(MODE_CONFIGS, data?.mode) ? data.mode : "hide_seek";
+    const mode = Object.prototype.hasOwnProperty.call(MODE_CONFIGS, data?.mode) ? data.mode : "allies";
     const map = normalizeMapId(data?.map);
     removeFromQueue(user.uuid || user.id);
 
