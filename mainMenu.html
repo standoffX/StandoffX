@@ -395,7 +395,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
     el.addEventListener("keydown",e=>{if(!editing||!["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.key))return;e.preventDefault();const r=stage.getBoundingClientRect(),step=e.shiftKey?5:1;let x=parseFloat(el.style.left)||defaults[el.dataset.layoutControl][0],y=parseFloat(el.style.top)||defaults[el.dataset.layoutControl][1];if(e.key==="ArrowLeft")x-=step;if(e.key==="ArrowRight")x+=step;if(e.key==="ArrowUp")y-=step;if(e.key==="ArrowDown")y+=step;el.style.left=clamp(x,5,95)+"%";el.style.top=clamp(y,8,92)+"%";save()});
   });
   toggle.addEventListener("click",()=>setEditing(!editing));
-  size.addEventListener("input",()=>{sizeInputs.forEach(input=>input.value=size.value);apply();save()});
+  size.addEventListener("input",()=>{sizeInputs.forEach(input=>input.value=size.value);const data=read();data.size=Number(size.value);data.sizes={};try{localStorage.setItem(key,JSON.stringify(data))}catch{}apply();save()});
   sizeInputs.forEach(input=>input.addEventListener("input",()=>{apply();save()}));
   opacity.addEventListener("input",()=>{apply();save()});
   document.getElementById("layoutReset").addEventListener("click",()=>{try{localStorage.removeItem(key)}catch{}controls.forEach(el=>{el.style.left="";el.style.top=""});size.value=100;opacity.value=82;sizeInputs.forEach(input=>input.value=100);apply();save();status.textContent="Розкладку скинуто."});
