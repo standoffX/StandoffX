@@ -1924,6 +1924,7 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
   }
 
   const oldId = u.id;
+  const previousClanForMove = u.clan || null;
   if (!isMaster) {
     if (nextIdRaw === ADMIN_ID) {
       return res.status(400).json({ success: false, message: "Dev_01 зарезервований для master." });
@@ -1956,17 +1957,27 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
     u.isBanned = false;
   }
 
-  if (req.body.clan !== undefined) {
-    const previousClan = u.clan;
-    const desiredClan = nextClan || null;
-    if (previousClan && previousClan !== desiredClan && clans[previousClan]) {
-      clans[previousClan].officers = (clans[previousClan].officers || []).filter(id => id !== u.id);
-      clans[previousClan].requests = (clans[previousClan].requests || []).filter(id => id !== u.id);
-    }
-    u.clan = desiredClan;
-  }
+  if (req.body.clan !== undefined) u.clan = nextClan || null;
 
   replaceUserIdReferences(oldId, u.id);
+
+  if (req.body.clan !== undefined && previousClanForMove && previousClanForMove !== u.clan && clans[previousClanForMove]) {
+    const previousClan = clans[previousClanForMove];
+    previousClan.officers = (previousClan.officers || []).filter(id => id !== u.id && id !== oldId);
+    previousClan.requests = (previousClan.requests || []).filter(id => id !== u.id && id !== oldId);
+    if (previousClan.ownerId === u.id) {
+      const nextOwner = users
+        .filter(member => member.id !== u.id && member.clan === previousClanForMove)
+        .sort((a, b) => ((previousClan.officers || []).includes(a.id) ? 0 : 1) - ((previousClan.officers || []).includes(b.id) ? 0 : 1))[0];
+      if (nextOwner) {
+        previousClan.ownerId = nextOwner.id;
+        previousClan.officers = (previousClan.officers || []).filter(id => id !== nextOwner.id);
+      } else {
+        delete clans[previousClanForMove];
+      }
+    }
+  }
+
   ensureUserShape(u);
   saveUsers();
   saveClans();
