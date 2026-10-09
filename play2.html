@@ -20,7 +20,9 @@
 #progressWrap{margin:15px auto 0;max-width:360px;height:5px;background:#202a38;border-radius:99px;overflow:hidden}#progress{height:100%;width:0;background:#4d8fff;transition:width .15s}
 #clickHint{margin-top:16px;color:#9aa7b8;font-size:11px}
 #results{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;background:#05080def}.resultBox{padding:28px;width:min(420px,90vw);background:#111821;border:1px solid #ffffff14;border-radius:11px;text-align:center}.resultBox h2{margin:0 0 12px}.resultBox .reward{font-size:20px;font-weight:900}.resultBox button{margin-top:18px;width:100%;height:44px;border:0;border-radius:6px;background:#327cff;color:white;font-weight:900}
-#mobile{display:none;position:fixed;inset:0;z-index:20;pointer-events:none}.stick{position:absolute;left:20px;bottom:25px;width:125px;height:125px;border-radius:50%;background:#ffffff0d;border:1px solid #ffffff1c;pointer-events:auto;touch-action:none}.stick i{position:absolute;left:35px;top:35px;width:55px;height:55px;border-radius:50%;background:#ffffff22}.mbtn{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid #ffffff1d;background:#0b111bd9;color:#fff;font-size:10px;font-weight:950;pointer-events:auto;touch-action:none}.fire{right:20px;bottom:64px;background:#3e6fb3e6}.jump{right:100px;bottom:145px}.reload{right:102px;bottom:64px}.leave{right:20px;top:20px;width:48px;height:40px;border-radius:6px}
+#mobile{display:none;position:fixed;inset:0;z-index:20;pointer-events:none}
+#leaveGameDesktop{position:fixed;right:14px;top:14px;z-index:25;pointer-events:auto;border:1px solid #ffffff28;background:#0b111bd9;color:#fff;border-radius:6px;padding:10px 13px;font-size:11px;font-weight:900;cursor:pointer}
+@media(max-width:800px),(pointer:coarse){#leaveGameDesktop{display:none}}.stick{position:absolute;left:20px;bottom:25px;width:125px;height:125px;border-radius:50%;background:#ffffff0d;border:1px solid #ffffff1c;pointer-events:auto;touch-action:none}.stick i{position:absolute;left:35px;top:35px;width:55px;height:55px;border-radius:50%;background:#ffffff22}.mbtn{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid #ffffff1d;background:#0b111bd9;color:#fff;font-size:10px;font-weight:950;pointer-events:auto;touch-action:none}.fire{right:20px;bottom:64px;background:#3e6fb3e6}.jump{right:100px;bottom:145px}.reload{right:102px;bottom:64px}.leave{right:20px;top:20px;width:48px;height:40px;border-radius:6px}
 #trainingControls button:hover{filter:brightness(1.15)}
 @media(max-width:800px){#trainingControls{top:auto;left:8px;right:auto;bottom:190px;width:155px;padding:8px}.fire{bottom:44px}}
 @media(max-width:800px),(pointer:coarse){#mobile{display:block}#hint{display:none}.top{top:8px}.players{grid-template-columns:1fr}.panel{max-height:90vh;overflow:auto}}
@@ -50,6 +52,7 @@
 </div>
 
 <div id="results"><div class="resultBox"><h2 id="resultTitle">МАТЧ ЗАВЕРШЕНО</h2><div id="resultText" class="reward"></div><button id="menuResult">У МЕНЮ</button></div></div>
+<button id="leaveGameDesktop" type="button">← МЕНЮ</button>
 <div id="trainingControls" style="display:none;position:fixed;right:14px;top:72px;width:190px;z-index:15;padding:12px;background:#090f1cdd;border:1px solid #ffffff20;border-radius:8px;pointer-events:auto">
   <b style="font-size:11px;letter-spacing:1px">TEST LAB</b>
   <div id="botStatus" style="margin:8px 0;color:#9baac0;font-size:10px">Бота ще немає</div>
@@ -68,7 +71,7 @@
   <button id="fireBtn" class="mbtn fire">FIRE</button>
   <button id="jumpBtn" class="mbtn jump">JUMP</button>
   <button id="reloadBtn" class="mbtn reload">RELOAD</button>
-  <button class="mbtn leave" onclick="location.href='/game'">×</button>
+  <button id="leaveGameMobile" class="mbtn leave" type="button">×</button>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -359,7 +362,21 @@ function setOverlayGame(){
   $("clickHint").textContent="Клікни для мишки. W A S D — рух.";
   if(/Android|iPhone|iPad/i.test(navigator.userAgent)) $("overlay").style.display="none";
 }
-$("menuResult").onclick=()=>location.href="/game";
+function leaveGame(){
+  try{
+    if(socket && socket.connected){
+      if(isTrainingMode)socket.emit("end_training",{trainingId});
+      else socket.emit("leave_match",{matchId});
+    }
+  }catch{}
+  setTimeout(()=>{
+    try{socket?.disconnect()}catch{}
+    location.href="/game";
+  },180);
+}
+$("menuResult").addEventListener("click",leaveGame);
+$("leaveGameDesktop").addEventListener("click",leaveGame);
+$("leaveGameMobile").addEventListener("click",leaveGame);
 $("spawnBot").addEventListener("click",()=>socket.emit("training_spawn_bot",{trainingId}));
 $("resetTraining").addEventListener("click",()=>{
   if(mode==="training")player.position.set(5,0,5);else player.position.set(0,0,0);player.rotationY=0;velocityY=0;jumping=false;
@@ -402,7 +419,8 @@ socket.on("init_match",data=>{
   myRole=data.me?.role||"runner";myTeam=data.me?.team||null;score=data.me?.score||0;hp=data.me?.hp||100;
   $("modeName").textContent=data.modeName||"MATCH";
   ensurePlayerVisual();
-  if(data.me?.spawn)player.position.set(data.me.spawn.x||0,data.me.spawn.y||0,data.me.spawn.z||0);
+  const authoritativePosition=data.me?.position||data.me?.spawn;
+  if(authoritativePosition)player.position.set(authoritativePosition.x||0,authoritativePosition.y||0,authoritativePosition.z||0);
   (data.players||[]).forEach(p=>{if(String(p.userId)!==String(myId))applyEnemy(p)});
   updateVisual();
 });
