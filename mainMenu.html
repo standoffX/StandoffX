@@ -253,7 +253,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
   <div class="playarea">
     <div class="playwrap">
       <button class="playbutton" id="playBtn"><span>▶ &nbsp; ГРАТИ</span></button>
-      <div class="muted" id="selectedModeText">HIDE &amp; SEEK</div><div class="muted" id="selectedMapText" style="font-size:9px;letter-spacing:1px">M3 MAZE</div>
+      <div class="muted" id="selectedModeText">СОЮЗНИКИ</div><div class="muted" id="selectedMapText" style="font-size:9px;letter-spacing:1px">HILL TOWN</div>
     </div>
   </div>
   <div class="homefooter"><span>STANDOFFX</span><span id="onlineStatus">ONLINE</span></div>
@@ -325,7 +325,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
   <button class="modebtn" data-mode="team_fight"><strong>КОМАНДНИЙ БІЙ</strong><span class="mode-desc">Дві команди · швидкі раунди</span></button>
   <button class="modebtn testonly" data-mode="training" id="trainingMode"><strong>ТРЕНУВАННЯ</strong><span class="mode-desc">Тестування зброї та керування</span></button>
   <button class="modebtn testonly" data-mode="field_test" id="fieldTestMode"><strong>ВІЛЬНИЙ РЕЖИМ</strong><span class="mode-desc">Вільна арена для руху та огляду</span></button>
-</div><h3 style="margin:10px 0 4px">ВИБІР КАРТИ</h3><div class="mapcards" id="mapBar"><button class="map-option active" data-map="M3_Maze"><b>M3 MAZE</b><span>Основна 3D-карта</span></button><button class="map-option" data-map="FIELD_ARENA"><b>FIELD ARENA</b><span>Відкрита арена з укриттями</span></button><button class="map-option" data-map="NEON_YARD"><b>NEON YARD</b><span>Неонова арена з перешкодами</span></button></div><button class="primary" id="confirmModeBtn">ПОЧАТИ ПОШУК МАТЧУ</button></div></div>
+</div><h3 style="margin:10px 0 4px">ВИБІР КАРТИ</h3><div class="mapcards" id="mapBar"><button class="map-option active" data-map="HILL_TOWN"><b>HILL TOWN</b><span>Модульна карта з будівлями, арками та укриттями</span></button><button class="map-option" data-map="M3_Maze"><b>M3 MAZE</b><span>Стара основна карта</span></button><button class="map-option" data-map="FIELD_ARENA"><b>FIELD ARENA</b><span>Відкрита тренувальна арена</span></button><button class="map-option" data-map="NEON_YARD"><b>NEON YARD</b><span>Неонова арена</span></button></div><button class="primary" id="confirmModeBtn">ПОЧАТИ ПОШУК МАТЧУ</button></div></div>
 <div id="searchModal" class="modal"><div class="modalbox"><div class="modalhead"><span id="searchTitle">ПОШУК МАТЧУ</span><button class="close" data-close="searchModal">×</button></div><div id="searchMode" class="muted">HIDE &amp; SEEK</div><div id="queue" class="queuecount">1 / 3</div><div id="searchText" class="muted">Очікування гравців...</div><div id="searchPlayers" class="waitplayers"></div><button class="danger" id="cancelSearch">СКАСУВАТИ</button></div></div>
 <div id="clanModal" class="modal"><div class="modalbox"><div class="modalhead"><span id="clanModalTitle">КЛАН</span><button class="close" data-close="clanModal">×</button></div><div id="clanModalBody"></div></div></div>
 <div id="appToast" role="status" aria-live="polite"></div>
@@ -377,12 +377,15 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
 const $=id=>document.getElementById(id);
 let me=null,socket=null,searching=false;
 let socialSocket=null,currentClanTag=null,clanChatHistory=[],toastTimer=null;
-let selectedMode=localStorage.getItem("sx_mode")||"hide_seek";
-let selectedMap=localStorage.getItem("sx_map")||"M3_Maze";
+let selectedMode=localStorage.getItem("sx_mode")||"allies";
+if(selectedMode==="hide_seek")selectedMode="allies";
+if(!["allies","team_fight","training","field_test"].includes(selectedMode))selectedMode="allies";
+let selectedMap=localStorage.getItem("sx_map")||"HILL_TOWN";
+if(selectedMap==="M3_Maze")selectedMap="HILL_TOWN";
 let selectedTheme=localStorage.getItem("sx_theme")||"cyan";
 const THEMES=["cyan","violet","red"];
-const MAPS={M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD"};
-const MODES={hide_seek:"HIDE & SEEK",team_fight:"TEAM FIGHT",training:"ТРЕНИРОВКА",field_test:"FIELD TEST"};
+const MAPS={HILL_TOWN:"HILL TOWN",M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD"};
+const MODES={allies:"СОЮЗНИКИ",team_fight:"КОМАНДНИЙ БІЙ",training:"ТРЕНУВАННЯ",field_test:"ВІЛЬНИЙ РЕЖИМ"};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const cleanId=id=>String(id||"").replace(/^ID_/i,"");
 async function api(url,opt={}){
@@ -514,7 +517,7 @@ function openPlay(){
     return;
   }
   if(searching)return;
-  $("searchModal").classList.add("show");$("searchTitle").textContent="ПОШУК МАТЧУ";$("searchMode").textContent=MODES[selectedMode];$("queue").textContent="1 / "+(selectedMode==="team_fight"?4:3);
+  $("searchModal").classList.add("show");$("searchTitle").textContent="ПОШУК МАТЧУ";$("searchMode").textContent=MODES[selectedMode];$("queue").textContent="1 / "+((selectedMode==="team_fight"||selectedMode==="allies")?4:3);
   $("searchText").textContent="Очікуємо гравців...";renderWaitPlayers([{nickname:me.nickname,userId:me.id,connected:true}]);searching=true;
   socket=io({withCredentials:true});
   socket.on("connect_error",()=>{cancelSearch();alert("Сервер недоступний.")});
@@ -816,7 +819,7 @@ async function refreshAtlasIndicator(){
   try{
     me=(await api("/api/me")).user;
     if(!canTest()&&(selectedMode==="training"||selectedMode==="field_test")){
-      selectedMode="hide_seek";localStorage.setItem("sx_mode",selectedMode);
+      selectedMode="allies";localStorage.setItem("sx_mode",selectedMode);
     }
     render();settings();initSocialSocket();loadFriends();loadClan();loadInventory();loadMarket();refreshAtlasIndicator();
   }catch{location.href="/"}
