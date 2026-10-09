@@ -55,8 +55,37 @@ function setTab(name){document.querySelectorAll(".tab").forEach(x=>x.classList.t
 function fillClanOptions(){$("fClan").innerHTML="<option value=''>Без клану</option>"+Object.values(clans).map(c=>"<option value='"+esc(c.tag)+"'>["+esc(c.tag)+"] "+esc(c.name)+"</option>").join("")}
 function fillEditor(u){creating=!u;selectedId=u?.id||null;$("editorNotice").textContent=creating?"Створення нового аккаунта":"Редагування: "+(u?.nickname||"");$("fId").value=creating?"":cleanId(u.id);$("fNick").value=creating?"":u.nickname||"";$("fPassword").value="";$("fGold").value=creating?0:u.gold||0;$("fXP").value=creating?0:u.XP||0;$("fComp").value=creating?1000:u.MMRCompetitive||1000;$("fAllies").value=creating?1000:u.MMRAllies||1000;$("fClan").value=creating?"":(u.clan||"");$("fAdmin").checked=creating?false:Boolean(u.isAdmin);$("fBan").checked=creating?false:Boolean(u.isBanned);$("fVerified").checked=creating?false:Boolean(u.isVerified);$("fTester").checked=creating?false:Boolean(u.isTester);$("deleteUser").style.display=creating?"none":"inline-block";$("selectedInfo").textContent=creating?"Новий аккаунт":("Status: "+(u.status?"ONLINE":"OFFLINE")+" · ID "+cleanId(u.id));setTab("editor")}
 function renderUsers(){const q=$("search").value.toLowerCase();$("rows").innerHTML=users.filter(u=>(String(u.id)+" "+String(u.nickname)).toLowerCase().includes(q)).map(u=>"<tr><td>"+esc(cleanId(u.id))+"</td><td>"+esc(u.nickname)+"</td><td>"+u.gold+"</td><td>"+u.XP+"</td><td>"+esc(u.clan||"—")+"</td><td>"+(u.isTester?"✓":"—")+"</td><td>"+(u.isAdmin?"✓":"—")+"</td><td>"+(u.isBanned?"<span class='warn'>YES</span>":"—")+"</td><td><button class='secondary' data-edit='"+esc(u.id)+"'>EDIT</button></td></tr>").join("")||"<tr><td colspan='9' class='muted'>Нічого не знайдено.</td></tr>"}
-function renderClans(){$("clanList").innerHTML=Object.values(clans).map(c=>{const members=users.filter(u=>u.clan===c.tag);const names=members.map(u=>esc(u.nickname)+" <span class='muted'>("+esc(cleanId(u.id))+")</span>").join(", ")||"<span class='muted'>Немає учасників</span>";return "<div class='clanrow'><b>"+esc(c.name)+" ["+esc(c.tag)+"]</b><div class='muted' style='margin:5px 0'>"+members.length+"/"+(c.memberLimit||30)+" · owner "+esc(cleanId(c.ownerId))+"</div><div>"+names+"</div></div>"}).join("")||"<div class='muted'>Кланів немає.</div>"}
+function renderClans(){$("clanList").innerHTML=Object.values(clans).map(c=>{const members=users.filter(u=>u.clan===c.tag);const names=members.map(u=>esc(u.nickname)+" <span class='muted'>("+esc(cleanId(u.id))+")</span>").join(", ")||"<span class='muted'>Немає учасників</span>";return "<div class='clanrow'><b>"+esc(c.name)+" ["+esc(c.tag)+"]</b><div class='muted' style='margin:5px 0'>"+members.length+"/"+(c.memberLimit||30)+" · owner "+esc(cleanId(c.ownerId))+"</div><div style='margin-bottom:10px'>"+names+"</div><div class='toolbar'><button class='secondary' data-clan-admin='edit' data-tag='"+esc(c.tag)+"'>РЕДАГУВАТИ</button><button class='danger' data-clan-admin='delete' data-tag='"+esc(c.tag)+"'>ВИДАЛИТИ КЛАН</button></div></div>"}).join("")||"<div class='muted'>Кланів немає.</div>"}
 async function load(){const o=await api("/api/admin/overview");$("usersN").textContent=o.users;$("onlineN").textContent=o.online;$("clansN").textContent=o.clans;$("marketN").textContent=o.market;$("messagesN").textContent=o.messages??"—";$("testersN").textContent=(o.testers??"—");$("storage").textContent=o.atlas?.connected?"ATLAS CONNECTED":(o.atlas?.state==="not_configured"?"ATLAS NOT CONFIGURED":"ATLAS: "+(o.atlas?.state||o.storage));const d=await api("/api/admin/database");users=d.users||[];clans=d.clans||{};fillClanOptions();renderUsers();renderClans()}
+$("clanList").addEventListener("click",async e=>{
+  const button=e.target.closest("[data-clan-admin]");
+  if(!button)return;
+  const tag=String(button.dataset.tag||"").toUpperCase();
+  const clan=clans[tag];
+  if(!clan)return;
+  if(button.dataset.clanAdmin==="edit"){
+    const name=prompt("Назва клану (3–24 символи):",clan.name);
+    if(name===null)return;
+    const description=prompt("Опис клану (до 120 символів):",clan.description||"");
+    if(description===null)return;
+    const memberLimit=prompt("Ліміт учасників (5–50):",String(clan.memberLimit||30));
+    if(memberLimit===null)return;
+    try{
+      await api("/api/admin/clans/update",{method:"POST",body:JSON.stringify({tag,name,description,memberLimit:Number(memberLimit)})});
+      await load();
+      alert("Клан оновлено.");
+    }catch(error){alert(error.message)}
+    return;
+  }
+  if(button.dataset.clanAdmin==="delete"){
+    if(!confirm("Видалити клан ["+tag+"] і прибрати його учасників із клану?"))return;
+    try{
+      await api("/api/admin/clans/delete",{method:"POST",body:JSON.stringify({tag})});
+      await load();
+      alert("Клан видалено.");
+    }catch(error){alert(error.message)}
+  }
+});
 $("search").oninput=renderUsers;$("refresh").onclick=()=>load().catch(e=>alert(e.message));$("newUser").onclick=()=>fillEditor(null);
 $("rows").addEventListener("click",e=>{const b=e.target.closest("[data-edit]");if(b){const u=users.find(x=>String(x.id)===String(b.dataset.edit));if(u)fillEditor(u)}});
 document.querySelectorAll(".tab").forEach(b=>b.onclick=async()=>{setTab(b.dataset.tab);if(b.dataset.tab==="database")$("dump").textContent=JSON.stringify(await api("/api/admin/database"),null,2)});
