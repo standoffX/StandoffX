@@ -1112,7 +1112,8 @@ function createMatch(io, mode) {
       lastMoveAt: 0,
       prevMoveTime: 0,
       ready: false,
-      joinedAt: null
+      joinedAt: null,
+      disconnectTimer: null
     })),
     phase: "waiting",
     phaseRemaining: null,
@@ -1175,7 +1176,11 @@ function cleanMatch(io, matchId, returnToMenu = true) {
   if (match.phaseTimer) clearInterval(match.phaseTimer);
   if (match.joinTimer) clearTimeout(match.joinTimer);
   if (returnToMenu) io.to(match.id).emit("go_to_menu");
-  for (const p of match.players) p.socketId = null;
+  for (const p of match.players) {
+    if (p.disconnectTimer) clearTimeout(p.disconnectTimer);
+    p.disconnectTimer = null;
+    p.socketId = null;
+  }
   activeMatches.delete(matchId);
 }
 
@@ -1241,6 +1246,48 @@ function startMatchWhenReady(io, match) {
       }, 1000);
     }
   }, 1000);
+}
+
+function finishMatch(io, matchId) {
+  const match = activeMatches.get(matchId);
+  if (!match || match.finished) return;
+
+  match.finished = true;
+  match.phase = "finished";
+  if (match.timer) clearInterval(match.timer);
+  if (match.phaseTimer) clearInterval(match.phaseTimer);
+  if (match.joinTimer) clearTimeout(match.joinTimer);
+
+  const ranked = [...match.players].sort((a, b) => b.score - a.score);
+  const highestScore = ranked[0]?.score || 0;
+
+  for (const player of match.players) {
+    const user = users.find(u => u.id === player.userId);
+    if (!user) continue;
+
+    const won = highestScore > 0 && player.score === highestScore;
+    const gold = won ? 10 : 2;
+    const xp = 50 + player.score * 20;
+    user.gold = (Number(user.gold) || 0) + gold;
+    user.XP = (Number(user.XP) || 0) + xp;
+
+    if (player.socketId) {
+      io.to(player.socketId).emit("show_results", {
+        xp,
+        gold,
+        score: player.score,
+        msg: "Матч завершено. +" + xp + " XP / +" + gold + " Gold"
+      });
+    }
+  }
+
+  saveUsers();
+  io.to(match.id).emit("match_finished", {
+    mode: match.mode,
+    scores: ranked.map(p => ({ userId: p.userId, nickname: p.nickname, score: p.score }))
+  });
+
+  setTimeout(() => cleanMatch(io, matchId, true), 8000);
 }
 
 function respawnPlayer(match, player) {
@@ -1655,6 +1702,31 @@ io.on("connection", socket => {
     if (removeFromQueue(socket.user.id)) emitQueueCount(io);
   });
 
+  socket.on("leave_match", data => {
+    const matchId = cleanText(data?.matchId, 100);
+    const match = activeMatches.get(matchId);
+    if (!match) return;
+
+    const index = match.players.findIndex(p => p.userId === socket.user.id && p.socketId === socket.id);
+    if (index < 0) return;
+
+    const player = match.players[index];
+    if (player.disconnectTimer) clearTimeout(player.disconnectTimer);
+    player.disconnectTimer = null;
+    player.socketId = null;
+    socket.leave(matchId);
+
+    if (match.phase !== "game") {
+      cleanMatch(io, matchId, true);
+      return;
+    }
+
+    match.players.splice(index, 1);
+    io.to(matchId).emit("player_left", { userId: player.userId });
+    if (match.players.length < 2) cleanMatch(io, matchId, true);
+    else emitMatchWaiting(io, match);
+  });
+
   socket.on("join_room", data => {
     const matchId = cleanText(data?.matchId, 100);
     const match = activeMatches.get(matchId);
@@ -1664,6 +1736,8 @@ io.on("connection", socket => {
     if (!player) return socket.emit("kick_to_menu", { reason: "Гравця немає в цьому матчі." });
 
     // A reconnect replaces the old socket for this user.
+    if (player.disconnectTimer) clearTimeout(player.disconnectTimer);
+    player.disconnectTimer = null;
     player.socketId = socket.id;
     player.joinedAt = Date.now();
     socket.join(matchId);
@@ -1680,7 +1754,8 @@ io.on("connection", socket => {
         team: player.team,
         hp: player.hp,
         score: player.score,
-        spawn: player.spawn
+        spawn: player.spawn,
+        position: player.pos
       },
       players: match.players.map(p => ({
         userId: p.userId,
@@ -1717,7 +1792,18 @@ io.on("connection", socket => {
     }
 
     emitMatchWaiting(io, match);
-    startMatchWhenReady(io, match);
+    if (match.phase === "game") {
+      socket.emit("match_phase", {
+        phase: "game",
+        time: match.remaining,
+        mode: match.mode,
+        modeName: match.modeName
+      });
+      socket.emit("match_start_now", { mode: match.mode, modeName: match.modeName, reconnect: true });
+      socket.emit("timer_update", { phase: "game", time: match.remaining });
+    } else {
+      startMatchWhenReady(io, match);
+    }
   });
 
   socket.on("client_ready", data => {
@@ -1808,17 +1894,40 @@ io.on("connection", socket => {
     if (practice && practice.socketId === socket.id) practice.socketId = null;
 
     for (const [matchId, match] of activeMatches.entries()) {
-      const p = match.players.find(x => x.socketId === socket.id);
-      if (!p) continue;
+      const player = match.players.find(p => p.socketId === socket.id);
+      if (!player) continue;
 
-      p.socketId = null;
-      p.ready = false;
-      io.to(matchId).emit("player_left", { userId: p.userId });
+      player.socketId = null;
+      player.ready = false;
+      io.to(matchId).emit("player_left", { userId: player.userId });
 
-      if (!match.started) {
+      if (match.phase === "waiting") {
+        // Expected when the search page navigates into play2.html: keep the slot
+        // for the new gameplay socket; joinTimer handles genuinely missing players.
         emitMatchWaiting(io, match);
-        // Let the remaining players wait for the missing player until the join timeout.
+        continue;
       }
+
+      if (match.phase !== "game") {
+        // A player who disappears during warmup/countdown invalidates the lobby.
+        cleanMatch(io, matchId, true);
+        continue;
+      }
+
+      if (player.disconnectTimer) clearTimeout(player.disconnectTimer);
+      player.disconnectTimer = setTimeout(() => {
+        const current = activeMatches.get(matchId);
+        if (!current) return;
+        const index = current.players.findIndex(p => p.userId === player.userId && !p.socketId);
+        if (index < 0) return;
+
+        const [expired] = current.players.splice(index, 1);
+        expired.disconnectTimer = null;
+        io.to(matchId).emit("player_left", { userId: expired.userId });
+
+        if (current.players.length < 2) cleanMatch(io, matchId, true);
+        else emitMatchWaiting(io, current);
+      }, 15000);
     }
 
     emitQueueCount(io);
