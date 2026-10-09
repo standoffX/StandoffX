@@ -83,7 +83,7 @@ body.lobby-screen:after{content:"";position:fixed;right:-12vw;top:-32vh;width:54
 .lobby-screen .pill{border:1px solid var(--line);border-radius:3px;background:#0b1f2d;color:#d3e8f6}
 .lobby-screen .content{min-height:0;padding:clamp(10px,2vw,26px);overflow:auto;overscroll-behavior:contain}
 .lobby-screen .screen{max-width:1680px}
-.lobby-screen .home-layout{grid-template-columns:minmax(245px,.88fr) minmax(215px,.78fr) minmax(280px,1.18fr);gap:14px}
+.lobby-screen .home-layout{grid-template-columns:minmax(260px,1fr) minmax(250px,.95fr) minmax(300px,1.12fr);gap:18px;align-items:stretch}
 .lobby-screen .panel{border:1px solid var(--line);border-radius:4px;background:linear-gradient(145deg,#10283bea,#091824eb);box-shadow:0 16px 42px #0003,0 0 34px #73c7f208}
 .lobby-screen .panelhead{height:38px;background:#071521bd;border-bottom:1px solid var(--line);color:#b9e9ff;font-size:9px;letter-spacing:1.8px}
 .lobby-screen .panelbody{padding:14px}
@@ -98,11 +98,12 @@ body.lobby-screen:after{content:"";position:fixed;right:-12vw;top:-32vh;width:54
 .lobby-screen .rankicon{color:#b4e5ff}
 .lobby-screen .rankname{font-size:8px;color:#cce4f2}
 .lobby-screen .rankdesc{color:#91adbf}
-.lobby-screen .promo{height:198px;background:#102d41}
+.lobby-screen .promo{height:218px;background:#102d41}
 .lobby-screen .promo img{opacity:.9;filter:saturate(.78) contrast(1.04)}
 .lobby-screen .promo-title{font-size:12px;letter-spacing:.3px}
 .lobby-screen .promo-tag{border:1px solid #c9efff44;background:#092034d9;color:#dcf5ff}
-.lobby-screen .passhero{background:linear-gradient(110deg,#153c57,#2c6c8b)}
+.lobby-screen .passpanel{min-height:295px}
+.lobby-screen .passhero{height:118px;background:linear-gradient(110deg,#153c57,#2c6c8b)}
 .lobby-screen .passhero img{filter:saturate(.7);opacity:.7}
 .lobby-screen .passheroText{background:linear-gradient(90deg,#061722b8,transparent)}
 .lobby-screen .passheroText strong{font-size:21px;letter-spacing:1px;color:#effaff}
@@ -176,8 +177,8 @@ body.lobby-screen:after{content:"";position:fixed;right:-12vw;top:-32vh;width:54
 .lobby-screen .layout-options output{color:#e3f6ff;font-size:11px;font-weight:900}
 .lobby-screen .layout-help{font-size:10px;color:#8daec0;line-height:1.5}
 .lobby-screen .layout-reset{margin-top:8px}
-@media(max-width:1120px){
-  .lobby-screen .home-layout{grid-template-columns:minmax(230px,.9fr) minmax(230px,.9fr)}
+@media(max-width:980px){
+  .lobby-screen .home-layout{grid-template-columns:minmax(240px,.95fr) minmax(250px,1.05fr)}
   .lobby-screen .promo-col{display:none}
   .lobby-screen .passpanel{grid-column:1/-1}
   .lobby-screen .playarea{right:16px!important;bottom:16px!important}
@@ -241,3 +242,35 @@ body.lobby-screen:after{content:"";position:fixed;right:-12vw;top:-32vh;width:54
   .lobby-screen .rankname{font-size:7px}
 }
 @media(prefers-reduced-motion:reduce){.lobby-screen *,body.auth-screen *{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+
+
+/* Tester prototype/test control is intentionally a compact two-state switch. */
+.lobby-screen .tester-mode-switch{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  width:100%;min-height:34px;margin:10px 0 12px;padding:0;
+  border:0;background:transparent;flex-wrap:wrap;
+}
+.lobby-screen .tester-mode-label{
+  color:#90b4c8;font-size:9px;font-weight:900;letter-spacing:1.2px;
+}
+.lobby-screen .tester-mode-segment{
+  display:inline-flex;align-items:center;gap:3px;padding:3px;
+  border:1px solid #8ecde43b;border-radius:4px;background:#061521;
+}
+.lobby-screen .tester-mode-option{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:27px;min-width:74px;padding:5px 10px;
+  border:1px solid transparent;border-radius:3px;
+  background:transparent;color:#93b1c4;
+  font-size:9px;font-weight:950;letter-spacing:.5px;white-space:nowrap;
+  transition:background .15s,border-color .15s,color .15s;
+}
+.lobby-screen .tester-mode-option.active{
+  border-color:#a8def85c;background:#a8def820;color:#effaff;
+  box-shadow:inset 0 0 0 1px #a8def81a;
+}
+.lobby-screen .tester-mode-option:hover{border-color:#b8e8ff66;transform:none;filter:none}
+@media(max-width:420px){
+  .lobby-screen .tester-mode-switch{justify-content:flex-start;gap:7px}
+  .lobby-screen .tester-mode-option{min-width:66px;padding:5px 8px}
+}
