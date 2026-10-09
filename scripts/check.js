@@ -185,4 +185,16 @@ assert.match(game, /async function loadHeldWeapon\(\)/, "game must load a first-
 assert.match(game, /e\.code==="Escape"\)\{e\.preventDefault\(\);leaveGame\(\);return\}/, "Escape must return to the lobby from any match phase");
 assert.match(game, /if\(selectedMap==="FIELD_ARENA"\)\{/, "prototype must honor the selected map rather than forcing the field arena");
 assert.doesNotMatch(game, / · UUID "\+uuid/, "the match lobby must not display UUIDs");
+
+assert.match(game, /function makeVisual\\(color\\)[\\s\\S]*?new THREE\\.CylinderGeometry[\\s\\S]*?function setSoldierTint/, "soldiers must have a multi-part procedural 3D model");
+assert.match(game, /function animateSoldier\\(model,dt,now,moving=false,inAir=false\\)/, "player models must animate without relying on external model downloads");
+assert.match(game, /animateSoldier\\(e\\.mesh,dt,now,e\\.anim==="Running"\\|\\|e\\.anim==="Walking",e\\.anim==="Jump"\\)/, "remote player movement must drive the walk/jump animation");
+assert.match(game, /if\\(e\\.code===binds\\.menu\\)\\{e\\.preventDefault\\(\\);if\\(matchPhase==="game"\\)togglePauseMenu\\(\\);return\\}/, "M opens the in-game pause menu instead of accidentally leaving the match");
+assert.match(game, /stick\\.addEventListener\\("touchcancel",releaseStick\\)/, "cancelled mobile joystick touches must release movement");
+assert.match(game, /\\$\\("fireBtn"\\)\\.addEventListener\\("touchcancel",\\(\\)=>fireHeld=false\\)/, "cancelled mobile fire touches must stop shooting");
+assert.match(game, /socket\\.on\\("player_left"/, "departed players must be removed from the scene");
+assert.match(game, /e\\.pos\\.set\\(data\\.x,data\\.y,data\\.z\\);e\\.mesh\\.position\\.copy\\(e\\.pos\\);e\\.anim="Idle"/, "a respawn must update both the displayed and authoritative remote position");
+assert.match(game, /let connectedToGameplay=socket\\.connected/, "the client must rejoin the match after a Socket.IO reconnection");
+assert.match(game, /matchPhase="finished"/, "the player must stop moving and shooting after match results");
+
 console.log("OK project invariants, tester-only tools, Atlas endpoint, and unique HTTP routes");
