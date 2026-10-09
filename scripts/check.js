@@ -238,4 +238,7 @@ assert.doesNotMatch(game, /Remote models unavailable; using local fallback\.\",e
 
 assert.match(server, /players\.some\(candidate => candidate\.isBot\) \? \(p\.isBot \? "B" : "A"\)/, "all tester bots must be on the opposing team and be shootable targets");
 
+assert.match(server, /player\.pos\.y = Math\.max\(0, Math\.min\(2\.25, y\)\)/, "match movement must reject impossible fly heights");
+assert.match(server, /previous\.y = Math\.max\(0, Math\.min\(2\.25, y\)\)/, "training movement must reject impossible fly heights");
+
 console.log("OK project invariants, tester-only tools, Atlas endpoint, and unique HTTP routes");
