@@ -247,7 +247,7 @@ assert.match(menu, /document\.documentElement\.dataset\.sxDevice/, "lobby must d
 assert.match(menu, /html\[data-sx-device="mobile"\] body\.lobby-screen #desktopControlsSettings/, "mobile must not display keyboard/mouse-only settings");
 assert.match(menu, /html\[data-sx-device="desktop"\] body\.lobby-screen #mobileLayoutEditor/, "desktop must not show touch-only settings");
 assert.match(server, /}, 90000\);/, "reconnect grace must last long enough to get back into the match");
-assert.match(server, /if \(current\.phase === "game"\) \{[\s\S]{0,210}never end\/delete a match/, "gameplay disconnect timeout must keep the match alive");
+assert.match(server, /never end\/delete a match[\s\S]{0,220}if \(current\.phase === "game"\)/, "gameplay disconnect timeout must keep the match alive");
 assert.match(server, /const MATCH_SPAWNS =/, "scaled maps must use safe per-map spawn points");
 assert.match(server, /io\.to\(matchId\)\.emit\("player_connection_state", \{ userId: player\.userId, connected: false/, "disconnect should not broadcast a permanent player-left event");
 assert.match(game, /function addTownFallbackArch\(/, "fallback town doors must preserve walkable archways");
