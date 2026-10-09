@@ -139,9 +139,14 @@ function publicMongoStatus() {
 
 async function checkMongoConnection() {
   mongoStatus.lastCheckAt = new Date().toISOString();
+  if (!mongoDb && mongoStatus.configured) {
+    await initMongo();
+  }
   if (!mongoDb) {
     mongoStatus.connected = false;
-    return { ok: false, status: publicMongoStatus(), message: mongoStatus.configured ? "Atlas is not connected." : "MONGODB_URI is not configured." };
+    return { ok: false, status: publicMongoStatus(), message: mongoStatus.configured
+      ? (mongoStatus.lastError || "Atlas is not connected.")
+      : "MONGODB_URI is not configured." };
   }
   try {
     await mongoDb.command({ ping: 1 });
@@ -197,6 +202,8 @@ async function initMongo() {
     console.log("[DB] MongoDB Atlas connected:", mongoStatus.database);
     return true;
   } catch (err) {
+    try { await mongoClient?.close(); } catch {}
+    mongoClient = null;
     mongoDb = null;
     mongoStatus.connected = false;
     mongoStatus.state = "error";
