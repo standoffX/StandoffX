@@ -2031,10 +2031,14 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
   if (!/^[\p{L}\p{N}_-]{3,24}$/u.test(nextNick)) {
     return res.status(400).json({ success: false, message: "Некоректний nickname." });
   }
-  if (!isMaster && (!nextIdRaw || !/^\d{6,10}$/.test(nextIdRaw))) {
-    return res.status(400).json({ success: false, message: "Player ID має містити 6–10 цифр." });
+  if (!nextIdRaw) {
+    return res.status(400).json({ success: false, message: "Player ID не може бути порожнім." });
   }
-  if (!isMaster && nextIdRaw !== u.id && users.some(x => x.id === nextIdRaw)) {
+  const changingId = !isMaster && nextIdRaw !== u.id;
+  if (changingId && !/^\d{6,10}$/.test(nextIdRaw)) {
+    return res.status(400).json({ success: false, message: "Новий Player ID має містити 6–10 цифр." });
+  }
+  if (changingId && users.some(x => x.id === nextIdRaw)) {
     return res.status(409).json({ success: false, message: "Такий ID вже зайнятий." });
   }
   if (users.some(x => x.id !== u.id && String(x.nickname).toLowerCase() === nextNick.toLowerCase())) {
