@@ -11,8 +11,10 @@ const { Server } = require("socket.io");
 const app = express();
 const SServer = Number(process.env.STANDOFFX_HTTPS || 0); // 0 = HTTP, 1 = HTTPS
 const PORT = Number(process.env.PORT) || (SServer ? 443 : 3000);
-const ADMIN_ID = "Dev_01";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "sonia";
+const ADMIN_ID = String(process.env.ADMIN_ID || "Dev_01").trim() || "Dev_01";
+const ADMIN_PASSWORD = String(process.env.ADMIN_PASSWORD || "");
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+if (!ADMIN_PASSWORD) console.warn("[AUTH] ADMIN_PASSWORD is not set; master account login is disabled.");
 
 
 const ROOT = __dirname;
@@ -358,7 +360,12 @@ function parseCookies(header = "") {
     const idx = item.indexOf("=");
     if (idx <= 0) continue;
     const key = item.slice(0, idx).trim();
-    const value = decodeURIComponent(item.slice(idx + 1).trim());
+    let value = item.slice(idx + 1).trim();
+    try {
+      value = decodeURIComponent(value);
+    } catch {
+      continue;
+    }
     out[key] = value;
   }
   return out;
@@ -366,13 +373,17 @@ function parseCookies(header = "") {
 
 function createSession(userId) {
   const token = crypto.randomBytes(32).toString("hex");
-  sessions.set(token, { userId, createdAt: Date.now() });
+  const now = Date.now();
+  sessions.set(token, { userId, createdAt: now, expiresAt: now + SESSION_TTL_MS });
   return token;
 }
 
 function sessionUserFromToken(token) {
   const data = token ? sessions.get(token) : null;
-  if (!data) return null;
+  if (!data || !Number.isFinite(data.expiresAt) || data.expiresAt <= Date.now()) {
+    if (token) sessions.delete(token);
+    return null;
+  }
   const user = users.find(u => u.id === data.userId);
   if (!user) {
     sessions.delete(token);
@@ -406,23 +417,95 @@ function requireAdmin(req, res, next) {
 }
 
 function setSessionCookie(res, token) {
+  const secureFlag = process.env.NODE_ENV === "production" || process.env.RENDER ? "; Secure" : "";
   res.setHeader(
     "Set-Cookie",
-    `standoffx_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`
+    `standoffx_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax${secureFlag}; Max-Age=${Math.floor(SESSION_TTL_MS / 1000)}`
   );
 }
 
 function clearSessionCookie(res) {
+  const secureFlag = process.env.NODE_ENV === "production" || process.env.RENDER ? "; Secure" : "";
   res.setHeader(
     "Set-Cookie",
-    "standoffx_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0"
+    `standoffx_session=; Path=/; HttpOnly; SameSite=Lax${secureFlag}; Max-Age=0`
   );
 }
 
 app.disable("x-powered-by");
+app.set("trust proxy", process.env.RENDER ? 1 : false);
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: false, limit: "1mb" }));
-app.use(express.static(ROOT));
+
+// Never expose server code, account JSON, database snapshots, or admin/menu HTML via static hosting.
+const BLOCKED_STATIC_DIRS = new Set([".git", ".github", "node_modules", "scripts", "data"]);
+const PROTECTED_STATIC_PAGES = new Set(["admin.html", "mainmenu.html"]);
+app.use((req, res, next) => {
+  let pathname;
+  try {
+    pathname = decodeURIComponent(req.path);
+  } catch {
+    return res.status(400).end();
+  }
+  const normalized = path.posix.normalize("/" + pathname.replace(/\\/g, "/")).replace(/^\\/+/, "");
+  const segments = normalized.split("/").filter(Boolean);
+  const rootName = (segments[0] || "").toLowerCase();
+  const privateRootFile = segments.length === 1 && /\\.(?:json|js|md|lock|ya?ml|env)$/i.test(rootName);
+  const blockedDirectory = segments.some(segment => BLOCKED_STATIC_DIRS.has(segment.toLowerCase()));
+  const protectedPage = segments.length === 1 && PROTECTED_STATIC_PAGES.has(rootName);
+  if (privateRootFile || blockedDirectory || protectedPage) return res.status(404).end();
+  next();
+});
+app.use(express.static(ROOT, { index: false, dotfiles: "deny" }));
+
+const rateLimitBuckets = new Map();
+function createRateLimit({ windowMs, max, message }) {
+  return (req, res, next) => {
+    const now = Date.now();
+    const identity = String(req.ip || req.socket?.remoteAddress || "unknown");
+    const key = identity + ":" + req.method + ":" + req.path;
+    let bucket = rateLimitBuckets.get(key);
+    if (!bucket || bucket.resetAt <= now) {
+      bucket = { count: 0, resetAt: now + windowMs };
+      rateLimitBuckets.set(key, bucket);
+    }
+    bucket.count += 1;
+
+    res.setHeader("RateLimit-Limit", String(max));
+    res.setHeader("RateLimit-Remaining", String(Math.max(0, max - bucket.count)));
+    res.setHeader("RateLimit-Reset", String(Math.ceil(bucket.resetAt / 1000)));
+
+    if (rateLimitBuckets.size > 1000) {
+      for (const [bucketKey, value] of rateLimitBuckets) {
+        if (value.resetAt <= now) rateLimitBuckets.delete(bucketKey);
+      }
+    }
+    while (rateLimitBuckets.size > 5000) {
+      rateLimitBuckets.delete(rateLimitBuckets.keys().next().value);
+    }
+
+    if (bucket.count > max) {
+      res.setHeader("Retry-After", String(Math.max(1, Math.ceil((bucket.resetAt - now) / 1000))));
+      return res.status(429).json({ success: false, message });
+    }
+    next();
+  };
+}
+const loginRateLimit = createRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: "Забагато спроб входу. Спробуй пізніше."
+});
+const registrationRateLimit = createRateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 6,
+  message: "Забагато реєстрацій із цієї адреси. Спробуй пізніше."
+});
+const transactionRateLimit = createRateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: "Забагато запитів. Спробуй трохи пізніше."
+});
 app.use("/avatars", express.static(AVATARS_DIR, { maxAge: "1d" }));
 
 const storage = multer.diskStorage({
@@ -442,7 +525,11 @@ const upload = multer({
 });
 
 app.get("/", (_req, res) => res.sendFile(path.join(ROOT, "auth.html")));
-app.get("/game", (_req, res) => res.sendFile(path.join(ROOT, "mainMenu.html")));
+app.get("/game", (req, res) => {
+  const user = requestUser(req);
+  if (!user || (user.isBanned && user.id !== ADMIN_ID)) return res.redirect("/");
+  res.sendFile(path.join(ROOT, "mainMenu.html"));
+});
 
 app.get("/api/health", (_req, res) => {
   res.json({
@@ -456,7 +543,7 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-app.post("/api/register", (req, res) => {
+app.post("/api/register", registrationRateLimit, (req, res) => {
   const nickname = cleanText(req.body.nickname, 24);
   const password = String(req.body.password || "");
 
@@ -512,7 +599,7 @@ app.post("/api/register", (req, res) => {
   });
 });
 
-app.post("/api/login", (req, res) => {
+app.post("/api/login", loginRateLimit, (req, res) => {
   const id = normalizeId(req.body.id || req.body.userId || "");
   const password = String(req.body.password || "");
 
@@ -523,11 +610,19 @@ app.post("/api/login", (req, res) => {
     return res.status(400).json({ success: false, message: "Введи пароль." });
   }
 
-  let user = findUser(id, { allowNickname: false });
+  let user = null;
+  if (id === ADMIN_ID) {
+    if (!ADMIN_PASSWORD) {
+      return res.status(503).json({
+        success: false,
+        message: "Вхід master-акаунта вимкнено: задай ADMIN_PASSWORD у Render Environment."
+      });
+    }
+    if (password !== ADMIN_PASSWORD) {
+      return res.status(401).json({ success: false, message: "Невірний ID або пароль." });
+    }
 
-  // Master account: exact ID Dev_01 + password.
-  if (id === ADMIN_ID && ADMIN_PASSWORD && password === ADMIN_PASSWORD) {
-    user = user || { id: ADMIN_ID, nickname: "SofterX" };
+    user = findUser(id, { allowNickname: false }) || { id: ADMIN_ID, nickname: "SofterX" };
     user.id = ADMIN_ID;
     user.nickname = user.nickname || "SofterX";
     user.isAdmin = true;
@@ -537,6 +632,8 @@ app.post("/api/login", (req, res) => {
     ensureUserShape(user);
     if (!users.some(u => u.id === ADMIN_ID)) users.push(user);
     saveUsers();
+  } else {
+    user = findUser(id, { allowNickname: false });
   }
 
   if (!user || !verifyPassword(password, user.passwordHash || user.password)) {
@@ -615,7 +712,7 @@ app.post("/api/search-user", requireAuth, (req, res) => {
   });
 });
 
-app.post("/api/friends/request", requireAuth, (req, res) => {
+app.post("/api/friends/request", transactionRateLimit, requireAuth, (req, res) => {
   const from = req.user;
   const to = users.find(u => u.id === normalizeId(req.body.toId));
   if (!to) return res.status(404).json({ success: false, message: "Гравця не знайдено." });
@@ -709,7 +806,7 @@ app.post("/api/clans/search", requireAuth, (req, res) => {
   res.json({ success: true, clans: result });
 });
 
-app.post("/api/clans/create", requireAuth, (req, res) => {
+app.post("/api/clans/create", transactionRateLimit, requireAuth, (req, res) => {
   if (req.user.clan) return res.status(400).json({ success: false, message: "Ти вже в клані." });
   if (req.user.gold < 500) return res.status(400).json({ success: false, message: "Потрібно 500 Gold." });
 
@@ -773,7 +870,7 @@ app.post("/api/clans/my", requireAuth, (req, res) => {
   });
 });
 
-app.post("/api/clans/request", requireAuth, (req, res) => {
+app.post("/api/clans/request", transactionRateLimit, requireAuth, (req, res) => {
   const tag = cleanText(req.body.clanId || req.body.tag, 5).toUpperCase();
   const clan = clans[tag];
   if (!clan) return res.status(404).json({ success: false, message: "Клан не знайдено." });
@@ -938,7 +1035,7 @@ app.post("/api/inventory/my", requireAuth, (req, res) => {
 
 app.get("/api/market/items", requireAuth, (_req, res) => res.json({ success: true, items: market }));
 
-app.post("/api/market/sell", requireAuth, (req, res) => {
+app.post("/api/market/sell", transactionRateLimit, requireAuth, (req, res) => {
   const skinId = cleanText(req.body.skinId, 64);
   const price = Number(req.body.price);
   const owned = Array.isArray(inventory[req.user.id]) && inventory[req.user.id].includes(skinId);
@@ -964,7 +1061,7 @@ app.post("/api/market/sell", requireAuth, (req, res) => {
   res.json({ success: true, lot });
 });
 
-app.post("/api/market/buy", requireAuth, (req, res) => {
+app.post("/api/market/buy", transactionRateLimit, requireAuth, (req, res) => {
   const lotIndex = market.findIndex(l => String(l.lotId) === String(req.body.lotId));
   if (lotIndex === -1) return res.status(404).json({ success: false, message: "Лот уже продано або видалено." });
   const lot = market[lotIndex];
@@ -986,7 +1083,7 @@ app.post("/api/market/buy", requireAuth, (req, res) => {
   res.json({ success: true, gold: req.user.gold, item: lot });
 });
 
-app.post("/api/use-promo", requireAuth, (req, res) => {
+app.post("/api/use-promo", transactionRateLimit, requireAuth, (req, res) => {
   const code = cleanText(req.body.code, 80);
   const valid = cleanText(process.env.STANDOFFX_PROMO_CODE || "SOFTERX-2024", 80);
   if (code !== valid) return res.status(400).json({ success: false, message: "Невірний промокод." });
@@ -1034,7 +1131,7 @@ app.post("/api/upload-avatar", requireAuth, upload.single("avatar"), (req, res) 
 const matchmakingQueue = [];
 const activeMatches = new Map(); // in-memory only; never written to MongoDB
 const trainingSessions = new Map(); // private tester sessions; never written to MongoDB
-const MATCH_SIZE = 3;
+const DEFAULT_MATCH_SIZE = 3;
 const GAME_SECONDS = 300;
 const WARMUP_SECONDS = 10;
 const COUNTDOWN_SECONDS = 15;
@@ -1045,13 +1142,15 @@ const MODE_CONFIGS = {
     id: "hide_seek",
     name: "HIDE & SEEK",
     short: "HS",
-    map: "M3_Maze"
+    map: "M3_Maze",
+    requiredPlayers: 3
   },
   team_fight: {
     id: "team_fight",
     name: "TEAM FIGHT",
     short: "TF",
-    map: "M3_Maze"
+    map: "M3_Maze",
+    requiredPlayers: 4
   }
 };
 
@@ -1067,11 +1166,16 @@ function canUseTesterModes(user) {
 const SPAWNS = [
   { x: 5, y: 0, z: 5 },
   { x: 25, y: 0, z: 25 },
-  { x: 15, y: 0, z: 5 }
+  { x: 15, y: 0, z: 5 },
+  { x: 15, y: 0, z: 25 }
 ];
 
 function getModeConfig(mode) {
   return MODE_CONFIGS[mode] || MODE_CONFIGS.hide_seek;
+}
+
+function getRequiredPlayers(mode) {
+  return Number(getModeConfig(mode).requiredPlayers) || DEFAULT_MATCH_SIZE;
 }
 
 function removeFromQueue(userId) {
@@ -1094,18 +1198,25 @@ function emitQueueCount(io) {
   for (const entry of matchmakingQueue) {
     const modePlayers = matchmakingQueue.filter(p => p.mode === entry.mode);
     io.to(entry.socketId).emit("queue_update", {
-      count: modePlayers.findIndex(p => p.userId === entry.userId) + 1,
-      required: MATCH_SIZE,
-      mode: entry.mode
+      count: modePlayers.length,
+      required: getRequiredPlayers(entry.mode),
+      mode: entry.mode,
+      players: modePlayers.map(p => ({
+        userId: p.userId,
+        nickname: p.nickname,
+        connected: true,
+        ready: false
+      }))
     });
   }
 }
 
 function createMatch(io, mode) {
   const candidates = matchmakingQueue.filter(p => p.mode === mode);
-  if (candidates.length < MATCH_SIZE) return;
+  const requiredPlayers = getRequiredPlayers(mode);
+  if (candidates.length < requiredPlayers) return;
 
-  const selectedIds = new Set(candidates.slice(0, MATCH_SIZE).map(p => p.userId));
+  const selectedIds = new Set(candidates.slice(0, requiredPlayers).map(p => p.userId));
   const players = matchmakingQueue.filter(p => selectedIds.has(p.userId));
   for (const p of players) removeFromQueue(p.userId);
 
