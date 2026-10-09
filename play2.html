@@ -362,7 +362,7 @@ function setOverlayGame(){
 $("menuResult").onclick=()=>location.href="/game";
 $("spawnBot").addEventListener("click",()=>socket.emit("training_spawn_bot",{trainingId}));
 $("resetTraining").addEventListener("click",()=>{
-  player.position.set(0,0,0);player.rotationY=0;velocityY=0;jumping=false;
+  if(mode==="training")player.position.set(5,0,5);else player.position.set(0,0,0);player.rotationY=0;velocityY=0;jumping=false;
   socket.emit("training_reset",{trainingId});
 });
 document.querySelectorAll("[data-bot-action]").forEach(b=>b.addEventListener("click",()=>socket.emit("training_bot_action",{trainingId,action:b.dataset.botAction})));
