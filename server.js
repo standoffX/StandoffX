@@ -2016,7 +2016,7 @@ io.on("connection", socket => {
     if (playerMatch(user.uuid || user.id)) return socket.emit("search_error", { message: "Ти вже в матчі." });
     if (matchmakingQueue.some(p => p.userId === user.id)) return;
 
-    const mode = Object.prototype.hasOwnProperty.call(MODE_CONFIGS, data?.mode) ? data.mode : "allies";
+    const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
     const map = normalizeMapId(data?.map);
     removeFromQueue(user.uuid || user.id);
 
@@ -2321,7 +2321,7 @@ io.on("connection", socket => {
         expired.disconnectTimer = null;
         io.to(matchId).emit("player_left", { userId: expired.userId });
 
-        if (current.players.length < 2) cleanMatch(io, matchId, true);
+        if (current.players.filter(p => !p.isBot).length === 0 || current.players.length < 2) cleanMatch(io, matchId, true);
         else emitMatchWaiting(io, current);
       }, 15000);
     }
