@@ -2027,7 +2027,7 @@ io.on("connection", socket => {
       x: session.playerPos.x, y: 0, z: session.playerPos.z - 8,
       rotY: Math.PI, action: "idle", updatedAt: Date.now()
     };
-    io.to(session.id).emit("training_state", { bot: null, reset: true, message: "Тренування скинуто." });
+    io.to(session.id).emit("training_state", { bot: session.bot, spawn: { ...session.playerPos }, reset: true, message: "Тренування скинуто." });
   });
 
   socket.on("end_training", data => {
