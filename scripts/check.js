@@ -244,8 +244,8 @@ assert.match(menu, /data-size-control="fire"/, "the mobile layout editor must le
 assert.match(menu, /data-size-control="crouch"/, "the mobile layout editor must let players size crouch separately");
 assert.match(menu, /data-size-control="sprint"/, "the mobile layout editor must let players size sprint separately");
 assert.match(menu, /document\.documentElement\.dataset\.sxDevice/, "lobby must detect device type and show matching settings");
-assert.match(menu, /html\[data-sx-device="mobile"\] body\.lobby-screen #desktopControlsSettings/, "mobile must not display keyboard/mouse-only settings");
-assert.match(menu, /html\[data-sx-device="desktop"\] body\.lobby-screen #mobileLayoutEditor/, "desktop must not show touch-only settings");
+assert.match(ui, /html\[data-sx-device="mobile"\] body\.lobby-screen #desktopControlsSettings/, "mobile must not display keyboard/mouse-only settings");
+assert.match(ui, /html\[data-sx-device="desktop"\] body\.lobby-screen #mobileLayoutEditor/, "desktop must not show touch-only settings");
 assert.match(server, /}, 90000\);/, "reconnect grace must last long enough to get back into the match");
 assert.match(server, /never end\/delete a match[\s\S]{0,220}if \(current\.phase === "game"\)/, "gameplay disconnect timeout must keep the match alive");
 assert.match(server, /const MATCH_SPAWNS =/, "scaled maps must use safe per-map spawn points");
