@@ -45,7 +45,8 @@
     <p id="overlayText">Підключаємо всіх гравців і завантажуємо карту.</p>
     <div id="progressWrap"><div id="progress"></div></div>
     <div id="players" class="players"></div>
-    <div id="clickHint">Клікни сюди для керування мишкою. Саме підключення до матчу відбувається автоматично.</div>
+    <div id="clickHint">Клікни для огляду мишкою. WASD — рух · Shift — біг · Ctrl — присісти · F — карта</div>
+    <button id="reconnectBtn" type="button" style="display:none;margin-top:14px;padding:12px 18px;border:1px solid #87dfff;border-radius:6px;background:#103047;color:#eafaff;font-weight:900;cursor:pointer">↻ ПЕРЕПІДКЛЮЧИТИСЯ</button>
   </div>
 </div>
 
@@ -57,6 +58,8 @@
   <div id="ammo" style="display:none"><div class="ammo-num" id="ammoNum">30</div><div class="ammo-sub">/ 30 · R — RELOAD</div></div>
   <div id="hint">WASD — рух · Space — стрибок · Shift — швидкість · G — камера · LMB — вогонь · R — перезарядка</div>
 </div>
+<div id="radarWrap" aria-label="Радар команди"><canvas id="radarCanvas" width="220" height="220"></canvas><span>TEAM RADAR</span></div>
+<div id="fullMapOverlay" aria-label="Повна карта" style="display:none"><div id="fullMapPanel"><div id="fullMapTitle">TACTICAL MAP <span>F — УТРИМУВАТИ</span></div><canvas id="fullMapCanvas" width="1000" height="760"></canvas><div id="fullMapLegend"><span class="legend-me">● ТИ</span><span class="legend-team">● СОЮЗНИКИ</span><span class="legend-wall">■ СТІНИ / УКРИТТЯ</span></div></div></div>
 
 <div id="results"><div class="resultBox"><h2 id="resultTitle">МАТЧ ЗАВЕРШЕНО</h2><div id="resultText" class="reward"></div><button id="menuResult">У МЕНЮ</button></div></div>
 <button id="leaveGameDesktop" type="button">← МЕНЮ</button>
@@ -91,6 +94,7 @@
   <button id="reloadBtn" class="mbtn reload">RELOAD</button>
   <button id="crouchBtn" class="mbtn crouch" type="button" aria-label="Присісти">CTRL</button>
   <button id="sprintBtn" class="mbtn sprint" type="button" aria-label="Бігти швидше">SPRINT</button>
+  <button id="mapBtn" class="mbtn mapButton" type="button" aria-label="Відкрити карту">MAP</button>
   <button id="leaveGameMobile" class="mbtn leave" type="button">×</button>
 </div>
 
@@ -105,6 +109,11 @@ import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
 import {PointerLockControls} from "three/addons/controls/PointerLockControls.js";
 
 const $=id=>document.getElementById(id);
+const isMobileDevice=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||
+  (navigator.maxTouchPoints>1&&matchMedia("(pointer: coarse)").matches)||
+  (innerWidth<=760&&navigator.maxTouchPoints>0);
+document.body.classList.toggle("device-mobile",isMobileDevice);
+document.body.classList.toggle("device-desktop",!isMobileDevice);
 const socket=io({
   withCredentials:true,
   transports:["websocket"],
@@ -822,30 +831,39 @@ function rebuildCollisionIndex(){
     const bounds=new THREE.Box3().setFromObject(object);
     if(bounds.isEmpty())continue;
     const size=bounds.getSize(new THREE.Vector3());
-    // Flat floor planes/grids are deliberately excluded from the collision hull.
-    if(size.y<.24||bounds.max.y<.16)continue;
+    // Skip flat floors, map-wide merged meshes and ceilings; keep individual solid walls/props.
+    if(size.y<.24||bounds.max.y<.16||size.y>18||size.x>58||size.z>58||(size.x>28&&size.z>28))continue;
     collisionBoxes.push(bounds);
   }
   collisionIndexReady=true;
 }
-function blockedAt(x,z){
+function worldLimit(){
+  return ({HILL_TOWN:54,NEON_YARD:168,FIELD_ARENA:292,M3_Maze:232})[selectedMap]||232;
+}
+function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
+  const limit=worldLimit(),outsideX=Math.max(0,Math.abs(x)-limit),outsideZ=Math.max(0,Math.abs(z)-limit);
+  let penalty=(outsideX+outsideZ)>0?100+outsideX+outsideZ:0;
   const radius=.38,baseY=player?.position?.y||0,bodyHeight=isCrouching?1.22:1.82;
   for(const bounds of collisionBoxes){
     if(baseY>=bounds.max.y-.03||baseY+bodyHeight<=bounds.min.y+.02)continue;
-    if(x+radius<=bounds.min.x||x-radius>=bounds.max.x)continue;
-    if(z+radius<=bounds.min.z||z-radius>=bounds.max.z)continue;
-    return true;
+    const ox=Math.min(x+radius,bounds.max.x)-Math.max(x-radius,bounds.min.x);
+    const oz=Math.min(z+radius,bounds.max.z)-Math.max(z-radius,bounds.min.z);
+    if(ox<=0||oz<=0)continue;
+    penalty+=1+Math.min(ox,oz);
   }
-  return false;
+  return penalty;
 }
+function blockedAt(x,z){return collisionPenaltyAt(x,z)>0}
 function moveWithCollision(direction,distance){
-  const count=Math.max(1,Math.ceil(distance/.18)),dx=direction.x*distance/count,dz=direction.z*distance/count;
+  const count=Math.max(1,Math.ceil(distance/.14)),dx=direction.x*distance/count,dz=direction.z*distance/count;
   for(let i=0;i<count;i++){
-    const nx=player.position.x+dx;
-    if(!blockedAt(nx,player.position.z))player.position.x=nx;
-    const nz=player.position.z+dz;
-    if(!blockedAt(player.position.x,nz))player.position.z=nz;
+    const current=collisionPenaltyAt(player.position.x,player.position.z);
+    const nx=player.position.x+dx,penaltyX=collisionPenaltyAt(nx,player.position.z);
+    if(penaltyX===0||penaltyX<current-.001)player.position.x=nx;
+    const currentAfterX=collisionPenaltyAt(player.position.x,player.position.z);
+    const nz=player.position.z+dz,penaltyZ=collisionPenaltyAt(player.position.x,nz);
+    if(penaltyZ===0||penaltyZ<currentAfterX-.001)player.position.z=nz;
   }
 }
 function sendMove(force=false){
@@ -945,6 +963,7 @@ function setOverlayGame(){
   if(/Android|iPhone|iPad/i.test(navigator.userAgent)) $("overlay").style.display="none";
 }
 function leaveGame(){
+  try{localStorage.removeItem("sx_active_match")}catch{}
   try{
     if(socket && socket.connected){
       if(isTrainingMode)socket.emit("end_training",{trainingId});
@@ -1035,6 +1054,10 @@ socket.on("training_state",data=>{
 });
 
 socket.on("init_match",data=>{
+  try{
+    if(!isTrainingMode)localStorage.setItem("sx_active_match",JSON.stringify({matchId:data.matchId||matchId,userId:myId,uuid:myUuid,map:data.map||selectedMap,mode:data.mode||mode,updatedAt:Date.now()}));
+  }catch{}
+  $("reconnectBtn").style.display="none";
   if(data.mode)sessionStorage.setItem("selectedMode",data.mode);
   if(data.map)sessionStorage.setItem("selectedMap",data.map);
   myRole=data.me?.role||"runner";myTeam=data.me?.team||null;score=data.me?.score||0;hp=data.me?.hp||100;
@@ -1151,6 +1174,7 @@ socket.on("player_respawn",data=>{
   }
 });
 socket.on("show_results",data=>{
+  try{localStorage.removeItem("sx_active_match")}catch{}
   matchPhase="finished";
   keys.w=keys.a=keys.s=keys.d=keys.shift=false;
   jumpQueued=false;fireHeld=false;
@@ -1158,8 +1182,8 @@ socket.on("show_results",data=>{
   $("results").style.display="flex";
   $("resultText").textContent=(data.msg||("+"+(data.xp||0)+" XP / +"+(data.gold||0)+" Gold"));
 });
-socket.on("go_to_menu",()=>location.href="/game");
-socket.on("kick_to_menu",()=>location.href="/game");
+socket.on("go_to_menu",()=>{try{localStorage.removeItem("sx_active_match")}catch{}location.href="/game"});
+socket.on("kick_to_menu",()=>{try{localStorage.removeItem("sx_active_match")}catch{}location.href="/game"});
 socket.on("auth_required",()=>location.href="/");
 socket.on("connect_error",err=>{
   if(matchPhase==="game"){
