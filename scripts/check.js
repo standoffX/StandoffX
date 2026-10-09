@@ -92,6 +92,8 @@ assert.match(server, /const activeMatches = new Map\(\);[^\n]*in-memory only/);
 assert.match(server, /const trainingSessions = new Map\(\);[^\n]*never written to MongoDB/);
 assert.match(server, /app\.post\("\/api\/admin\/atlas\/check"/);
 assert.match(server, /isTester/);
+assert.match(server, /const requestedMap = normalizeMapId\(data\?\.map \|\| cfg\.map\)/, "tester maps must be validated server-side");
+assert.match(server, /map: requestedMap/, "test sessions must retain the selected map");
 assert.match(menu, /data-mode="training"/);
 assert.match(menu, /data-mode="field_test"/);
 assert.match(menu, /id="modeModal"/, "Play must show a mode selection modal");
@@ -130,6 +132,11 @@ assert.match(game, /function requestMouseLook\(\)/, "mouse look must be activata
 assert.match(game, /controls\.pointerSpeed=mouseSensitivity/, "mouse look must use the saved sensitivity");
 assert.match(game, /function buildNeonYard\(\)/, "the selected neon map must be implemented");
 assert.match(game, /selectedMap==="NEON_YARD"/, "game must load the selected map");
+assert.match(game, /id="fieldControls"/, "field test must have a dedicated map lab panel");
+assert.match(game, /id="fieldCoords"/, "field test must report live player coordinates");
+assert.match(game, /id="resetFieldPosition"/, "field test must offer a return-to-start control");
+assert.doesNotMatch(game, /selectedMap==="FIELD_ARENA"\|\|mode==="field_test"/, "field test must respect the selected map");
+assert.match(menu, /socket\.emit\("start_training",\{mode:selectedMode,map:selectedMap\}\)/, "tester modes must receive the selected map");
 
 
 
