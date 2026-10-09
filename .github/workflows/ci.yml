@@ -15,4 +15,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Diagnostic npm audit report
+        run: npm audit --json || true
       - run: npm test
