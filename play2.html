@@ -89,7 +89,16 @@ import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
 import {PointerLockControls} from "three/addons/controls/PointerLockControls.js";
 
 const $=id=>document.getElementById(id);
-const socket=io({withCredentials:true});
+const socket=io({
+  withCredentials:true,
+  transports:["websocket"],
+  upgrade:false,
+  reconnection:true,
+  reconnectionAttempts:Infinity,
+  reconnectionDelay:800,
+  reconnectionDelayMax:6000,
+  timeout:20000
+});
 const myId=sessionStorage.getItem("myPlayerId");
 const myUuid=sessionStorage.getItem("myPlayerUUID")||"";
 const matchId=sessionStorage.getItem("currentMatchId");
@@ -1071,7 +1080,22 @@ socket.on("show_results",data=>{
 socket.on("go_to_menu",()=>location.href="/game");
 socket.on("kick_to_menu",()=>location.href="/game");
 socket.on("auth_required",()=>location.href="/");
-socket.on("disconnect",()=>{if(matchPhase==="game")$("overlayText").textContent="З'єднання перервано..."});
+socket.on("connect_error",err=>{
+  if(matchPhase==="game"){
+    $("overlayText").textContent="Зв’язок із сервером втрачено. Повторне підключення…";
+    $("overlay").style.display="flex";
+  }
+  console.warn("[Socket.IO] Gameplay connection failed; retrying.",err?.message||err);
+});
+socket.on("disconnect",()=>{
+  keys.w=keys.a=keys.s=keys.d=keys.shift=false;
+  jumpQueued=false;fireHeld=false;
+  if(matchPhase==="game"){
+    $("overlayTitle").textContent="ПЕРЕПІДКЛЮЧЕННЯ";
+    $("overlayText").textContent="З’єднання перервано. Автоматично підключаємося знову…";
+    $("overlay").style.display="flex";
+  }
+});
 
 // mobile controls: track each touch independently so move/look/fire can be used together.
 const stick=$("stick"),thumb=stick.querySelector("i");
@@ -1187,6 +1211,10 @@ socket.on("connect",()=>{
   if(!connectedToGameplay){connectedToGameplay=true;return}
   if(isTrainingMode)socket.emit("join_training",{trainingId});
   else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
+  if(matchPhase==="game"&&mapLoadFinished){
+    $("overlay").style.display="none";
+    $("overlayText").textContent="З’єднання відновлено.";
+  }
 });
 
 $("progress").style.width="4%";
