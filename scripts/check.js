@@ -182,7 +182,7 @@ assert.match(menu, /data-map="HILL_TOWN"/, "menu must offer Hill Town");
 assert.match(game, /async function buildHillTownMap\(\)/, "game must assemble the new map from modular assets");
 assert.match(game, /HILL_TOWN_MANIFEST_URL/, "game must load the public CC0 map asset manifest");
 assert.match(game, /async function loadHeldWeapon\(\)/, "game must load a first-person weapon model");
-assert.match(game, /e\.code==="Escape"&&matchPhase==="game"\)\{e\.preventDefault\(\);leaveGame\(\);return\}/, "Escape must return to the lobby");
+assert.match(game, /e\.code==="Escape"\)\{e\.preventDefault\(\);leaveGame\(\);return\}/, "Escape must return to the lobby from any match phase");
 assert.match(game, /if\(selectedMap==="FIELD_ARENA"\)\{/, "prototype must honor the selected map rather than forcing the field arena");
 assert.doesNotMatch(game, / · UUID "\+uuid/, "the match lobby must not display UUIDs");
 console.log("OK project invariants, tester-only tools, Atlas endpoint, and unique HTTP routes");
