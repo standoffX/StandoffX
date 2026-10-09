@@ -1305,8 +1305,8 @@ function getRequiredPlayers(mode) {
   return Number(getModeConfig(mode).requiredPlayers) || DEFAULT_MATCH_SIZE;
 }
 
-function removeFromQueue(userId) {
-  const idx = matchmakingQueue.findIndex(p => p.userId === userId);
+function removeFromQueue(identity) {
+  const idx = matchmakingQueue.findIndex(p => p.uuid === identity || (!p.uuid && p.userId === identity));
   if (idx !== -1) {
     matchmakingQueue.splice(idx, 1);
     return true;
@@ -1314,9 +1314,9 @@ function removeFromQueue(userId) {
   return false;
 }
 
-function playerMatch(userId) {
+function playerMatch(identity) {
   for (const match of activeMatches.values()) {
-    if (match.players.some(p => p.userId === userId)) return match;
+    if (match.players.some(p => p.uuid === identity || (!p.uuid && p.userId === identity))) return match;
   }
   return null;
 }
@@ -1347,9 +1347,8 @@ function createMatch(io, mode, mapId = "M3_Maze") {
   const requiredPlayers = getRequiredPlayers(mode);
   if (candidates.length < requiredPlayers) return;
 
-  const selectedIds = new Set(candidates.slice(0, requiredPlayers).map(p => p.userId));
-  const players = matchmakingQueue.filter(p => selectedIds.has(p.userId));
-  for (const p of players) removeFromQueue(p.userId);
+  const players = candidates.slice(0, requiredPlayers);
+  for (const p of players) removeFromQueue(p.uuid || p.userId);
 
   const cfg = getModeConfig(mode);
   const matchId = "match_" + Date.now() + "_" + crypto.randomBytes(2).toString("hex");
@@ -1953,12 +1952,12 @@ io.on("connection", socket => {
 
   socket.on("start_search", data => {
     const user = socket.user;
-    if (playerMatch(user.id)) return socket.emit("search_error", { message: "Ти вже в матчі." });
+    if (playerMatch(user.uuid || user.id)) return socket.emit("search_error", { message: "Ти вже в матчі." });
     if (matchmakingQueue.some(p => p.userId === user.id)) return;
 
     const mode = Object.prototype.hasOwnProperty.call(MODE_CONFIGS, data?.mode) ? data.mode : "hide_seek";
     const map = normalizeMapId(data?.map);
-    removeFromQueue(user.id);
+    removeFromQueue(user.uuid || user.id);
 
     matchmakingQueue.push({
       socketId: socket.id,
@@ -1975,7 +1974,7 @@ io.on("connection", socket => {
   });
 
   socket.on("cancel_search", () => {
-    if (removeFromQueue(socket.user.id)) emitQueueCount(io);
+    if (removeFromQueue(socket.user.uuid || socket.user.id)) emitQueueCount(io);
   });
 
   socket.on("leave_match", data => {
@@ -2207,7 +2206,7 @@ io.on("connection", socket => {
   });
 
   socket.on("disconnect", () => {
-    removeFromQueue(socket.user?.id);
+    removeFromQueue(socket.user?.uuid || socket.user?.id);
 
     if (socket.user) {
       socket.user.status = false;
