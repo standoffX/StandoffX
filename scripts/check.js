@@ -136,6 +136,20 @@ assert.match(game, /selectedMap==="NEON_YARD"/, "game must load the selected map
 assert.match(admin, /id="fTester"/);
 assert.match(game, /training_spawn_bot/);
 assert.match(game, /training_bot_action/);
+assert.match(menu, /DEFAULT_KEYBINDS/, "settings must define default training key bindings");
+assert.match(menu, /data-bind-action="spawnBot"/, "settings must let players remap bot spawning");
+assert.match(menu, /data-bind-action="resetSession"/, "settings must let players remap training reset");
+assert.match(menu, /data-bind-action="menu"/, "settings must let players remap the in-game menu");
+assert.match(menu, /current\.keybinds=binds/, "custom key bindings must be saved in localStorage");
+assert.match(menu, /refreshProfileIdentity\(\)/, "opening the profile must refresh the UUID from the account API");
+assert.match(menu, /api\("\/api\/user-data\?id="/, "profile UUID refresh must have a user-data fallback");
+assert.match(game, /function runTrainingAction\(action\)/, "training actions must be keyboard-driven");
+assert.match(game, /function togglePauseMenu\(force\)/, "the game must have a keyboard-toggleable menu");
+assert.match(game, /menu:"KeyM"/, "M must open the in-game menu by default");
+assert.match(game, /function renderTrainingKeyHints\(\)/, "training HUD must show the configured action keys");
+assert.doesNotMatch(game, /id="spawnBot"/, "training bot controls must no longer require on-screen buttons");
+assert.doesNotMatch(game, /id="resetTraining"/, "training reset must be keyboard-driven");
+
 assert.equal((menu.split("<script src=")[0].match(/\sonclick\s*=/gi) || []).length, 0, "menu must not contain inline onclick handlers");
 
 const routes = [...server.matchAll(/app\.(get|post|put|patch|delete)\(["']([^"']+)["']/gi)]
