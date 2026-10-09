@@ -1347,8 +1347,11 @@ function getRequiredPlayers(mode) {
   return Number(getModeConfig(mode).requiredPlayers) || DEFAULT_MATCH_SIZE;
 }
 
-function removeFromQueue(identity) {
-  const idx = matchmakingQueue.findIndex(p => p.uuid === identity || (!p.uuid && p.userId === identity));
+function removeFromQueue(identity, socketId = null) {
+  const idx = matchmakingQueue.findIndex(p =>
+    (p.uuid === identity || (!p.uuid && p.userId === identity)) &&
+    (!socketId || p.socketId === socketId)
+  );
   if (idx !== -1) {
     matchmakingQueue.splice(idx, 1);
     return true;
@@ -2014,7 +2017,13 @@ io.on("connection", socket => {
   socket.on("start_search", data => {
     const user = socket.user;
     if (playerMatch(user.uuid || user.id)) return socket.emit("search_error", { message: "Ти вже в матчі." });
-    if (matchmakingQueue.some(p => p.userId === user.id)) return;
+    const existingQueueIndex = matchmakingQueue.findIndex(p => p.userId === user.id);
+    if (existingQueueIndex !== -1) {
+      const [existing] = matchmakingQueue.splice(existingQueueIndex, 1);
+      if (existing.socketId && existing.socketId !== socket.id) {
+        io.to(existing.socketId).emit("search_error", { message: "Пошук перенесено в інше вікно." });
+      }
+    }
 
     const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
     const map = normalizeMapId(data?.map);
@@ -2047,7 +2056,7 @@ io.on("connection", socket => {
   });
 
   socket.on("cancel_search", () => {
-    if (removeFromQueue(socket.user.uuid || socket.user.id)) emitQueueCount(io);
+    if (removeFromQueue(socket.user.uuid || socket.user.id, socket.id)) emitQueueCount(io);
   });
 
   socket.on("leave_match", data => {
@@ -2279,7 +2288,7 @@ io.on("connection", socket => {
   });
 
   socket.on("disconnect", () => {
-    removeFromQueue(socket.user?.uuid || socket.user?.id);
+    removeFromQueue(socket.user?.uuid || socket.user?.id, socket.id);
 
     if (socket.user) {
       socket.user.status = false;
