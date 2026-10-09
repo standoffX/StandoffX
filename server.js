@@ -2025,7 +2025,7 @@ io.on("connection", socket => {
       modeName: match.modeName,
       me: {
         userId: player.userId,
-        uuid: users.find(user => user.id === player.userId)?.uuid || "",
+        uuid: player.uuid || "",
         nickname: player.nickname,
         role: player.role,
         team: player.team,
