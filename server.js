@@ -2113,7 +2113,7 @@ io.on("connection", socket => {
     }
 
     match.players.splice(index, 1);
-    io.to(matchId).emit("player_connection_state", { userId: player.userId, connected: false, reconnectSeconds: 90 });
+    io.to(matchId).emit("player_left", { userId: player.userId });
     if (match.players.filter(p => !p.isBot).length === 0 || match.players.length < 2) cleanMatch(io, matchId, true);
     else emitMatchWaiting(io, match);
   });
@@ -2341,13 +2341,13 @@ io.on("connection", socket => {
 
       player.socketId = null;
       player.ready = false;
-      io.to(matchId).emit("player_left", { userId: player.userId });
+      io.to(matchId).emit("player_connection_state", { userId: player.userId, connected: false, reconnectSeconds: 90 });
 
       if (match.phase === "waiting") {
-        // Expected when the search page navigates into play2.html: keep the slot
-        // for the new gameplay socket; joinTimer handles genuinely missing players.
-        emitMatchWaiting(io, match);
-        continue;
+        // A navigation or dropped connection can take a moment; pause the initial
+        // join timeout and give the new socket the same reconnect grace period.
+        if (match.joinTimer) clearTimeout(match.joinTimer);
+        match.joinTimer = null;
       }
 
       if (match.phase !== "game") {
