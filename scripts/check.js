@@ -68,6 +68,19 @@ assert.match(server, /requiredPlayers: 3/, "hide and seek requires three players
 assert.match(server, /requiredPlayers: 4/, "team fight must be 2v2");
 assert.match(server, /count: modePlayers\.length/, "queue count must be the total number waiting");
 assert.match(server, /players: modePlayers\.map/, "queue must send a waiting player roster");
+assert.match(server, /function normalizeClanState\(rawClans\)/, "legacy and Atlas clan records must be normalized");
+assert.match(server, /app\.post\("\/api\/clans\/update"/, "clan owner must be able to edit clan details");
+assert.match(server, /app\.post\("\/api\/clans\/transfer"/, "clan owner must be able to transfer ownership");
+assert.match(server, /clan_request_notification/, "new clan requests must notify owners and officers");
+assert.match(server, /socket\.on\("join_clan_chat"/, "clan members need a real-time chat");
+assert.match(server, /socket\.on\("send_clan_msg"/, "clan chat messages must be processed server-side");
+assert.match(server, /socket\.on\("leave_clan_chat"/, "clients must be able to leave clan chat rooms");
+assert.match(server, /app\.post\("\/api\/admin\/clans\/update"/, "admins must be able to edit clans");
+assert.match(server, /app\.post\("\/api\/admin\/clans\/delete"/, "admins must be able to remove clans");
+assert.match(server, /const affectedIds = new Set\(users\.filter\(user => user\.clan === tag\)\.map\(user => user\.id\)\)/, "admin clan deletion must revoke live member chat access");
+assert.match(server, /client\.user\?\.id === target\.id[\s\S]{0,180}client\.leave\("clan:" \+ clan\.tag\)/, "kicked members must leave the clan chat room");
+assert.match(server, /client\.user\?\.id === id\) client\.disconnect\(true\)/, "deleted accounts must be disconnected immediately");
+
 
 assert.match(server, /user\.isAdmin = user\.id === ADMIN_ID \? true : Boolean\(user\.isAdmin\)/, "master account must remain admin");
 assert.match(server, /const changingId = !isMaster && nextIdRaw !== u\.id/, "legacy IDs must be editable without changing ID");
@@ -86,6 +99,16 @@ assert.match(menu, /id="confirmModeBtn"/, "mode selection must have an explicit 
 assert.match(menu, /renderWaitPlayers\(d\.players\|\|\[\]\)/, "queue UI must render the waiting roster");
 assert.match(menu, /playerId=esc\(cleanId\(p\.userId\|\|p\.id\|\|["']—["']\)\)/, "queue UI must display player IDs");
 assert.match(game, /class='player-id'>ID /, "waiting lobby must display player IDs");
+assert.match(menu, /join_clan_chat/, "menu must connect to the clan chat");
+assert.match(menu, /send_clan_msg/, "menu must send clan chat messages");
+assert.match(menu, /data-clan-action='transfer'/, "clan owner UI must expose transfer ownership");
+assert.match(menu, /data-clan-action='promote'/, "clan owner UI must expose officer promotion");
+assert.match(menu, /data-clan-action='demote'/, "clan owner UI must expose officer demotion");
+assert.match(menu, /data-clan-action='edit'/, "clan owner UI must expose clan editing");
+assert.match(menu, /clan_request_notification/, "menu must show clan application notifications");
+assert.match(admin, /data-clan-admin='edit'/, "admin UI must expose clan editing");
+assert.match(admin, /data-clan-admin='delete'/, "admin UI must expose clan deletion");
+
 
 assert.match(admin, /id="fTester"/);
 assert.match(game, /training_spawn_bot/);
