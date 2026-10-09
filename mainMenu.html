@@ -464,7 +464,7 @@ function render(){
 }
 function renderMode(){
   document.querySelectorAll(".modebtn").forEach(b=>b.classList.toggle("active",b.dataset.mode===selectedMode));
-  $("selectedModeText").textContent=MODES[selectedMode]||MODES.hide_seek;
+  $("selectedModeText").textContent=MODES[selectedMode]||MODES.allies;
   if($("confirmModeBtn")) $("confirmModeBtn").textContent=(selectedMode==="training"||selectedMode==="field_test")?"ЗАПУСТИТИ РЕЖИМ":"ПОЧАТИ ПОШУК МАТЧУ";
 }
 document.querySelectorAll(".rail button[data-view]").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.view==="admin"){location.href="/admin";return}show(b.dataset.view)}));
