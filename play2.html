@@ -867,7 +867,7 @@ function rebuildCollisionIndex(){
   collisionIndexReady=true;
 }
 function worldLimit(){
-  return ({HILL_TOWN:60,NEON_YARD:190,FIELD_ARENA:315,M3_Maze:232})[selectedMap]||232;
+  return ({HILL_TOWN:70,NEON_YARD:205,FIELD_ARENA:330,M3_Maze:232})[selectedMap]||232;
 }
 function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
@@ -941,7 +941,7 @@ function drawTacticalMaps(){
       if(full){ctx.fillStyle="#d7efff";ctx.font="bold 14px Arial";ctx.fillText("ALLY",x+10,y+4)}
     }
     let px=full?mapX(player.position.x):cx,py=full?mapY(player.position.z):cy;
-    ctx.save();ctx.translate(px,py);ctx.rotate(player.rotationY+Math.PI);
+    ctx.save();ctx.translate(px,py);ctx.rotate(-camera.rotation.y);
     ctx.beginPath();ctx.moveTo(0,-(full?12:9));ctx.lineTo(full?7:5,full?8:6);ctx.lineTo(0,full?5:4);ctx.lineTo(full?-7:-5,full?8:6);ctx.closePath();
     ctx.fillStyle="#57f1bd";ctx.shadowColor="#57f1bd";ctx.shadowBlur=full?12:8;ctx.fill();ctx.restore();
     if(full){ctx.strokeStyle="#5af0bd";ctx.lineWidth=2;ctx.strokeRect(margin,margin,w-margin*2,h-margin*2)}
