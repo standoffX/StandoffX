@@ -1283,7 +1283,8 @@ const JOIN_TIMEOUT_SECONDS = 35;
 const PLAYABLE_MAPS = Object.freeze({
   M3_Maze: { id: "M3_Maze", name: "M3 MAZE", kind: "model" },
   FIELD_ARENA: { id: "FIELD_ARENA", name: "FIELD ARENA", kind: "arena" },
-  NEON_YARD: { id: "NEON_YARD", name: "NEON YARD", kind: "neon" }
+  NEON_YARD: { id: "NEON_YARD", name: "NEON YARD", kind: "neon" },
+  HILL_TOWN: { id: "HILL_TOWN", name: "HILL TOWN", kind: "hill-town" }
 });
 function normalizeMapId(value) {
   const id = cleanText(value, 32);
@@ -1291,6 +1292,13 @@ function normalizeMapId(value) {
 }
 
 const MODE_CONFIGS = {
+  allies: {
+    id: "allies",
+    name: "СОЮЗНИКИ",
+    short: "AL",
+    map: "HILL_TOWN",
+    requiredPlayers: 4
+  },
   hide_seek: {
     id: "hide_seek",
     name: "HIDE & SEEK",
@@ -1302,14 +1310,14 @@ const MODE_CONFIGS = {
     id: "team_fight",
     name: "TEAM FIGHT",
     short: "TF",
-    map: "M3_Maze",
+    map: "HILL_TOWN",
     requiredPlayers: 4
   }
 };
 
 const TESTER_MODE_CONFIGS = {
-  training: { id: "training", name: "TRAINING", map: "M3_Maze", kind: "bot-training" },
-  field_test: { id: "field_test", name: "FIELD TEST", map: "FIELD_ARENA", kind: "free-range" }
+  training: { id: "training", name: "TRAINING", map: "HILL_TOWN", kind: "bot-training" },
+  field_test: { id: "field_test", name: "FIELD TEST", map: "HILL_TOWN", kind: "free-range" }
 };
 
 function canUseTesterModes(user) {
@@ -1392,7 +1400,7 @@ function createMatch(io, mode, mapId = "M3_Maze") {
       uuid: p.uuid,
       nickname: p.nickname,
       role: mode === "hide_seek" ? (i === hunterIndex ? "hunter" : "runner") : (i % 2 === 0 ? "teamA" : "teamB"),
-      team: mode === "team_fight" ? (i % 2 === 0 ? "A" : "B") : null,
+      team: (mode === "team_fight" || mode === "allies") ? (i % 2 === 0 ? "A" : "B") : null,
       hp: 100,
       score: 0,
       kills: 0,
@@ -1596,7 +1604,7 @@ function respawnPlayer(match, player) {
 }
 
 function handleTeamShot(io, match, shooter, data) {
-  if (match.mode !== "team_fight" || match.phase !== "game") return;
+  if (!["team_fight", "allies"].includes(match.mode) || match.phase !== "game") return;
 
   const now = Date.now();
   if (now - (shooter.lastShotAt || 0) < 120) return;
