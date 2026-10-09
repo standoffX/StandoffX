@@ -48,6 +48,22 @@ node server.js
 
 Render автоматично передає `PORT`.
 
+### Render Environment
+
+Додай змінні в **Render → Service → Environment**:
+
+| Змінна | Значення | Примітка |
+|---|---|---|
+| `ADMIN_ID` | `Dev_01` | Master ID; не змінюй, якщо користуєшся наявним master-акаунтом. |
+| `ADMIN_PASSWORD` | власний довгий пароль | **Обовʼязкова Secret-змінна.** У коді немає пароля за замовчуванням; без неї master-вхід вимкнений. |
+| `MONGODB_URI` | MongoDB Atlas connection string | Рекомендовано для постійного збереження акаунтів, кланів, повідомлень та інвентарю. |
+| `MONGODB_DB` | `standoffx` | Необовʼязково; назва БД за замовчуванням. |
+| `NODE_ENV` | `production` | Render зазвичай уже запускає production-середовище. |
+
+`MONGO_URI` також підтримується як сумісний alias для `MONGODB_URI`. Не додавай TLS key/cert для звичайного Render Web Service: TLS завершує Render. Залиш Start Command як `node server.js`.
+
+**Важливо про сховище:** без MongoDB активується JSON fallback. На Render локальні файли не є надійним постійним сховищем після redeploy/restart, тому для реальних акаунтів налаштуй Atlas та перевір статус у `/api/health` або в адмінці. Усі матчі залишаються в памʼяті процесу й не зберігаються в БД.
+
 ## HTTPS
 
 За потреби:
