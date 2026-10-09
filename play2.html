@@ -89,6 +89,7 @@ const socket=io({withCredentials:true});
 const myId=sessionStorage.getItem("myPlayerId");
 const matchId=sessionStorage.getItem("currentMatchId");
 const mode=sessionStorage.getItem("selectedMode")||"hide_seek";
+const selectedMap=sessionStorage.getItem("selectedMap")||"M3_Maze";
 const isTrainingMode=mode==="training"||mode==="field_test";
 const trainingId=sessionStorage.getItem("trainingId")||matchId;
 if(!myId||(!matchId&&!isTrainingMode)){location.href="/game";throw new Error("No active match")}
@@ -118,7 +119,23 @@ keyLight.position.set(30,60,20);scene.add(keyLight);
 
 const controls=new PointerLockControls(camera,document.body);
 let canControl=false;
-$("overlay").addEventListener("click",()=>{if(!/Android|iPhone|iPad/i.test(navigator.userAgent))controls.lock()});
+let mouseSensitivity=1;
+try{mouseSensitivity=Number(JSON.parse(localStorage.getItem("sx_settings")||"{}").sensitivity)||1}catch{}
+controls.pointerSpeed=mouseSensitivity;
+controls.minPolarAngle=.08;
+controls.maxPolarAngle=Math.PI-.08;
+function requestMouseLook(){
+  if(!/Android|iPhone|iPad/i.test(navigator.userAgent)&&matchPhase==="game"&&!controls.isLocked){
+    try{controls.lock()}catch{}
+  }
+}
+$("overlay").addEventListener("click",requestMouseLook);
+renderer.domElement.addEventListener("click",requestMouseLook);
+document.addEventListener("pointerlockchange",()=>{
+  if(document.pointerLockElement===document.body){
+    $("clickHint").textContent="Миша: огляд · ESC: звільнити курсор · WASD: рух";
+  }
+});
 controls.addEventListener("lock",()=>{if(matchPhase==="game")$("overlay").style.display="none"});
 controls.addEventListener("unlock",()=>{if(matchPhase==="game")$("overlay").style.display="flex"});
 
@@ -173,6 +190,32 @@ function buildFieldArena(){
   addBox(0,1,35,12,2,5,boxMat);addBox(38,1,28,5,2,12,boxMat);
   $("progress").style.width="100%";
 }
+function buildNeonYard(){
+  if(mapLoadFinished)return;
+  mapLoadFinished=true;
+  scene.background=new THREE.Color(0x050b18);
+  scene.fog=new THREE.Fog(0x050b18,95,300);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(180,180),new THREE.MeshStandardMaterial({color:0x101a2a,roughness:.88,metalness:.25}));
+  floor.rotation.x=-Math.PI/2;floor.position.y=-.05;scene.add(floor);mapObjects.push(floor);
+  const grid=new THREE.GridHelper(180,45,0x1de9ff,0x123b56);grid.position.y=.015;scene.add(grid);
+  const wallMat=new THREE.MeshStandardMaterial({color:0x101d31,roughness:.55,metalness:.35});
+  const neonMat=new THREE.MeshStandardMaterial({color:0x08283a,emissive:0x00cfff,emissiveIntensity:1.2,roughness:.35,metalness:.3});
+  const violetMat=new THREE.MeshStandardMaterial({color:0x251039,emissive:0x8b35ff,emissiveIntensity:.8,roughness:.4,metalness:.2});
+  const addBox=(x,y,z,w,h,d,mat)=>{
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+    mesh.position.set(x,y,z);mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
+  };
+  addBox(0,4,-88,180,8,3,wallMat);addBox(0,4,88,180,8,3,wallMat);
+  addBox(-88,4,0,3,8,180,wallMat);addBox(88,4,0,3,8,180,wallMat);
+  for(const [x,z] of [[-24,-20],[24,-20],[-24,20],[24,20],[0,-38],[0,38]]){
+    addBox(x,2,z,9,4,7,wallMat);
+    addBox(x,4.08,z,9,.14,7,neonMat);
+    addBox(x,1,z,9,.12,7,violetMat);
+  }
+  addBox(0,1,0,5,2,16,wallMat);
+  addBox(0,2.1,0,.18,.12,16,neonMat);
+  $("progress").style.width="100%";
+}
 function addFallbackArena(){
   if(mapLoadFinished)return;
   mapLoadFinished=true;
@@ -187,7 +230,12 @@ function addFallbackArena(){
 
 function loadMap(){
   $("phase").textContent="ЗАВАНТАЖЕННЯ КАРТИ";
-  if(mode==="field_test"){
+  if(selectedMap==="NEON_YARD"){
+    buildNeonYard();
+    finishClientReady();
+    return;
+  }
+  if(selectedMap==="FIELD_ARENA"||mode==="field_test"){
     buildFieldArena();
     finishClientReady();
     return;
@@ -368,8 +416,8 @@ addEventListener("keyup",e=>{
 addEventListener("mousedown",e=>{if(e.button===0)shoot()});
 
 function setOverlayGame(){
-  $("overlayTitle").textContent=mode==="team_fight"?"TEAM FIGHT":"HIDE & SEEK";
-  $("clickHint").textContent="Клікни для мишки. W A S D — рух.";
+  $("overlayTitle").textContent=mode==="team_fight"?"TEAM FIGHT":mode==="field_test"?"FIELD TEST":mode==="training"?"TRAINING":"HIDE & SEEK";
+  $("clickHint").textContent="Клікни для огляду мишкою. WASD — рух · ESC — курсор";
   if(/Android|iPhone|iPad/i.test(navigator.userAgent)) $("overlay").style.display="none";
 }
 function leaveGame(){
@@ -426,6 +474,7 @@ socket.on("training_state",data=>{
 
 socket.on("init_match",data=>{
   if(data.mode)sessionStorage.setItem("selectedMode",data.mode);
+  if(data.map)sessionStorage.setItem("selectedMap",data.map);
   myRole=data.me?.role||"runner";myTeam=data.me?.team||null;score=data.me?.score||0;hp=data.me?.hp||100;
   $("modeName").textContent=data.modeName||"MATCH";
   ensurePlayerVisual();
@@ -552,7 +601,7 @@ function animate(){
       const currentSpeed=(mode==="hide_seek"&&myRole==="hunter")?10.5:(keys.shift?10:7.5);
       const step=currentSpeed*dt;
       if(!blocked(move))player.position.addScaledVector(move,step);
-      player.rotationY=Math.atan2(move.x,move.z);
+      player.rotationY=Math.atan2(dir.x,dir.z);
     }
     if(jumpQueued&&!jumping){velocityY=10;jumping=true;jumpQueued=false}
     velocityY-=28*dt;player.position.y+=velocityY*dt;
