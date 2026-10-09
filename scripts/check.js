@@ -117,7 +117,7 @@ assert.match(server, /while \(users\.some\(u => String\(u\.id\) === id\)\)/, "ne
 assert.match(server, /const PLAYABLE_MAPS = Object\.freeze/, "matchmaking must validate map selections");
 assert.match(server, /p\.mode === entry\.mode && p\.map === entry\.map/, "players on different maps must not be mixed into one queue");
 assert.match(server, /createMatch\(io, mode, map\)/, "the selected map must reach the match");
-assert.match(menu, /id="createdUuid"/, "registration must display the UUID");
+assert.match(read("auth.html"), /id="createdUuid"/, "registration must display the UUID");
 assert.match(menu, /data-theme-choice="cyan"/, "menu must offer the cyan theme");
 assert.match(menu, /data-theme-choice="violet"/, "menu must offer the violet theme");
 assert.match(menu, /data-theme-choice="red"/, "menu must offer the red theme");
