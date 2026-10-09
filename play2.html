@@ -708,6 +708,7 @@ function applyEnemy(data){
   if(data.score!=null)p.score=data.score;
   if(typeof data.anim==="string")p.anim=data.anim;
   if(previousRole!==p.role||previousTeam!==p.team)setSoldierTint(p.mesh,colorFor(p.role,p.team));
+  if(p.hp<=0){p.anim="Dead";setSoldierDown(p.mesh,true)}
 }
 function updateVisual(){
   if(!playerVisual||!player)return;
