@@ -2472,9 +2472,10 @@ app.post("/api/admin/clans/delete", transactionRateLimit, requireAdmin, (req, re
   const clan = clans[tag];
   if (!clan) return res.status(404).json({ success: false, message: "Клан не знайдено." });
 
-  for (const user of users) if (user.clan === tag) user.clan = null;
+  const affectedIds = new Set(users.filter(user => user.clan === tag).map(user => user.id));
+  for (const user of users) if (affectedIds.has(user.id)) user.clan = null;
   for (const client of io.sockets.sockets.values()) {
-    if (client.user?.clan === tag) {
+    if (client.user && affectedIds.has(client.user.id)) {
       client.leave("clan:" + tag);
       client.emit("clan_chat_error", { message: "Клан було видалено адміністрацією." });
     }
