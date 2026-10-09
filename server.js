@@ -1742,6 +1742,7 @@ io.on("connection", socket => {
     }
     if (!cfg) return socket.emit("training_error", { message: "Невідомий тестовий режим." });
 
+    const requestedMap = normalizeMapId(data?.map || cfg.map);
     const previous = trainingSessions.get(user.id);
     const session = {
       id: "practice_" + crypto.randomBytes(10).toString("hex"),
@@ -1749,7 +1750,7 @@ io.on("connection", socket => {
       nickname: user.nickname,
       mode: cfg.id,
       modeName: cfg.name,
-      map: cfg.map,
+      map: requestedMap,
       socketId: socket.id,
       playerPos: mode === "training" ? { x: 5, y: 0, z: 5 } : { x: 0, y: 0, z: 0 },
       playerRotY: 0,
@@ -1765,7 +1766,7 @@ io.on("connection", socket => {
       userId: user.id,
       mode: cfg.id,
       modeName: cfg.name,
-      map: cfg.map,
+      map: requestedMap,
       uuid: user.uuid
     });
   });
