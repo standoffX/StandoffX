@@ -269,6 +269,54 @@ function addTownFallbackProp(x,z,color=0x897052){
   const slat=new THREE.Mesh(new THREE.BoxGeometry(1.4,.08,1.04),new THREE.MeshStandardMaterial({color:0x4e3a2a,roughness:1}));
   slat.position.set(x,1.12,z);scene.add(slat);mapObjects.push(slat);
 }
+function buildLocalHillTownFallback(){
+  if(mapLoadFinished)return;
+  scene.background=new THREE.Color(0xc8d3d8);
+  scene.fog=new THREE.Fog(0xc8d3d8,85,190);
+  const mat=(color,roughness=0.9)=>new THREE.MeshStandardMaterial({color,roughness});
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(64,64),mat(0x8a8b7a,1));
+  floor.rotation.x=-Math.PI/2;floor.position.y=-.08;scene.add(floor);
+  const road=new THREE.Mesh(new THREE.PlaneGeometry(10,60),mat(0x555b5c,1));
+  road.rotation.x=-Math.PI/2;road.position.set(0,-.055,0);scene.add(road);
+  const crossRoad=new THREE.Mesh(new THREE.PlaneGeometry(60,9),mat(0x555b5c,1));
+  crossRoad.rotation.x=-Math.PI/2;crossRoad.position.set(0,-.05,0);scene.add(crossRoad);
+  const addBox=(x,y,z,w,h,d,material,rotationY=0,collidable=true)=>{
+    const object=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
+    object.position.set(x,y,z);object.rotation.y=rotationY;
+    object.castShadow=false;object.receiveShadow=false;scene.add(object);
+    if(collidable)mapObjects.push(object);
+    return object;
+  };
+  const wall=mat(0xb8a181),wallDark=mat(0x89735e),roof=mat(0x554c48),wood=mat(0x614b38),windowMat=new THREE.MeshStandardMaterial({color:0x233542,roughness:.36,metalness:.2});
+  // Small town buildings frame the road without blocking the four player spawns.
+  for(const z of [-19,-7,7,19]){
+    for(const side of [-1,1]){
+      const x=side*15;
+      addBox(x,2.1,z,7,4.2,7,wall,side<0?0.035:-0.035);
+      addBox(x,4.32,z,7.6,.35,7.6,roof);
+      for(const wz of [z-2,z+2]){
+        addBox(x+side*.02,2.6,wz,1.15,1.05,.08,windowMat);
+        addBox(x-side*.03,1.05,wz,1.1,2,.12,wood);
+      }
+      addBox(x,3.5,z-side*3.56,7.15,.16,.12,wallDark);
+    }
+  }
+  // Low cover and market stalls create playable lanes through the center.
+  for(const [x,z] of [[-7,-15],[7,15],[-7,15],[7,-15]]){
+    addBox(x,.62,z,1.4,1.2,1.2,wood);
+    addBox(x,1.25,z,1.5,.09,1.28,wallDark);
+  }
+  addBox(-4,.6,-3,3,1.2,1,wallDark);
+  addBox(4,.6,3,3,1.2,1,wallDark);
+  for(const x of [-26,26])addBox(x,1.5,0,.6,3,52,wallDark);
+  for(const z of [-26,26])addBox(0,1.5,z,52,3,.6,wallDark);
+  // Arch-like gate marks the central route and is also physical cover.
+  addBox(0,2.5,-11,1.1,5,.65,wallDark);
+  addBox(0,2.5,-11,6.2,.7,.65,wallDark);
+  mapLoadFinished=true;mapLoaded=true;hillTownBuilding=false;
+  $("progress").style.width="100%";
+  $("phase").textContent="HILL TOWN · ГОТОВО";
+}
 async function loadHillTownStarterFallback(){
   try{
     const map=await loadGLBScene(HILL_TOWN_STARTER_URL);
@@ -278,8 +326,8 @@ async function loadHillTownStarterFallback(){
     $("phase").textContent="HILL TOWN";
     finishClientReady();
   }catch(error){
-    console.warn("[HILL_TOWN] Remote models unavailable; using local fallback.",error);
-    buildFieldArena();finishClientReady();
+    console.warn("[HILL_TOWN] Remote models unavailable; using local town geometry.",error);
+    buildLocalHillTownFallback();finishClientReady();
   }
 }
 async function buildHillTownMap(){
