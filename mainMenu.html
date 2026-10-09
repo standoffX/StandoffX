@@ -348,8 +348,25 @@ $("marketList").addEventListener("click",e=>{const b=e.target.closest("[data-buy
 
 function settings(){let d={sensitivity:1,ads:1,crosshairSize:20,crosshairGap:0};try{d=Object.assign(d,JSON.parse(localStorage.getItem("sx_settings")||"{}"))}catch{};["sens","ads","crossSize","crossGap"].forEach((id,i)=>$(id).value=[d.sensitivity,d.ads,d.crosshairSize,d.crosshairGap][i]);["sens","ads","crossSize","crossGap"].forEach(id=>$(id).addEventListener("input",()=>localStorage.setItem("sx_settings",JSON.stringify({sensitivity:Number($("sens").value),ads:Number($("ads").value),crosshairSize:Number($("crossSize").value),crosshairGap:Number($("crossGap").value)}))))}
 
-fetch("/api/health",{credentials:"same-origin"}).then(r=>r.json()).then(d=>{if(me&&(me.id==="Dev_01"||me.isAdmin)){$("atlasIndicator").style.display="block";$("atlasIndicator").textContent=d.atlas?.connected?"ATLAS ✓":d.atlas?.state==="not_configured"?"ATLAS !":"ATLAS ?"}}).catch(()=>{});
-(async()=>{try{me=(await api("/api/me")).user;render();settings();loadFriends();loadClan();loadInventory();loadMarket()}catch{location.href="/"}})();
+async function refreshAtlasIndicator(){
+  try{
+    const d=await api("/api/health");
+    if(me&&(me.id==="Dev_01"||me.isAdmin)){
+      $("atlasIndicator").style.display="block";
+      $("atlasIndicator").textContent=d.atlas?.connected?"ATLAS ✓":d.atlas?.state==="not_configured"?"ATLAS !":"ATLAS ?";
+      $("atlasIndicator").title=d.atlas?.lastError||d.atlas?.state||"";
+    }
+  }catch{}
+}
+(async()=>{
+  try{
+    me=(await api("/api/me")).user;
+    if(!canTest()&&(selectedMode==="training"||selectedMode==="field_test")){
+      selectedMode="hide_seek";localStorage.setItem("sx_mode",selectedMode);
+    }
+    render();settings();loadFriends();loadClan();loadInventory();loadMarket();refreshAtlasIndicator();
+  }catch{location.href="/"}
+})();
 </script>
 </body>
 </html>
