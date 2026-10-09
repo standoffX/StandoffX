@@ -379,7 +379,7 @@ function initSocialSocket(){
     if(clanChatHistory.length>200)clanChatHistory.splice(0,clanChatHistory.length-200);
     renderClanChat();
   });
-  socialSocket.on("clan_chat_error",data=>notifyToast(data?.message||"Помилка кланового чату."));
+  socialSocket.on("clan_chat_error",data=>{notifyToast(data?.message||"Помилка кланового чату.");loadClan();});
   socialSocket.on("clan_request_notification",data=>{
     if(!data)return;
     notifyToast("Нова заявка до клану ["+String(data.tag||"")+"]: "+String(data.nickname||"Гравець"));
