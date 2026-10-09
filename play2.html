@@ -22,7 +22,7 @@
 #results{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;background:#05080def}.resultBox{padding:28px;width:min(420px,90vw);background:#111821;border:1px solid #ffffff14;border-radius:11px;text-align:center}.resultBox h2{margin:0 0 12px}.resultBox .reward{font-size:20px;font-weight:900}.resultBox button{margin-top:18px;width:100%;height:44px;border:0;border-radius:6px;background:#327cff;color:white;font-weight:900}
 #mobile{display:none;position:fixed;inset:0;z-index:20;pointer-events:none}
 #leaveGameDesktop{position:fixed;right:14px;top:14px;z-index:25;pointer-events:auto;border:1px solid #ffffff28;background:#0b111bd9;color:#fff;border-radius:6px;padding:10px 13px;font-size:11px;font-weight:900;cursor:pointer}
-@media(max-width:800px),(pointer:coarse){#leaveGameDesktop{display:none}}.stick{position:absolute;left:20px;bottom:25px;width:125px;height:125px;border-radius:50%;background:#ffffff0d;border:1px solid #ffffff1c;pointer-events:auto;touch-action:none}.stick i{position:absolute;left:35px;top:35px;width:55px;height:55px;border-radius:50%;background:#ffffff22}.mbtn{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid #ffffff1d;background:#0b111bd9;color:#fff;font-size:10px;font-weight:950;pointer-events:auto;touch-action:none}.fire{right:20px;bottom:64px;background:#3e6fb3e6}.jump{right:100px;bottom:145px}.reload{right:102px;bottom:64px}.leave{right:20px;top:20px;width:48px;height:40px;border-radius:6px}
+@media(max-width:800px),(pointer:coarse){#leaveGameDesktop{display:none}}.stick{position:absolute;left:20px;bottom:25px;width:125px;height:125px;border-radius:50%;background:#ffffff0d;border:1px solid #ffffff1c;pointer-events:auto;touch-action:none}.stick i{position:absolute;left:35px;top:35px;width:55px;height:55px;border-radius:50%;background:#ffffff22}.mbtn{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid #ffffff1d;background:#0b111bd9;color:#fff;font-size:10px;font-weight:950;pointer-events:auto;touch-action:none}.fire{right:18px;bottom:54px;background:#3e6fb3e6}.jump{right:92px;bottom:128px}.reload{right:92px;bottom:54px}.crouch{right:18px;bottom:128px;background:#7258a8e8}.sprint{right:24px;bottom:202px;background:#237f78e8;width:58px;height:52px;border-radius:14px}.leave{right:20px;top:20px;width:48px;height:40px;border-radius:6px}
 #trainingControls button:hover{filter:brightness(1.15)}
 .training-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .training-action-grid button{display:flex;align-items:center;justify-content:space-between;gap:5px;min-width:0;min-height:32px;padding:6px 7px;border:1px solid #1de9ff35;border-radius:4px;background:#101e2de8;color:#eaf8ff;font-size:9px;font-weight:900;letter-spacing:.2px;text-align:left;cursor:pointer;touch-action:manipulation}
@@ -30,7 +30,7 @@
 .training-action-grid kbd{flex:0 0 auto;display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 4px;border:1px solid #1de9ff60;border-radius:3px;background:#071520;color:#1de9ff;font:900 9px ui-monospace,monospace}
 #trainingControls{overscroll-behavior:contain;touch-action:pan-y}
 @media(max-width:800px){#trainingControls{top:auto;left:8px;right:auto;bottom:190px;width:196px;max-height:46vh;padding:8px}.training-action-grid button{min-height:29px;padding:5px;font-size:8px}.training-action-grid kbd{min-width:17px;height:17px}.fire{bottom:44px}}
-@media(max-width:800px){#trainingControls{top:auto;left:8px;right:auto;bottom:190px;width:185px;padding:8px}.fire{bottom:44px}}
+@media(max-width:800px){#trainingControls{top:54px;left:auto;right:8px;bottom:auto;width:min(205px,52vw);max-height:39vh;padding:8px}.fire{bottom:44px}.crouch{bottom:112px}.jump{bottom:112px}.sprint{bottom:190px}}
 @media(max-width:800px),(pointer:coarse){#mobile{display:block}#hint{display:none}.top{top:8px}.players{grid-template-columns:1fr}.panel{max-height:90vh;overflow:auto}}
 </style>
 </head>
@@ -89,6 +89,8 @@
   <button id="fireBtn" class="mbtn fire">FIRE</button>
   <button id="jumpBtn" class="mbtn jump">JUMP</button>
   <button id="reloadBtn" class="mbtn reload">RELOAD</button>
+  <button id="crouchBtn" class="mbtn crouch" type="button" aria-label="Присісти">CTRL</button>
+  <button id="sprintBtn" class="mbtn sprint" type="button" aria-label="Бігти швидше">SPRINT</button>
   <button id="leaveGameMobile" class="mbtn leave" type="button">×</button>
 </div>
 
@@ -270,7 +272,9 @@ async function getHillTownTemplate(name){
 function addAssetInstance(template,x,y,z,rotationY=0,collidable=true){
   if(!template)return null;
   const clone=template.clone(true);
-  clone.position.set(x,y,z);clone.rotation.y=rotationY;
+  clone.position.set(x*HILL_TOWN_SCALE,y,z*HILL_TOWN_SCALE);
+  clone.scale.x*=HILL_TOWN_SCALE;clone.scale.z*=HILL_TOWN_SCALE;
+  clone.rotation.y=rotationY;
   clone.traverse(node=>{
     if(node.isMesh){
       node.castShadow=false;node.receiveShadow=false;
@@ -281,31 +285,33 @@ function addAssetInstance(template,x,y,z,rotationY=0,collidable=true){
   return clone;
 }
 function addTownFallbackWall(x,z,rotationY=0,materialColor=0xb69a76){
-  const mesh=new THREE.Mesh(new THREE.BoxGeometry(4,3.5,.34),new THREE.MeshStandardMaterial({color:materialColor,roughness:.92}));
-  mesh.position.set(x,1.75,z);mesh.rotation.y=rotationY;scene.add(mesh);mapObjects.push(mesh);
-  const trim=new THREE.Mesh(new THREE.BoxGeometry(4.02,.12,.38),new THREE.MeshStandardMaterial({color:0x705841,roughness:1}));
-  trim.position.set(x,3.35,z);trim.rotation.y=rotationY;scene.add(trim);mapObjects.push(trim);
+  const s=HILL_TOWN_SCALE;
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(4*s,3.5,.34*s),new THREE.MeshStandardMaterial({color:materialColor,roughness:.92}));
+  mesh.position.set(x*s,1.75,z*s);mesh.rotation.y=rotationY;scene.add(mesh);mapObjects.push(mesh);
+  const trim=new THREE.Mesh(new THREE.BoxGeometry(4.02*s,.12,.38*s),new THREE.MeshStandardMaterial({color:0x705841,roughness:1}));
+  trim.position.set(x*s,3.35,z*s);trim.rotation.y=rotationY;scene.add(trim);mapObjects.push(trim);
 }
 function addTownFallbackProp(x,z,color=0x897052){
-  const base=new THREE.Mesh(new THREE.BoxGeometry(1.35,1.15,1),new THREE.MeshStandardMaterial({color,roughness:.95}));
-  base.position.set(x,.575,z);scene.add(base);mapObjects.push(base);
-  const slat=new THREE.Mesh(new THREE.BoxGeometry(1.4,.08,1.04),new THREE.MeshStandardMaterial({color:0x4e3a2a,roughness:1}));
-  slat.position.set(x,1.12,z);scene.add(slat);mapObjects.push(slat);
+  const s=HILL_TOWN_SCALE;
+  const base=new THREE.Mesh(new THREE.BoxGeometry(1.35*s,1.15,s),new THREE.MeshStandardMaterial({color,roughness:.95}));
+  base.position.set(x*s,.575,z*s);scene.add(base);mapObjects.push(base);
+  const slat=new THREE.Mesh(new THREE.BoxGeometry(1.4*s,.08,1.04*s),new THREE.MeshStandardMaterial({color:0x4e3a2a,roughness:1}));
+  slat.position.set(x*s,1.12,z*s);scene.add(slat);mapObjects.push(slat);
 }
 function buildLocalHillTownFallback(){
   if(mapLoadFinished)return;
   scene.background=new THREE.Color(0xc8d3d8);
   scene.fog=new THREE.Fog(0xc8d3d8,85,190);
   const mat=(color,roughness=0.9)=>new THREE.MeshStandardMaterial({color,roughness});
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(64,64),mat(0x8a8b7a,1));
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(64*HILL_TOWN_SCALE,64*HILL_TOWN_SCALE),mat(0x8a8b7a,1));
   floor.rotation.x=-Math.PI/2;floor.position.y=-.08;scene.add(floor);
-  const road=new THREE.Mesh(new THREE.PlaneGeometry(10,60),mat(0x555b5c,1));
+  const road=new THREE.Mesh(new THREE.PlaneGeometry(10*HILL_TOWN_SCALE,60*HILL_TOWN_SCALE),mat(0x555b5c,1));
   road.rotation.x=-Math.PI/2;road.position.set(0,-.055,0);scene.add(road);
-  const crossRoad=new THREE.Mesh(new THREE.PlaneGeometry(60,9),mat(0x555b5c,1));
+  const crossRoad=new THREE.Mesh(new THREE.PlaneGeometry(60*HILL_TOWN_SCALE,9*HILL_TOWN_SCALE),mat(0x555b5c,1));
   crossRoad.rotation.x=-Math.PI/2;crossRoad.position.set(0,-.05,0);scene.add(crossRoad);
   const addBox=(x,y,z,w,h,d,material,rotationY=0,collidable=true)=>{
-    const object=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
-    object.position.set(x,y,z);object.rotation.y=rotationY;
+    const object=new THREE.Mesh(new THREE.BoxGeometry(w*HILL_TOWN_SCALE,h,d*HILL_TOWN_SCALE),material);
+    object.position.set(x*HILL_TOWN_SCALE,y,z*HILL_TOWN_SCALE);object.rotation.y=rotationY;
     object.castShadow=false;object.receiveShadow=false;scene.add(object);
     if(collidable)mapObjects.push(object);
     return object;
@@ -480,6 +486,7 @@ let player=null;
 let playerVisual=null;
 const enemies={};
 const raycaster=new THREE.Raycaster();
+const HILL_TOWN_SCALE=2.25,NEON_YARD_SCALE=2,FIELD_ARENA_SCALE=2,FALLBACK_ARENA_SCALE=3;
 
 let matchPhase="waiting";
 let myRole="runner";
@@ -499,8 +506,9 @@ let reloading=false;
 let jumpQueued=false;
 let fireHeld=false;
 let lookTouch=null;
-let lastCollisionCheck=0;
-let cachedCollisionClear=true;
+let collisionBoxes=[];
+let collisionIndexReady=false;
+let isCrouching=false;
 
 const keys={w:false,s:false,a:false,d:false,shift:false};
 const DEFAULT_TRAINING_BINDS={spawnBot:"KeyN",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
@@ -526,14 +534,14 @@ function buildFieldArena(){
   if(mapLoadFinished)return;
   mapLoadFinished=true;
   scene.background=new THREE.Color(0x91a6b9);
-  scene.fog=new THREE.Fog(0x91a6b9,120,420);
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(300,300),new THREE.MeshStandardMaterial({color:0x5c6e62,roughness:1}));
+  scene.fog=new THREE.Fog(0x91a6b9,220,780);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(300*FIELD_ARENA_SCALE,300*FIELD_ARENA_SCALE),new THREE.MeshStandardMaterial({color:0x5c6e62,roughness:1}));
   floor.rotation.x=-Math.PI/2;floor.position.y=-.04;scene.add(floor);
-  const grid=new THREE.GridHelper(300,60,0x879987,0x748575);grid.position.y=.01;scene.add(grid);
+  const grid=new THREE.GridHelper(300*FIELD_ARENA_SCALE,120,0x879987,0x748575);grid.position.y=.01;scene.add(grid);
   const wallMat=new THREE.MeshStandardMaterial({color:0x4e5965,roughness:1});
   const boxMat=new THREE.MeshStandardMaterial({color:0x626a70,roughness:.9});
   const addBox=(x,y,z,w,h,d,mat)=>{
-    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);mesh.position.set(x,y,z);mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w*FIELD_ARENA_SCALE,h,d*FIELD_ARENA_SCALE),mat);mesh.position.set(x*FIELD_ARENA_SCALE,y,z*FIELD_ARENA_SCALE);mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
   };
   addBox(0,4,-150,300,8,3,wallMat);addBox(0,4,150,300,8,3,wallMat);
   addBox(-150,4,0,3,8,300,wallMat);addBox(150,4,0,3,8,300,wallMat);
@@ -546,16 +554,16 @@ function buildNeonYard(){
   if(mapLoadFinished)return;
   mapLoadFinished=true;
   scene.background=new THREE.Color(0x050b18);
-  scene.fog=new THREE.Fog(0x050b18,95,300);
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(180,180),new THREE.MeshStandardMaterial({color:0x101a2a,roughness:.88,metalness:.25}));
+  scene.fog=new THREE.Fog(0x050b18,190,620);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(180*NEON_YARD_SCALE,180*NEON_YARD_SCALE),new THREE.MeshStandardMaterial({color:0x101a2a,roughness:.88,metalness:.25}));
   floor.rotation.x=-Math.PI/2;floor.position.y=-.05;scene.add(floor);mapObjects.push(floor);
-  const grid=new THREE.GridHelper(180,45,0x1de9ff,0x123b56);grid.position.y=.015;scene.add(grid);
+  const grid=new THREE.GridHelper(180*NEON_YARD_SCALE,90,0x1de9ff,0x123b56);grid.position.y=.015;scene.add(grid);
   const wallMat=new THREE.MeshStandardMaterial({color:0x101d31,roughness:.55,metalness:.35});
   const neonMat=new THREE.MeshStandardMaterial({color:0x08283a,emissive:0x00cfff,emissiveIntensity:1.2,roughness:.35,metalness:.3});
   const violetMat=new THREE.MeshStandardMaterial({color:0x251039,emissive:0x8b35ff,emissiveIntensity:.8,roughness:.4,metalness:.2});
   const addBox=(x,y,z,w,h,d,mat)=>{
-    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
-    mesh.position.set(x,y,z);mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w*NEON_YARD_SCALE,h,d*NEON_YARD_SCALE),mat);
+    mesh.position.set(x*NEON_YARD_SCALE,y,z*NEON_YARD_SCALE);mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
   };
   addBox(0,4,-88,180,8,3,wallMat);addBox(0,4,88,180,8,3,wallMat);
   addBox(-88,4,0,3,8,180,wallMat);addBox(88,4,0,3,8,180,wallMat);
@@ -571,12 +579,12 @@ function buildNeonYard(){
 function addFallbackArena(){
   if(mapLoadFinished)return;
   mapLoadFinished=true;
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(160,160),new THREE.MeshStandardMaterial({color:0x303943,roughness:1}));
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(160*FALLBACK_ARENA_SCALE,160*FALLBACK_ARENA_SCALE),new THREE.MeshStandardMaterial({color:0x303943,roughness:1}));
   floor.rotation.x=-Math.PI/2;scene.add(floor);mapObjects.push(floor);
-  for(const [x,z] of [[-30,-30],[-30,30],[30,-30],[30,30]]){
-    const wall=new THREE.Mesh(new THREE.BoxGeometry(6,12,6),new THREE.MeshStandardMaterial({color:0x4b5662}));
-    wall.position.set(x,6,z);scene.add(wall);mapObjects.push(wall);
-  }
+  const wallMat=new THREE.MeshStandardMaterial({color:0x4b5662,roughness:.9});
+  const addSolid=(x,y,z,w,h,d)=>{const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),wallMat);wall.position.set(x,y,z);wall.castShadow=false;wall.receiveShadow=false;scene.add(wall);mapObjects.push(wall)};
+  addSolid(0,6,-238,480,12,6);addSolid(0,6,238,480,12,6);addSolid(-238,6,0,6,12,480);addSolid(238,6,0,6,12,480);
+  for(const [x,z,w,d] of [[-90,-90,14,14],[-90,90,14,14],[90,-90,14,14],[90,90,14,14],[0,0,28,8],[-42,18,24,8],[45,-24,24,8],[0,125,18,18]])addSolid(x,2.5,z,w,5,d);
   $("progress").style.width="100%";
 }
 
@@ -728,8 +736,9 @@ function setSoldierDown(model,down){
   model.scale.set(1,down?0.55:1,1);
   if(down)setSoldierTint(model,0x59616b);
 }
-function animateSoldier(model,dt,now,moving=false,inAir=false){
+function animateSoldier(model,dt,now,moving=false,inAir=false,crouching=false){
   const r=model?.userData?.rig;if(!r||model.userData.dead)return;
+  model.scale.y=crouching?.72:1;
   const phase=now*.010+r.offset;
   const stride=moving?.62:0;
   const left=Math.sin(phase)*stride;
@@ -743,7 +752,7 @@ function animateSoldier(model,dt,now,moving=false,inAir=false){
   damp(r.rightKnee,"x",kneeRight);
   damp(r.leftArm,"x",-.36-right*.42+(inAir?-.12:0));
   damp(r.rightArm,"x",-.48+left*.28+(inAir?-.1:0));
-  damp(r.torso,"z",moving?Math.sin(phase*.5)*.025:Math.sin(now*.0015+r.offset)*.008);
+  damp(r.torso,"z",crouching?.1:(moving?Math.sin(phase*.5)*.025:Math.sin(now*.0015+r.offset)*.008));
   if(r.head)damp(r.head,"y",Math.sin(now*.0012+r.offset)*.025,5);
   damp(r.rifle,"x",-.12+(moving?Math.sin(phase*2)*.025:0)+(inAir?-.03:0));
 }
@@ -789,27 +798,52 @@ function updateVisual(){
   playerVisual.rotation.y=player.rotationY;
   playerVisual.visible=isThird;
 }
-function blocked(dir){
-  if(!mapObjects.length)return false;
-  const now=performance.now();
-  if(now-lastCollisionCheck<60)return !cachedCollisionClear;
-  lastCollisionCheck=now;
-  const origin=new THREE.Vector3(player.position.x,player.position.y+.8,player.position.z);
-  raycaster.set(origin,dir);
-  const hits=raycaster.intersectObjects(mapObjects,true);
-  cachedCollisionClear=!(hits.length&&hits[0].distance<.65);
-  return !cachedCollisionClear;
+function rebuildCollisionIndex(){
+  scene.updateMatrixWorld(true);
+  const seen=new Set();collisionBoxes=[];
+  for(const object of mapObjects){
+    if(!object?.isMesh||seen.has(object))continue;
+    seen.add(object);
+    const bounds=new THREE.Box3().setFromObject(object);
+    if(bounds.isEmpty())continue;
+    const size=bounds.getSize(new THREE.Vector3());
+    // Flat floor planes/grids are deliberately excluded from the collision hull.
+    if(size.y<.24||bounds.max.y<.16)continue;
+    collisionBoxes.push(bounds);
+  }
+  collisionIndexReady=true;
+}
+function blockedAt(x,z){
+  if(!collisionIndexReady)rebuildCollisionIndex();
+  const radius=.38,baseY=player?.position?.y||0,bodyHeight=isCrouching?1.22:1.82;
+  for(const bounds of collisionBoxes){
+    if(baseY>=bounds.max.y-.03||baseY+bodyHeight<=bounds.min.y+.02)continue;
+    if(x+radius<=bounds.min.x||x-radius>=bounds.max.x)continue;
+    if(z+radius<=bounds.min.z||z-radius>=bounds.max.z)continue;
+    return true;
+  }
+  return false;
+}
+function moveWithCollision(direction,distance){
+  const count=Math.max(1,Math.ceil(distance/.18)),dx=direction.x*distance/count,dz=direction.z*distance/count;
+  for(let i=0;i<count;i++){
+    const nx=player.position.x+dx;
+    if(!blockedAt(nx,player.position.z))player.position.x=nx;
+    const nz=player.position.z+dz;
+    if(!blockedAt(player.position.x,nz))player.position.z=nz;
+  }
 }
 function sendMove(force=false){
   const now=performance.now();
   if(!force&&now-lastMoveSend<50)return;
   lastMoveSend=now;
-  const data={uuid:myUuid,x:player.position.x,y:player.position.y,z:player.position.z,rotY:player.rotationY,anim:jumping?"Jump":((keys.w||keys.s||keys.a||keys.d)?"Running":"Idle")};
+  const data={uuid:myUuid,x:player.position.x,y:player.position.y,z:player.position.z,rotY:player.rotationY,anim:jumping?"Jump":(isCrouching?"Crouch":((keys.w||keys.s||keys.a||keys.d)?"Running":"Idle"))};
   if(isTrainingMode)socket.emit("training_move",{trainingId,viewY:camera.rotation.y,...data});
   else socket.emit("player_moved",{matchId,myId,userId:myId,...data});
 }
 function finishClientReady(){
   if(!mapLoadFinished)return;
+  rebuildCollisionIndex();
   ensurePlayerVisual();
   if(isTrainingMode){
     matchPhase="game";
@@ -869,6 +903,7 @@ addEventListener("keydown",e=>{
     const action=Object.keys(binds).find(name=>name!=="menu"&&binds[name]===e.code);
     if(action){e.preventDefault();runTrainingAction(action);return}
   }
+  if(e.code==="ControlLeft"||e.code==="ControlRight"){e.preventDefault();isCrouching=true;return}
   if(e.code==="KeyW"||e.code==="ArrowUp")keys.w=true;
   if(e.code==="KeyS"||e.code==="ArrowDown")keys.s=true;
   if(e.code==="KeyA"||e.code==="ArrowLeft")keys.a=true;
@@ -880,6 +915,7 @@ addEventListener("keydown",e=>{
   if(e.code==="Mouse0")shoot();
 });
 addEventListener("keyup",e=>{
+  if(e.code==="ControlLeft"||e.code==="ControlRight")isCrouching=false;
   if(e.code==="KeyW"||e.code==="ArrowUp")keys.w=false;
   if(e.code==="KeyS"||e.code==="ArrowDown")keys.s=false;
   if(e.code==="KeyA"||e.code==="ArrowLeft")keys.a=false;
@@ -1153,6 +1189,13 @@ $("reloadBtn").addEventListener("touchstart",e=>{e.preventDefault();startReload(
 $("fireBtn").addEventListener("touchstart",e=>{e.preventDefault();fireHeld=true;fireLoop()},{passive:false});
 $("fireBtn").addEventListener("touchend",()=>fireHeld=false);
 $("fireBtn").addEventListener("touchcancel",()=>fireHeld=false);
+const crouchBtn=$("crouchBtn"),sprintBtn=$("sprintBtn");
+crouchBtn.addEventListener("touchstart",e=>{e.preventDefault();isCrouching=true;crouchBtn.classList.add("active")},{passive:false});
+crouchBtn.addEventListener("touchend",()=>{isCrouching=false;crouchBtn.classList.remove("active")});
+crouchBtn.addEventListener("touchcancel",()=>{isCrouching=false;crouchBtn.classList.remove("active")});
+sprintBtn.addEventListener("touchstart",e=>{e.preventDefault();keys.shift=true;sprintBtn.classList.add("active")},{passive:false});
+sprintBtn.addEventListener("touchend",()=>{keys.shift=false;sprintBtn.classList.remove("active")});
+sprintBtn.addEventListener("touchcancel",()=>{keys.shift=false;sprintBtn.classList.remove("active")});
 let lookTouchId=null;
 document.addEventListener("touchstart",e=>{
   if(e.target.closest("#mobile")||lookTouchId!==null)return;
@@ -1175,7 +1218,7 @@ const releaseLookTouch=e=>{
 document.addEventListener("touchend",releaseLookTouch);
 document.addEventListener("touchcancel",releaseLookTouch);
 function clearHeldInputs(){
-  keys.w=keys.a=keys.s=keys.d=keys.shift=false;jumpQueued=false;fireHeld=false;
+  keys.w=keys.a=keys.s=keys.d=keys.shift=false;isCrouching=false;jumpQueued=false;fireHeld=false;
   stickActive=false;stickTouchId=null;window.sxMove={x:0,y:0};thumb.style.transform="translate(0,0)";
   lookTouch=null;lookTouchId=null;
 }
@@ -1197,22 +1240,22 @@ function animate(){
     if(keys.w)move.add(dir);if(keys.s)move.sub(dir);if(keys.a)move.add(side);if(keys.d)move.sub(side);
     if(move.lengthSq()>0){
       move.normalize();
-      const currentSpeed=(mode==="hide_seek"&&myRole==="hunter")?10.5:(keys.shift?10:7.5);
+      const currentSpeed=isCrouching?4.2:((mode==="hide_seek"&&myRole==="hunter")?10.5:(keys.shift?14.5:8.5));
       const step=currentSpeed*dt;
-      if(!blocked(move))player.position.addScaledVector(move,step);
+      moveWithCollision(move,step);
       player.rotationY=Math.atan2(dir.x,dir.z);
     }
-    if(jumpQueued&&!jumping){velocityY=10;jumping=true;jumpQueued=false}
+    if(jumpQueued&&!jumping){isCrouching=false;velocityY=10;jumping=true;jumpQueued=false}
     velocityY-=28*dt;player.position.y+=velocityY*dt;
     if(player.position.y<=0){player.position.y=0;velocityY=0;jumping=false}
-    if(!isThird){camera.position.set(player.position.x,player.position.y+1.58,player.position.z)}
+    if(!isThird){camera.position.set(player.position.x,player.position.y+(isCrouching?1.05:1.58),player.position.z)}
     else{const offset=new THREE.Vector3(0,2.5,5).applyQuaternion(camera.quaternion);camera.position.copy(player.position).add(offset)}
     updateVisual();sendMove();
   }
-  if(playerVisual)animateSoldier(playerVisual,dt,now,keys.w||keys.s||keys.a||keys.d,jumping);
+  if(playerVisual)animateSoldier(playerVisual,dt,now,keys.w||keys.s||keys.a||keys.d,jumping,isCrouching);
   Object.values(enemies).forEach(e=>{
     e.mesh.position.lerp(e.pos,.35);
-    animateSoldier(e.mesh,dt,now,e.anim==="Running"||e.anim==="Walking",e.anim==="Jump");
+    animateSoldier(e.mesh,dt,now,e.anim==="Running"||e.anim==="Walking",e.anim==="Jump",e.anim==="Crouch");
   });
   if(heldWeaponRoot){
     heldWeaponRoot.position.x=.29+Math.sin(now*.0016)*.0018;
