@@ -2055,6 +2055,7 @@ io.on("connection", socket => {
         socket.emit("enemy_moved", {
           id: other.socketId,
           userId: other.userId,
+          uuid: other.uuid || "",
           nickname: other.nickname,
           role: other.role,
           team: other.team,
@@ -2117,6 +2118,7 @@ io.on("connection", socket => {
     socket.to(match.id).emit("enemy_moved", {
       id: socket.id,
       userId: player.userId,
+      uuid: player.uuid || "",
       nickname: player.nickname,
       role: player.role,
       team: player.team,
