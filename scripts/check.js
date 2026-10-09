@@ -275,4 +275,7 @@ const unknownAnimationPlayer = {
 assert.equal(validateMove(unknownAnimationPlayer, { x: 0.1, y: 0, z: 0, rotY: 0, anim: "Teleport" }), true);
 assert.equal(unknownAnimationPlayer.anim, "Idle", "unknown animation states must be rejected");
 
+assert.match(server, /if \(mongoClient !== client\) return/, "a stale MongoDB close event must not clear a newer client");
+assert.match(server, /const failedClient = mongoClient;\s*mongoClient = null;\s*mongoDb = null;\s*mongoStatus\.connected = false;\s*mongoStatus\.state = "error";\s*mongoStatus\.lastError = cleanText\(err\.message, 240\);\s*try \{ await failedClient\?\.close\(\); \} catch \{\}/, "Atlas ping failures must reset the broken client so a later health check can reconnect");
+
 console.log("OK project invariants, tester-only tools, Atlas endpoint, and unique HTTP routes");
