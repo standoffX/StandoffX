@@ -107,6 +107,8 @@ scene.background=new THREE.Color(0x87a9c2);
 scene.fog=new THREE.Fog(0x87a9c2,70,260);
 
 const camera=new THREE.PerspectiveCamera(74,innerWidth/innerHeight,.08,700);
+// Camera-attached weapon and view models must belong to the rendered scene graph.
+scene.add(camera);
 const renderer=new THREE.WebGLRenderer({
   antialias:false,
   powerPreference:"high-performance",
