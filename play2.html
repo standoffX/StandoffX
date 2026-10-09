@@ -630,7 +630,7 @@ function updateWaiting(data){
     const cls=(p.connected?"online ":"")+(p.ready?"ready":"");
     const nickname=String(p.nickname||"PLAYER").replace(/[&<>"]/g,"");
     const playerId=String(p.userId||"—").replace(/[&<>"]/g,"");
-    return "<div class='player "+cls+"'><span class='dot'></span><b>"+nickname+"</b><div class='player-id'>ID "+playerId+"</div><div style='margin-top:4px;color:#7d8ca0;font-size:10px'>"+(p.ready?"ГОТОВ":"ПІДКЛЮЧЕННЯ")+"</div></div>"
+    return "<div class='player "+cls+"'><span class='dot'></span><b>"+nickname+"</b><div class='player-id'>"+(p.isBot?"БОТ":"ID "+playerId)+"</div><div style='margin-top:4px;color:#7d8ca0;font-size:10px'>"+(p.ready?"ГОТОВ":"ПІДКЛЮЧЕННЯ")+"</div></div>"
   }).join("");
   $("phase").textContent=data.ready>=data.required?"ВСІ ГОТОВІ":("ГОТОВНІ: "+(data.ready||0)+"/"+data.required);
   $("bigTimer").textContent=(data.connected||0)+"/"+data.required;
