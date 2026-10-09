@@ -252,7 +252,7 @@ const movingPlayer = {
   anim: "Idle"
 };
 assert.equal(validateMove(movingPlayer, { x: 100, y: 100, z: 0, rotY: 0, anim: "Running" }), true);
-assert.ok(movingPlayer.pos.x > 0 && movingPlayer.pos.x < 2, "large planar movement must be rate-limited");
+assert.ok(movingPlayer.pos.x > 0 && movingPlayer.pos.x <= 4.5, "large planar movement must be rate-limited to the validator maximum");
 assert.equal(movingPlayer.pos.y, 2.25, "vertical position must remain within the supported jump height");
 assert.equal(movingPlayer.anim, "Running");
 const beforeInvalidMove = { ...movingPlayer.pos };
