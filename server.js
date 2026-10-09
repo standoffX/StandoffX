@@ -1412,7 +1412,12 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const cfg = getModeConfig(mode);
   const matchId = "match_" + Date.now() + "_" + crypto.randomBytes(2).toString("hex");
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
-  const matchSpawns = safeMapId === "HILL_TOWN" ? HILL_TOWN_SPAWNS : SPAWNS;
+  const MATCH_SPAWNS = {
+    HILL_TOWN: [{x:-36,y:0,z:-34},{x:36,y:0,z:-34},{x:-36,y:0,z:34},{x:36,y:0,z:34}],
+    NEON_YARD: [{x:-72,y:0,z:-72},{x:72,y:0,z:-72},{x:-72,y:0,z:72},{x:72,y:0,z:72}],
+    FIELD_ARENA: [{x:-100,y:0,z:-100},{x:100,y:0,z:-100},{x:-100,y:0,z:100},{x:100,y:0,z:100}]
+  };
+  const matchSpawns = MATCH_SPAWNS[safeMapId] || (safeMapId === "HILL_TOWN" ? HILL_TOWN_SPAWNS : SPAWNS);
 
   const match = {
     id: matchId,
@@ -1822,7 +1827,13 @@ io.on("connection", socket => {
 
     const previous = trainingSessions.get(user.id);
     const sessionMap = ["field_test", "training"].includes(mode) ? normalizeMapId(data?.map) : cfg.map;
-    const spawnPosition = sessionMap === "NEON_YARD" ? { x: 0, y: 0, z: 12 } : (mode === "training" ? { x: 5, y: 0, z: 5 } : { x: 0, y: 0, z: 0 });
+    const TRAINING_SPAWNS = {
+      HILL_TOWN: {x:0,y:0,z:38},
+      NEON_YARD: {x:0,y:0,z:70},
+      FIELD_ARENA: {x:0,y:0,z:0},
+      M3_Maze: {x:5,y:0,z:5}
+    };
+    const spawnPosition = { ...(TRAINING_SPAWNS[sessionMap] || {x:0,y:0,z:0}) };
     const session = {
       id: "practice_" + crypto.randomBytes(10).toString("hex"),
       userId: user.id,
@@ -2102,7 +2113,7 @@ io.on("connection", socket => {
     }
 
     match.players.splice(index, 1);
-    io.to(matchId).emit("player_left", { userId: player.userId });
+    io.to(matchId).emit("player_connection_state", { userId: player.userId, connected: false, reconnectSeconds: 90 });
     if (match.players.filter(p => !p.isBot).length === 0 || match.players.length < 2) cleanMatch(io, matchId, true);
     else emitMatchWaiting(io, match);
   });
@@ -2119,8 +2130,10 @@ io.on("connection", socket => {
     if (player.disconnectTimer) clearTimeout(player.disconnectTimer);
     player.disconnectTimer = null;
     player.socketId = socket.id;
+    player.disconnectTimer = null;
     player.joinedAt = Date.now();
     socket.join(matchId);
+    io.to(matchId).emit("player_connection_state", { userId: player.userId, connected: true });
 
     socket.emit("init_match", {
       matchId,
@@ -2337,25 +2350,39 @@ io.on("connection", socket => {
       }
 
       if (match.phase !== "game") {
-        // A player who disappears during warmup/countdown invalidates the lobby.
-        cleanMatch(io, matchId, true);
-        continue;
+        // Keep the match recoverable during warmup/countdown too; a fresh socket
+        // will reclaim the same slot through join_room and restart readiness.
+        if (match.phaseTimer) clearInterval(match.phaseTimer);
+        match.phaseTimer = null;
+        match.phase = "waiting";
+        match.started = false;
+        match.phaseRemaining = null;
       }
 
       if (player.disconnectTimer) clearTimeout(player.disconnectTimer);
       player.disconnectTimer = setTimeout(() => {
         const current = activeMatches.get(matchId);
         if (!current) return;
+        const stillDisconnected = current.players.find(p => p.userId === player.userId && !p.socketId);
+        if (!stillDisconnected) return;
+        stillDisconnected.disconnectTimer = null;
+        // During live gameplay, never end/delete a match just because one player
+        // vanished. Keep the identity slot so a late reconnect can rejoin it.
+        if (current.phase === "game") {
+          io.to(matchId).emit("player_connection_state", { userId: player.userId, connected: false, reconnectExpired: true });
+          return;
+        }
+        // Before the round starts, remove only the missing roster slot after grace;
+        // do not destroy the match for everyone else.
         const index = current.players.findIndex(p => p.userId === player.userId && !p.socketId);
         if (index < 0) return;
-
-        const [expired] = current.players.splice(index, 1);
-        expired.disconnectTimer = null;
-        io.to(matchId).emit("player_left", { userId: expired.userId });
-
-        if (current.players.filter(p => !p.isBot).length === 0 || current.players.length < 2) cleanMatch(io, matchId, true);
-        else emitMatchWaiting(io, current);
-      }, 15000);
+        current.players.splice(index, 1);
+        current.started = false;
+        current.phase = "waiting";
+        emitMatchWaiting(io, current);
+        if (current.players.length >= 2 && current.players.some(p => !p.isBot)) startMatchWhenReady(io, current);
+        else cleanMatch(io, matchId, true);
+      }, 90000);
     }
 
     emitQueueCount(io);
