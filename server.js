@@ -2380,11 +2380,8 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
   if (changingId && !/^\d{6,10}$/.test(nextIdRaw)) {
     return res.status(400).json({ success: false, message: "Новий Player ID має містити 6–10 цифр." });
   }
-  if (changingId && users.some(x => x.id === nextIdRaw)) {
-    return res.status(409).json({ success: false, message: "Такий ID вже зайнятий." });
-  }
-  if (users.some(x => x.id !== u.id && String(x.nickname).toLowerCase() === nextNick.toLowerCase())) {
-    return res.status(409).json({ success: false, message: "Такий nickname вже зайнятий." });
+  if (changingId && (playerIdExists(nextIdRaw) || nextIdRaw.toLowerCase() === ADMIN_ID.toLowerCase())) {
+    return res.status(409).json({ success: false, message: "Такий ID вже зайнятий або зарезервований." });
   }
   if (nextClan && !clans[nextClan]) {
     return res.status(404).json({ success: false, message: "Такого клану немає." });
