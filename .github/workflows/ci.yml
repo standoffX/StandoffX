@@ -5,6 +5,9 @@ on:
     branches: ["**"]
   pull_request:
 
+permissions:
+  contents: write
+
 jobs:
   syntax:
     runs-on: ubuntu-latest
@@ -15,6 +18,17 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Patch vulnerable dependency lock (temporary maintenance)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/fix/render-security-matchmaking-ui'
+        run: |
+          npm audit fix
+          if ! git diff --quiet -- package-lock.json package.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json package.json
+            git commit -m "fix(deps): resolve npm audit vulnerabilities"
+            git push origin HEAD:fix/render-security-matchmaking-ui
+          fi
       - name: Diagnostic npm audit report
         run: npm audit --json || true
       - run: npm test
