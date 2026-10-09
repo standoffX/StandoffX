@@ -274,3 +274,23 @@ body.lobby-screen:after{content:"";position:fixed;right:-12vw;top:-32vh;width:54
   .lobby-screen .tester-mode-switch{justify-content:flex-start;gap:7px}
   .lobby-screen .tester-mode-option{min-width:66px;padding:5px 8px}
 }
+
+
+/* Small visual polish for the roomier lobby and its 3-state tester selector. */
+.lobby-screen .tester-mode-switch{gap:12px;margin:12px 0 14px;min-height:38px}
+.lobby-screen .tester-mode-segment{gap:2px;padding:3px;border-radius:5px;box-shadow:inset 0 1px 5px #0005}
+.lobby-screen .tester-mode-option{min-width:76px;min-height:29px;padding:5px 9px;letter-spacing:.25px}
+.lobby-screen .tester-mode-option[data-test-gameplay="training"]{min-width:104px}
+.lobby-screen .tester-mode-option.active{box-shadow:inset 0 0 0 1px #a8def825,0 0 12px #86d3f213}
+.lobby-screen .modebox{width:min(760px,100%);padding:20px}
+.lobby-screen .modecards .modebtn{box-shadow:0 6px 18px #0002}
+.lobby-screen .map-option{transition:transform .16s,border-color .16s,background .16s}
+.lobby-screen .map-option:hover{transform:translateY(-2px);background:#102d40}
+.lobby-screen .playbutton{transition:transform .18s,filter .18s,box-shadow .18s}
+.lobby-screen .primary,.lobby-screen .secondary,.lobby-screen .danger{transition:filter .16s,transform .16s,border-color .16s}
+.lobby-screen .primary:hover,.lobby-screen .secondary:hover,.lobby-screen .danger:hover{filter:brightness(1.08)}
+@media(max-width:540px){
+ .lobby-screen .tester-mode-switch{align-items:flex-start;flex-direction:column;gap:7px}
+ .lobby-screen .tester-mode-option{min-width:72px}
+ .lobby-screen .tester-mode-option[data-test-gameplay="training"]{min-width:98px}
+}

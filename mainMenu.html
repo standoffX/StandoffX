@@ -319,7 +319,8 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
 </div><div id="testerGameplaySwitch" class="tester-mode-switch" style="display:none" role="group" aria-label="Перемикач режиму тестування">
   <span class="tester-mode-label">ТЕСТЕР</span>
   <div class="tester-mode-segment">
-    <button type="button" class="tester-mode-option active" data-test-gameplay="prototype" aria-pressed="true" title="Вільна карта, зброя та тренувальна мішень">ПРОТОТИП</button>
+    <button type="button" class="tester-mode-option active" data-test-gameplay="prototype" aria-pressed="true" title="Вільна карта, зброя та мішень">ПРОТОТИП</button>
+    <button type="button" class="tester-mode-option" data-test-gameplay="training" aria-pressed="false" title="Повноцінне тренування на вибраній карті">ТРЕНУВАННЯ</button>
     <button type="button" class="tester-mode-option" data-test-gameplay="real" aria-pressed="false" title="Реальний командний матч із ботами">ТЕСТ</button>
   </div>
 </div><h3 style="margin:10px 0 4px">ВИБІР КАРТИ</h3><div class="mapcards" id="mapBar"><button class="map-option active" data-map="HILL_TOWN"><b>HILL TOWN</b><span>Модульна карта з будівлями, арками та укриттями</span></button><button class="map-option" data-map="M3_Maze"><b>M3 MAZE</b><span>Стара основна карта</span></button><button class="map-option" data-map="FIELD_ARENA"><b>FIELD ARENA</b><span>Відкрита тренувальна арена</span></button><button class="map-option" data-map="NEON_YARD"><b>NEON YARD</b><span>Неонова арена</span></button></div><button class="primary" id="confirmModeBtn">ПОЧАТИ ПОШУК МАТЧУ</button></div></div>
@@ -384,7 +385,7 @@ let selectedTheme=localStorage.getItem("sx_theme")||"cyan";
 const THEMES=["cyan","violet","red"];
 const MAPS={HILL_TOWN:"HILL TOWN",M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD"};
 const MODES={allies:"СОЮЗНИКИ",team_fight:"КОМАНДНИЙ БІЙ"};
-let testGameplayMode=localStorage.getItem("sx_test_gameplay")==="real"?"real":"prototype";
+let testGameplayMode=["prototype","training","real"].includes(localStorage.getItem("sx_test_gameplay"))?localStorage.getItem("sx_test_gameplay"):"prototype";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const cleanId=id=>String(id||"").replace(/^ID_/i,"");
 async function api(url,opt={}){
@@ -469,8 +470,9 @@ function renderMode(){
   document.querySelectorAll(".modebtn[data-mode]").forEach(b=>b.classList.toggle("active",b.dataset.mode===selectedMode));
   document.querySelectorAll("[data-test-gameplay]").forEach(b=>{const active=b.dataset.testGameplay===testGameplayMode;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active));});
   const publicMode=MODES[selectedMode]||MODES.allies;
-  $("selectedModeText").textContent=canTest()?(testGameplayMode==="real"?"РЕАЛЬНА ГРА · ":"ПРОТОТИП · ")+publicMode:publicMode;
-  if($("confirmModeBtn")) $("confirmModeBtn").textContent=canTest()?(testGameplayMode==="real"?"ГРАТИ З БОТАМИ":"ЗАПУСТИТИ ПРОТОТИП"):"ПОЧАТИ ПОШУК МАТЧУ";
+  const testerLabels={prototype:"ПРОТОТИП",training:"ТРЕНУВАННЯ",real:"ТЕСТ"};
+  $("selectedModeText").textContent=canTest()?(testerLabels[testGameplayMode]||"ПРОТОТИП")+" · "+publicMode:publicMode;
+  if($("confirmModeBtn")) $("confirmModeBtn").textContent=canTest()?(testGameplayMode==="real"?"ГРАТИ З БОТАМИ":testGameplayMode==="training"?"ЗАПУСТИТИ ТРЕНУВАННЯ":"ЗАПУСТИТИ ПРОТОТИП"):"ПОЧАТИ ПОШУК МАТЧУ";
 }
 document.querySelectorAll(".rail button[data-view]").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.view==="admin"){location.href="/admin";return}show(b.dataset.view)}));
 document.querySelectorAll("[data-theme-choice]").forEach(button=>button.addEventListener("click",()=>applyTheme(button.dataset.themeChoice)));
@@ -485,7 +487,7 @@ document.querySelectorAll(".modebtn[data-mode]").forEach(b=>b.addEventListener("
 }));
 document.querySelectorAll("[data-test-gameplay]").forEach(b=>b.addEventListener("click",()=>{
   if(!canTest())return;
-  testGameplayMode=b.dataset.testGameplay==="real"?"real":"prototype";
+  testGameplayMode=["prototype","training","real"].includes(b.dataset.testGameplay)?b.dataset.testGameplay:"prototype";
   localStorage.setItem("sx_test_gameplay",testGameplayMode);
   renderMode();
 }));
@@ -521,7 +523,7 @@ function createRealtimeSocket(){
   });
 }
 function openPlay(){
-  if(canTest()&&testGameplayMode==="prototype"){
+  if(canTest()&&(testGameplayMode==="prototype"||testGameplayMode==="training")){
     if(searching)return;
     socket=createRealtimeSocket();
     socket.on("connect_error",err=>{console.warn("[Socket.IO] Prototype connection failed; retrying.",err?.message||err)});
@@ -535,7 +537,7 @@ function openPlay(){
       sessionStorage.setItem("currentMatchId",d.trainingId);
       location.href="/play2.html";
     });
-    socket.emit("start_training",{mode:"field_test",map:selectedMap});
+    socket.emit("start_training",{mode:testGameplayMode==="training"?"training":"field_test",map:selectedMap});
     return;
   }
   if(searching)return;
