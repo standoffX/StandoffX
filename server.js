@@ -178,7 +178,8 @@ async function initMongo() {
   mongoStatus.state = "connecting";
   mongoStatus.lastError = null;
   try {
-    mongoClient = new MongoClient(uri, { serverSelectionTimeoutMS: 8000, connectTimeoutMS: 8000, maxPoolSize: 5, appName: "StandoffX" });
+    const atlasTlsRequired = /^mongodb\+srv:\/\//i.test(uri) || /\.mongodb\.net(?:[:/?]|$)/i.test(uri);
+    mongoClient = new MongoClient(uri, { ...(atlasTlsRequired ? { tls: true } : {}), serverSelectionTimeoutMS: 8000, connectTimeoutMS: 8000, maxPoolSize: 5, appName: "StandoffX" });
     mongoClient.on("close", () => {
       mongoStatus.connected = false;
       if (mongoStatus.state === "connected") mongoStatus.state = "disconnected";
@@ -327,9 +328,10 @@ function findUser(idOrNickname, options = {}) {
   });
 }
 
-function publicUser(user) {
+function publicUser(user, options = {}) {
   if (!user) return null;
-  const { password, passwordHash, ...safe } = user;
+  const { password, passwordHash, uuid, ...safe } = user;
+  if (options.includeUuid === true && typeof uuid === "string") safe.uuid = uuid;
   safe.friendsList = Array.isArray(user.friendsList) ? user.friendsList : [];
   safe.incomingRequests = Array.isArray(user.incomingRequests) ? user.incomingRequests : [];
   safe.blocked = Array.isArray(user.blocked) ? user.blocked : [];
@@ -658,7 +660,7 @@ app.post("/api/register", registrationRateLimit, (req, res) => {
   res.json({
     success: true,
     redirect: "/game",
-    user: publicUser(user),
+    user: publicUser(user, { includeUuid: true }),
     createdId: user.id,
     message: "Акаунт створено."
   });
@@ -720,7 +722,7 @@ app.post("/api/login", loginRateLimit, (req, res) => {
 
   const token = createSession(user.uuid || user.id);
   setSessionCookie(res, token);
-  res.json({ success: true, redirect: "/game", user: publicUser(user) });
+  res.json({ success: true, redirect: "/game", user: publicUser(user, { includeUuid: true }) });
 });
 
 app.post("/api/logout", requireAuth, (req, res) => {
@@ -733,7 +735,7 @@ app.post("/api/logout", requireAuth, (req, res) => {
 });
 
 app.get("/api/me", requireAuth, (req, res) => {
-  res.json({ success: true, user: publicUser(req.user) });
+  res.json({ success: true, user: publicUser(req.user, { includeUuid: true }) });
 });
 
 app.get("/api/user-data", requireAuth, (req, res) => {
@@ -743,7 +745,7 @@ app.get("/api/user-data", requireAuth, (req, res) => {
     .map(id => users.find(u => u.id === id))
     .filter(Boolean)
     .map(publicUser);
-  res.json({ success: true, user: publicUser(target), friends });
+  res.json({ success: true, user: publicUser(target, { includeUuid: target.id === req.user.id }), friends });
 });
 
 app.post("/api/sync-user", requireAuth, (req, res) => {
@@ -1372,7 +1374,6 @@ function emitQueueCount(io) {
       mapName: PLAYABLE_MAPS[entry.map]?.name || PLAYABLE_MAPS.M3_Maze.name,
       players: modePlayers.map(p => ({
         userId: p.userId,
-        uuid: p.uuid,
         nickname: p.nickname,
         connected: true,
         ready: false
@@ -1381,14 +1382,14 @@ function emitQueueCount(io) {
   }
 }
 
-function createMatch(io, mode, mapId = "M3_Maze") {
+function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const safeMapId = normalizeMapId(mapId);
-  const candidates = matchmakingQueue.filter(p => p.mode === mode && p.map === safeMapId);
+  const candidates = Array.isArray(forcedCandidates) ? forcedCandidates : matchmakingQueue.filter(p => p.mode === mode && p.map === safeMapId);
   const requiredPlayers = getRequiredPlayers(mode);
   if (candidates.length < requiredPlayers) return;
 
   const players = candidates.slice(0, requiredPlayers);
-  for (const p of players) removeFromQueue(p.uuid || p.userId);
+  for (const p of players) if (!p.isBot) removeFromQueue(p.uuid || p.userId);
 
   const cfg = getModeConfig(mode);
   const matchId = "match_" + Date.now() + "_" + crypto.randomBytes(2).toString("hex");
@@ -1402,9 +1403,10 @@ function createMatch(io, mode, mapId = "M3_Maze") {
     map: safeMapId,
     mapName: PLAYABLE_MAPS[safeMapId]?.name || PLAYABLE_MAPS.M3_Maze.name,
     players: players.map((p, i) => ({
-      socketId: p.socketId,
+      socketId: p.socketId || null,
       userId: p.userId,
-      uuid: p.uuid,
+      uuid: p.uuid || "",
+      isBot: Boolean(p.isBot),
       nickname: p.nickname,
       role: mode === "hide_seek" ? (i === hunterIndex ? "hunter" : "runner") : (i % 2 === 0 ? "teamA" : "teamB"),
       team: (mode === "team_fight" || mode === "allies") ? (i % 2 === 0 ? "A" : "B") : null,
@@ -1418,7 +1420,7 @@ function createMatch(io, mode, mapId = "M3_Maze") {
       anim: "Idle",
       lastMoveAt: 0,
       prevMoveTime: 0,
-      ready: false,
+      ready: Boolean(p.isBot),
       joinedAt: null,
       disconnectTimer: null
     })),
@@ -1436,6 +1438,7 @@ function createMatch(io, mode, mapId = "M3_Maze") {
   emitQueueCount(io);
 
   for (const p of match.players) {
+    if (!p.socketId || p.isBot) continue;
     io.to(p.socketId).emit("match_found", {
       matchId,
       userId: p.userId,
@@ -1449,8 +1452,8 @@ function createMatch(io, mode, mapId = "M3_Maze") {
   match.joinTimer = setTimeout(() => {
     const current = activeMatches.get(matchId);
     if (!current || current.started || current.finished) return;
-    const connected = current.players.filter(p => Boolean(p.socketId)).length;
-    const ready = current.players.filter(p => p.ready).length;
+    const connected = current.players.filter(p => p.isBot || Boolean(p.socketId)).length;
+    const ready = current.players.filter(p => p.isBot || p.ready).length;
     if (connected < current.players.length || ready < current.players.length) {
       for (const p of current.players) {
         if (p.socketId) io.to(p.socketId).emit("search_error", {
@@ -1465,8 +1468,8 @@ function createMatch(io, mode, mapId = "M3_Maze") {
 }
 
 function emitMatchWaiting(io, match) {
-  const connected = match.players.filter(p => Boolean(p.socketId)).length;
-  const ready = match.players.filter(p => p.ready).length;
+  const connected = match.players.filter(p => p.isBot || Boolean(p.socketId)).length;
+  const ready = match.players.filter(p => p.isBot || p.ready).length;
   io.to(match.id).emit("match_waiting", {
     connected,
     ready,
@@ -1476,8 +1479,9 @@ function emitMatchWaiting(io, match) {
     players: match.players.map(p => ({
       userId: p.userId,
       nickname: p.nickname,
-      connected: Boolean(p.socketId),
-      ready: Boolean(p.ready)
+      connected: p.isBot || Boolean(p.socketId),
+      ready: p.isBot || Boolean(p.ready),
+      isBot: Boolean(p.isBot)
     }))
   });
 }
@@ -1499,8 +1503,8 @@ function cleanMatch(io, matchId, returnToMenu = true) {
 
 function startMatchWhenReady(io, match) {
   if (match.started || match.phase !== "waiting") return;
-  const allConnected = match.players.every(p => Boolean(p.socketId));
-  const allReady = match.players.every(p => p.ready);
+  const allConnected = match.players.every(p => p.isBot || Boolean(p.socketId));
+  const allReady = match.players.every(p => p.isBot || p.ready);
   if (!allConnected || !allReady) {
     emitMatchWaiting(io, match);
     return;
@@ -1784,17 +1788,19 @@ io.on("connection", socket => {
     if (!cfg) return socket.emit("training_error", { message: "Невідомий тестовий режим." });
 
     const previous = trainingSessions.get(user.id);
+    const sessionMap = mode === "field_test" ? normalizeMapId(data?.map) : cfg.map;
+    const spawnPosition = mode === "training" ? { x: 5, y: 0, z: 5 } : (sessionMap === "NEON_YARD" ? { x: 0, y: 0, z: 12 } : { x: 0, y: 0, z: 0 });
     const session = {
       id: "practice_" + crypto.randomBytes(10).toString("hex"),
       userId: user.id,
       nickname: user.nickname,
       mode: cfg.id,
       modeName: cfg.name,
-      map: cfg.map,
+      map: sessionMap,
       socketId: socket.id,
-      playerPos: mode === "training" ? { x: 5, y: 0, z: 5 } : { x: 0, y: 0, z: 0 },
+      playerPos: spawnPosition,
       playerRotY: 0,
-      bot: null,
+      bot: mode === "field_test" ? { id: "training_bot", nickname: "БОТ", role: "runner", team: "B", hp: 100, maxHp: 100, hits: 0, x: spawnPosition.x, y: 0, z: spawnPosition.z - 3, rotY: Math.PI, action: "idle", updatedAt: Date.now() } : null,
       lastMoveAt: 0,
       lastActionAt: 0,
       createdAt: Date.now()
@@ -1806,7 +1812,7 @@ io.on("connection", socket => {
       userId: user.id,
       mode: cfg.id,
       modeName: cfg.name,
-      map: cfg.map,
+      map: session.map,
       uuid: user.uuid
     });
   });
@@ -2001,6 +2007,18 @@ io.on("connection", socket => {
     const map = normalizeMapId(data?.map);
     removeFromQueue(user.uuid || user.id);
 
+    if (data?.testerBots === true && canUseTesterModes(user) && ["allies", "team_fight"].includes(mode)) {
+      const realPlayer = { socketId: socket.id, userId: user.id, nickname: user.nickname, uuid: user.uuid, mode, map, isBot: false };
+      const bots = Array.from({ length: Math.max(0, getRequiredPlayers(mode) - 1) }, (_, index) => ({
+        socketId: null,
+        userId: "BOT_" + crypto.randomBytes(4).toString("hex"),
+        nickname: "БОТ " + String(index + 1).padStart(2, "0"),
+        uuid: "", mode, map, isBot: true
+      }));
+      createMatch(io, mode, map, [realPlayer, ...bots]);
+      return;
+    }
+
     matchmakingQueue.push({
       socketId: socket.id,
       userId: user.id,
@@ -2040,7 +2058,7 @@ io.on("connection", socket => {
 
     match.players.splice(index, 1);
     io.to(matchId).emit("player_left", { userId: player.userId });
-    if (match.players.length < 2) cleanMatch(io, matchId, true);
+    if (match.players.filter(p => !p.isBot).length === 0 || match.players.length < 2) cleanMatch(io, matchId, true);
     else emitMatchWaiting(io, match);
   });
 
@@ -2077,8 +2095,8 @@ io.on("connection", socket => {
       },
       players: match.players.map(p => ({
         userId: p.userId,
-        uuid: p.uuid || "",
         nickname: p.nickname,
+        isBot: Boolean(p.isBot),
         role: p.role,
         team: p.team,
         score: p.score,
@@ -2096,7 +2114,6 @@ io.on("connection", socket => {
         socket.emit("enemy_moved", {
           id: other.socketId,
           userId: other.userId,
-          uuid: other.uuid || "",
           nickname: other.nickname,
           role: other.role,
           team: other.team,
@@ -2159,7 +2176,6 @@ io.on("connection", socket => {
     socket.to(match.id).emit("enemy_moved", {
       id: socket.id,
       userId: player.userId,
-      uuid: player.uuid || "",
       nickname: player.nickname,
       role: player.role,
       team: player.team,
