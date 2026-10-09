@@ -1148,10 +1148,15 @@ function createMatch(io, mode) {
   match.joinTimer = setTimeout(() => {
     const current = activeMatches.get(matchId);
     if (!current || current.started || current.finished) return;
-    const connected = current.players.filter(p => p.socketId).length;
-    if (connected < MATCH_SIZE) {
+    const connected = current.players.filter(p => Boolean(p.socketId)).length;
+    const ready = current.players.filter(p => p.ready).length;
+    if (connected < current.players.length || ready < current.players.length) {
       for (const p of current.players) {
-        if (p.socketId) io.to(p.socketId).emit("search_error", { message: "Не всі гравці підключилися до матчу." });
+        if (p.socketId) io.to(p.socketId).emit("search_error", {
+          message: connected < current.players.length
+            ? "Не всі гравці підключилися до матчу."
+            : "Не всі гравці встигли завантажити карту."
+        });
       }
       cleanMatch(io, matchId, true);
     }
