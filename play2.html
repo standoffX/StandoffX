@@ -87,8 +87,10 @@ import {PointerLockControls} from "three/addons/controls/PointerLockControls.js"
 const $=id=>document.getElementById(id);
 const socket=io({withCredentials:true});
 const myId=sessionStorage.getItem("myPlayerId");
+const myUuid=sessionStorage.getItem("myPlayerUUID")||"";
 const matchId=sessionStorage.getItem("currentMatchId");
 const mode=sessionStorage.getItem("selectedMode")||"hide_seek";
+const selectedMap=sessionStorage.getItem("selectedMap")||"M3_Maze";
 const isTrainingMode=mode==="training"||mode==="field_test";
 const trainingId=sessionStorage.getItem("trainingId")||matchId;
 if(!myId||(!matchId&&!isTrainingMode)){location.href="/game";throw new Error("No active match")}
@@ -118,7 +120,23 @@ keyLight.position.set(30,60,20);scene.add(keyLight);
 
 const controls=new PointerLockControls(camera,document.body);
 let canControl=false;
-$("overlay").addEventListener("click",()=>{if(!/Android|iPhone|iPad/i.test(navigator.userAgent))controls.lock()});
+let mouseSensitivity=1;
+try{mouseSensitivity=Number(JSON.parse(localStorage.getItem("sx_settings")||"{}").sensitivity)||1}catch{}
+controls.pointerSpeed=mouseSensitivity;
+controls.minPolarAngle=.08;
+controls.maxPolarAngle=Math.PI-.08;
+function requestMouseLook(){
+  if(!/Android|iPhone|iPad/i.test(navigator.userAgent)&&matchPhase==="game"&&!controls.isLocked){
+    try{controls.lock()}catch{}
+  }
+}
+$("overlay").addEventListener("click",requestMouseLook);
+renderer.domElement.addEventListener("click",requestMouseLook);
+document.addEventListener("pointerlockchange",()=>{
+  if(document.pointerLockElement===document.body){
+    $("clickHint").textContent="Миша: огляд · ESC: звільнити курсор · WASD: рух";
+  }
+});
 controls.addEventListener("lock",()=>{if(matchPhase==="game")$("overlay").style.display="none"});
 controls.addEventListener("unlock",()=>{if(matchPhase==="game")$("overlay").style.display="flex"});
 
@@ -173,6 +191,32 @@ function buildFieldArena(){
   addBox(0,1,35,12,2,5,boxMat);addBox(38,1,28,5,2,12,boxMat);
   $("progress").style.width="100%";
 }
+function buildNeonYard(){
+  if(mapLoadFinished)return;
+  mapLoadFinished=true;
+  scene.background=new THREE.Color(0x050b18);
+  scene.fog=new THREE.Fog(0x050b18,95,300);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(180,180),new THREE.MeshStandardMaterial({color:0x101a2a,roughness:.88,metalness:.25}));
+  floor.rotation.x=-Math.PI/2;floor.position.y=-.05;scene.add(floor);mapObjects.push(floor);
+  const grid=new THREE.GridHelper(180,45,0x1de9ff,0x123b56);grid.position.y=.015;scene.add(grid);
+  const wallMat=new THREE.MeshStandardMaterial({color:0x101d31,roughness:.55,metalness:.35});
+  const neonMat=new THREE.MeshStandardMaterial({color:0x08283a,emissive:0x00cfff,emissiveIntensity:1.2,roughness:.35,metalness:.3});
+  const violetMat=new THREE.MeshStandardMaterial({color:0x251039,emissive:0x8b35ff,emissiveIntensity:.8,roughness:.4,metalness:.2});
+  const addBox=(x,y,z,w,h,d,mat)=>{
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+    mesh.position.set(x,y,z);mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
+  };
+  addBox(0,4,-88,180,8,3,wallMat);addBox(0,4,88,180,8,3,wallMat);
+  addBox(-88,4,0,3,8,180,wallMat);addBox(88,4,0,3,8,180,wallMat);
+  for(const [x,z] of [[-24,-20],[24,-20],[-24,20],[24,20],[0,-38],[0,38]]){
+    addBox(x,2,z,9,4,7,wallMat);
+    addBox(x,4.08,z,9,.14,7,neonMat);
+    addBox(x,1,z,9,.12,7,violetMat);
+  }
+  addBox(0,1,0,5,2,16,wallMat);
+  addBox(0,2.1,0,.18,.12,16,neonMat);
+  $("progress").style.width="100%";
+}
 function addFallbackArena(){
   if(mapLoadFinished)return;
   mapLoadFinished=true;
@@ -187,7 +231,12 @@ function addFallbackArena(){
 
 function loadMap(){
   $("phase").textContent="ЗАВАНТАЖЕННЯ КАРТИ";
-  if(mode==="field_test"){
+  if(selectedMap==="NEON_YARD"){
+    buildNeonYard();
+    finishClientReady();
+    return;
+  }
+  if(selectedMap==="FIELD_ARENA"||mode==="field_test"){
     buildFieldArena();
     finishClientReady();
     return;
@@ -251,8 +300,8 @@ function ensurePlayerVisual(){
   scene.add(playerVisual);
 }
 function ensureEnemy(data){
-  const key=String(data.userId||data.id);
-  if(key===String(myId))return null;
+  const key=String(data.uuid||data.userId||data.id);
+  if((myUuid&&String(data.uuid||"")===myUuid)||(!data.uuid&&String(data.userId||data.id)===String(myId)))return null;
   if(!enemies[key]){
     const mesh=makeVisual(colorFor(data.role,data.team));
     scene.add(mesh);
@@ -291,7 +340,7 @@ function sendMove(force=false){
   const now=performance.now();
   if(!force&&now-lastMoveSend<50)return;
   lastMoveSend=now;
-  const data={x:player.position.x,y:player.position.y,z:player.position.z,rotY:player.rotationY,anim:(keys.w||keys.s||keys.a||keys.d)?"Running":"Idle"};
+  const data={uuid:myUuid,x:player.position.x,y:player.position.y,z:player.position.z,rotY:player.rotationY,anim:(keys.w||keys.s||keys.a||keys.d)?"Running":"Idle"};
   if(isTrainingMode)socket.emit("training_move",{trainingId,viewY:camera.rotation.y,...data});
   else socket.emit("player_moved",{matchId,myId,userId:myId,...data});
 }
@@ -318,7 +367,8 @@ function updateWaiting(data){
     const cls=(p.connected?"online ":"")+(p.ready?"ready":"");
     const nickname=String(p.nickname||"PLAYER").replace(/[&<>"]/g,"");
     const playerId=String(p.userId||"—").replace(/[&<>"]/g,"");
-    return "<div class='player "+cls+"'><span class='dot'></span><b>"+nickname+"</b><div class='player-id'>ID "+playerId+"</div><div style='margin-top:4px;color:#7d8ca0;font-size:10px'>"+(p.ready?"ГОТОВ":"ПІДКЛЮЧЕННЯ")+"</div></div>"
+    const uuid=String(p.uuid||"").slice(0,8).replace(/[&<>"]/g,"");
+    return "<div class='player "+cls+"'><span class='dot'></span><b>"+nickname+"</b><div class='player-id'>ID "+playerId+(uuid?" · UUID "+uuid+"…":"")+"</div><div style='margin-top:4px;color:#7d8ca0;font-size:10px'>"+(p.ready?"ГОТОВ":"ПІДКЛЮЧЕННЯ")+"</div></div>"
   }).join("");
   $("phase").textContent=data.ready>=data.required?"ВСІ ГОТОВІ":("ГОТОВНІ: "+(data.ready||0)+"/"+data.required);
   $("bigTimer").textContent=(data.connected||0)+"/"+data.required;
@@ -368,8 +418,8 @@ addEventListener("keyup",e=>{
 addEventListener("mousedown",e=>{if(e.button===0)shoot()});
 
 function setOverlayGame(){
-  $("overlayTitle").textContent=mode==="team_fight"?"TEAM FIGHT":"HIDE & SEEK";
-  $("clickHint").textContent="Клікни для мишки. W A S D — рух.";
+  $("overlayTitle").textContent=mode==="team_fight"?"TEAM FIGHT":mode==="field_test"?"FIELD TEST":mode==="training"?"TRAINING":"HIDE & SEEK";
+  $("clickHint").textContent="Клікни для огляду мишкою. WASD — рух · ESC — курсор";
   if(/Android|iPhone|iPad/i.test(navigator.userAgent)) $("overlay").style.display="none";
 }
 function leaveGame(){
@@ -426,12 +476,13 @@ socket.on("training_state",data=>{
 
 socket.on("init_match",data=>{
   if(data.mode)sessionStorage.setItem("selectedMode",data.mode);
+  if(data.map)sessionStorage.setItem("selectedMap",data.map);
   myRole=data.me?.role||"runner";myTeam=data.me?.team||null;score=data.me?.score||0;hp=data.me?.hp||100;
   $("modeName").textContent=data.modeName||"MATCH";
   ensurePlayerVisual();
   const authoritativePosition=data.me?.position||data.me?.spawn;
   if(authoritativePosition)player.position.set(authoritativePosition.x||0,authoritativePosition.y||0,authoritativePosition.z||0);
-  (data.players||[]).forEach(p=>{if(String(p.userId)!==String(myId))applyEnemy(p)});
+  (data.players||[]).forEach(p=>{if(myUuid?String(p.uuid||"")!==myUuid:String(p.userId)!==String(myId))applyEnemy(p)});
   updateVisual();
 });
 socket.on("match_waiting",data=>{
@@ -478,13 +529,13 @@ socket.on("match_start_now",()=>{
 });
 socket.on("enemy_moved",applyEnemy);
 socket.on("roles_updated",data=>{
-  const me=data.players?.find(p=>String(p.userId)===String(myId));
+  const me=data.players?.find(p=>myUuid?String(p.uuid||"")===myUuid:String(p.userId)===String(myId));
   if(me){
   myRole=me.role;score=me.score||score;myTeam=me.team||myTeam;
   player.position.set(me.spawn.x,me.spawn.y||0,me.spawn.z);ensurePlayerVisual();
   playerVisual.traverse(x=>{if(x.material?.color)x.material.color.set(colorFor(myRole,myTeam))});
 }
-  (data.players||[]).forEach(p=>{if(String(p.userId)!==String(myId)){const e=ensureEnemy(p);if(e){e.role=p.role;e.mesh.traverse(x=>{if(x.material?.color)x.material.color.set(colorFor(p.role,p.team))});}}});
+  (data.players||[]).forEach(p=>{if(myUuid?String(p.uuid||"")!==myUuid:String(p.userId)!==String(myId)){const e=ensureEnemy(p);if(e){e.role=p.role;e.mesh.traverse(x=>{if(x.material?.color)x.material.color.set(colorFor(p.role,p.team))});}}});
 });
 socket.on("player_hit",data=>{
   if(String(data.targetId)===String(myId)){hp=0}
@@ -552,7 +603,7 @@ function animate(){
       const currentSpeed=(mode==="hide_seek"&&myRole==="hunter")?10.5:(keys.shift?10:7.5);
       const step=currentSpeed*dt;
       if(!blocked(move))player.position.addScaledVector(move,step);
-      player.rotationY=Math.atan2(move.x,move.z);
+      player.rotationY=Math.atan2(dir.x,dir.z);
     }
     if(jumpQueued&&!jumping){velocityY=10;jumping=true;jumpQueued=false}
     velocityY-=28*dt;player.position.y+=velocityY*dt;
@@ -574,7 +625,7 @@ addEventListener("resize",()=>{
 $("progress").style.width="4%";
 loadMap();
 if(isTrainingMode)socket.emit("join_training",{trainingId});
-else socket.emit("join_room",{matchId,userId:myId});
+else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
 animate();
 </script>
 </body>

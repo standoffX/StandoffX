@@ -108,6 +108,29 @@ assert.match(menu, /data-clan-action='edit'/, "clan owner UI must expose clan ed
 assert.match(menu, /clan_request_notification/, "menu must show clan application notifications");
 assert.match(admin, /data-clan-admin='edit'/, "admin UI must expose clan editing");
 assert.match(admin, /data-clan-admin='delete'/, "admin UI must expose clan deletion");
+assert.match(server, /crypto\.randomUUID\(\)/, "every account must have a UUID");
+assert.match(server, /user\.uuid = crypto\.randomUUID\(\)/, "legacy accounts must receive a UUID");
+assert.match(server, /users\.find\(candidate => candidate\.uuid === id\)/, "login must accept the unique UUID");
+assert.match(server, /createSession\(user\.uuid \|\| user\.id\)/, "sessions must use UUID where available");
+assert.doesNotMatch(server, /Такий нік вже зайнятий/, "nicknames must be allowed to repeat");
+assert.match(server, /while \(users\.some\(u => String\(u\.id\) === id\)\)/, "new public IDs must be unique");
+assert.match(server, /const PLAYABLE_MAPS = Object\.freeze/, "matchmaking must validate map selections");
+assert.match(server, /p\.mode === entry\.mode && p\.map === entry\.map/, "players on different maps must not be mixed into one queue");
+assert.match(server, /createMatch\(io, mode, map\)/, "the selected map must reach the match");
+assert.match(read("auth.html"), /id="createdUuid"/, "registration must display the UUID");
+assert.match(menu, /data-theme-choice="cyan"/, "menu must offer the cyan theme");
+assert.match(menu, /data-theme-choice="violet"/, "menu must offer the violet theme");
+assert.match(menu, /data-theme-choice="red"/, "menu must offer the red theme");
+assert.match(menu, /data-map="M3_Maze"/, "menu must offer the main map");
+assert.match(menu, /data-map="FIELD_ARENA"/, "menu must offer the field arena");
+assert.match(menu, /data-map="NEON_YARD"/, "menu must offer the neon yard map");
+assert.doesNotMatch(menu, /DEV BUILD/i, "the main menu must not show development-build labels");
+assert.match(menu, /id="profilePageUuid"/, "the player profile must display UUID");
+assert.match(game, /function requestMouseLook\(\)/, "mouse look must be activatable from the game view");
+assert.match(game, /controls\.pointerSpeed=mouseSensitivity/, "mouse look must use the saved sensitivity");
+assert.match(game, /function buildNeonYard\(\)/, "the selected neon map must be implemented");
+assert.match(game, /selectedMap==="NEON_YARD"/, "game must load the selected map");
+
 
 
 assert.match(admin, /id="fTester"/);

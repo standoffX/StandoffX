@@ -314,6 +314,10 @@ function publicUser(user) {
 function ensureUserShape(user) {
   user.nickname = cleanText(user.nickname, 24);
   user.id = normalizeId(user.id);
+  if (typeof user.uuid !== "string" || !/^[0-9a-f-]{36}$/i.test(user.uuid) || users.some(other => other !== user && other.uuid === user.uuid)) {
+    do { user.uuid = crypto.randomUUID(); }
+    while (users.some(other => other !== user && other.uuid === user.uuid));
+  }
   if (!Array.isArray(user.friendsList)) user.friendsList = [];
   if (!Array.isArray(user.incomingRequests)) user.incomingRequests = [];
   if (!Array.isArray(user.blocked)) user.blocked = [];
@@ -406,7 +410,7 @@ function sessionUserFromToken(token) {
     if (token) sessions.delete(token);
     return null;
   }
-  const user = users.find(u => u.id === data.userId);
+  const user = users.find(u => u.uuid === data.userId) || users.find(u => u.id === data.userId);
   if (!user) {
     sessions.delete(token);
     return null;
@@ -590,10 +594,7 @@ app.post("/api/register", registrationRateLimit, (req, res) => {
   if (password.length < 6 || password.length > 128) {
     return res.status(400).json({ success: false, message: "Пароль має містити 6–128 символів." });
   }
-  if (users.some(u => String(u.nickname || "").toLowerCase() === nickname.toLowerCase())) {
-    return res.status(409).json({ success: false, message: "Такий нік вже зайнятий." });
-  }
-
+  // Nicknames are display names and intentionally do not need to be unique.
   let id;
   do id = String(crypto.randomInt(1000000, 10000000));
   while (users.some(u => String(u.id) === id));
@@ -601,6 +602,7 @@ app.post("/api/register", registrationRateLimit, (req, res) => {
   const user = {
     nickname,
     id,
+    uuid: crypto.randomUUID(),
     passwordHash: hashPassword(password),
     playerAvatar: "/avatars/default.jpg",
     status: true,
@@ -625,7 +627,7 @@ app.post("/api/register", registrationRateLimit, (req, res) => {
   saveUsers();
   saveInventory();
 
-  const token = createSession(user.id);
+  const token = createSession(user.uuid || user.id);
   setSessionCookie(res, token);
   res.json({
     success: true,
@@ -637,7 +639,7 @@ app.post("/api/register", registrationRateLimit, (req, res) => {
 });
 
 app.post("/api/login", loginRateLimit, (req, res) => {
-  const id = normalizeId(req.body.id || req.body.userId || "");
+  const id = normalizeId(req.body.id || req.body.userId || req.body.uuid || "");
   const password = String(req.body.password || "");
 
   if (!id) {
@@ -670,7 +672,8 @@ app.post("/api/login", loginRateLimit, (req, res) => {
     if (!users.some(u => u.id === ADMIN_ID)) users.push(user);
     saveUsers();
   } else {
-    user = findUser(id, { allowNickname: false });
+    // UUID is the stable, globally unique identity; Player ID remains a shorter public identifier.
+    user = users.find(candidate => candidate.uuid === id) || findUser(id, { allowNickname: false });
   }
 
   if (!user || !verifyPassword(password, user.passwordHash || user.password)) {
@@ -689,7 +692,7 @@ app.post("/api/login", loginRateLimit, (req, res) => {
   ensureUserShape(user);
   saveUsers();
 
-  const token = createSession(user.id);
+  const token = createSession(user.uuid || user.id);
   setSessionCookie(res, token);
   res.json({ success: true, redirect: "/game", user: publicUser(user) });
 });
@@ -1251,6 +1254,16 @@ const WARMUP_SECONDS = 10;
 const COUNTDOWN_SECONDS = 15;
 const JOIN_TIMEOUT_SECONDS = 35;
 
+const PLAYABLE_MAPS = Object.freeze({
+  M3_Maze: { id: "M3_Maze", name: "M3 MAZE", kind: "model" },
+  FIELD_ARENA: { id: "FIELD_ARENA", name: "FIELD ARENA", kind: "arena" },
+  NEON_YARD: { id: "NEON_YARD", name: "NEON YARD", kind: "neon" }
+});
+function normalizeMapId(value) {
+  const id = cleanText(value, 32);
+  return Object.prototype.hasOwnProperty.call(PLAYABLE_MAPS, id) ? id : "M3_Maze";
+}
+
 const MODE_CONFIGS = {
   hide_seek: {
     id: "hide_seek",
@@ -1292,8 +1305,8 @@ function getRequiredPlayers(mode) {
   return Number(getModeConfig(mode).requiredPlayers) || DEFAULT_MATCH_SIZE;
 }
 
-function removeFromQueue(userId) {
-  const idx = matchmakingQueue.findIndex(p => p.userId === userId);
+function removeFromQueue(identity) {
+  const idx = matchmakingQueue.findIndex(p => p.uuid === identity || (!p.uuid && p.userId === identity));
   if (idx !== -1) {
     matchmakingQueue.splice(idx, 1);
     return true;
@@ -1301,22 +1314,25 @@ function removeFromQueue(userId) {
   return false;
 }
 
-function playerMatch(userId) {
+function playerMatch(identity) {
   for (const match of activeMatches.values()) {
-    if (match.players.some(p => p.userId === userId)) return match;
+    if (match.players.some(p => p.uuid === identity || (!p.uuid && p.userId === identity))) return match;
   }
   return null;
 }
 
 function emitQueueCount(io) {
   for (const entry of matchmakingQueue) {
-    const modePlayers = matchmakingQueue.filter(p => p.mode === entry.mode);
+    const modePlayers = matchmakingQueue.filter(p => p.mode === entry.mode && p.map === entry.map);
     io.to(entry.socketId).emit("queue_update", {
       count: modePlayers.length,
       required: getRequiredPlayers(entry.mode),
       mode: entry.mode,
+      map: entry.map,
+      mapName: PLAYABLE_MAPS[entry.map]?.name || PLAYABLE_MAPS.M3_Maze.name,
       players: modePlayers.map(p => ({
         userId: p.userId,
+        uuid: p.uuid,
         nickname: p.nickname,
         connected: true,
         ready: false
@@ -1325,14 +1341,14 @@ function emitQueueCount(io) {
   }
 }
 
-function createMatch(io, mode) {
-  const candidates = matchmakingQueue.filter(p => p.mode === mode);
+function createMatch(io, mode, mapId = "M3_Maze") {
+  const safeMapId = normalizeMapId(mapId);
+  const candidates = matchmakingQueue.filter(p => p.mode === mode && p.map === safeMapId);
   const requiredPlayers = getRequiredPlayers(mode);
   if (candidates.length < requiredPlayers) return;
 
-  const selectedIds = new Set(candidates.slice(0, requiredPlayers).map(p => p.userId));
-  const players = matchmakingQueue.filter(p => selectedIds.has(p.userId));
-  for (const p of players) removeFromQueue(p.userId);
+  const players = candidates.slice(0, requiredPlayers);
+  for (const p of players) removeFromQueue(p.uuid || p.userId);
 
   const cfg = getModeConfig(mode);
   const matchId = "match_" + Date.now() + "_" + crypto.randomBytes(2).toString("hex");
@@ -1342,10 +1358,12 @@ function createMatch(io, mode) {
     id: matchId,
     mode: cfg.id,
     modeName: cfg.name,
-    map: cfg.map,
+    map: safeMapId,
+    mapName: PLAYABLE_MAPS[safeMapId]?.name || PLAYABLE_MAPS.M3_Maze.name,
     players: players.map((p, i) => ({
       socketId: p.socketId,
       userId: p.userId,
+      uuid: p.uuid,
       nickname: p.nickname,
       role: mode === "hide_seek" ? (i === hunterIndex ? "hunter" : "runner") : (i % 2 === 0 ? "teamA" : "teamB"),
       team: mode === "team_fight" ? (i % 2 === 0 ? "A" : "B") : null,
@@ -1380,6 +1398,7 @@ function createMatch(io, mode) {
     io.to(p.socketId).emit("match_found", {
       matchId,
       userId: p.userId,
+      uuid: p.uuid,
       mode: cfg.id,
       modeName: cfg.name,
       map: match.map
@@ -1746,7 +1765,8 @@ io.on("connection", socket => {
       userId: user.id,
       mode: cfg.id,
       modeName: cfg.name,
-      map: cfg.map
+      map: cfg.map,
+      uuid: user.uuid
     });
   });
 
@@ -1933,26 +1953,29 @@ io.on("connection", socket => {
 
   socket.on("start_search", data => {
     const user = socket.user;
-    if (playerMatch(user.id)) return socket.emit("search_error", { message: "Ти вже в матчі." });
+    if (playerMatch(user.uuid || user.id)) return socket.emit("search_error", { message: "Ти вже в матчі." });
     if (matchmakingQueue.some(p => p.userId === user.id)) return;
 
     const mode = Object.prototype.hasOwnProperty.call(MODE_CONFIGS, data?.mode) ? data.mode : "hide_seek";
-    removeFromQueue(user.id);
+    const map = normalizeMapId(data?.map);
+    removeFromQueue(user.uuid || user.id);
 
     matchmakingQueue.push({
       socketId: socket.id,
       userId: user.id,
       nickname: user.nickname,
-      mode
+      uuid: user.uuid,
+      mode,
+      map
     });
 
-    socket.emit("search_started", { mode, modeName: MODE_CONFIGS[mode].name });
+    socket.emit("search_started", { mode, modeName: MODE_CONFIGS[mode].name, map, mapName: PLAYABLE_MAPS[map].name });
     emitQueueCount(io);
-    createMatch(io, mode);
+    createMatch(io, mode, map);
   });
 
   socket.on("cancel_search", () => {
-    if (removeFromQueue(socket.user.id)) emitQueueCount(io);
+    if (removeFromQueue(socket.user.uuid || socket.user.id)) emitQueueCount(io);
   });
 
   socket.on("leave_match", data => {
@@ -1960,7 +1983,7 @@ io.on("connection", socket => {
     const match = activeMatches.get(matchId);
     if (!match) return;
 
-    const index = match.players.findIndex(p => p.userId === socket.user.id && p.socketId === socket.id);
+    const index = match.players.findIndex(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
     if (index < 0) return;
 
     const player = match.players[index];
@@ -1985,7 +2008,7 @@ io.on("connection", socket => {
     const match = activeMatches.get(matchId);
     if (!match) return socket.emit("kick_to_menu", { reason: "Матч не знайдено." });
 
-    const player = match.players.find(p => p.userId === socket.user.id);
+    const player = match.players.find(p => p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id);
     if (!player) return socket.emit("kick_to_menu", { reason: "Гравця немає в цьому матчі." });
 
     // A reconnect replaces the old socket for this user.
@@ -2002,6 +2025,7 @@ io.on("connection", socket => {
       modeName: match.modeName,
       me: {
         userId: player.userId,
+        uuid: player.uuid || "",
         nickname: player.nickname,
         role: player.role,
         team: player.team,
@@ -2012,6 +2036,7 @@ io.on("connection", socket => {
       },
       players: match.players.map(p => ({
         userId: p.userId,
+        uuid: p.uuid || "",
         nickname: p.nickname,
         role: p.role,
         team: p.team,
@@ -2026,10 +2051,11 @@ io.on("connection", socket => {
     });
 
     for (const other of match.players) {
-      if (other.userId !== player.userId && other.socketId) {
+      if ((other.uuid ? other.uuid !== player.uuid : other.userId !== player.userId) && other.socketId) {
         socket.emit("enemy_moved", {
           id: other.socketId,
           userId: other.userId,
+          uuid: other.uuid || "",
           nickname: other.nickname,
           role: other.role,
           team: other.team,
@@ -2064,7 +2090,7 @@ io.on("connection", socket => {
     const match = activeMatches.get(matchId);
     if (!match) return;
 
-    const player = match.players.find(p => p.userId === socket.user.id);
+    const player = match.players.find(p => p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id);
     if (!player || player.socketId !== socket.id) return;
 
     player.ready = true;
@@ -2075,7 +2101,7 @@ io.on("connection", socket => {
   socket.on("team_shoot", data => {
     const match = activeMatches.get(cleanText(data?.matchId, 100));
     if (!match) return;
-    const player = match.players.find(p => p.userId === socket.user.id && p.socketId === socket.id);
+    const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
     if (!player) return;
     handleTeamShot(io, match, player, data);
   });
@@ -2092,6 +2118,7 @@ io.on("connection", socket => {
     socket.to(match.id).emit("enemy_moved", {
       id: socket.id,
       userId: player.userId,
+      uuid: player.uuid || "",
       nickname: player.nickname,
       role: player.role,
       team: player.team,
@@ -2182,7 +2209,7 @@ io.on("connection", socket => {
   });
 
   socket.on("disconnect", () => {
-    removeFromQueue(socket.user?.id);
+    removeFromQueue(socket.user?.uuid || socket.user?.id);
 
     if (socket.user) {
       socket.user.status = false;
