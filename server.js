@@ -1010,6 +1010,7 @@ app.post("/api/upload-avatar", requireAuth, upload.single("avatar"), (req, res) 
 
 const matchmakingQueue = [];
 const activeMatches = new Map(); // in-memory only; never written to MongoDB
+const trainingSessions = new Map(); // private tester sessions; never written to MongoDB
 const MATCH_SIZE = 3;
 const GAME_SECONDS = 300;
 const WARMUP_SECONDS = 10;
@@ -1030,6 +1031,15 @@ const MODE_CONFIGS = {
     map: "M3_Maze"
   }
 };
+
+const TESTER_MODE_CONFIGS = {
+  training: { id: "training", name: "TRAINING", map: "M3_Maze", kind: "bot-training" },
+  field_test: { id: "field_test", name: "FIELD TEST", map: "FIELD_ARENA", kind: "free-range" }
+};
+
+function canUseTesterModes(user) {
+  return Boolean(user && (user.id === ADMIN_ID || user.isTester === true));
+}
 
 const SPAWNS = [
   { x: 5, y: 0, z: 5 },
@@ -1404,6 +1414,222 @@ io.on("connection", socket => {
   socket.user.status = true;
   saveUsers();
 
+  socket.on("start_training", data => {
+    const user = socket.user;
+    const mode = cleanText(data?.mode, 32);
+    const cfg = TESTER_MODE_CONFIGS[mode];
+    if (!canUseTesterModes(user)) {
+      return socket.emit("training_error", { message: "Цей режим доступний лише тестерам." });
+    }
+    if (!cfg) return socket.emit("training_error", { message: "Невідомий тестовий режим." });
+
+    const previous = trainingSessions.get(user.id);
+    const session = {
+      id: "practice_" + crypto.randomBytes(10).toString("hex"),
+      userId: user.id,
+      nickname: user.nickname,
+      mode: cfg.id,
+      modeName: cfg.name,
+      map: cfg.map,
+      socketId: socket.id,
+      playerPos: { x: 0, y: 0, z: 0 },
+      playerRotY: 0,
+      bot: null,
+      lastMoveAt: 0,
+      lastActionAt: 0,
+      createdAt: Date.now()
+    };
+    if (previous?.bot?.despawnTimer) clearTimeout(previous.bot.despawnTimer);
+    trainingSessions.set(user.id, session);
+    socket.emit("training_started", {
+      trainingId: session.id,
+      userId: user.id,
+      mode: cfg.id,
+      modeName: cfg.name,
+      map: cfg.map
+    });
+  });
+
+  socket.on("join_training", data => {
+    const user = socket.user;
+    if (!canUseTesterModes(user)) return socket.emit("kick_to_menu", { reason: "Режим доступний лише тестерам." });
+    const session = trainingSessions.get(user.id);
+    if (!session || session.id !== cleanText(data?.trainingId, 100)) {
+      return socket.emit("kick_to_menu", { reason: "Тренувальну сесію не знайдено." });
+    }
+    session.socketId = socket.id;
+    socket.join(session.id);
+    socket.emit("training_init", {
+      trainingId: session.id,
+      mode: session.mode,
+      modeName: session.modeName,
+      map: session.map,
+      spawn: { x: 0, y: 0, z: 0 },
+      bot: session.bot
+    });
+    if (session.bot) socket.emit("training_state", { bot: session.bot });
+  });
+
+  socket.on("training_move", data => {
+    const session = trainingSessions.get(socket.user?.id);
+    if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
+    const now = Date.now();
+    if (now - session.lastMoveAt < 33) return;
+    session.lastMoveAt = now;
+    const x = Number(data.x), y = Number(data.y), z = Number(data.z), rotY = Number(data.rotY);
+    if (![x, y, z, rotY].every(Number.isFinite)) return;
+
+    const previous = session.playerPos;
+    const maxStep = 0.55;
+    const dx = x - previous.x, dz = z - previous.z;
+    const distance = Math.hypot(dx, dz);
+    if (distance > maxStep) {
+      previous.x += dx / distance * maxStep;
+      previous.z += dz / distance * maxStep;
+    } else {
+      previous.x = x;
+      previous.z = z;
+    }
+    previous.y = Math.max(0, Math.min(20, y));
+    session.playerRotY = rotY;
+  });
+
+  socket.on("training_spawn_bot", data => {
+    const session = trainingSessions.get(socket.user?.id);
+    if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
+    const now = Date.now();
+    if (now - session.lastActionAt < 250) return;
+    session.lastActionAt = now;
+
+    const p = session.playerPos;
+    const angle = session.playerRotY || 0;
+    session.bot = {
+      id: "training_bot",
+      nickname: "Training Bot",
+      role: "runner",
+      team: "B",
+      hp: 100,
+      maxHp: 100,
+      hits: 0,
+      x: p.x + Math.sin(angle) * 3,
+      y: 0,
+      z: p.z + Math.cos(angle) * 3,
+      rotY: angle + Math.PI,
+      action: "idle",
+      updatedAt: Date.now()
+    };
+    io.to(session.id).emit("training_state", { bot: session.bot, message: "Бота створено." });
+  });
+
+  socket.on("training_bot_action", data => {
+    const session = trainingSessions.get(socket.user?.id);
+    if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || !session.bot) return;
+    const now = Date.now();
+    if (now - session.lastActionAt < 180) return;
+    session.lastActionAt = now;
+
+    const action = cleanText(data?.action, 16);
+    const bot = session.bot;
+    const p = session.playerPos;
+    let dx = bot.x - p.x, dz = bot.z - p.z;
+    let dist = Math.hypot(dx, dz) || 1;
+    dx /= dist; dz /= dist;
+
+    if (action === "push" || action === "kick") {
+      const force = action === "kick" ? 4.5 : 2.0;
+      bot.x += dx * force;
+      bot.z += dz * force;
+      bot.hp = Math.max(0, bot.hp - (action === "kick" ? 25 : 8));
+      bot.hits += 1;
+      bot.action = action;
+      if (bot.hp <= 0) {
+        bot.action = "knocked-out";
+        bot.x = p.x + dx * 2.5;
+        bot.z = p.z + dz * 2.5;
+        setTimeout(() => {
+          const current = trainingSessions.get(session.userId);
+          if (!current || current.id !== session.id || !current.bot || current.bot.id !== bot.id) return;
+          current.bot.hp = current.bot.maxHp;
+          current.bot.action = "idle";
+          current.bot.updatedAt = Date.now();
+          io.to(current.id).emit("training_state", { bot: current.bot, message: "Бот відновився." });
+        }, 1200);
+      }
+    } else if (action === "boost") {
+      bot.y = 1.5;
+      bot.action = "boost";
+      setTimeout(() => {
+        const current = trainingSessions.get(session.userId);
+        if (!current || current.id !== session.id || current.bot !== bot) return;
+        bot.y = 0;
+        bot.action = "idle";
+        io.to(current.id).emit("training_state", { bot });
+      }, 650);
+    } else if (action === "reset") {
+      bot.x = p.x + dx * 3;
+      bot.y = 0;
+      bot.z = p.z + dz * 3;
+      bot.hp = bot.maxHp;
+      bot.action = "idle";
+    } else {
+      return;
+    }
+
+    bot.updatedAt = Date.now();
+    io.to(session.id).emit("training_state", { bot, message: action });
+  });
+
+  socket.on("training_shoot", data => {
+    const session = trainingSessions.get(socket.user?.id);
+    if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || !session.bot) return;
+    if (session.mode !== "field_test" && session.mode !== "training") return;
+
+    const dx = Number(data.dx), dy = Number(data.dy), dz = Number(data.dz);
+    if (![dx, dy, dz].every(Number.isFinite)) return;
+    const length = Math.hypot(dx, dy, dz) || 1;
+    const aim = { x: dx / length, y: dy / length, z: dz / length };
+    const bot = session.bot;
+    const vx = bot.x - session.playerPos.x;
+    const vy = bot.y + 0.9 - (session.playerPos.y + 1);
+    const vz = bot.z - session.playerPos.z;
+    const dist = Math.hypot(vx, vy, vz);
+    if (dist > 70 || dist < 0.5) return;
+    const dot = aim.x * vx / dist + aim.y * vy / dist + aim.z * vz / dist;
+    if (dot < 0.975) return;
+
+    bot.hp = Math.max(0, bot.hp - (Number(data.damage) || 34));
+    bot.hits += 1;
+    bot.action = bot.hp <= 0 ? "knocked-out" : "hit";
+    bot.updatedAt = Date.now();
+    io.to(session.id).emit("training_state", { bot, hit: true, message: "HIT" });
+    if (bot.hp <= 0) {
+      setTimeout(() => {
+        const current = trainingSessions.get(session.userId);
+        if (!current || current.id !== session.id || !current.bot) return;
+        current.bot.hp = current.bot.maxHp;
+        current.bot.action = "idle";
+        current.bot.updatedAt = Date.now();
+        io.to(current.id).emit("training_state", { bot: current.bot, message: "Бот відновився." });
+      }, 1200);
+    }
+  });
+
+  socket.on("training_reset", data => {
+    const session = trainingSessions.get(socket.user?.id);
+    if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
+    session.playerPos = { x: 0, y: 0, z: 0 };
+    session.playerRotY = 0;
+    session.bot = null;
+    io.to(session.id).emit("training_state", { bot: null, reset: true, message: "Тренування скинуто." });
+  });
+
+  socket.on("end_training", data => {
+    const session = trainingSessions.get(socket.user?.id);
+    if (!session || session.id !== cleanText(data?.trainingId, 100)) return;
+    if (session.socketId !== socket.id) return;
+    trainingSessions.delete(socket.user.id);
+  });
+
   socket.on("start_search", data => {
     const user = socket.user;
     if (playerMatch(user.id)) return socket.emit("search_error", { message: "Ти вже в матчі." });
@@ -1576,6 +1802,9 @@ io.on("connection", socket => {
       socket.user.status = false;
       saveUsers();
     }
+
+    const practice = socket.user ? trainingSessions.get(socket.user.id) : null;
+    if (practice && practice.socketId === socket.id) practice.socketId = null;
 
     for (const [matchId, match] of activeMatches.entries()) {
       const p = match.players.find(x => x.socketId === socket.id);
