@@ -2182,7 +2182,7 @@ io.on("connection", socket => {
     const match = activeMatches.get(cleanText(data?.matchId, 100));
     if (!match) return;
     const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
-    if (!player) return;
+    if (!player || player.hp <= 0) return;
     handleTeamShot(io, match, player, data);
   });
 
@@ -2190,7 +2190,7 @@ io.on("connection", socket => {
     const match = activeMatches.get(cleanText(data?.matchId, 100));
     if (!match) return;
     const player = match.players.find(p => p.userId === socket.user.id);
-    if (!player || player.socketId !== socket.id) return;
+    if (!player || player.socketId !== socket.id || player.hp <= 0) return;
     if (!validateMove(player, data)) return;
 
     if (match.phase === "game") handleCatch(io, match, player);
