@@ -92,9 +92,10 @@ const socket=io({withCredentials:true});
 const myId=sessionStorage.getItem("myPlayerId");
 const myUuid=sessionStorage.getItem("myPlayerUUID")||"";
 const matchId=sessionStorage.getItem("currentMatchId");
-const mode=sessionStorage.getItem("selectedMode")||"hide_seek";
-const selectedMap=sessionStorage.getItem("selectedMap")||"M3_Maze";
+const mode=sessionStorage.getItem("selectedMode")||"allies";
+const selectedMap=sessionStorage.getItem("selectedMap")||"HILL_TOWN";
 const isTrainingMode=mode==="training"||mode==="field_test";
+const isTeamCombat=mode==="allies"||mode==="team_fight";
 const trainingId=sessionStorage.getItem("trainingId")||matchId;
 if(!myId||(!matchId&&!isTrainingMode)){location.href="/game";throw new Error("No active match")}
 
@@ -148,6 +149,238 @@ controls.addEventListener("unlock",()=>{if(matchPhase==="game")$("overlay").styl
 
 const loader=new GLTFLoader();
 const mapObjects=[];
+const HILL_TOWN_MANIFEST_URL="https://3dassets.dev/api/v1/packs/tactical-shooter-hill-town";
+const HILL_TOWN_STARTER_URL="https://cdn.3dassets.dev/assets/27595/v1/model.glb";
+let hillTownManifestPromise=null;
+let hillTownBuilding=false;
+let heldWeaponRoot=null;
+let heldWeaponBaseZ=-.42;
+let weaponKick=0;
+const loadedAssetTemplates=new Map();
+const loadedAssetUrls=new Map();
+const ASSET_MATCHES={
+  floor:["cobbled ground tile","stone floor tile"],
+  plaster:["plaster wall bay"],
+  ochre:["ochre wall bay"],
+  window:["wall bay with shuttered window","shuttered window"],
+  door:["wall bay with timber door","timber door"],
+  arch:["arched passage bay"],
+  crate:["timber crate stack"],
+  sandbag:["sandbag wall"],
+  stall:["market awning stall"],
+  olive:["potted olive tree"],
+  lamp:["wall lamp on iron bracket"],
+  rifle:["attacker assault rifle","assault rifle"]
+};
+function loadHillTownManifest(){
+  if(!hillTownManifestPromise){
+    hillTownManifestPromise=fetch(HILL_TOWN_MANIFEST_URL,{mode:"cors",cache:"force-cache"})
+      .then(r=>{if(!r.ok)throw new Error("Asset manifest HTTP "+r.status);return r.json()});
+  }
+  return hillTownManifestPromise;
+}
+function subtreeStrings(node,out=[],depth=0){
+  if(node==null||depth>9)return out;
+  if(typeof node==="string"){out.push(node);return out}
+  if(Array.isArray(node)){for(const item of node)subtreeStrings(item,out,depth+1);return out}
+  if(typeof node==="object"){for(const value of Object.values(node))subtreeStrings(value,out,depth+1)}
+  return out;
+}
+function findHillTownAssetUrl(root,needles){
+  const list=Array.isArray(needles)?needles:[needles];
+  function walk(node,path=""){
+    if(!node||typeof node!=="object")return null;
+    if(Array.isArray(node)){
+      for(let i=0;i<node.length;i++){const found=walk(node[i],path+" "+i);if(found)return found}
+      return null;
+    }
+    const direct=Object.entries(node).filter(([,v])=>typeof v==="string").map(([k,v])=>k+":"+v).join(" ").toLowerCase();
+    const identity=(path+" "+direct).toLowerCase();
+    if(list.some(needle=>identity.includes(String(needle).toLowerCase()))){
+      const urls=subtreeStrings(node).filter(value=>/^https?:\/\//i.test(value)&&/\.glb(?:[?#]|$)/i.test(value));
+      const url=urls.find(value=>/cdn\.3dassets\.dev\/assets\//i.test(value))||urls[0];
+      if(url)return url;
+      const id=node.assetId??node.asset_id??node.modelId??node.model_id??node.id;
+      if(Number.isFinite(Number(id))&&Number(id)>0)return "https://cdn.3dassets.dev/assets/"+Number(id)+"/v1/model.glb";
+    }
+    for(const [key,value] of Object.entries(node)){const found=walk(value,path+" "+key);if(found)return found}
+    return null;
+  }
+  return walk(root);
+}
+function loadGLBScene(url){
+  return new Promise((resolve,reject)=>loader.load(url,gltf=>resolve(gltf.scene),undefined,reject));
+}
+async function getHillTownTemplate(name){
+  if(loadedAssetTemplates.has(name))return loadedAssetTemplates.get(name);
+  if(loadedAssetUrls.has(name)&&loadedAssetUrls.get(name)===null)return null;
+  const manifest=await loadHillTownManifest();
+  const url=findHillTownAssetUrl(manifest,ASSET_MATCHES[name]||name);
+  if(!url){loadedAssetUrls.set(name,null);return null}
+  loadedAssetUrls.set(name,url);
+  const model=await loadGLBScene(url);
+  loadedAssetTemplates.set(name,model);
+  return model;
+}
+function addAssetInstance(template,x,y,z,rotationY=0,collidable=true){
+  if(!template)return null;
+  const clone=template.clone(true);
+  clone.position.set(x,y,z);clone.rotation.y=rotationY;
+  clone.traverse(node=>{
+    if(node.isMesh){
+      node.castShadow=false;node.receiveShadow=false;
+      if(collidable)mapObjects.push(node);
+    }
+  });
+  scene.add(clone);
+  return clone;
+}
+function addTownFallbackWall(x,z,rotationY=0,materialColor=0xb69a76){
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(4,3.5,.34),new THREE.MeshStandardMaterial({color:materialColor,roughness:.92}));
+  mesh.position.set(x,1.75,z);mesh.rotation.y=rotationY;scene.add(mesh);mapObjects.push(mesh);
+  const trim=new THREE.Mesh(new THREE.BoxGeometry(4.02,.12,.38),new THREE.MeshStandardMaterial({color:0x705841,roughness:1}));
+  trim.position.set(x,3.35,z);trim.rotation.y=rotationY;scene.add(trim);mapObjects.push(trim);
+}
+function addTownFallbackProp(x,z,color=0x897052){
+  const base=new THREE.Mesh(new THREE.BoxGeometry(1.35,1.15,1),new THREE.MeshStandardMaterial({color,roughness:.95}));
+  base.position.set(x,.575,z);scene.add(base);mapObjects.push(base);
+  const slat=new THREE.Mesh(new THREE.BoxGeometry(1.4,.08,1.04),new THREE.MeshStandardMaterial({color:0x4e3a2a,roughness:1}));
+  slat.position.set(x,1.12,z);scene.add(slat);mapObjects.push(slat);
+}
+async function loadHillTownStarterFallback(){
+  try{
+    const map=await loadGLBScene(HILL_TOWN_STARTER_URL);
+    map.traverse(node=>{if(node.isMesh){node.castShadow=false;node.receiveShadow=false;mapObjects.push(node)}});
+    scene.add(map);mapLoaded=true;mapLoadFinished=true;
+    $("progress").style.width="100%";
+    $("phase").textContent="HILL TOWN";
+    finishClientReady();
+  }catch(error){
+    console.warn("[HILL_TOWN] Remote models unavailable; using local fallback.",error);
+    buildFieldArena();finishClientReady();
+  }
+}
+async function buildHillTownMap(){
+  if(mapLoadFinished||hillTownBuilding)return;
+  hillTownBuilding=true;
+  $("phase").textContent="ЗАВАНТАЖЕННЯ HILL TOWN";
+  $("overlayText").textContent="Завантаження моделей карти з ліцензією CC0…";
+  $("progress").style.width="12%";
+  try{
+    const names=["floor","plaster","ochre","window","door","arch","crate","sandbag","stall","olive","lamp","rifle"];
+    const results=await Promise.all(names.map(async name=>{
+      try{return [name,await getHillTownTemplate(name)]}catch(error){console.warn("[HILL_TOWN] Model unavailable:",name,error);return [name,null]}
+    }));
+    const assets=Object.fromEntries(results);
+    if(!assets.floor||(!assets.plaster&&!assets.ochre))throw new Error("Hill Town manifest did not return floor/wall models");
+    $("progress").style.width="65%";
+    // 13 x 13 metre-aligned cobblestone tiles form the walkable ground.
+    for(let z=-24;z<=24;z+=4){
+      for(let x=-24;x<=24;x+=4)addAssetInstance(assets.floor,x,-.12,z,0,false);
+    }
+    const variants=[assets.plaster,assets.ochre,assets.window,assets.door];
+    const placeWall=(x,z,rotationY=0,kind="wall")=>{
+      const variant=kind==="arch"?assets.arch:kind==="door"?assets.door:kind==="window"?assets.window:variants[(Math.abs(Math.round(x+z))%variants.length)];
+      if(variant)addAssetInstance(variant,x,0,z,rotationY,true);
+      else addTownFallbackWall(x,z,rotationY,kind==="door"?0x9b7958:0xb69a76);
+    };
+    // Outer wall ring and a handful of windows/doors break up the silhouette.
+    let index=0;
+    for(let v=-24;v<=24;v+=4){
+      placeWall(v,-26,0,index%5===0?"window":"wall");
+      placeWall(v,26,0,index%4===0?"door":"wall");
+      placeWall(-26,v,Math.PI/2,index%4===1?"window":"wall");
+      placeWall(26,v,Math.PI/2,index%5===2?"door":"wall");
+      index++;
+    }
+    // Internal lanes: open gaps keep the map traversable while giving cover.
+    for(const z of [-10,10]){
+      for(let x=-18;x<=18;x+=4){
+        if(Math.abs(x)<=2){if(x===0)placeWall(x,z,0,"arch");continue}
+        placeWall(x,z,0,Math.abs(x)===14?"window":"wall");
+      }
+    }
+    for(const x of [-10,10]){
+      for(let z=-18;z<=18;z+=4){
+        if(Math.abs(z)<=2)continue;
+        if((x<0&&z===6)||(x>0&&z===-6))continue;
+        placeWall(x,z,Math.PI/2,(z%8===0)?"window":"wall");
+      }
+    }
+    // Low cover and landmarks around the two combat lanes.
+    const prop=(name,x,z,rotationY=0)=>{
+      if(assets[name])addAssetInstance(assets[name],x,0,z,rotationY,true);
+      else addTownFallbackProp(x,z,name==="sandbag"?0x9b896c:0x85684a);
+    };
+    [[-18,-18],[18,-18],[-18,18],[18,18],[-4,-2],[4,2]].forEach(([x,z],i)=>prop("crate",x,z,(i%2)*Math.PI/2));
+    prop("sandbag",-8,0,Math.PI/2);prop("sandbag",8,0,Math.PI/2);
+    prop("stall",-16,4,0);prop("stall",16,-4,Math.PI);
+    prop("olive",-20,8,0);prop("olive",20,-8,0);
+    prop("lamp",-24,0,Math.PI/2);prop("lamp",24,0,-Math.PI/2);
+    mapLoadFinished=true;mapLoaded=true;hillTownBuilding=false;
+    scene.background=new THREE.Color(0xc8d3d8);
+    scene.fog=new THREE.Fog(0xc8d3d8,95,250);
+    $("progress").style.width="100%";
+    $("phase").textContent="HILL TOWN · ГОТОВО";
+    finishClientReady();
+  }catch(error){
+    console.warn("[HILL_TOWN] Modular map load failed; trying the CC0 starter scene.",error);
+    hillTownBuilding=false;
+    await loadHillTownStarterFallback();
+  }
+}
+function makeFallbackAK(){
+  if(!heldWeaponRoot)return;
+  const metal=new THREE.MeshStandardMaterial({color:0x30383c,roughness:.48,metalness:.72});
+  const darkMetal=new THREE.MeshStandardMaterial({color:0x15191b,roughness:.58,metalness:.45});
+  const wood=new THREE.MeshStandardMaterial({color:0x755036,roughness:.82,metalness:.02});
+  const addPart=(w,h,d,x,y,z,mat,rx=0,ry=0,rz=0)=>{
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+    mesh.position.set(x,y,z);mesh.rotation.set(rx,ry,rz);mesh.castShadow=false;mesh.receiveShadow=false;heldWeaponRoot.add(mesh);
+  };
+  addPart(.105,.12,.32,0,0,0,metal);
+  addPart(.095,.095,.23,0,.015,.265,wood,0,0,0);
+  addPart(.095,.09,.20,0,.045,-.22,wood);
+  addPart(.065,.105,.09,0,-.095,.12,darkMetal,-.24);
+  addPart(.078,.205,.13,0,-.145,.025,metal,-.22);
+  addPart(.035,.035,.22,0,.04,-.405,darkMetal);
+  addPart(.12,.025,.18,0,.078,-.245,metal);
+  addPart(.025,.04,.035,0,.085,-.06,darkMetal);
+  addPart(.025,.045,.035,0,.078,-.34,darkMetal);
+  const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.014,.014,.3,8),metal);
+  barrel.rotation.x=Math.PI/2;barrel.position.set(0,.025,-.49);heldWeaponRoot.add(barrel);
+  const muzzle=new THREE.Mesh(new THREE.CylinderGeometry(.02,.02,.045,8),darkMetal);
+  muzzle.rotation.x=Math.PI/2;muzzle.position.set(0,.025,-.65);heldWeaponRoot.add(muzzle);
+  const sight=new THREE.Mesh(new THREE.BoxGeometry(.025,.04,.035),darkMetal);
+  sight.position.set(0,.1,-.15);heldWeaponRoot.add(sight);
+}
+async function loadHeldWeapon(){
+  if(!heldWeaponRoot){
+    heldWeaponRoot=new THREE.Group();
+    heldWeaponRoot.position.set(.29,-.29,heldWeaponBaseZ);
+    camera.add(heldWeaponRoot);
+  }
+  makeFallbackAK();
+  try{
+    const manifest=await loadHillTownManifest();
+    const url=findHillTownAssetUrl(manifest,ASSET_MATCHES.rifle);
+    if(!url)return;
+    const model=await loadGLBScene(url);
+    const box=new THREE.Box3().setFromObject(model);
+    const size=box.getSize(new THREE.Vector3());
+    const longest=Math.max(size.x,size.z);
+    if(longest>0)model.scale.setScalar(.82/longest);
+    const centeredBox=new THREE.Box3().setFromObject(model);
+    const center=centeredBox.getCenter(new THREE.Vector3());
+    model.position.sub(center);
+    model.rotation.y=Math.PI;
+    while(heldWeaponRoot.children.length)heldWeaponRoot.remove(heldWeaponRoot.children[0]);
+    model.traverse(node=>{if(node.isMesh){node.castShadow=false;node.receiveShadow=false}});
+    heldWeaponRoot.add(model);
+    heldWeaponRoot.userData.realModel=true;
+  }catch(error){console.warn("[WEAPON] Keeping built-in AK-style fallback.",error)}
+}
+
 let mapLoaded=false;
 let mapLoadFinished=false;
 let player=null;
@@ -255,6 +488,10 @@ function addFallbackArena(){
 
 function loadMap(){
   $("phase").textContent="ЗАВАНТАЖЕННЯ КАРТИ";
+  if(selectedMap==="HILL_TOWN"){
+    buildHillTownMap();
+    return;
+  }
   if(selectedMap==="NEON_YARD"){
     buildNeonYard();
     finishClientReady();
@@ -313,7 +550,7 @@ function makeVisual(color){
   return g;
 }
 function colorFor(role,team){
-  if(mode==="team_fight") return team==="A"?0x3f82ff:0xff4f65;
+  if(isTeamCombat) return team==="A"?0x3f82ff:0xff4f65;
   return role==="hunter"?0xff465a:0x3fe58b;
 }
 function ensurePlayerVisual(){
@@ -402,15 +639,15 @@ function updateWaiting(data){
 }
 
 function startReload(){
-  if((mode!=="team_fight"&&!isTrainingMode)||reloading||ammo>=30||matchPhase!=="game")return;
+  if((!isTeamCombat&&!isTrainingMode)||reloading||ammo>=30||matchPhase!=="game")return;
   reloading=true;$("ammoNum").textContent="—";
   setTimeout(()=>{ammo=30;reloading=false;$("ammoNum").textContent=ammo},900);
 }
 function shoot(){
-  if($("pauseMenu")?.style.display==="flex"||(mode!=="team_fight"&&!isTrainingMode)||matchPhase!=="game"||reloading)return;
+  if($("pauseMenu")?.style.display==="flex"||(!isTeamCombat&&!isTrainingMode)||matchPhase!=="game"||reloading)return;
   const now=performance.now();
   if(now-lastShot<125||ammo<=0){if(ammo<=0)startReload();return}
-  lastShot=now;ammo--; $("ammoNum").textContent=ammo;
+  lastShot=now;weaponKick=Math.min(.09,weaponKick+.045);ammo--; $("ammoNum").textContent=ammo;
   const dir=new THREE.Vector3();
   camera.getWorldDirection(dir);dir.normalize();
   if(isTrainingMode)socket.emit("training_shoot",{trainingId,dx:dir.x,dy:dir.y,dz:dir.z,damage:34});
@@ -449,7 +686,7 @@ addEventListener("keyup",e=>{
 addEventListener("mousedown",e=>{if(e.button===0&&$("pauseMenu")?.style.display!=="flex")shoot()});
 
 function setOverlayGame(){
-  $("overlayTitle").textContent=mode==="team_fight"?"TEAM FIGHT":mode==="field_test"?"FIELD TEST":mode==="training"?"TRAINING":"HIDE & SEEK";
+  $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":mode==="training"?"ТРЕНУВАННЯ":"HIDE & SEEK";
   $("clickHint").textContent="Клікни для огляду мишкою. WASD — рух · ESC — курсор";
   if(/Android|iPhone|iPad/i.test(navigator.userAgent)) $("overlay").style.display="none";
 }
@@ -554,7 +791,7 @@ socket.on("match_phase",data=>{
     $("bigTimer").textContent=data.time+"с";
     $("overlayText").textContent="Приготуйся.";
   }else if(data.phase==="game"){
-    $("overlayTitle").textContent=mode==="team_fight"?"TEAM FIGHT":"HIDE & SEEK";
+    $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":"HIDE & SEEK";
     $("phase").textContent="МАТЧ";
     setOverlayGame();
   }
@@ -571,11 +808,11 @@ socket.on("timer_update",data=>{
 });
 socket.on("match_start_now",()=>{
   matchPhase="game";canControl=true;
-  $("overlayTitle").textContent=mode==="team_fight"?"TEAM FIGHT":"HIDE & SEEK";
+  $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":"HIDE & SEEK";
   $("phase").textContent="МАТЧ У ПРОЦЕСІ";
   $("overlayText").textContent="";
   $("clickHint").textContent="Клікни для мишки";
-  if(mode==="team_fight")$("ammo").style.display="block";
+  if(isTeamCombat||isTrainingMode)$("ammo").style.display="block";
   if(/Android|iPhone|iPad/i.test(navigator.userAgent))$("overlay").style.display="none";
 });
 socket.on("enemy_moved",applyEnemy);
@@ -674,6 +911,7 @@ addEventListener("resize",()=>{
 });
 
 $("progress").style.width="4%";
+loadHeldWeapon();
 loadMap();
 if(isTrainingMode)socket.emit("join_training",{trainingId});
 else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
