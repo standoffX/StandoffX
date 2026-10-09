@@ -193,8 +193,14 @@ function loadMap(){
     return;
   }
   let done=false;
-  const timer=setTimeout(()=>{if(!done){addFallbackArena();finishClientReady()}},9000);
+  const timer=setTimeout(()=>{
+    if(done)return;
+    done=true;
+    addFallbackArena();
+    finishClientReady();
+  },9000);
   loader.load("m3.glb",g=>{
+    if(done)return;
     done=true;clearTimeout(timer);
     const map=g.scene;
     map.scale.setScalar(50);
@@ -211,10 +217,12 @@ function loadMap(){
     $("progress").style.width="100%";
     finishClientReady();
   },xhr=>{
+    if(done)return;
     const total=xhr.total||0;
     const pct=total?Math.min(99,(xhr.loaded/total)*100):35;
     $("progress").style.width=pct+"%";
   },()=>{
+    if(done)return;
     done=true;clearTimeout(timer);addFallbackArena();finishClientReady();
   });
 }
