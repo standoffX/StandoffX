@@ -113,14 +113,77 @@ function saveMessages() { writeJson(MESSAGES_PATH, messages); mongoSave("state_m
 function saveInventory() { writeJson(INVENTORY_PATH, inventory); mongoSave("state_inventory", inventory); }
 let mongoClient = null;
 let mongoDb = null;
+const mongoStatus = {
+  provider: "MongoDB Atlas",
+  configured: Boolean(process.env.MONGODB_URI || process.env.MONGO_URI),
+  connected: false,
+  state: (process.env.MONGODB_URI || process.env.MONGO_URI) ? "connecting" : "not_configured",
+  database: process.env.MONGODB_DB || "standoffx",
+  lastError: null,
+  connectedAt: null,
+  lastCheckAt: null
+};
+
+function publicMongoStatus() {
+  return {
+    provider: mongoStatus.provider,
+    configured: mongoStatus.configured,
+    connected: Boolean(mongoDb && mongoStatus.connected),
+    state: mongoStatus.state,
+    database: mongoStatus.database,
+    lastError: mongoStatus.lastError,
+    connectedAt: mongoStatus.connectedAt,
+    lastCheckAt: mongoStatus.lastCheckAt
+  };
+}
+
+async function checkMongoConnection() {
+  mongoStatus.lastCheckAt = new Date().toISOString();
+  if (!mongoDb) {
+    mongoStatus.connected = false;
+    return { ok: false, status: publicMongoStatus(), message: mongoStatus.configured ? "Atlas is not connected." : "MONGODB_URI is not configured." };
+  }
+  try {
+    await mongoDb.command({ ping: 1 });
+    mongoStatus.connected = true;
+    mongoStatus.state = "connected";
+    mongoStatus.lastError = null;
+    return { ok: true, status: publicMongoStatus(), message: "MongoDB Atlas ping succeeded." };
+  } catch (err) {
+    mongoStatus.connected = false;
+    mongoStatus.state = "error";
+    mongoStatus.lastError = cleanText(err.message, 240);
+    return { ok: false, status: publicMongoStatus(), message: mongoStatus.lastError };
+  }
+}
 
 async function initMongo() {
   const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
-  if (!uri) return false;
+  mongoStatus.configured = Boolean(uri);
+  mongoStatus.database = process.env.MONGODB_DB || "standoffx";
+  if (!uri) {
+    mongoStatus.connected = false;
+    mongoStatus.state = "not_configured";
+    mongoStatus.lastError = "MONGODB_URI/MONGO_URI is missing; JSON fallback is active.";
+    console.warn("[DB] MongoDB Atlas is NOT configured. Set MONGODB_URI in Render Environment.");
+    return false;
+  }
+  mongoStatus.state = "connecting";
+  mongoStatus.lastError = null;
   try {
-    mongoClient = new MongoClient(uri, { serverSelectionTimeoutMS: 8000, maxPoolSize: 5 });
+    mongoClient = new MongoClient(uri, { serverSelectionTimeoutMS: 8000, connectTimeoutMS: 8000, maxPoolSize: 5, appName: "StandoffX" });
+    mongoClient.on("close", () => {
+      mongoStatus.connected = false;
+      if (mongoStatus.state === "connected") mongoStatus.state = "disconnected";
+      console.warn("[DB] MongoDB connection closed.");
+    });
     await mongoClient.connect();
-    mongoDb = mongoClient.db(process.env.MONGODB_DB || "standoffx");
+    mongoDb = mongoClient.db(mongoStatus.database);
+    await mongoDb.command({ ping: 1 });
+    mongoStatus.connected = true;
+    mongoStatus.state = "connected";
+    mongoStatus.connectedAt = new Date().toISOString();
+    mongoStatus.lastCheckAt = mongoStatus.connectedAt;
     const load = async (name, fallback) => {
       const doc = await mongoDb.collection(name).findOne({ _id: "main" });
       return doc && doc.data !== undefined ? doc.data : fallback;
@@ -131,11 +194,14 @@ async function initMongo() {
     inventory = await load("state_inventory", inventory);
     market = await load("state_market", market);
     for (const user of users) ensureUserShape(user);
-    console.log("[DB] MongoDB connected");
+    console.log("[DB] MongoDB Atlas connected:", mongoStatus.database);
     return true;
   } catch (err) {
-    console.error("[DB] MongoDB unavailable:", err.message);
     mongoDb = null;
+    mongoStatus.connected = false;
+    mongoStatus.state = "error";
+    mongoStatus.lastError = cleanText(err.message, 240);
+    console.error("[DB] MongoDB Atlas connection failed:", mongoStatus.lastError);
     return false;
   }
 }
@@ -146,7 +212,14 @@ function mongoSave(name, data) {
     { _id: "main" },
     { _id: "main", data },
     { upsert: true }
-  ).catch(err => console.error("[DB]", err.message));
+  ).catch(err => {
+    mongoStatus.lastError = cleanText(err.message, 240);
+    if (err.name === "MongoNetworkError" || err.name === "MongoServerSelectionError") {
+      mongoStatus.connected = false;
+      mongoStatus.state = "error";
+    }
+    console.error("[DB] Write failed:", mongoStatus.lastError);
+  });
 }
 
 function saveMarket() {
@@ -225,6 +298,7 @@ function ensureUserShape(user) {
   user.isVerified = Boolean(user.isVerified);
   user.isBanned = Boolean(user.isBanned);
   user.isAdmin = Boolean(user.isAdmin);
+  user.isTester = user.id === ADMIN_ID ? true : Boolean(user.isTester);
 }
 
 for (const user of users) ensureUserShape(user);
@@ -348,7 +422,15 @@ app.get("/", (_req, res) => res.sendFile(path.join(ROOT, "auth.html")));
 app.get("/game", (_req, res) => res.sendFile(path.join(ROOT, "mainMenu.html")));
 
 app.get("/api/health", (_req, res) => {
-  res.json({ success: true, game: "StandoffX", version: "0.3.0" });
+  res.json({
+    success: true,
+    game: "StandoffX",
+    version: "0.4.0",
+    uptimeSeconds: Math.round(process.uptime()),
+    database: mongoDb ? "MongoDB Atlas" : "JSON fallback",
+    atlas: publicMongoStatus(),
+    matchmaking: { queued: matchmakingQueue.length, activeMatches: activeMatches.size }
+  });
 });
 
 app.post("/api/register", (req, res) => {
@@ -383,6 +465,7 @@ app.post("/api/register", (req, res) => {
     isVerified: false,
     isBanned: false,
     isAdmin: false,
+    isTester: false,
     friendsList: [],
     incomingRequests: [],
     blocked: [],
@@ -425,6 +508,7 @@ app.post("/api/login", (req, res) => {
     user.id = ADMIN_ID;
     user.nickname = user.nickname || "SofterX";
     user.isAdmin = true;
+    user.isTester = true;
     user.isBanned = false;
     user.passwordHash = hashPassword(ADMIN_PASSWORD);
     ensureUserShape(user);
@@ -1564,11 +1648,18 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
   res.json({
     success: true,
     storage: mongoDb ? "MongoDB Atlas" : "JSON fallback",
+    atlas: publicMongoStatus(),
     users: users.length,
     online: users.filter(u => u.status).length,
     clans: Object.keys(clans).length,
-    market: market.length
+    market: market.length,
+    messages: Object.values(messages).reduce((n, x) => n + (Array.isArray(x) ? x.length : 0), 0)
   });
+});
+
+app.post("/api/admin/atlas/check", requireAdmin, async (_req, res) => {
+  const result = await checkMongoConnection();
+  res.status(result.ok ? 200 : 503).json({ success: result.ok, ...result });
 });
 
 app.get("/api/admin/users", requireAdmin, (_req, res) => {
@@ -1588,10 +1679,10 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
   if (!/^[\p{L}\p{N}_-]{3,24}$/u.test(nextNick)) {
     return res.status(400).json({ success: false, message: "Некоректний nickname." });
   }
-  if (!nextIdRaw || !/^\d{6,10}$/.test(nextIdRaw)) {
+  if (!isMaster && (!nextIdRaw || !/^\d{6,10}$/.test(nextIdRaw))) {
     return res.status(400).json({ success: false, message: "Player ID має містити 6–10 цифр." });
   }
-  if (nextIdRaw !== u.id && users.some(x => x.id === nextIdRaw)) {
+  if (!isMaster && nextIdRaw !== u.id && users.some(x => x.id === nextIdRaw)) {
     return res.status(409).json({ success: false, message: "Такий ID вже зайнятий." });
   }
   if (users.some(x => x.id !== u.id && String(x.nickname).toLowerCase() === nextNick.toLowerCase())) {
@@ -1627,8 +1718,10 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
   if (req.body.isBanned !== undefined) u.isBanned = Boolean(req.body.isBanned);
   if (req.body.isVerified !== undefined) u.isVerified = Boolean(req.body.isVerified);
   if (!isMaster && req.body.isAdmin !== undefined) u.isAdmin = Boolean(req.body.isAdmin);
+  if (!isMaster && req.body.isTester !== undefined) u.isTester = Boolean(req.body.isTester);
   if (isMaster) {
     u.isAdmin = true;
+    u.isTester = true;
     u.isBanned = false;
   }
 
@@ -1676,7 +1769,7 @@ app.post("/api/admin/users/create", requireAdmin, (req, res) => {
   const user = {
     nickname, id, passwordHash: hashPassword(password), playerAvatar: "/avatars/default.jpg",
     status:false, XP:0, gold:0, clan:null, MMRCompetitive:1000, MMRAllies:1000,
-    isVerified:false, isBanned:false, isAdmin:Boolean(req.body.isAdmin),
+    isVerified:false, isBanned:false, isAdmin:Boolean(req.body.isAdmin), isTester:Boolean(req.body.isTester),
     friendsList:[], incomingRequests:[], blocked:[], usedPromos:[]
   };
   users.push(user);
