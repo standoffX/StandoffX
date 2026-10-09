@@ -369,6 +369,7 @@ const $=id=>document.getElementById(id);
 let me=null,socket=null,searching=false;
 let socialSocket=null,currentClanTag=null,clanChatHistory=[],toastTimer=null;
 let selectedMode=localStorage.getItem("sx_mode")||"allies";
+if(!["allies","team_fight"].includes(selectedMode)){selectedMode="allies";localStorage.setItem("sx_mode",selectedMode)}
 if(selectedMode==="hide_seek")selectedMode="allies";
 if(!["allies","team_fight"].includes(selectedMode))selectedMode="allies";
 let selectedMap=localStorage.getItem("sx_map")||"HILL_TOWN";
