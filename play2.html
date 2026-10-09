@@ -1,2 +1,676 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>StandoffX — Match</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:Inter,Arial,sans-serif}
+#game{position:fixed;inset:0}.hud{position:fixed;inset:0;pointer-events:none;z-index:10}
+#crosshair{position:absolute;left:50%;top:50%;width:20px;height:20px;transform:translate(-50%,-50%)}#crosshair i,#crosshair:before,#crosshair:after{content:"";position:absolute;background:#fff;opacity:.95;border-radius:1px}#crosshair i{width:2px;height:20px;left:9px;top:0}#crosshair:before{width:20px;height:2px;left:0;top:9px}
+.top{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:8px 13px;background:#080d14d9;border:1px solid #ffffff12;border-radius:7px;white-space:nowrap}.top b{font-size:12px;letter-spacing:1px}.top span{font-size:26px;font-weight:950}.status{color:#5ba0ff}
+#score{position:absolute;top:14px;left:14px;padding:9px 12px;background:#080d14c9;border:1px solid #ffffff12;border-radius:7px;font-size:12px}.teamA{color:#63a1ff}.teamB{color:#ff6f7d}
+#hint{position:absolute;left:14px;bottom:14px;padding:8px 10px;background:#080d14b8;border:1px solid #ffffff0d;border-radius:6px;color:#bac5d4;font-size:11px}
+#ammo{position:absolute;right:16px;bottom:18px;text-align:right;text-shadow:0 2px 8px #000}.ammo-num{font-size:34px;font-weight:950}.ammo-sub{color:#9aa7b8;font-size:11px}
+#overlay{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:linear-gradient(180deg,#070b10ee,#070b10f5);padding:24px;cursor:pointer}
+#overlay .panel{width:min(580px,92vw);padding:26px;border:1px solid #ffffff12;background:#0f151ed9;border-radius:12px;box-shadow:0 30px 100px #000a}
+#overlay h1{margin:0 0 8px;font-size:34px;letter-spacing:-1px}#overlay p{margin:8px 0;color:#8391a5;font-size:13px}
+#phase{font-size:24px;font-weight:950;color:#5b9dff;margin:15px 0 6px}#bigTimer{font-size:58px;font-weight:950;line-height:1}
+.players{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:18px}.player{padding:11px;background:#0a1017;border:1px solid #ffffff0d;border-radius:7px;text-align:left;min-width:0}.player .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#465366;margin-right:7px}.player.online .dot{background:#4ad985}.player.ready .dot{background:#4d8fff}.player-id{margin-top:4px;color:#8d9db8;font-size:9px;overflow-wrap:anywhere}
+#progressWrap{margin:15px auto 0;max-width:360px;height:5px;background:#202a38;border-radius:99px;overflow:hidden}#progress{height:100%;width:0;background:#4d8fff;transition:width .15s}
+#clickHint{margin-top:16px;color:#9aa7b8;font-size:11px}
+#results{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;background:#05080def}.resultBox{padding:28px;width:min(420px,90vw);background:#111821;border:1px solid #ffffff14;border-radius:11px;text-align:center}.resultBox h2{margin:0 0 12px}.resultBox .reward{font-size:20px;font-weight:900}.resultBox button{margin-top:18px;width:100%;height:44px;border:0;border-radius:6px;background:#327cff;color:white;font-weight:900}
+#mobile{display:none;position:fixed;inset:0;z-index:20;pointer-events:none}
+#leaveGameDesktop{position:fixed;right:14px;top:14px;z-index:25;pointer-events:auto;border:1px solid #ffffff28;background:#0b111bd9;color:#fff;border-radius:6px;padding:10px 13px;font-size:11px;font-weight:900;cursor:pointer}
+@media(max-width:800px),(pointer:coarse){#leaveGameDesktop{display:none}}.stick{position:absolute;left:20px;bottom:25px;width:125px;height:125px;border-radius:50%;background:#ffffff0d;border:1px solid #ffffff1c;pointer-events:auto;touch-action:none}.stick i{position:absolute;left:35px;top:35px;width:55px;height:55px;border-radius:50%;background:#ffffff22}.mbtn{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid #ffffff1d;background:#0b111bd9;color:#fff;font-size:10px;font-weight:950;pointer-events:auto;touch-action:none}.fire{right:20px;bottom:64px;background:#3e6fb3e6}.jump{right:100px;bottom:145px}.reload{right:102px;bottom:64px}.leave{right:20px;top:20px;width:48px;height:40px;border-radius:6px}
+#trainingControls button:hover{filter:brightness(1.15)}
+@media(max-width:800px){#trainingControls{top:auto;left:8px;right:auto;bottom:190px;width:185px;padding:8px}.fire{bottom:44px}}
+@media(max-width:800px),(pointer:coarse){#mobile{display:block}#hint{display:none}.top{top:8px}.players{grid-template-columns:1fr}.panel{max-height:90vh;overflow:auto}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+
+<div id="overlay">
+  <div class="panel">
+    <h1 id="overlayTitle">ПІДКЛЮЧЕННЯ ДО МАТЧУ</h1>
+    <div id="phase">Синхронізація...</div>
+    <div id="bigTimer">—</div>
+    <p id="overlayText">Підключаємо всіх гравців і завантажуємо карту.</p>
+    <div id="progressWrap"><div id="progress"></div></div>
+    <div id="players" class="players"></div>
+    <div id="clickHint">Клікни сюди для керування мишкою. Саме підключення до матчу відбувається автоматично.</div>
+  </div>
+</div>
+
+<div class="hud">
+  <div class="top"><b id="modeName">MATCH</b><span id="timer">00:00</span></div>
+  <div id="score">SCORE 0</div>
+  <div id="crosshair"><i></i></div>
+  <div id="ammo" style="display:none"><div class="ammo-num" id="ammoNum">30</div><div class="ammo-sub">/ 30 · R — RELOAD</div></div>
+  <div id="hint">WASD — рух · Space — стрибок · Shift — швидкість · G — камера · LMB — вогонь · R — перезарядка</div>
+</div>
+
+<div id="results"><div class="resultBox"><h2 id="resultTitle">МАТЧ ЗАВЕРШЕНО</h2><div id="resultText" class="reward"></div><button id="menuResult">У МЕНЮ</button></div></div>
+<button id="leaveGameDesktop" type="button">← МЕНЮ</button>
+<div id="trainingControls" style="display:none;position:fixed;right:14px;top:72px;width:220px;z-index:15;padding:12px;background:#090f1cdd;border:1px solid #1de9ff55;border-radius:8px;pointer-events:none;backdrop-filter:blur(8px)">
+  <b style="font-size:11px;letter-spacing:1px;color:#1de9ff">TRAINING · KEYBOARD</b>
+  <div id="botStatus" style="margin:8px 0;color:#d7e4f5;font-size:11px">Бота ще немає</div>
+  <div id="trainingKeyHints" style="display:grid;grid-template-columns:1fr auto;gap:6px;color:#aebdd0;font-size:10px;line-height:1.4"></div>
+  <div style="margin-top:9px;color:#71849b;font-size:9px">Зміни клавіші в меню → Налаштування → Клавіші тренування</div>
+</div>
+<div id="pauseMenu" style="display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;background:#020611c9;backdrop-filter:blur(8px);pointer-events:auto">
+  <div style="width:min(360px,calc(100vw - 36px));padding:24px;background:#091323;border:1px solid #1de9ff88;border-radius:14px;box-shadow:0 0 45px #00cfff22;color:#edf7ff;text-align:center">
+    <div style="font-size:11px;letter-spacing:3px;color:#1de9ff">STANDOFFX</div>
+    <h2 style="margin:10px 0 5px;font-size:24px">МЕНЮ</h2>
+    <p style="margin:0 0 18px;color:#92a7c1;font-size:12px">Натисни M, щоб повернутися до гри</p>
+    <button id="resumeGame" style="width:100%;padding:12px;border:0;border-radius:7px;background:#1de9ff;color:#04101b;font-weight:900">ПРОДОВЖИТИ · M</button>
+    <button id="pauseLeave" style="width:100%;padding:12px;margin-top:8px;border:1px solid #ffffff24;border-radius:7px;background:#172235;color:#edf7ff;font-weight:800">ПОВЕРНУТИСЯ В ЛОБІ</button>
+  </div>
+</div>
+
+<div id="mobile">
+  <div id="stick" class="stick"><i></i></div>
+  <button id="fireBtn" class="mbtn fire">FIRE</button>
+  <button id="jumpBtn" class="mbtn jump">JUMP</button>
+  <button id="reloadBtn" class="mbtn reload">RELOAD</button>
+  <button id="leaveGameMobile" class="mbtn leave" type="button">×</button>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
+import {PointerLockControls} from "three/addons/controls/PointerLockControls.js";
+
+const $=id=>document.getElementById(id);
+const socket=io({withCredentials:true});
+const myId=sessionStorage.getItem("myPlayerId");
+const myUuid=sessionStorage.getItem("myPlayerUUID")||"";
+const matchId=sessionStorage.getItem("currentMatchId");
+const mode=sessionStorage.getItem("selectedMode")||"hide_seek";
+const selectedMap=sessionStorage.getItem("selectedMap")||"M3_Maze";
+const isTrainingMode=mode==="training"||mode==="field_test";
+const trainingId=sessionStorage.getItem("trainingId")||matchId;
+if(!myId||(!matchId&&!isTrainingMode)){location.href="/game";throw new Error("No active match")}
+
+THREE.Cache.enabled=true;
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x87a9c2);
+scene.fog=new THREE.Fog(0x87a9c2,70,260);
+
+const camera=new THREE.PerspectiveCamera(74,innerWidth/innerHeight,.08,700);
+const renderer=new THREE.WebGLRenderer({
+  antialias:false,
+  powerPreference:"high-performance",
+  stencil:false,
+  depth:true,
+  preserveDrawingBuffer:false
+});
+renderer.setSize(innerWidth,innerHeight,false);
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25));
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+$("game").appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xffffff,0x344252,1.15));
+const keyLight=new THREE.DirectionalLight(0xffffff,.7);
+keyLight.position.set(30,60,20);scene.add(keyLight);
+
+const controls=new PointerLockControls(camera,document.body);
+let canControl=false;
+let mouseSensitivity=1;
+try{mouseSensitivity=Number(JSON.parse(localStorage.getItem("sx_settings")||"{}").sensitivity)||1}catch{}
+controls.pointerSpeed=mouseSensitivity;
+controls.minPolarAngle=.08;
+controls.maxPolarAngle=Math.PI-.08;
+function requestMouseLook(){
+  if(!/Android|iPhone|iPad/i.test(navigator.userAgent)&&matchPhase==="game"&&!controls.isLocked){
+    try{controls.lock()}catch{}
+  }
+}
+$("overlay").addEventListener("click",requestMouseLook);
+renderer.domElement.addEventListener("click",requestMouseLook);
+document.addEventListener("pointerlockchange",()=>{
+  if(document.pointerLockElement===document.body){
+    $("clickHint").textContent="Миша: огляд · ESC: звільнити курсор · WASD: рух";
+  }
+});
+controls.addEventListener("lock",()=>{if(matchPhase==="game")$("overlay").style.display="none"});
+controls.addEventListener("unlock",()=>{if(matchPhase==="game")$("overlay").style.display="flex"});
+
+const loader=new GLTFLoader();
+const mapObjects=[];
+let mapLoaded=false;
+let mapLoadFinished=false;
+let player=null;
+let playerVisual=null;
+const enemies={};
+const raycaster=new THREE.Raycaster();
+
+let matchPhase="waiting";
+let myRole="runner";
+let myTeam=null;
+let hp=100;
+let score=0;
+let matchTime=0;
+let speed=7.5;
+let jumping=false;
+let velocityY=0;
+let isThird=false;
+let lastMoveSend=0;
+let lastShot=0;
+let ammo=30;
+let reloading=false;
+let jumpQueued=false;
+let fireHeld=false;
+let lookTouch=null;
+let lastCollisionCheck=0;
+let cachedCollisionClear=true;
+
+const keys={w:false,s:false,a:false,d:false,shift:false};
+const DEFAULT_TRAINING_BINDS={spawnBot:"KeyN",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
+const TRAINING_ACTION_NAMES={spawnBot:"СТВОРИТИ БОТА",push:"PUSH",kick:"KICK",boost:"BOOST",resetBot:"СКИНУТИ БОТА",resetSession:"СКИНУТИ ТРЕНУВАННЯ",menu:"МЕНЮ"};
+function readTrainingBinds(){
+  try{
+    const stored=JSON.parse(localStorage.getItem("sx_settings")||"{}").keybinds||{};
+    return Object.fromEntries(Object.entries(DEFAULT_TRAINING_BINDS).map(([action,code])=>[action,typeof stored[action]==="string"&&stored[action]?stored[action]:code]));
+  }catch{return {...DEFAULT_TRAINING_BINDS}}
+}
+function trainingKeyLabel(code){
+  if(code?.startsWith("Key"))return code.slice(3);
+  if(code?.startsWith("Digit"))return code.slice(5);
+  return ({Space:"SPACE",Escape:"ESC",ArrowUp:"↑",ArrowDown:"↓",ArrowLeft:"←",ArrowRight:"→"})[code]||String(code||"—").replace(/^Numpad/,"NUM ");
+}
+function renderTrainingKeyHints(){
+  const el=$("trainingKeyHints");if(!el)return;
+  const binds=readTrainingBinds();
+  el.innerHTML=["spawnBot","push","kick","boost","resetBot","resetSession"].map(action=>"<span>"+TRAINING_ACTION_NAMES[action]+"</span><b style='color:#1de9ff'>"+trainingKeyLabel(binds[action])+"</b>").join("");
+}
+
+function buildFieldArena(){
+  if(mapLoadFinished)return;
+  mapLoadFinished=true;
+  scene.background=new THREE.Color(0x91a6b9);
+  scene.fog=new THREE.Fog(0x91a6b9,120,420);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(300,300),new THREE.MeshStandardMaterial({color:0x5c6e62,roughness:1}));
+  floor.rotation.x=-Math.PI/2;floor.position.y=-.04;scene.add(floor);
+  const grid=new THREE.GridHelper(300,60,0x879987,0x748575);grid.position.y=.01;scene.add(grid);
+  const wallMat=new THREE.MeshStandardMaterial({color:0x4e5965,roughness:1});
+  const boxMat=new THREE.MeshStandardMaterial({color:0x626a70,roughness:.9});
+  const addBox=(x,y,z,w,h,d,mat)=>{
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);mesh.position.set(x,y,z);mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
+  };
+  addBox(0,4,-150,300,8,3,wallMat);addBox(0,4,150,300,8,3,wallMat);
+  addBox(-150,4,0,3,8,300,wallMat);addBox(150,4,0,3,8,300,wallMat);
+  addBox(-16,1,7,6,2,5,boxMat);addBox(12,1,18,7,2,5,boxMat);
+  addBox(22,1,-12,8,2,5,boxMat);addBox(-25,1,-18,8,2,5,boxMat);
+  addBox(0,1,35,12,2,5,boxMat);addBox(38,1,28,5,2,12,boxMat);
+  $("progress").style.width="100%";
+}
+function buildNeonYard(){
+  if(mapLoadFinished)return;
+  mapLoadFinished=true;
+  scene.background=new THREE.Color(0x050b18);
+  scene.fog=new THREE.Fog(0x050b18,95,300);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(180,180),new THREE.MeshStandardMaterial({color:0x101a2a,roughness:.88,metalness:.25}));
+  floor.rotation.x=-Math.PI/2;floor.position.y=-.05;scene.add(floor);mapObjects.push(floor);
+  const grid=new THREE.GridHelper(180,45,0x1de9ff,0x123b56);grid.position.y=.015;scene.add(grid);
+  const wallMat=new THREE.MeshStandardMaterial({color:0x101d31,roughness:.55,metalness:.35});
+  const neonMat=new THREE.MeshStandardMaterial({color:0x08283a,emissive:0x00cfff,emissiveIntensity:1.2,roughness:.35,metalness:.3});
+  const violetMat=new THREE.MeshStandardMaterial({color:0x251039,emissive:0x8b35ff,emissiveIntensity:.8,roughness:.4,metalness:.2});
+  const addBox=(x,y,z,w,h,d,mat)=>{
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+    mesh.position.set(x,y,z);mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
+  };
+  addBox(0,4,-88,180,8,3,wallMat);addBox(0,4,88,180,8,3,wallMat);
+  addBox(-88,4,0,3,8,180,wallMat);addBox(88,4,0,3,8,180,wallMat);
+  for(const [x,z] of [[-24,-20],[24,-20],[-24,20],[24,20],[0,-38],[0,38]]){
+    addBox(x,2,z,9,4,7,wallMat);
+    addBox(x,4.08,z,9,.14,7,neonMat);
+    addBox(x,1,z,9,.12,7,violetMat);
+  }
+  addBox(0,1,0,5,2,16,wallMat);
+  addBox(0,2.1,0,.18,.12,16,neonMat);
+  $("progress").style.width="100%";
+}
+function addFallbackArena(){
+  if(mapLoadFinished)return;
+  mapLoadFinished=true;
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(160,160),new THREE.MeshStandardMaterial({color:0x303943,roughness:1}));
+  floor.rotation.x=-Math.PI/2;scene.add(floor);mapObjects.push(floor);
+  for(const [x,z] of [[-30,-30],[-30,30],[30,-30],[30,30]]){
+    const wall=new THREE.Mesh(new THREE.BoxGeometry(6,12,6),new THREE.MeshStandardMaterial({color:0x4b5662}));
+    wall.position.set(x,6,z);scene.add(wall);mapObjects.push(wall);
+  }
+  $("progress").style.width="100%";
+}
+
+function loadMap(){
+  $("phase").textContent="ЗАВАНТАЖЕННЯ КАРТИ";
+  if(selectedMap==="NEON_YARD"){
+    buildNeonYard();
+    finishClientReady();
+    return;
+  }
+  if(selectedMap==="FIELD_ARENA"||mode==="field_test"){
+    buildFieldArena();
+    finishClientReady();
+    return;
+  }
+  let done=false;
+  const timer=setTimeout(()=>{
+    if(done)return;
+    done=true;
+    addFallbackArena();
+    finishClientReady();
+  },9000);
+  loader.load("m3.glb",g=>{
+    if(done)return;
+    done=true;clearTimeout(timer);
+    const map=g.scene;
+    map.scale.setScalar(50);
+    map.traverse(n=>{
+      if(n.isMesh){
+        n.frustumCulled=true;
+        n.castShadow=false;
+        n.receiveShadow=false;
+        mapObjects.push(n);
+      }
+    });
+    scene.add(map);
+    mapLoaded=true;mapLoadFinished=true;
+    $("progress").style.width="100%";
+    finishClientReady();
+  },xhr=>{
+    if(done)return;
+    const total=xhr.total||0;
+    const pct=total?Math.min(99,(xhr.loaded/total)*100):35;
+    $("progress").style.width=pct+"%";
+  },()=>{
+    if(done)return;
+    done=true;clearTimeout(timer);addFallbackArena();finishClientReady();
+  });
+}
+
+function playerMaterial(color){return new THREE.MeshStandardMaterial({color,roughness:.82,metalness:.05})}
+function makeVisual(color){
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.BoxGeometry(.75,1.25,.45),playerMaterial(color));
+  body.position.y=.75;g.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.31,8,6),playerMaterial(color));
+  head.position.y=1.6;g.add(head);
+  const leg1=new THREE.Mesh(new THREE.BoxGeometry(.19,.7,.22),playerMaterial(color));leg1.position.set(-.2,-.2,0);g.add(leg1);
+  const leg2=leg1.clone();leg2.position.x=.2;g.add(leg2);
+  g.position.y=0;
+  return g;
+}
+function colorFor(role,team){
+  if(mode==="team_fight") return team==="A"?0x3f82ff:0xff4f65;
+  return role==="hunter"?0xff465a:0x3fe58b;
+}
+function ensurePlayerVisual(){
+  if(player)return;
+  player={position:new THREE.Vector3(0,0,0),rotationY:0};
+  playerVisual=makeVisual(colorFor(myRole,myTeam));
+  playerVisual.visible=isThird;
+  scene.add(playerVisual);
+}
+function ensureEnemy(data){
+  const key=String(data.uuid||data.userId||data.id);
+  if((myUuid&&String(data.uuid||"")===myUuid)||(!data.uuid&&String(data.userId||data.id)===String(myId)))return null;
+  if(!enemies[key]){
+    const mesh=makeVisual(colorFor(data.role,data.team));
+    scene.add(mesh);
+    enemies[key]={id:key,mesh,pos:new THREE.Vector3(),role:data.role||"runner",team:data.team||null,hp:data.hp||100,score:data.score||0};
+  }
+  return enemies[key];
+}
+function applyEnemy(data){
+  const p=ensureEnemy(data);if(!p)return;
+  p.pos.set(Number(data.x)||0,Number(data.y)||0,Number(data.z)||0);
+  p.mesh.position.lerp(p.pos,.8);
+  p.mesh.rotation.y=Number(data.rotY)||0;
+  if(data.role)p.role=data.role;
+  if(data.team)p.team=data.team;
+  if(data.hp!=null)p.hp=data.hp;
+  if(data.score!=null)p.score=data.score;
+}
+function updateVisual(){
+  if(!playerVisual||!player)return;
+  playerVisual.position.copy(player.position);
+  playerVisual.rotation.y=player.rotationY;
+  playerVisual.visible=isThird;
+}
+function blocked(dir){
+  if(!mapObjects.length)return false;
+  const now=performance.now();
+  if(now-lastCollisionCheck<60)return !cachedCollisionClear;
+  lastCollisionCheck=now;
+  const origin=new THREE.Vector3(player.position.x,player.position.y+.8,player.position.z);
+  raycaster.set(origin,dir);
+  const hits=raycaster.intersectObjects(mapObjects,true);
+  cachedCollisionClear=!(hits.length&&hits[0].distance<.65);
+  return !cachedCollisionClear;
+}
+function sendMove(force=false){
+  const now=performance.now();
+  if(!force&&now-lastMoveSend<50)return;
+  lastMoveSend=now;
+  const data={uuid:myUuid,x:player.position.x,y:player.position.y,z:player.position.z,rotY:player.rotationY,anim:(keys.w||keys.s||keys.a||keys.d)?"Running":"Idle"};
+  if(isTrainingMode)socket.emit("training_move",{trainingId,viewY:camera.rotation.y,...data});
+  else socket.emit("player_moved",{matchId,myId,userId:myId,...data});
+}
+function finishClientReady(){
+  if(!mapLoadFinished)return;
+  ensurePlayerVisual();
+  if(isTrainingMode){
+    matchPhase="game";
+    $("overlayTitle").textContent=mode==="field_test"?"FIELD TEST":"TRAINING";
+    $("phase").textContent="ГОТОВО";
+    $("overlayText").textContent="Тестовий режим";
+    $("trainingControls").style.display="block";
+    $("ammo").style.display="block";
+    $("overlay").style.display="none";
+    return;
+  }
+  $("overlayText").textContent="Карта готова. Чекаємо інших гравців...";
+  socket.emit("client_ready",{matchId});
+}
+
+function updateWaiting(data){
+  const list=data.players||[];
+  $("players").innerHTML=list.map(p=>{
+    const cls=(p.connected?"online ":"")+(p.ready?"ready":"");
+    const nickname=String(p.nickname||"PLAYER").replace(/[&<>"]/g,"");
+    const playerId=String(p.userId||"—").replace(/[&<>"]/g,"");
+    const uuid=String(p.uuid||"").slice(0,8).replace(/[&<>"]/g,"");
+    return "<div class='player "+cls+"'><span class='dot'></span><b>"+nickname+"</b><div class='player-id'>ID "+playerId+(uuid?" · UUID "+uuid+"…":"")+"</div><div style='margin-top:4px;color:#7d8ca0;font-size:10px'>"+(p.ready?"ГОТОВ":"ПІДКЛЮЧЕННЯ")+"</div></div>"
+  }).join("");
+  $("phase").textContent=data.ready>=data.required?"ВСІ ГОТОВІ":("ГОТОВНІ: "+(data.ready||0)+"/"+data.required);
+  $("bigTimer").textContent=(data.connected||0)+"/"+data.required;
+  $("overlayText").textContent=data.connected<data.required
+    ?"Чекаємо, поки всі гравці зайдуть."
+    :"Усі зайшли. Чекаємо завантаження карти в кожного гравця.";
+}
+
+function startReload(){
+  if((mode!=="team_fight"&&!isTrainingMode)||reloading||ammo>=30||matchPhase!=="game")return;
+  reloading=true;$("ammoNum").textContent="—";
+  setTimeout(()=>{ammo=30;reloading=false;$("ammoNum").textContent=ammo},900);
+}
+function shoot(){
+  if((mode!=="team_fight"&&!isTrainingMode)||matchPhase!=="game"||reloading)return;
+  const now=performance.now();
+  if(now-lastShot<125||ammo<=0){if(ammo<=0)startReload();return}
+  lastShot=now;ammo--; $("ammoNum").textContent=ammo;
+  const dir=new THREE.Vector3();
+  camera.getWorldDirection(dir);dir.normalize();
+  if(isTrainingMode)socket.emit("training_shoot",{trainingId,dx:dir.x,dy:dir.y,dz:dir.z,damage:34});
+  else socket.emit("team_shoot",{matchId,dx:dir.x,dy:dir.y,dz:dir.z});
+}
+function fireLoop(){
+  if(fireHeld){shoot();requestAnimationFrame(fireLoop)}
+}
+function queueJump(){if(matchPhase==="game")jumpQueued=true}
+
+addEventListener("keydown",e=>{
+  if(e.repeat)return;
+  const binds=readTrainingBinds();
+  if(e.code===binds.menu){e.preventDefault();togglePauseMenu();return}
+  if(isTrainingMode&&matchPhase==="game"){
+    const action=Object.keys(binds).find(name=>name!=="menu"&&binds[name]===e.code);
+    if(action){e.preventDefault();runTrainingAction(action);return}
+  }
+  if(e.code==="KeyW"||e.code==="ArrowUp")keys.w=true;
+  if(e.code==="KeyS"||e.code==="ArrowDown")keys.s=true;
+  if(e.code==="KeyA"||e.code==="ArrowLeft")keys.a=true;
+  if(e.code==="KeyD"||e.code==="ArrowRight")keys.d=true;
+  if(e.code==="ShiftLeft"||e.code==="ShiftRight")keys.shift=true;
+  if(e.code==="Space"){e.preventDefault();queueJump()}
+  if(e.code==="KeyG"){isThird=!isThird;updateVisual()}
+  if(e.code==="KeyR")startReload();
+  if(e.code==="Mouse0")shoot();
+});
+addEventListener("keyup",e=>{
+  if(e.code==="KeyW"||e.code==="ArrowUp")keys.w=false;
+  if(e.code==="KeyS"||e.code==="ArrowDown")keys.s=false;
+  if(e.code==="KeyA"||e.code==="ArrowLeft")keys.a=false;
+  if(e.code==="KeyD"||e.code==="ArrowRight")keys.d=false;
+  if(e.code==="ShiftLeft"||e.code==="ShiftRight")keys.shift=false;
+});
+addEventListener("mousedown",e=>{if(e.button===0)shoot()});
+
+function setOverlayGame(){
+  $("overlayTitle").textContent=mode==="team_fight"?"TEAM FIGHT":mode==="field_test"?"FIELD TEST":mode==="training"?"TRAINING":"HIDE & SEEK";
+  $("clickHint").textContent="Клікни для огляду мишкою. WASD — рух · ESC — курсор";
+  if(/Android|iPhone|iPad/i.test(navigator.userAgent)) $("overlay").style.display="none";
+}
+function leaveGame(){
+  try{
+    if(socket && socket.connected){
+      if(isTrainingMode)socket.emit("end_training",{trainingId});
+      else socket.emit("leave_match",{matchId});
+    }
+  }catch{}
+  setTimeout(()=>{
+    try{socket?.disconnect()}catch{}
+    location.href="/game";
+  },180);
+}
+$("menuResult").addEventListener("click",leaveGame);
+$("leaveGameDesktop").addEventListener("click",leaveGame);
+$("leaveGameMobile").addEventListener("click",leaveGame);
+function runTrainingAction(action){
+  if(!isTrainingMode||matchPhase!=="game")return;
+  if(action==="spawnBot"){socket.emit("training_spawn_bot",{trainingId});return}
+  if(action==="resetBot"){socket.emit("training_bot_action",{trainingId,action:"reset"});return}
+  if(action==="resetSession"){
+    if(mode==="training")player.position.set(5,0,5);else player.position.set(0,0,0);
+    player.rotationY=0;velocityY=0;jumping=false;
+    socket.emit("training_reset",{trainingId});return;
+  }
+  if(["push","kick","boost"].includes(action))socket.emit("training_bot_action",{trainingId,action});
+}
+function togglePauseMenu(force){
+  const menu=$("pauseMenu");
+  const open=typeof force==="boolean"?force:menu.style.display!=="flex";
+  menu.style.display=open?"flex":"none";
+  if(open){try{controls.unlock()}catch{}}
+  else if(matchPhase==="game"&&!/Android|iPhone|iPad/i.test(navigator.userAgent)){try{controls.lock()}catch{}}
+}
+$("resumeGame").addEventListener("click",()=>togglePauseMenu(false));
+$("pauseLeave").addEventListener("click",leaveGame);
+renderTrainingKeyHints();
+
+socket.on("training_init",data=>{
+  if(!isTrainingMode)return;
+  $("modeName").textContent=data.modeName||mode.toUpperCase();
+  matchPhase="game";canControl=true;
+  ensurePlayerVisual();
+  if(data.spawn)player.position.set(data.spawn.x||0,data.spawn.y||0,data.spawn.z||0);
   $("trainingControls").style.display="block";
+  renderTrainingKeyHints();
   $("overlay").style.display="none";
+  $("phase").textContent="TRAINING";
+  if(data.bot)applyTrainingBot(data.bot);else removeTrainingBot();
+});
+function applyTrainingBot(bot){
+  if(!bot){removeTrainingBot();return}
+  applyEnemy({userId:"training_bot",id:"training_bot",nickname:bot.nickname||"Training Bot",role:"runner",team:"B",hp:bot.hp,x:bot.x,y:bot.y,z:bot.z,rotY:bot.rotY||0,score:0});
+  $("botStatus").textContent="BOT · HP "+bot.hp+"/"+(bot.maxHp||100)+" · HITS "+(bot.hits||0);
+  const enemy=enemies["training_bot"];
+  if(enemy)enemy.mesh.traverse(n=>{if(n.material?.color)n.material.color.set(bot.hp<=0?0x777777:0xffbd67)});
+}
+function removeTrainingBot(){
+  const bot=enemies["training_bot"];
+  if(bot){scene.remove(bot.mesh);delete enemies["training_bot"];}
+  $("botStatus").textContent="Бота ще немає";
+}
+socket.on("training_state",data=>{
+  if(!isTrainingMode)return;
+  if(data.reset||data.bot===null)removeTrainingBot();
+  else if(data.bot)applyTrainingBot(data.bot);
+  if(data.message==="HIT")$("botStatus").textContent="ПОПАДАННЯ · "+$("botStatus").textContent;
+});
+
+socket.on("init_match",data=>{
+  if(data.mode)sessionStorage.setItem("selectedMode",data.mode);
+  if(data.map)sessionStorage.setItem("selectedMap",data.map);
+  myRole=data.me?.role||"runner";myTeam=data.me?.team||null;score=data.me?.score||0;hp=data.me?.hp||100;
+  $("modeName").textContent=data.modeName||"MATCH";
+  ensurePlayerVisual();
+  const authoritativePosition=data.me?.position||data.me?.spawn;
+  if(authoritativePosition)player.position.set(authoritativePosition.x||0,authoritativePosition.y||0,authoritativePosition.z||0);
+  (data.players||[]).forEach(p=>{if(myUuid?String(p.uuid||"")!==myUuid:String(p.userId)!==String(myId))applyEnemy(p)});
+  updateVisual();
+});
+socket.on("match_waiting",data=>{
+  updateWaiting(data);
+  if(data.modeName)$("modeName").textContent=data.modeName;
+});
+socket.on("match_phase",data=>{
+  matchPhase=data.phase||"waiting";
+  $("overlay").style.display="flex";
+  if(data.phase==="warmup"){
+    $("overlayTitle").textContent="РОЗМИНКА";
+    $("phase").textContent="РОЗМИНКА";
+    $("bigTimer").textContent=data.time+"с";
+    $("overlayText").textContent="Усі гравці готові. Розминаємось.";
+  }else if(data.phase==="countdown"){
+    $("overlayTitle").textContent="МАТЧ ПОЧИНАЄТЬСЯ";
+    $("phase").textContent="СТАРТ ЧЕРЕЗ";
+    $("bigTimer").textContent=data.time+"с";
+    $("overlayText").textContent="Приготуйся.";
+  }else if(data.phase==="game"){
+    $("overlayTitle").textContent=mode==="team_fight"?"TEAM FIGHT":"HIDE & SEEK";
+    $("phase").textContent="МАТЧ";
+    setOverlayGame();
+  }
+});
+socket.on("timer_update",data=>{
+  const t=Math.max(0,Number(data.time)||0);
+  if(data.phase==="warmup"||data.phase==="countdown"){
+    $("bigTimer").textContent=t+"с";
+  }else{
+    matchTime=t;
+    const m=Math.floor(t/60),s=t%60;
+    $("timer").textContent=m+":"+(s<10?"0":"")+s;
+  }
+});
+socket.on("match_start_now",()=>{
+  matchPhase="game";canControl=true;
+  $("overlayTitle").textContent=mode==="team_fight"?"TEAM FIGHT":"HIDE & SEEK";
+  $("phase").textContent="МАТЧ У ПРОЦЕСІ";
+  $("overlayText").textContent="";
+  $("clickHint").textContent="Клікни для мишки";
+  if(mode==="team_fight")$("ammo").style.display="block";
+  if(/Android|iPhone|iPad/i.test(navigator.userAgent))$("overlay").style.display="none";
+});
+socket.on("enemy_moved",applyEnemy);
+socket.on("roles_updated",data=>{
+  const me=data.players?.find(p=>myUuid?String(p.uuid||"")===myUuid:String(p.userId)===String(myId));
+  if(me){
+  myRole=me.role;score=me.score||score;myTeam=me.team||myTeam;
+  player.position.set(me.spawn.x,me.spawn.y||0,me.spawn.z);ensurePlayerVisual();
+  playerVisual.traverse(x=>{if(x.material?.color)x.material.color.set(colorFor(myRole,myTeam))});
+}
+  (data.players||[]).forEach(p=>{if(myUuid?String(p.uuid||"")!==myUuid:String(p.userId)!==String(myId)){const e=ensureEnemy(p);if(e){e.role=p.role;e.mesh.traverse(x=>{if(x.material?.color)x.material.color.set(colorFor(p.role,p.team))});}}});
+});
+socket.on("player_hit",data=>{
+  if(String(data.targetId)===String(myId)){hp=0}
+  const shooter=data.shooterId===myId;
+  if(shooter){score=data.score||score;$("score").textContent="SCORE "+score}
+});
+socket.on("player_respawn",data=>{
+  const e=enemies[String(data.userId)];
+  if(e)e.mesh.position.set(data.x,data.y,data.z);
+  if(String(data.userId)===String(myId)){hp=data.hp||100;player.position.set(data.x,data.y,data.z)}
+});
+socket.on("show_results",data=>{
+  $("results").style.display="flex";
+  $("resultText").textContent=(data.msg||("+"+(data.xp||0)+" XP / +"+(data.gold||0)+" Gold"));
+});
+socket.on("go_to_menu",()=>location.href="/game");
+socket.on("kick_to_menu",()=>location.href="/game");
+socket.on("auth_required",()=>location.href="/");
+socket.on("disconnect",()=>{if(matchPhase==="game")$("overlayText").textContent="З'єднання перервано..."});
+
+// mobile joystick
+const stick=$("stick"),thumb=stick.querySelector("i");
+let stickActive=false;
+window.sxMove={x:0,y:0};
+function moveStick(e){
+  const t=e.touches[0],r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;
+  let x=t.clientX-cx,y=t.clientY-cy,len=Math.hypot(x,y),max=48;
+  if(len>max){x=x/len*max;y=y/len*max}
+  thumb.style.transform="translate("+x+"px,"+y+"px)";
+  window.sxMove={x:x/max,y:y/max};
+}
+stick.addEventListener("touchstart",e=>{stickActive=true;moveStick(e);e.preventDefault()},{passive:false});
+stick.addEventListener("touchmove",e=>{if(stickActive)moveStick(e);e.preventDefault()},{passive:false});
+stick.addEventListener("touchend",()=>{stickActive=false;thumb.style.transform="translate(0,0)";window.sxMove={x:0,y:0}});
+$("jumpBtn").addEventListener("touchstart",e=>{e.preventDefault();queueJump()},{passive:false});
+$("reloadBtn").addEventListener("touchstart",e=>{e.preventDefault();startReload()},{passive:false});
+$("fireBtn").addEventListener("touchstart",e=>{e.preventDefault();fireHeld=true;fireLoop()},{passive:false});
+$("fireBtn").addEventListener("touchend",()=>fireHeld=false);
+document.addEventListener("touchstart",e=>{if(e.target.closest("#mobile"))return;lookTouch=e.touches[0]});
+document.addEventListener("touchmove",e=>{
+  if(!lookTouch)return;
+  const t=e.touches[0],dx=t.clientX-lookTouch.clientX,dy=t.clientY-lookTouch.clientY;
+  camera.rotation.y-=dx*.004;
+  camera.rotation.x-=dy*.004;
+  camera.rotation.x=Math.max(-1.35,Math.min(1.35,camera.rotation.x));
+  lookTouch=t;
+},{passive:true});
+document.addEventListener("touchend",()=>lookTouch=null);
+
+let previous=performance.now();
+function animate(){
+  requestAnimationFrame(animate);
+  const now=performance.now(),dt=Math.min(.05,(now-previous)/1000);previous=now;
+  const mv=window.sxMove||{x:0,y:0};
+
+  if(matchPhase==="game"&&player){
+    if(mv.x||mv.y){keys.a=mv.x<-.18;keys.d=mv.x>.18;keys.w=mv.y<-.18;keys.s=mv.y>.18}
+    const dir=new THREE.Vector3();
+    camera.getWorldDirection(dir);dir.y=0;dir.normalize();
+    const side=new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0),dir).normalize();
+    const move=new THREE.Vector3();
+    if(keys.w)move.add(dir);if(keys.s)move.sub(dir);if(keys.a)move.add(side);if(keys.d)move.sub(side);
+    if(move.lengthSq()>0){
+      move.normalize();
+      const currentSpeed=(mode==="hide_seek"&&myRole==="hunter")?10.5:(keys.shift?10:7.5);
+      const step=currentSpeed*dt;
+      if(!blocked(move))player.position.addScaledVector(move,step);
+      player.rotationY=Math.atan2(dir.x,dir.z);
+    }
+    if(jumpQueued&&!jumping){velocityY=10;jumping=true;jumpQueued=false}
+    velocityY-=28*dt;player.position.y+=velocityY*dt;
+    if(player.position.y<=0){player.position.y=0;velocityY=0;jumping=false}
+    if(!isThird){camera.position.set(player.position.x,player.position.y+1.58,player.position.z)}
+    else{const offset=new THREE.Vector3(0,2.5,5).applyQuaternion(camera.quaternion);camera.position.copy(player.position).add(offset)}
+    updateVisual();sendMove();
+  }
+  Object.values(enemies).forEach(e=>{e.mesh.position.lerp(e.pos,.35)});
+  renderer.render(scene,camera);
+}
+
+addEventListener("resize",()=>{
+  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight,false);
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25));
+});
+
+$("progress").style.width="4%";
+loadMap();
+if(isTrainingMode)socket.emit("join_training",{trainingId});
+else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
+animate();
+</script>
+</body>
+</html>
