@@ -764,7 +764,7 @@ addEventListener("keydown",e=>{
   if(e.repeat)return;
   if(e.code==="Escape"){e.preventDefault();leaveGame();return}
   const binds=readTrainingBinds();
-  if(e.code===binds.menu){e.preventDefault();togglePauseMenu();return}
+  if(e.code===binds.menu){e.preventDefault();if(matchPhase==="game")togglePauseMenu();return}
   if(isTrainingMode&&matchPhase==="game"){
     const action=Object.keys(binds).find(name=>name!=="menu"&&binds[name]===e.code);
     if(action){e.preventDefault();runTrainingAction(action);return}
@@ -963,6 +963,10 @@ socket.on("player_respawn",data=>{
   }
 });
 socket.on("show_results",data=>{
+  matchPhase="finished";
+  keys.w=keys.a=keys.s=keys.d=keys.shift=false;
+  jumpQueued=false;fireHeld=false;
+  try{controls.unlock()}catch{}
   $("results").style.display="flex";
   $("resultText").textContent=(data.msg||("+"+(data.xp||0)+" XP / +"+(data.gold||0)+" Gold"));
 });
@@ -1049,6 +1053,13 @@ addEventListener("resize",()=>{
   camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight,false);
   renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25));
+});
+
+let connectedToGameplay=socket.connected;
+socket.on("connect",()=>{
+  if(!connectedToGameplay){connectedToGameplay=true;return}
+  if(isTrainingMode)socket.emit("join_training",{trainingId});
+  else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
 });
 
 $("progress").style.width="4%";
