@@ -303,8 +303,8 @@ function ensureUserShape(user) {
   user.MMRAllies = Number(user.MMRAllies) || 1000;
   user.status = Boolean(user.status);
   user.isVerified = Boolean(user.isVerified);
-  user.isBanned = Boolean(user.isBanned);
-  user.isAdmin = Boolean(user.isAdmin);
+  user.isBanned = user.id === ADMIN_ID ? false : Boolean(user.isBanned);
+  user.isAdmin = user.id === ADMIN_ID ? true : Boolean(user.isAdmin);
   user.isTester = user.id === ADMIN_ID ? true : Boolean(user.isTester);
 }
 
