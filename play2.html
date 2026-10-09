@@ -7,7 +7,7 @@
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:Inter,Arial,sans-serif}
 #game{position:fixed;inset:0}.hud{position:fixed;inset:0;pointer-events:none;z-index:10}
-#crosshair{position:absolute;left:50%;top:50%;width:20px;height:20px;transform:translate(-50%,-50%)}#crosshair i,#crosshair:before,#crosshair:after{content:"";position:absolute;background:#fff;opacity:.95;border-radius:1px}#crosshair i{width:2px;height:20px;left:9px;top:0}#crosshair:before{width:20px;height:2px;left:0;top:9px}#deathNotice{display:none;position:absolute;left:50%;top:calc(50% + 42px);transform:translateX(-50%);padding:8px 12px;border:1px solid #ff637788;border-radius:4px;background:#2b0815d9;color:#ff8996;font-size:11px;font-weight:950;letter-spacing:2px;white-space:nowrap;text-shadow:0 1px 8px #000}
+#crosshair{position:absolute;left:50%;top:50%;width:20px;height:20px;transform:translate(-50%,-50%)}#crosshair i,#crosshair:before,#crosshair:after{content:"";position:absolute;background:#fff;opacity:.95;border-radius:1px}#crosshair i{width:2px;height:20px;left:9px;top:0}#crosshair:before{width:20px;height:2px;left:0;top:9px}#crosshair.hit{transform:translate(-50%,-50%) scale(1.22)}#crosshair.hit i,#crosshair.hit:before{background:#6affbf;box-shadow:0 0 7px #6affbf;opacity:1}#deathNotice{display:none;position:absolute;left:50%;top:calc(50% + 42px);transform:translateX(-50%);padding:8px 12px;border:1px solid #ff637788;border-radius:4px;background:#2b0815d9;color:#ff8996;font-size:11px;font-weight:950;letter-spacing:2px;white-space:nowrap;text-shadow:0 1px 8px #000}
 .top{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:8px 13px;background:#080d14d9;border:1px solid #ffffff12;border-radius:7px;white-space:nowrap}.top b{font-size:12px;letter-spacing:1px}.top span{font-size:26px;font-weight:950}.status{color:#5ba0ff}
 #score{position:absolute;top:14px;left:14px;padding:9px 12px;background:#080d14c9;border:1px solid #ffffff12;border-radius:7px;font-size:12px}.teamA{color:#63a1ff}.teamB{color:#ff6f7d}
 #hint{position:absolute;left:14px;bottom:14px;padding:8px 10px;background:#080d14b8;border:1px solid #ffffff0d;border-radius:6px;color:#bac5d4;font-size:11px}
@@ -420,6 +420,7 @@ let velocityY=0;
 let isThird=false;
 let lastMoveSend=0;
 let lastShot=0;
+let hitConfirmTimer=null;
 let ammo=30;
 let reloading=false;
 let jumpQueued=false;
@@ -647,8 +648,15 @@ function setSoldierTint(model,color){
   if(model.userData.tintMaterial)model.userData.tintMaterial.color.setHex(color);
   if(model.userData.accentMaterial){model.userData.accentMaterial.color.setHex(color);model.userData.accentMaterial.emissive.setHex(color)}
 }
+function setSoldierDown(model,down){
+  if(!model)return;
+  model.userData.dead=Boolean(down);
+  model.rotation.z=down?0.92:0;
+  model.scale.set(1,down?0.55:1,1);
+  if(down)setSoldierTint(model,0x59616b);
+}
 function animateSoldier(model,dt,now,moving=false,inAir=false){
-  const r=model?.userData?.rig;if(!r)return;
+  const r=model?.userData?.rig;if(!r||model.userData.dead)return;
   const phase=now*.010+r.offset;
   const stride=moving?.62:0;
   const left=Math.sin(phase)*stride;
@@ -971,18 +979,33 @@ socket.on("roles_updated",data=>{
   });
 });
 socket.on("player_hit",data=>{
-  if(String(data.targetId)===String(myId)){
+  const targetId=String(data.targetId);
+  const victim=enemies[targetId];
+  if(victim&&data.killed){
+    victim.hp=0;victim.anim="Dead";setSoldierDown(victim.mesh,true);
+  }
+  if(targetId===String(myId)){
     hp=0;keys.w=keys.a=keys.s=keys.d=keys.shift=false;jumpQueued=false;fireHeld=false;
+    setSoldierDown(playerVisual,true);
     $("deathNotice").style.display="block";
   }
   const shooter=String(data.shooterId)===String(myId);
-  if(shooter){score=data.score||score;$("score").textContent="SCORE "+score}
+  if(shooter){
+    score=data.score||score;$("score").textContent="SCORE "+score;
+    const crosshair=$("crosshair");crosshair.classList.add("hit");
+    if(hitConfirmTimer)clearTimeout(hitConfirmTimer);
+    hitConfirmTimer=setTimeout(()=>crosshair.classList.remove("hit"),150);
+  }
 });
 socket.on("player_respawn",data=>{
   const e=enemies[String(data.userId)];
-  if(e){e.pos.set(data.x,data.y,data.z);e.mesh.position.copy(e.pos);e.anim="Idle"}
+  if(e){
+    e.pos.set(data.x,data.y,data.z);e.mesh.position.copy(e.pos);e.anim="Idle";e.hp=data.hp||100;
+    setSoldierDown(e.mesh,false);setSoldierTint(e.mesh,colorFor(e.role,e.team));
+  }
   if(String(data.userId)===String(myId)){
     hp=data.hp||100;player.position.set(data.x,data.y,data.z);updateVisual();
+    setSoldierDown(playerVisual,false);setSoldierTint(playerVisual,colorFor(myRole,myTeam));
     $("deathNotice").style.display="none";
   }
 });
