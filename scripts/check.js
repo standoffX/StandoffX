@@ -236,4 +236,6 @@ assert.match(game, /function buildLocalHillTownFallback\(\)/, "Hill Town must ha
 assert.match(game, /buildLocalHillTownFallback\(\);finishClientReady\(\)/, "a failed remote Hill Town asset load must still start the match using town geometry");
 assert.doesNotMatch(game, /Remote models unavailable; using local fallback\.\",error\);\s*buildFieldArena\(\)/, "Hill Town must not silently turn into a field arena when the CDN fails");
 
+assert.match(server, /players\.some\(candidate => candidate\.isBot\) \? \(p\.isBot \? "B" : "A"\)/, "all tester bots must be on the opposing team and be shootable targets");
+
 console.log("OK project invariants, tester-only tools, Atlas endpoint, and unique HTTP routes");
