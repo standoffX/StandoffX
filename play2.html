@@ -904,6 +904,13 @@ function animate(){
     updateVisual();sendMove();
   }
   Object.values(enemies).forEach(e=>{e.mesh.position.lerp(e.pos,.35)});
+  if(heldWeaponRoot){
+    heldWeaponRoot.position.x=.29+Math.sin(now*.0016)*.0018;
+    heldWeaponRoot.position.y=-.29+Math.abs(Math.sin(now*.006))* .0015;
+    heldWeaponRoot.position.z=heldWeaponBaseZ+weaponKick;
+    weaponKick=Math.max(0,weaponKick-dt*.58);
+    heldWeaponRoot.rotation.x=reloading?-.07:0;
+  }
   renderer.render(scene,camera);
 }
 
