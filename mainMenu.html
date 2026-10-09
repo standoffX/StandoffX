@@ -266,6 +266,7 @@ function openPlay(){
   if(selectedMode==="training"||selectedMode==="field_test"){
     if(!canTest()){alert("Цей режим доступний лише тестерам.");return}
     socket=io({withCredentials:true});
+    socket.on("connect_error",()=>{socket?.disconnect();socket=null;alert("Не вдалося підключитися до сервера.")});
     socket.on("training_error",d=>{socket.disconnect();socket=null;alert(d.message||"Помилка тренування")});
     socket.on("training_started",d=>{
       sessionStorage.setItem("myPlayerId",d.userId);
@@ -318,7 +319,7 @@ $("friendResult").addEventListener("click",e=>{const b=e.target.closest("[data-f
 function openClanModal(title,body){$("clanModalTitle").textContent=title;$("clanModalBody").innerHTML=body;$("clanModal").classList.add("show")}
 async function loadClan(){
   try{
-    const d=await api("/api/clans/my");
+    const d=await api("/api/clans/my",{method:"POST",body:"{}"});
     if(!d.clan){
       $("clanBody").innerHTML="<div class='muted'>Ви ще не в клані.</div><div class='actions' style='margin-top:12px'><button class='primary' data-clan-action='create'>СТВОРИТИ · 500 G</button><button class='secondary' data-clan-action='search'>ЗНАЙТИ КЛАН</button></div>";
       return;
