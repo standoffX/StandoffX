@@ -87,6 +87,7 @@ import {PointerLockControls} from "three/addons/controls/PointerLockControls.js"
 const $=id=>document.getElementById(id);
 const socket=io({withCredentials:true});
 const myId=sessionStorage.getItem("myPlayerId");
+const myUuid=sessionStorage.getItem("myPlayerUUID")||"";
 const matchId=sessionStorage.getItem("currentMatchId");
 const mode=sessionStorage.getItem("selectedMode")||"hide_seek";
 const selectedMap=sessionStorage.getItem("selectedMap")||"M3_Maze";
@@ -299,8 +300,8 @@ function ensurePlayerVisual(){
   scene.add(playerVisual);
 }
 function ensureEnemy(data){
-  const key=String(data.userId||data.id);
-  if(key===String(myId))return null;
+  const key=String(data.uuid||data.userId||data.id);
+  if((myUuid&&String(data.uuid||"")===myUuid)||(!data.uuid&&String(data.userId||data.id)===String(myId)))return null;
   if(!enemies[key]){
     const mesh=makeVisual(colorFor(data.role,data.team));
     scene.add(mesh);
@@ -339,7 +340,7 @@ function sendMove(force=false){
   const now=performance.now();
   if(!force&&now-lastMoveSend<50)return;
   lastMoveSend=now;
-  const data={x:player.position.x,y:player.position.y,z:player.position.z,rotY:player.rotationY,anim:(keys.w||keys.s||keys.a||keys.d)?"Running":"Idle"};
+  const data={uuid:myUuid,x:player.position.x,y:player.position.y,z:player.position.z,rotY:player.rotationY,anim:(keys.w||keys.s||keys.a||keys.d)?"Running":"Idle"};
   if(isTrainingMode)socket.emit("training_move",{trainingId,viewY:camera.rotation.y,...data});
   else socket.emit("player_moved",{matchId,myId,userId:myId,...data});
 }
@@ -481,7 +482,7 @@ socket.on("init_match",data=>{
   ensurePlayerVisual();
   const authoritativePosition=data.me?.position||data.me?.spawn;
   if(authoritativePosition)player.position.set(authoritativePosition.x||0,authoritativePosition.y||0,authoritativePosition.z||0);
-  (data.players||[]).forEach(p=>{if(String(p.userId)!==String(myId))applyEnemy(p)});
+  (data.players||[]).forEach(p=>{if(myUuid?String(p.uuid||"")!==myUuid:String(p.userId)!==String(myId))applyEnemy(p)});
   updateVisual();
 });
 socket.on("match_waiting",data=>{
@@ -528,13 +529,13 @@ socket.on("match_start_now",()=>{
 });
 socket.on("enemy_moved",applyEnemy);
 socket.on("roles_updated",data=>{
-  const me=data.players?.find(p=>String(p.userId)===String(myId));
+  const me=data.players?.find(p=>myUuid?String(p.uuid||"")===myUuid:String(p.userId)===String(myId));
   if(me){
   myRole=me.role;score=me.score||score;myTeam=me.team||myTeam;
   player.position.set(me.spawn.x,me.spawn.y||0,me.spawn.z);ensurePlayerVisual();
   playerVisual.traverse(x=>{if(x.material?.color)x.material.color.set(colorFor(myRole,myTeam))});
 }
-  (data.players||[]).forEach(p=>{if(String(p.userId)!==String(myId)){const e=ensureEnemy(p);if(e){e.role=p.role;e.mesh.traverse(x=>{if(x.material?.color)x.material.color.set(colorFor(p.role,p.team))});}}});
+  (data.players||[]).forEach(p=>{if(myUuid?String(p.uuid||"")!==myUuid:String(p.userId)!==String(myId)){const e=ensureEnemy(p);if(e){e.role=p.role;e.mesh.traverse(x=>{if(x.material?.color)x.material.color.set(colorFor(p.role,p.team))});}}});
 });
 socket.on("player_hit",data=>{
   if(String(data.targetId)===String(myId)){hp=0}
@@ -624,7 +625,7 @@ addEventListener("resize",()=>{
 $("progress").style.width="4%";
 loadMap();
 if(isTrainingMode)socket.emit("join_training",{trainingId});
-else socket.emit("join_room",{matchId,userId:myId});
+else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
 animate();
 </script>
 </body>
