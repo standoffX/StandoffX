@@ -1765,7 +1765,8 @@ io.on("connection", socket => {
       userId: user.id,
       mode: cfg.id,
       modeName: cfg.name,
-      map: cfg.map
+      map: cfg.map,
+      uuid: user.uuid
     });
   });
 
@@ -1982,7 +1983,7 @@ io.on("connection", socket => {
     const match = activeMatches.get(matchId);
     if (!match) return;
 
-    const index = match.players.findIndex(p => p.userId === socket.user.id && p.socketId === socket.id);
+    const index = match.players.findIndex(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
     if (index < 0) return;
 
     const player = match.players[index];
@@ -2007,7 +2008,7 @@ io.on("connection", socket => {
     const match = activeMatches.get(matchId);
     if (!match) return socket.emit("kick_to_menu", { reason: "Матч не знайдено." });
 
-    const player = match.players.find(p => p.userId === socket.user.id);
+    const player = match.players.find(p => p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id);
     if (!player) return socket.emit("kick_to_menu", { reason: "Гравця немає в цьому матчі." });
 
     // A reconnect replaces the old socket for this user.
@@ -2050,7 +2051,7 @@ io.on("connection", socket => {
     });
 
     for (const other of match.players) {
-      if (other.userId !== player.userId && other.socketId) {
+      if ((other.uuid ? other.uuid !== player.uuid : other.userId !== player.userId) && other.socketId) {
         socket.emit("enemy_moved", {
           id: other.socketId,
           userId: other.userId,
@@ -2088,7 +2089,7 @@ io.on("connection", socket => {
     const match = activeMatches.get(matchId);
     if (!match) return;
 
-    const player = match.players.find(p => p.userId === socket.user.id);
+    const player = match.players.find(p => p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id);
     if (!player || player.socketId !== socket.id) return;
 
     player.ready = true;
@@ -2099,7 +2100,7 @@ io.on("connection", socket => {
   socket.on("team_shoot", data => {
     const match = activeMatches.get(cleanText(data?.matchId, 100));
     if (!match) return;
-    const player = match.players.find(p => p.userId === socket.user.id && p.socketId === socket.id);
+    const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
     if (!player) return;
     handleTeamShot(io, match, player, data);
   });
