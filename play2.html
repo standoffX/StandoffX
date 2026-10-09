@@ -176,8 +176,11 @@ const ASSET_MATCHES={
 };
 function loadHillTownManifest(){
   if(!hillTownManifestPromise){
-    hillTownManifestPromise=fetch(HILL_TOWN_MANIFEST_URL,{mode:"cors",cache:"force-cache"})
-      .then(r=>{if(!r.ok)throw new Error("Asset manifest HTTP "+r.status);return r.json()});
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),8000);
+    hillTownManifestPromise=fetch(HILL_TOWN_MANIFEST_URL,{mode:"cors",cache:"force-cache",signal:controller.signal})
+      .then(r=>{if(!r.ok)throw new Error("Asset manifest HTTP "+r.status);return r.json()})
+      .finally(()=>clearTimeout(timeout));
   }
   return hillTownManifestPromise;
 }
@@ -211,7 +214,21 @@ function findHillTownAssetUrl(root,needles){
   return walk(root);
 }
 function loadGLBScene(url){
-  return new Promise((resolve,reject)=>loader.load(url,gltf=>resolve(gltf.scene),undefined,reject));
+  return new Promise((resolve,reject)=>{
+    let settled=false;
+    const timeout=setTimeout(()=>{
+      if(settled)return;
+      settled=true;
+      reject(new Error("3D asset loading timed out"));
+    },10000);
+    loader.load(url,gltf=>{
+      if(settled)return;
+      settled=true;clearTimeout(timeout);resolve(gltf.scene);
+    },undefined,error=>{
+      if(settled)return;
+      settled=true;clearTimeout(timeout);reject(error||new Error("3D asset failed to load"));
+    });
+  });
 }
 async function getHillTownTemplate(name){
   if(loadedAssetTemplates.has(name))return loadedAssetTemplates.get(name);
