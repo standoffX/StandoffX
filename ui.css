@@ -294,3 +294,24 @@ body.lobby-screen:after{content:"";position:fixed;right:-12vw;top:-32vh;width:54
  .lobby-screen .tester-mode-option{min-width:72px}
  .lobby-screen .tester-mode-option[data-test-gameplay="training"]{min-width:98px}
 }
+
+
+/* Per-device settings: touch layout on phones, keyboard/mouse tools on desktops. */
+html[data-sx-device="desktop"] body.lobby-screen #mobileLayoutEditor{display:none!important}
+html[data-sx-device="mobile"] body.lobby-screen #desktopControlsSettings{display:none!important}
+html[data-sx-device="mobile"] body.lobby-screen #testKeybindSettings{display:none!important}
+html[data-sx-device="mobile"] body.lobby-screen #mobileLayoutEditor{display:block!important}
+.lobby-screen .individual-size-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:4px 0 8px}
+.lobby-screen .individual-size-list>b{grid-column:1/-1;color:#bceaff;font-size:9px;letter-spacing:1px}
+.lobby-screen .individual-size-list label{display:grid;gap:4px;min-width:0;padding:8px;border:1px solid var(--line);border-radius:4px;background:#071722;color:#a9c7d8;font-size:10px}
+.lobby-screen .individual-size-list output{justify-self:end;color:#e4f8ff;font-size:10px;font-weight:900}
+.lobby-screen .individual-size-list input{width:100%;min-width:0}
+.lobby-screen .layout-control[data-layout-control=crouch]{left:86%;top:55%;border-radius:4px}
+.lobby-screen .layout-control[data-layout-control=sprint]{left:76%;top:28%;border-radius:5px;min-width:50px}
+.lobby-screen .layout-control[data-layout-control=map]{left:18%;top:26%;border-radius:5px}
+.lobby-screen #resumeMatchBtn{width:250px;min-height:38px;border-radius:3px;background:#10283b;color:#dff6ff;border:1px solid #91d8fb55;box-shadow:0 6px 20px #0003;align-items:center;justify-content:center;font-size:10px;letter-spacing:.5px}
+.lobby-screen #resumeMatchBtn:hover{border-color:#91d8fb;background:#163b54;filter:none;transform:translateY(-1px)}
+@media(max-width:700px){
+  .lobby-screen .individual-size-list{grid-template-columns:minmax(0,1fr)}
+  .lobby-screen #resumeMatchBtn{width:100%;min-height:40px}
+}
