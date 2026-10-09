@@ -195,7 +195,7 @@ controls.pointerSpeed=mouseSensitivity;
 controls.minPolarAngle=.08;
 controls.maxPolarAngle=Math.PI-.08;
 function requestMouseLook(){
-  if(!/Android|iPhone|iPad/i.test(navigator.userAgent)&&matchPhase==="game"&&!controls.isLocked){
+  if(!isMobileDevice&&matchPhase==="game"&&!controls.isLocked){
     try{controls.lock()}catch{}
   }
 }
@@ -538,7 +538,7 @@ let player=null;
 let playerVisual=null;
 const enemies={};
 const raycaster=new THREE.Raycaster();
-const HILL_TOWN_SCALE=2.25,NEON_YARD_SCALE=2,FIELD_ARENA_SCALE=2,FALLBACK_ARENA_SCALE=3;
+const HILL_TOWN_SCALE=2.55,NEON_YARD_SCALE=2.25,FIELD_ARENA_SCALE=2.15,FALLBACK_ARENA_SCALE=3;
 
 let matchPhase="waiting";
 let myRole="runner";
@@ -668,7 +668,7 @@ function loadMap(){
     if(done)return;
     done=true;clearTimeout(timer);
     const map=g.scene;
-    map.scale.setScalar(75);
+    map.scale.setScalar(82.5);
     map.traverse(n=>{
       if(n.isMesh){
         n.frustumCulled=true;
@@ -867,7 +867,7 @@ function rebuildCollisionIndex(){
   collisionIndexReady=true;
 }
 function worldLimit(){
-  return ({HILL_TOWN:54,NEON_YARD:168,FIELD_ARENA:292,M3_Maze:232})[selectedMap]||232;
+  return ({HILL_TOWN:60,NEON_YARD:190,FIELD_ARENA:315,M3_Maze:232})[selectedMap]||232;
 }
 function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
@@ -1053,7 +1053,7 @@ addEventListener("mousedown",e=>{if(e.button===0&&$("pauseMenu")?.style.display!
 function setOverlayGame(){
   $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":mode==="training"?"ТРЕНУВАННЯ":"HIDE & SEEK";
   $("clickHint").textContent="Клікни для огляду мишкою. WASD — рух · ESC — у лобі";
-  if(/Android|iPhone|iPad/i.test(navigator.userAgent)) $("overlay").style.display="none";
+  if(isMobileDevice) $("overlay").style.display="none";
 }
 function leaveGame(){
   try{localStorage.removeItem("sx_active_match")}catch{}
@@ -1108,6 +1108,7 @@ $("trainingControls").addEventListener("touchstart",e=>e.stopPropagation(),{pass
 
 socket.on("training_init",data=>{
   if(!isTrainingMode)return;
+  $("reconnectBtn").style.display="none";
   $("modeName").textContent=data.modeName||mode.toUpperCase();
   matchPhase="game";canControl=true;
   ensurePlayerVisual();
@@ -1202,7 +1203,7 @@ socket.on("match_start_now",()=>{
   $("overlayText").textContent="";
   $("clickHint").textContent="Клікни для мишки";
   if(isTeamCombat||isTrainingMode)$("ammo").style.display="block";
-  if(/Android|iPhone|iPad/i.test(navigator.userAgent))$("overlay").style.display="none";
+  if(isMobileDevice)$("overlay").style.display="none";
 });
 socket.on("enemy_moved",applyEnemy);
 socket.on("player_left",data=>{
