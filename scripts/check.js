@@ -241,4 +241,38 @@ assert.match(server, /players\.some\(candidate => candidate\.isBot\) \? \(p\.isB
 assert.match(server, /player\.pos\.y = Math\.max\(0, Math\.min\(2\.25, y\)\)/, "match movement must reject impossible fly heights");
 assert.match(server, /previous\.y = Math\.max\(0, Math\.min\(2\.25, y\)\)/, "training movement must reject impossible fly heights");
 
+const validateMoveFunction = server.match(/function validateMove\(player, data\) \{[\s\S]*?\n\}/);
+assert.ok(validateMoveFunction, "the server movement validator must be available for behavioral tests");
+const validateMove = vm.runInNewContext("(" + validateMoveFunction[0] + ")");
+const movingPlayer = {
+  lastMoveAt: Date.now() - 120,
+  prevMoveTime: Date.now() - 120,
+  pos: { x: 0, y: 0, z: 0 },
+  rotY: 0,
+  anim: "Idle"
+};
+assert.equal(validateMove(movingPlayer, { x: 100, y: 100, z: 0, rotY: 0, anim: "Running" }), true);
+assert.ok(movingPlayer.pos.x > 0 && movingPlayer.pos.x < 2, "large planar movement must be rate-limited");
+assert.equal(movingPlayer.pos.y, 2.25, "vertical position must remain within the supported jump height");
+assert.equal(movingPlayer.anim, "Running");
+const beforeInvalidMove = { ...movingPlayer.pos };
+const invalidPlayer = {
+  lastMoveAt: Date.now() - 120,
+  prevMoveTime: Date.now() - 120,
+  pos: { ...movingPlayer.pos },
+  rotY: 0,
+  anim: "Idle"
+};
+assert.equal(validateMove(invalidPlayer, { x: "not-a-number", y: 0, z: 0, rotY: 0, anim: "Teleport" }), false);
+assert.deepEqual(invalidPlayer.pos, beforeInvalidMove, "invalid movement must not change authoritative coordinates");
+const unknownAnimationPlayer = {
+  lastMoveAt: Date.now() - 120,
+  prevMoveTime: Date.now() - 120,
+  pos: { x: 0, y: 0, z: 0 },
+  rotY: 0,
+  anim: "Idle"
+};
+assert.equal(validateMove(unknownAnimationPlayer, { x: 0.1, y: 0, z: 0, rotY: 0, anim: "Teleport" }), true);
+assert.equal(unknownAnimationPlayer.anim, "Idle", "unknown animation states must be rejected");
+
 console.log("OK project invariants, tester-only tools, Atlas endpoint, and unique HTTP routes");
