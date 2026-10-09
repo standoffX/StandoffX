@@ -214,8 +214,8 @@ assert.match(game, /socket\.on\("player_left"/, "departed players must be remove
 assert.match(game, /e\.pos\.set\(data\.x,data\.y,data\.z\);e\.mesh\.position\.copy\(e\.pos\);e\.anim="Idle"/, "a respawn must update both the displayed and authoritative remote position");
 assert.match(game, /let connectedToGameplay=socket\.connected/, "the client must rejoin the match after a Socket.IO reconnection");
 assert.match(game, /const HILL_TOWN_SCALE=2\.25/, "Hill Town must be dramatically larger than its original footprint");
-assert.match(game, /const NEON_YARD_SCALE=2/, "Neon Yard must have an enlarged play area");
-assert.match(game, /const FIELD_ARENA_SCALE=2/, "Field Arena must have an enlarged play area");
+assert.match(game, /NEON_YARD_SCALE=2/, "Neon Yard must have an enlarged play area");
+assert.match(game, /FIELD_ARENA_SCALE=2/, "Field Arena must have an enlarged play area");
 assert.match(game, /map\.scale\.setScalar\(75\)/, "the M3 map must be enlarged too");
 assert.match(game, /function rebuildCollisionIndex\(\)/, "map geometry must be registered for solid collision");
 assert.match(game, /function blockedAt\(x,z\)/, "the player must be blocked by solid map objects");
