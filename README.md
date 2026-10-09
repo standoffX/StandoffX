@@ -28,6 +28,8 @@ StandoffX — browser FPS prototype на Three.js + Socket.IO.
 - reconnect-aware player identity;
 - Three.js gameplay client;
 - procedural tactical soldier models with running and jumping animations (no extra character CDN needed);
+- map-model CDN requests have time limits and fall back to local geometry when assets are unavailable;
+- public matchmaking is limited to ALLIES and TEAM FIGHT, even if a client submits an obsolete mode value;
 - mobile joystick and fire-button cancellation handling;
 - match rejoin after temporary Socket.IO reconnects, plus correct enemy despawn/respawn cleanup;
 - `Escape` always leaves for the lobby; `M` toggles the in-game pause menu;
