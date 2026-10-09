@@ -1296,6 +1296,24 @@ $("reconnectBtn").addEventListener("click",e=>{
     else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
   }else socket.connect();
 });
+function showReconnectPanel(message="З’єднання перервано. Автоматично перепідключаємося…"){
+  $("overlayTitle").textContent="ПЕРЕПІДКЛЮЧЕННЯ";
+  $("phase").textContent="ЗВ’ЯЗОК ІЗ СЕРВЕРОМ";
+  $("overlayText").textContent=message;
+  $("reconnectBtn").style.display="inline-flex";
+  $("reconnectBtn").disabled=false;
+  $("reconnectBtn").textContent="↻ ПЕРЕПІДКЛЮЧИТИСЯ";
+  $("overlay").style.display="flex";
+}
+$("reconnectBtn").addEventListener("click",e=>{
+  e.preventDefault();e.stopPropagation();
+  $("reconnectBtn").disabled=true;
+  $("reconnectBtn").textContent="ПІДКЛЮЧАЄМОСЯ…";
+  if(socket.connected){
+    if(isTrainingMode)socket.emit("join_training",{trainingId});
+    else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
+  }else socket.connect();
+});
 socket.on("connect_error",err=>{
   showReconnectPanel("Сервер поки недоступний. Натисни кнопку, щоб повторити підключення.");
   console.warn("[Socket.IO] Gameplay connection failed; retrying.",err?.message||err);
@@ -1304,6 +1322,10 @@ socket.on("disconnect",()=>{
   keys.w=keys.a=keys.s=keys.d=keys.shift=false;isCrouching=false;
   jumpQueued=false;fireHeld=false;
   showReconnectPanel("Гру не завершено. Натисни «ПЕРЕПІДКЛЮЧИТИСЯ», щоб повернутися в ту саму катку.");
+});
+socket.on("player_connection_state",data=>{
+  const enemy=Object.values(enemies).find(e=>String(e.userId)===String(data?.userId));
+  if(enemy)enemy.connected=data.connected!==false;
 });
 socket.on("player_connection_state",data=>{
   const enemy=Object.values(enemies).find(e=>String(e.userId)===String(data?.userId));
