@@ -450,7 +450,7 @@ app.use((req, res, next) => {
   const normalized = path.posix.normalize("/" + pathname.replace(/\\/g, "/")).replace(/^\\/+/, "");
   const segments = normalized.split("/").filter(Boolean);
   const rootName = (segments[0] || "").toLowerCase();
-  const privateRootFile = segments.length === 1 && /\\.(?:json|js|md|lock|ya?ml|env)$/i.test(rootName);
+  const privateRootFile = segments.length === 1 && /\.(?:json|js|md|lock|ya?ml|env)$/i.test(rootName);
   const blockedDirectory = segments.some(segment => BLOCKED_STATIC_DIRS.has(segment.toLowerCase()));
   const protectedPage = segments.length === 1 && PROTECTED_STATIC_PAGES.has(rootName);
   if (privateRootFile || blockedDirectory || protectedPage) return res.status(404).end();
