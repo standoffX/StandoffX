@@ -230,4 +230,6 @@ assert.match(game, /setSoldierDown\(e\.mesh,false\);setSoldierTint\(e\.mesh,colo
 
 assert.match(game, /if\(p\.hp<=0\)\{p\.anim="Dead";setSoldierDown\(p\.mesh,true\)\}/, "rejoining clients must render eliminated players as down until respawn");
 
+assert.match(game, /const camera=new THREE\.PerspectiveCamera\([^;]+\);\s*\/\/ Camera-attached weapon and view models must belong to the rendered scene graph\.\s*scene\.add\(camera\);/, "camera-mounted weapon models must be in the scene graph to render");
+
 console.log("OK project invariants, tester-only tools, Atlas endpoint, and unique HTTP routes");
