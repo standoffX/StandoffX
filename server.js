@@ -218,6 +218,7 @@ async function initMongo() {
       ensureUserShape(user);
       if (user.clan && !clans[user.clan]) user.clan = null;
     }
+    migratePlayerIds();
     saveUsers();
     saveClans();
     console.log("[DB] MongoDB Atlas connected:", mongoStatus.database);
