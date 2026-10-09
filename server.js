@@ -218,6 +218,7 @@ async function initMongo() {
       ensureUserShape(user);
       if (user.clan && !clans[user.clan]) user.clan = null;
     }
+    migratePlayerIds();
     saveUsers();
     saveClans();
     console.log("[DB] MongoDB Atlas connected:", mongoStatus.database);
@@ -286,8 +287,33 @@ function normalizeId(value) {
 }
 
 function displayId(id) {
-  const q = normalizeId(id);
-  return q;
+  return normalizeId(id);
+}
+
+function playerIdExists(id) {
+  const key = normalizeId(id).toLowerCase();
+  return users.some(user => normalizeId(user.id).toLowerCase() === key);
+}
+
+function newPlayerId() {
+  let id;
+  do { id = String(crypto.randomInt(1000000, 10000000)); }
+  while (id.toLowerCase() === ADMIN_ID.toLowerCase() || playerIdExists(id));
+  return id;
+}
+
+function migratePlayerIds() {
+  const seen = new Set();
+  const ordered = [...users].sort((a, b) => Number(b.id === ADMIN_ID) - Number(a.id === ADMIN_ID));
+  for (const user of ordered) {
+    let id = normalizeId(user.id);
+    if (!id || seen.has(id.toLowerCase()) || (id.toLowerCase() === ADMIN_ID.toLowerCase() && id !== ADMIN_ID)) {
+      id = newPlayerId();
+    }
+    while (seen.has(id.toLowerCase())) id = newPlayerId();
+    user.id = id;
+    seen.add(id.toLowerCase());
+  }
 }
 
 function findUser(idOrNickname, options = {}) {
@@ -359,6 +385,8 @@ function normalizeClanState(rawClans) {
 }
 
 for (const user of users) ensureUserShape(user);
+migratePlayerIds();
+saveUsers();
 
 if (users.some(u => u.clan === "67") && !clans["67"]) {
   clans["67"] = {
@@ -595,9 +623,7 @@ app.post("/api/register", registrationRateLimit, (req, res) => {
     return res.status(400).json({ success: false, message: "Пароль має містити 6–128 символів." });
   }
   // Nicknames are display names and intentionally do not need to be unique.
-  let id;
-  do id = String(crypto.randomInt(1000000, 10000000));
-  while (users.some(u => String(u.id) === id));
+  const id = newPlayerId();
 
   const user = {
     nickname,
@@ -2356,11 +2382,8 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
   if (changingId && !/^\d{6,10}$/.test(nextIdRaw)) {
     return res.status(400).json({ success: false, message: "Новий Player ID має містити 6–10 цифр." });
   }
-  if (changingId && users.some(x => x.id === nextIdRaw)) {
-    return res.status(409).json({ success: false, message: "Такий ID вже зайнятий." });
-  }
-  if (users.some(x => x.id !== u.id && String(x.nickname).toLowerCase() === nextNick.toLowerCase())) {
-    return res.status(409).json({ success: false, message: "Такий nickname вже зайнятий." });
+  if (changingId && (playerIdExists(nextIdRaw) || nextIdRaw.toLowerCase() === ADMIN_ID.toLowerCase())) {
+    return res.status(409).json({ success: false, message: "Такий ID вже зайнятий або зарезервований." });
   }
   if (nextClan && !clans[nextClan]) {
     return res.status(404).json({ success: false, message: "Такого клану немає." });
@@ -2441,18 +2464,21 @@ app.post("/api/admin/users/create", requireAdmin, (req, res) => {
   if (id && !/^\d{6,10}$/.test(id)) {
     return res.status(400).json({ success: false, message: "Player ID має містити 6–10 цифр." });
   }
-  if (id && users.some(u => u.id === id)) return res.status(409).json({ success: false, message: "Такий ID вже зайнятий." });
-  if (users.some(u => String(u.nickname).toLowerCase() === nickname.toLowerCase())) {
-    return res.status(409).json({ success: false, message: "Такий nickname вже зайнятий." });
+  if (id && id.toLowerCase() === ADMIN_ID.toLowerCase()) {
+    return res.status(409).json({ success: false, message: "Цей ID зарезервований для master-акаунта." });
   }
-  if (!id) do id = String(crypto.randomInt(1000000, 10000000)); while (users.some(u => u.id === id));
+  if (id && (playerIdExists(id) || id.toLowerCase() === ADMIN_ID.toLowerCase())) {
+    return res.status(409).json({ success: false, message: "Такий ID вже зайнятий або зарезервований." });
+  }
+  if (!id) id = newPlayerId();
 
   const user = {
-    nickname, id, passwordHash: hashPassword(password), playerAvatar: "/avatars/default.jpg",
+    nickname, id, uuid: crypto.randomUUID(), passwordHash: hashPassword(password), playerAvatar: "/avatars/default.jpg",
     status:false, XP:0, gold:0, clan:null, MMRCompetitive:1000, MMRAllies:1000,
     isVerified:false, isBanned:false, isAdmin:Boolean(req.body.isAdmin), isTester:Boolean(req.body.isTester),
     friendsList:[], incomingRequests:[], blocked:[], usedPromos:[]
   };
+  ensureUserShape(user);
   users.push(user);
   inventory[id] = [];
   saveUsers(); saveInventory();
