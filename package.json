@@ -4,7 +4,7 @@
   "description": "By SofterX",
   "main": "server.js",
   "scripts": {
-    "test": "node --check server.js",
+    "test": "node --check server.js && node scripts/check.js",
     "start": "node server.js"
   },
   "author": "SofterX",
