@@ -2358,6 +2358,7 @@ io.on("connection", socket => {
         match.phase = "waiting";
         match.started = false;
         match.phaseRemaining = null;
+        emitMatchWaiting(io, match);
       }
 
       if (player.disconnectTimer) clearTimeout(player.disconnectTimer);
