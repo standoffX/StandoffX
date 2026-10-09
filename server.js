@@ -1477,6 +1477,7 @@ io.on("connection", socket => {
     if (now - session.lastMoveAt < 33) return;
     session.lastMoveAt = now;
     const x = Number(data.x), y = Number(data.y), z = Number(data.z), rotY = Number(data.rotY);
+    const viewY = Number(data.viewY);
     if (![x, y, z, rotY].every(Number.isFinite)) return;
 
     const previous = session.playerPos;
@@ -1491,7 +1492,7 @@ io.on("connection", socket => {
       previous.z = z;
     }
     previous.y = Math.max(0, Math.min(20, y));
-    session.playerRotY = rotY;
+    session.playerRotY = Number.isFinite(viewY) ? viewY : rotY;
   });
 
   socket.on("training_spawn_bot", data => {
@@ -1511,9 +1512,9 @@ io.on("connection", socket => {
       hp: 100,
       maxHp: 100,
       hits: 0,
-      x: p.x + Math.sin(angle) * 3,
+      x: p.x - Math.sin(angle) * 3,
       y: 0,
-      z: p.z + Math.cos(angle) * 3,
+      z: p.z - Math.cos(angle) * 3,
       rotY: angle + Math.PI,
       action: "idle",
       updatedAt: Date.now()
@@ -1880,6 +1881,7 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     atlas: publicMongoStatus(),
     users: users.length,
     online: users.filter(u => u.status).length,
+    testers: users.filter(u => u.isTester || u.id === ADMIN_ID).length,
     clans: Object.keys(clans).length,
     market: market.length,
     messages: Object.values(messages).reduce((n, x) => n + (Array.isArray(x) ? x.length : 0), 0)
