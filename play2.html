@@ -291,6 +291,19 @@ function addTownFallbackWall(x,z,rotationY=0,materialColor=0xb69a76){
   const trim=new THREE.Mesh(new THREE.BoxGeometry(4.02*s,.12,.38*s),new THREE.MeshStandardMaterial({color:0x705841,roughness:1}));
   trim.position.set(x*s,3.35,z*s);trim.rotation.y=rotationY;scene.add(trim);mapObjects.push(trim);
 }
+function addTownFallbackArch(x,z,rotationY=0){
+  const s=HILL_TOWN_SCALE,group=new THREE.Group();
+  group.position.set(x*s,0,z*s);group.rotation.y=rotationY;scene.add(group);
+  const mat=new THREE.MeshStandardMaterial({color:0x89735e,roughness:.92});
+  const part=(w,h,d,px,py,pz)=>{
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+    mesh.position.set(px,py,pz);mesh.castShadow=false;mesh.receiveShadow=false;
+    group.add(mesh);mapObjects.push(mesh);
+  };
+  part(1.05*s,2.65,.4*s,-1.45*s,1.325,0);
+  part(1.05*s,2.65,.4*s,1.45*s,1.325,0);
+  part(4.0*s,.72,.46*s,0,3.0,0);
+}
 function addTownFallbackProp(x,z,color=0x897052){
   const s=HILL_TOWN_SCALE;
   const base=new THREE.Mesh(new THREE.BoxGeometry(1.35*s,1.15,s),new THREE.MeshStandardMaterial({color,roughness:.95}));
@@ -349,6 +362,7 @@ function buildLocalHillTownFallback(){
 async function loadHillTownStarterFallback(){
   try{
     const map=await loadGLBScene(HILL_TOWN_STARTER_URL);
+    map.scale.x*=HILL_TOWN_SCALE;map.scale.z*=HILL_TOWN_SCALE;
     map.traverse(node=>{if(node.isMesh){node.castShadow=false;node.receiveShadow=false;mapObjects.push(node)}});
     scene.add(map);mapLoaded=true;mapLoadFinished=true;
     $("progress").style.width="100%";
@@ -381,6 +395,7 @@ async function buildHillTownMap(){
     const placeWall=(x,z,rotationY=0,kind="wall")=>{
       const variant=kind==="arch"?assets.arch:kind==="door"?assets.door:kind==="window"?assets.window:variants[(Math.abs(Math.round(x+z))%variants.length)];
       if(variant)addAssetInstance(variant,x,0,z,rotationY,true);
+      else if(kind==="arch")addTownFallbackArch(x,z,rotationY);
       else addTownFallbackWall(x,z,rotationY,kind==="door"?0x9b7958:0xb69a76);
     };
     // Outer wall ring and a handful of windows/doors break up the silhouette.
@@ -615,7 +630,7 @@ function loadMap(){
     if(done)return;
     done=true;clearTimeout(timer);
     const map=g.scene;
-    map.scale.setScalar(50);
+    map.scale.setScalar(75);
     map.traverse(n=>{
       if(n.isMesh){
         n.frustumCulled=true;
@@ -1111,7 +1126,7 @@ socket.on("player_hit",data=>{
     victim.hp=0;victim.anim="Dead";setSoldierDown(victim.mesh,true);
   }
   if(targetId===String(myId)){
-    hp=0;keys.w=keys.a=keys.s=keys.d=keys.shift=false;jumpQueued=false;fireHeld=false;
+    hp=0;keys.w=keys.a=keys.s=keys.d=keys.shift=false;isCrouching=false;jumpQueued=false;fireHeld=false;
     setSoldierDown(playerVisual,true);
     $("deathNotice").style.display="block";
   }
@@ -1130,7 +1145,7 @@ socket.on("player_respawn",data=>{
     setSoldierDown(e.mesh,false);setSoldierTint(e.mesh,colorFor(e.role,e.team));
   }
   if(String(data.userId)===String(myId)){
-    hp=data.hp||100;player.position.set(data.x,data.y,data.z);updateVisual();
+    hp=data.hp||100;isCrouching=false;player.position.set(data.x,data.y,data.z);updateVisual();
     setSoldierDown(playerVisual,false);setSoldierTint(playerVisual,colorFor(myRole,myTeam));
     $("deathNotice").style.display="none";
   }
