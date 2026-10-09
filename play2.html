@@ -827,7 +827,7 @@ function ensureEnemy(data){
   if(!enemies[key]){
     const mesh=makeVisual(colorFor(data.role,data.team));
     scene.add(mesh);
-    enemies[key]={id:key,userId:String(data.userId||data.id||key),mesh,pos:new THREE.Vector3(),role:data.role||"runner",team:data.team||null,hp:data.hp||100,score:data.score||0,anim:data.anim||"Idle"};
+    enemies[key]={id:key,userId:String(data.userId||data.id||key),mesh,pos:new THREE.Vector3(),role:data.role||"runner",team:data.team||null,hp:data.hp||100,score:data.score||0,anim:data.anim||"Idle",connected:data.connected!==false};
   }
   return enemies[key];
 }
@@ -1278,21 +1278,35 @@ socket.on("show_results",data=>{
 socket.on("go_to_menu",()=>{try{localStorage.removeItem("sx_active_match")}catch{}location.href="/game"});
 socket.on("kick_to_menu",()=>{try{localStorage.removeItem("sx_active_match")}catch{}location.href="/game"});
 socket.on("auth_required",()=>location.href="/");
+function showReconnectPanel(message="З’єднання перервано. Автоматично перепідключаємося…"){
+  $("overlayTitle").textContent="ПЕРЕПІДКЛЮЧЕННЯ";
+  $("phase").textContent="ЗВ’ЯЗОК ІЗ СЕРВЕРОМ";
+  $("overlayText").textContent=message;
+  $("reconnectBtn").style.display="inline-flex";
+  $("reconnectBtn").disabled=false;
+  $("reconnectBtn").textContent="↻ ПЕРЕПІДКЛЮЧИТИСЯ";
+  $("overlay").style.display="flex";
+}
+$("reconnectBtn").addEventListener("click",e=>{
+  e.preventDefault();e.stopPropagation();
+  $("reconnectBtn").disabled=true;$("reconnectBtn").textContent="ПІДКЛЮЧАЄМОСЯ…";
+  if(socket.connected){
+    if(isTrainingMode)socket.emit("join_training",{trainingId});
+    else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
+  }else socket.connect();
+});
 socket.on("connect_error",err=>{
-  if(matchPhase==="game"){
-    $("overlayText").textContent="Зв’язок із сервером втрачено. Повторне підключення…";
-    $("overlay").style.display="flex";
-  }
+  showReconnectPanel("Сервер поки недоступний. Натисни кнопку, щоб повторити підключення.");
   console.warn("[Socket.IO] Gameplay connection failed; retrying.",err?.message||err);
 });
 socket.on("disconnect",()=>{
-  keys.w=keys.a=keys.s=keys.d=keys.shift=false;
+  keys.w=keys.a=keys.s=keys.d=keys.shift=false;isCrouching=false;
   jumpQueued=false;fireHeld=false;
-  if(matchPhase==="game"){
-    $("overlayTitle").textContent="ПЕРЕПІДКЛЮЧЕННЯ";
-    $("overlayText").textContent="З’єднання перервано. Автоматично підключаємося знову…";
-    $("overlay").style.display="flex";
-  }
+  showReconnectPanel("Гру не завершено. Натисни «ПЕРЕПІДКЛЮЧИТИСЯ», щоб повернутися в ту саму катку.");
+});
+socket.on("player_connection_state",data=>{
+  const enemy=Object.values(enemies).find(e=>String(e.userId)===String(data?.userId));
+  if(enemy)enemy.connected=data.connected!==false;
 });
 
 // mobile controls: track each touch independently so move/look/fire can be used together.
