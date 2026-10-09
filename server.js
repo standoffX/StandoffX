@@ -627,7 +627,7 @@ app.post("/api/register", registrationRateLimit, (req, res) => {
   saveUsers();
   saveInventory();
 
-  const token = createSession(user.id);
+  const token = createSession(user.uuid || user.id);
   setSessionCookie(res, token);
   res.json({
     success: true,
@@ -692,7 +692,7 @@ app.post("/api/login", loginRateLimit, (req, res) => {
   ensureUserShape(user);
   saveUsers();
 
-  const token = createSession(user.id);
+  const token = createSession(user.uuid || user.id);
   setSessionCookie(res, token);
   res.json({ success: true, redirect: "/game", user: publicUser(user) });
 });
@@ -1332,6 +1332,7 @@ function emitQueueCount(io) {
       mapName: PLAYABLE_MAPS[entry.map]?.name || PLAYABLE_MAPS.M3_Maze.name,
       players: modePlayers.map(p => ({
         userId: p.userId,
+        uuid: p.uuid,
         nickname: p.nickname,
         connected: true,
         ready: false
@@ -1363,6 +1364,7 @@ function createMatch(io, mode, mapId = "M3_Maze") {
     players: players.map((p, i) => ({
       socketId: p.socketId,
       userId: p.userId,
+      uuid: p.uuid,
       nickname: p.nickname,
       role: mode === "hide_seek" ? (i === hunterIndex ? "hunter" : "runner") : (i % 2 === 0 ? "teamA" : "teamB"),
       team: mode === "team_fight" ? (i % 2 === 0 ? "A" : "B") : null,
@@ -1397,6 +1399,7 @@ function createMatch(io, mode, mapId = "M3_Maze") {
     io.to(p.socketId).emit("match_found", {
       matchId,
       userId: p.userId,
+      uuid: p.uuid,
       mode: cfg.id,
       modeName: cfg.name,
       map: match.map
@@ -1961,6 +1964,7 @@ io.on("connection", socket => {
       socketId: socket.id,
       userId: user.id,
       nickname: user.nickname,
+      uuid: user.uuid,
       mode,
       map
     });
@@ -2021,6 +2025,7 @@ io.on("connection", socket => {
       modeName: match.modeName,
       me: {
         userId: player.userId,
+        uuid: users.find(user => user.id === player.userId)?.uuid || "",
         nickname: player.nickname,
         role: player.role,
         team: player.team,
@@ -2031,6 +2036,7 @@ io.on("connection", socket => {
       },
       players: match.players.map(p => ({
         userId: p.userId,
+        uuid: p.uuid || "",
         nickname: p.nickname,
         role: p.role,
         team: p.team,
