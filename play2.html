@@ -60,7 +60,6 @@
 </div>
 
 <div id="results"><div class="resultBox"><h2 id="resultTitle">МАТЧ ЗАВЕРШЕНО</h2><div id="resultText" class="reward"></div><button id="menuResult">У МЕНЮ</button></div></div>
-<button id="leaveGameDesktop" type="button">← МЕНЮ</button>
 <div id="trainingControls" style="display:none;position:fixed;right:14px;top:72px;width:190px;z-index:15;padding:12px;background:#090f1cdd;border:1px solid #ffffff20;border-radius:8px;pointer-events:auto">
   <b style="font-size:11px;letter-spacing:1px">TEST LAB</b>
   <div id="botStatus" style="margin:8px 0;color:#9baac0;font-size:10px">Бота ще немає</div>
@@ -87,7 +86,6 @@
   <button id="fireBtn" class="mbtn fire">FIRE</button>
   <button id="jumpBtn" class="mbtn jump">JUMP</button>
   <button id="reloadBtn" class="mbtn reload">RELOAD</button>
-  <button id="leaveGameMobile" class="mbtn leave" type="button">×</button>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -119,6 +117,56 @@ scene.background=new THREE.Color(0x87a9c2);
 scene.fog=new THREE.Fog(0x87a9c2,70,260);
 
 const camera=new THREE.PerspectiveCamera(74,innerWidth/innerHeight,.08,700);
+scene.add(camera);
+
+// Procedural first-person rifle: visible even when optional weapon GLB files are absent.
+const weaponView=new THREE.Group();
+weaponView.name="StandoffX First-Person Rifle";
+let weaponKick=0;
+const weaponMaterials={
+  receiver:new THREE.MeshStandardMaterial({color:0x202b38,metalness:.72,roughness:.32}),
+  dark:new THREE.MeshStandardMaterial({color:0x0b1119,metalness:.38,roughness:.42}),
+  steel:new THREE.MeshStandardMaterial({color:0x465565,metalness:.86,roughness:.24}),
+  grip:new THREE.MeshStandardMaterial({color:0x111820,metalness:.12,roughness:.72}),
+  accent:new THREE.MeshStandardMaterial({color:0x087d9b,emissive:0x00394b,emissiveIntensity:.75,metalness:.6,roughness:.28}),
+  glass:new THREE.MeshStandardMaterial({color:0x182c40,emissive:0x06202c,emissiveIntensity:.45,metalness:.65,roughness:.2})
+};
+function weaponPart(geometry,material,position,rotation=[0,0,0]){
+  const mesh=new THREE.Mesh(geometry,material);
+  mesh.position.set(position[0],position[1],position[2]);
+  mesh.rotation.set(rotation[0],rotation[1],rotation[2]);
+  mesh.castShadow=false;mesh.receiveShadow=false;
+  weaponView.add(mesh);
+  return mesh;
+}
+// Stock and receiver.
+weaponPart(new THREE.BoxGeometry(.13,.115,.22),weaponMaterials.grip,[0,.005,.175]);
+weaponPart(new THREE.BoxGeometry(.135,.12,.045),weaponMaterials.dark,[0,.008,.298]);
+weaponPart(new THREE.BoxGeometry(.18,.135,.34),weaponMaterials.receiver,[0,0,-.065]);
+weaponPart(new THREE.BoxGeometry(.145,.06,.24),weaponMaterials.dark,[0,.083,-.12]);
+// Handguard, barrel and muzzle.
+weaponPart(new THREE.BoxGeometry(.145,.105,.245),weaponMaterials.steel,[0,.005,-.315]);
+weaponPart(new THREE.CylinderGeometry(.022,.025,.31,10),weaponMaterials.dark,[0,.025,-.442],[Math.PI/2,0,0]);
+weaponPart(new THREE.CylinderGeometry(.035,.032,.095,10),weaponMaterials.steel,[0,.025,-.596],[Math.PI/2,0,0]);
+weaponPart(new THREE.CylinderGeometry(.021,.021,.009,10),weaponMaterials.dark,[0,.025,-.647],[Math.PI/2,0,0]);
+// Magazine, pistol grip and front support grip.
+weaponPart(new THREE.BoxGeometry(.092,.19,.115),weaponMaterials.grip,[0,-.145,-.105],[-.14,0,0]);
+weaponPart(new THREE.BoxGeometry(.086,.155,.105),weaponMaterials.dark,[0,-.13,.035],[-.2,0,0]);
+weaponPart(new THREE.BoxGeometry(.072,.12,.075),weaponMaterials.grip,[0,-.105,-.292],[-.12,0,0]);
+// Top rail and compact optic.
+weaponPart(new THREE.BoxGeometry(.048,.026,.205),weaponMaterials.dark,[0,.125,-.135]);
+weaponPart(new THREE.BoxGeometry(.075,.065,.07),weaponMaterials.receiver,[0,.169,-.095]);
+weaponPart(new THREE.BoxGeometry(.052,.018,.045),weaponMaterials.glass,[0,.205,-.095]);
+weaponPart(new THREE.BoxGeometry(.014,.018,.13),weaponMaterials.accent,[.078,.04,-.32]);
+weaponPart(new THREE.BoxGeometry(.014,.018,.13),weaponMaterials.accent,[-.078,.04,-.32]);
+// Subtle sights and gloved hands give the weapon a readable first-person silhouette.
+weaponPart(new THREE.BoxGeometry(.025,.024,.025),weaponMaterials.accent,[0,.149,-.295]);
+weaponPart(new THREE.SphereGeometry(.057,8,6),weaponMaterials.grip,[.085,-.155,.005]);
+weaponPart(new THREE.SphereGeometry(.06,8,6),weaponMaterials.grip,[-.085,-.145,-.29]);
+weaponView.position.set(.32,-.285,-.62);
+weaponView.rotation.set(-.035,-.07,-.02);
+camera.add(weaponView);
+
 const renderer=new THREE.WebGLRenderer({
   antialias:false,
   powerPreference:"high-performance",
@@ -151,11 +199,12 @@ $("overlay").addEventListener("click",requestMouseLook);
 renderer.domElement.addEventListener("click",requestMouseLook);
 document.addEventListener("pointerlockchange",()=>{
   if(document.pointerLockElement===document.body){
-    $("clickHint").textContent="Миша: огляд · ESC: звільнити курсор · WASD: рух";
+    $("clickHint").textContent="Миша: огляд · ESC: вихід у меню · WASD: рух";
   }
 });
 controls.addEventListener("lock",()=>{if(matchPhase==="game")$("overlay").style.display="none"});
-controls.addEventListener("unlock",()=>{if(matchPhase==="game")$("overlay").style.display="flex"});
+// Escape exits the current session; do not show a pause overlay that requires another click.
+controls.addEventListener("unlock",()=>{if(!leavingGame)leaveGame()});
 
 const loader=new GLTFLoader();
 const mapObjects=[];
@@ -180,6 +229,7 @@ let lastMoveSend=0;
 let lastShot=0;
 let ammo=30;
 let reloading=false;
+let leavingGame=false;
 let jumpQueued=false;
 let fireHeld=false;
 let lookTouch=null;
@@ -341,6 +391,7 @@ function updateVisual(){
   playerVisual.position.copy(player.position);
   playerVisual.rotation.y=player.rotationY;
   playerVisual.visible=isThird;
+  weaponView.visible=matchPhase==="game"&&!isThird;
 }
 function blocked(dir){
   if(!mapObjects.length)return false;
@@ -409,6 +460,7 @@ function shoot(){
   const now=performance.now();
   if(now-lastShot<125||ammo<=0){if(ammo<=0)startReload();return}
   lastShot=now;ammo--; $("ammoNum").textContent=ammo;
+  weaponKick=Math.min(.18,weaponKick+.075);
   const dir=new THREE.Vector3();
   camera.getWorldDirection(dir);dir.normalize();
   if(isTrainingMode)socket.emit("training_shoot",{trainingId,dx:dir.x,dy:dir.y,dz:dir.z,damage:34});
@@ -441,10 +493,12 @@ addEventListener("mousedown",e=>{if(e.button===0)shoot()});
 
 function setOverlayGame(){
   $("overlayTitle").textContent=mode==="team_fight"?"TEAM FIGHT":mode==="field_test"?"FIELD TEST":mode==="training"?"TRAINING":"HIDE & SEEK";
-  $("clickHint").textContent="Клікни для огляду мишкою. WASD — рух · ESC — курсор";
+  $("clickHint").textContent="Клікни для огляду мишкою. WASD — рух · ESC — вихід у меню";
   if(/Android|iPhone|iPad/i.test(navigator.userAgent)) $("overlay").style.display="none";
 }
 function leaveGame(){
+  if(leavingGame)return;
+  leavingGame=true;
   try{
     if(socket && socket.connected){
       if(isTrainingMode)socket.emit("end_training",{trainingId});
@@ -456,9 +510,13 @@ function leaveGame(){
     location.href="/game";
   },180);
 }
+addEventListener("keydown",e=>{
+  if(e.code!=="Escape")return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  leaveGame();
+},{capture:true});
 $("menuResult").addEventListener("click",leaveGame);
-$("leaveGameDesktop").addEventListener("click",leaveGame);
-$("leaveGameMobile").addEventListener("click",leaveGame);
 $("spawnBot").addEventListener("click",()=>socket.emit("training_spawn_bot",{trainingId}));
 $("resetTraining").addEventListener("click",()=>{
   if(mode==="training")player.position.set(5,0,5);else player.position.set(0,0,0);player.rotationY=0;velocityY=0;jumping=false;
@@ -648,6 +706,16 @@ function animate(){
     $("fieldCoords").textContent="X "+player.position.x.toFixed(1)+" · Y "+player.position.y.toFixed(1)+" · Z "+player.position.z.toFixed(1);
     lastFieldTelemetry=now;
   }
+  // Small idle/movement sway and kick-back make the rifle track the first-person camera.
+  const moving=matchPhase==="game"&&(keys.w||keys.a||keys.s||keys.d);
+  weaponKick=Math.max(0,weaponKick-dt*1.9);
+  weaponView.visible=matchPhase==="game"&&!isThird;
+  weaponView.position.x=.32+(moving?Math.sin(now*.012)*.009:0);
+  weaponView.position.y=-.285+(moving?Math.abs(Math.sin(now*.014))*.009:0);
+  weaponView.position.z=-.62+weaponKick*.48;
+  weaponView.rotation.x=-.035+weaponKick*.75+(moving?Math.sin(now*.013)*.015:0);
+  weaponView.rotation.y=-.07+(moving?Math.sin(now*.007)*.02:0);
+  weaponView.rotation.z=-.02+(moving?Math.cos(now*.014)*.014:0);
   renderer.render(scene,camera);
 }
 

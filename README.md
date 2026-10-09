@@ -25,7 +25,9 @@ StandoffX — browser FPS prototype на Three.js + Socket.IO.
 - server-side match state;
 - rate-limited movement validation;
 - reconnect-aware player identity;
-- Three.js gameplay client;
+- Three.js gameplay client із вбудованою low-poly first-person rifle, видимою без зовнішніх GLB моделей;
+- анімація зброї: легке хитання під час руху та віддача під час пострілу;
+- клавіша Escape повертає в меню й завершує поточну матчеву/тестову сесію без окремої кнопки виходу;
 - fallback map, якщо 3D map не завантажилась;
 - /api/health з безпечним статусом MongoDB Atlas;
 - адміністративний Atlas ping через /api/admin/atlas/check;
