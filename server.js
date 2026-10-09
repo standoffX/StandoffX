@@ -2163,7 +2163,8 @@ io.on("connection", socket => {
         y: p.pos.y,
         z: p.pos.z,
         rotY: p.rotY,
-        anim: p.anim
+        anim: p.anim,
+        connected: p.isBot || Boolean(p.socketId)
       }))
     });
 
