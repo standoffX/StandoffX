@@ -22,7 +22,7 @@
 #results{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;background:#05080def}.resultBox{padding:28px;width:min(420px,90vw);background:#111821;border:1px solid #ffffff14;border-radius:11px;text-align:center}.resultBox h2{margin:0 0 12px}.resultBox .reward{font-size:20px;font-weight:900}.resultBox button{margin-top:18px;width:100%;height:44px;border:0;border-radius:6px;background:#327cff;color:white;font-weight:900}
 #mobile{display:none;position:fixed;inset:0;z-index:20;pointer-events:none}.stick{position:absolute;left:20px;bottom:25px;width:125px;height:125px;border-radius:50%;background:#ffffff0d;border:1px solid #ffffff1c;pointer-events:auto;touch-action:none}.stick i{position:absolute;left:35px;top:35px;width:55px;height:55px;border-radius:50%;background:#ffffff22}.mbtn{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid #ffffff1d;background:#0b111bd9;color:#fff;font-size:10px;font-weight:950;pointer-events:auto;touch-action:none}.fire{right:20px;bottom:64px;background:#3e6fb3e6}.jump{right:100px;bottom:145px}.reload{right:102px;bottom:64px}.leave{right:20px;top:20px;width:48px;height:40px;border-radius:6px}
 #trainingControls button:hover{filter:brightness(1.15)}
-@media(max-width:800px){#trainingControls{top:auto;right:8px;bottom:220px;width:155px;padding:8px}.fire{bottom:44px}}
+@media(max-width:800px){#trainingControls{top:auto;left:8px;right:auto;bottom:190px;width:155px;padding:8px}.fire{bottom:44px}}
 @media(max-width:800px),(pointer:coarse){#mobile{display:block}#hint{display:none}.top{top:8px}.players{grid-template-columns:1fr}.panel{max-height:90vh;overflow:auto}}
 </style>
 </head>
@@ -281,7 +281,7 @@ function sendMove(force=false){
   if(!force&&now-lastMoveSend<50)return;
   lastMoveSend=now;
   const data={x:player.position.x,y:player.position.y,z:player.position.z,rotY:player.rotationY,anim:(keys.w||keys.s||keys.a||keys.d)?"Running":"Idle"};
-  if(isTrainingMode)socket.emit("training_move",{trainingId,...data});
+  if(isTrainingMode)socket.emit("training_move",{trainingId,viewY:camera.rotation.y,...data});
   else socket.emit("player_moved",{matchId,myId,userId:myId,...data});
 }
 function finishClientReady(){
