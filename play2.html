@@ -24,7 +24,7 @@
 #leaveGameDesktop{position:fixed;right:14px;top:14px;z-index:25;pointer-events:auto;border:1px solid #ffffff28;background:#0b111bd9;color:#fff;border-radius:6px;padding:10px 13px;font-size:11px;font-weight:900;cursor:pointer}
 @media(max-width:800px),(pointer:coarse){#leaveGameDesktop{display:none}}.stick{position:absolute;left:20px;bottom:25px;width:125px;height:125px;border-radius:50%;background:#ffffff0d;border:1px solid #ffffff1c;pointer-events:auto;touch-action:none}.stick i{position:absolute;left:35px;top:35px;width:55px;height:55px;border-radius:50%;background:#ffffff22}.mbtn{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid #ffffff1d;background:#0b111bd9;color:#fff;font-size:10px;font-weight:950;pointer-events:auto;touch-action:none}.fire{right:20px;bottom:64px;background:#3e6fb3e6}.jump{right:100px;bottom:145px}.reload{right:102px;bottom:64px}.leave{right:20px;top:20px;width:48px;height:40px;border-radius:6px}
 #trainingControls button:hover{filter:brightness(1.15)}
-@media(max-width:800px){#trainingControls{top:auto;left:8px;right:auto;bottom:190px;width:155px;padding:8px}.fire{bottom:44px}}
+@media(max-width:800px){#trainingControls{top:auto;left:8px;right:auto;bottom:190px;width:185px;padding:8px}.fire{bottom:44px}}
 @media(max-width:800px),(pointer:coarse){#mobile{display:block}#hint{display:none}.top{top:8px}.players{grid-template-columns:1fr}.panel{max-height:90vh;overflow:auto}}
 </style>
 </head>
@@ -53,17 +53,20 @@
 
 <div id="results"><div class="resultBox"><h2 id="resultTitle">МАТЧ ЗАВЕРШЕНО</h2><div id="resultText" class="reward"></div><button id="menuResult">У МЕНЮ</button></div></div>
 <button id="leaveGameDesktop" type="button">← МЕНЮ</button>
-<div id="trainingControls" style="display:none;position:fixed;right:14px;top:72px;width:190px;z-index:15;padding:12px;background:#090f1cdd;border:1px solid #ffffff20;border-radius:8px;pointer-events:auto">
-  <b style="font-size:11px;letter-spacing:1px">TEST LAB</b>
-  <div id="botStatus" style="margin:8px 0;color:#9baac0;font-size:10px">Бота ще немає</div>
-  <button id="spawnBot" style="width:100%;margin:3px 0;padding:9px;background:#327cff;color:#fff;border:0;border-radius:5px;font-weight:900">SPAWN BOT</button>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
-    <button data-bot-action="push" style="padding:8px;background:#182538;border:1px solid #ffffff18;color:#fff;border-radius:5px">PUSH</button>
-    <button data-bot-action="kick" style="padding:8px;background:#182538;border:1px solid #ffffff18;color:#fff;border-radius:5px">KICK</button>
-    <button data-bot-action="boost" style="padding:8px;background:#182538;border:1px solid #ffffff18;color:#fff;border-radius:5px">BOOST</button>
-    <button data-bot-action="reset" style="padding:8px;background:#182538;border:1px solid #ffffff18;color:#fff;border-radius:5px">RESET BOT</button>
+<div id="trainingControls" style="display:none;position:fixed;right:14px;top:72px;width:220px;z-index:15;padding:12px;background:#090f1cdd;border:1px solid #1de9ff55;border-radius:8px;pointer-events:none;backdrop-filter:blur(8px)">
+  <b style="font-size:11px;letter-spacing:1px;color:#1de9ff">TRAINING · KEYBOARD</b>
+  <div id="botStatus" style="margin:8px 0;color:#d7e4f5;font-size:11px">Бота ще немає</div>
+  <div id="trainingKeyHints" style="display:grid;grid-template-columns:1fr auto;gap:6px;color:#aebdd0;font-size:10px;line-height:1.4"></div>
+  <div style="margin-top:9px;color:#71849b;font-size:9px">Зміни клавіші в меню → Налаштування → Клавіші тренування</div>
+</div>
+<div id="pauseMenu" style="display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;background:#020611c9;backdrop-filter:blur(8px);pointer-events:auto">
+  <div style="width:min(360px,calc(100vw - 36px));padding:24px;background:#091323;border:1px solid #1de9ff88;border-radius:14px;box-shadow:0 0 45px #00cfff22;color:#edf7ff;text-align:center">
+    <div style="font-size:11px;letter-spacing:3px;color:#1de9ff">STANDOFFX</div>
+    <h2 style="margin:10px 0 5px;font-size:24px">МЕНЮ</h2>
+    <p style="margin:0 0 18px;color:#92a7c1;font-size:12px">Натисни M, щоб повернутися до гри</p>
+    <button id="resumeGame" style="width:100%;padding:12px;border:0;border-radius:7px;background:#1de9ff;color:#04101b;font-weight:900">ПРОДОВЖИТИ · M</button>
+    <button id="pauseLeave" style="width:100%;padding:12px;margin-top:8px;border:1px solid #ffffff24;border-radius:7px;background:#172235;color:#edf7ff;font-weight:800">ПОВЕРНУТИСЯ В ЛОБІ</button>
   </div>
-  <button id="resetTraining" style="width:100%;margin-top:7px;padding:8px;background:#632e40;color:#fff;border:0;border-radius:5px">RESET SESSION</button>
 </div>
 
 <div id="mobile">
@@ -170,6 +173,24 @@ let lastCollisionCheck=0;
 let cachedCollisionClear=true;
 
 const keys={w:false,s:false,a:false,d:false,shift:false};
+const DEFAULT_TRAINING_BINDS={spawnBot:"KeyN",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
+const TRAINING_ACTION_NAMES={spawnBot:"СТВОРИТИ БОТА",push:"PUSH",kick:"KICK",boost:"BOOST",resetBot:"СКИНУТИ БОТА",resetSession:"СКИНУТИ ТРЕНУВАННЯ",menu:"МЕНЮ"};
+function readTrainingBinds(){
+  try{
+    const stored=JSON.parse(localStorage.getItem("sx_settings")||"{}").keybinds||{};
+    return Object.fromEntries(Object.entries(DEFAULT_TRAINING_BINDS).map(([action,code])=>[action,typeof stored[action]==="string"&&stored[action]?stored[action]:code]));
+  }catch{return {...DEFAULT_TRAINING_BINDS}}
+}
+function trainingKeyLabel(code){
+  if(code?.startsWith("Key"))return code.slice(3);
+  if(code?.startsWith("Digit"))return code.slice(5);
+  return ({Space:"SPACE",Escape:"ESC",ArrowUp:"↑",ArrowDown:"↓",ArrowLeft:"←",ArrowRight:"→"})[code]||String(code||"—").replace(/^Numpad/,"NUM ");
+}
+function renderTrainingKeyHints(){
+  const el=$("trainingKeyHints");if(!el)return;
+  const binds=readTrainingBinds();
+  el.innerHTML=["spawnBot","push","kick","boost","resetBot","resetSession"].map(action=>"<span>"+TRAINING_ACTION_NAMES[action]+"</span><b style='color:#1de9ff'>"+trainingKeyLabel(binds[action])+"</b>").join("");
+}
 
 function buildFieldArena(){
   if(mapLoadFinished)return;
@@ -383,7 +404,7 @@ function startReload(){
   setTimeout(()=>{ammo=30;reloading=false;$("ammoNum").textContent=ammo},900);
 }
 function shoot(){
-  if((mode!=="team_fight"&&!isTrainingMode)||matchPhase!=="game"||reloading)return;
+  if($("pauseMenu")?.style.display==="flex"||(mode!=="team_fight"&&!isTrainingMode)||matchPhase!=="game"||reloading)return;
   const now=performance.now();
   if(now-lastShot<125||ammo<=0){if(ammo<=0)startReload();return}
   lastShot=now;ammo--; $("ammoNum").textContent=ammo;
@@ -398,6 +419,13 @@ function fireLoop(){
 function queueJump(){if(matchPhase==="game")jumpQueued=true}
 
 addEventListener("keydown",e=>{
+  if(e.repeat)return;
+  const binds=readTrainingBinds();
+  if(e.code===binds.menu){e.preventDefault();togglePauseMenu();return}
+  if(isTrainingMode&&matchPhase==="game"){
+    const action=Object.keys(binds).find(name=>name!=="menu"&&binds[name]===e.code);
+    if(action){e.preventDefault();runTrainingAction(action);return}
+  }
   if(e.code==="KeyW"||e.code==="ArrowUp")keys.w=true;
   if(e.code==="KeyS"||e.code==="ArrowDown")keys.s=true;
   if(e.code==="KeyA"||e.code==="ArrowLeft")keys.a=true;
@@ -415,7 +443,7 @@ addEventListener("keyup",e=>{
   if(e.code==="KeyD"||e.code==="ArrowRight")keys.d=false;
   if(e.code==="ShiftLeft"||e.code==="ShiftRight")keys.shift=false;
 });
-addEventListener("mousedown",e=>{if(e.button===0)shoot()});
+addEventListener("mousedown",e=>{if(e.button===0&&$("pauseMenu")?.style.display!=="flex")shoot()});
 
 function setOverlayGame(){
   $("overlayTitle").textContent=mode==="team_fight"?"TEAM FIGHT":mode==="field_test"?"FIELD TEST":mode==="training"?"TRAINING":"HIDE & SEEK";
@@ -437,12 +465,31 @@ function leaveGame(){
 $("menuResult").addEventListener("click",leaveGame);
 $("leaveGameDesktop").addEventListener("click",leaveGame);
 $("leaveGameMobile").addEventListener("click",leaveGame);
-$("spawnBot").addEventListener("click",()=>socket.emit("training_spawn_bot",{trainingId}));
-$("resetTraining").addEventListener("click",()=>{
-  if(mode==="training")player.position.set(5,0,5);else player.position.set(0,0,0);player.rotationY=0;velocityY=0;jumping=false;
-  socket.emit("training_reset",{trainingId});
-});
-document.querySelectorAll("[data-bot-action]").forEach(b=>b.addEventListener("click",()=>socket.emit("training_bot_action",{trainingId,action:b.dataset.botAction})));
+function runTrainingAction(action){
+  if(!isTrainingMode||matchPhase!=="game")return;
+  if(action==="spawnBot"){socket.emit("training_spawn_bot",{trainingId});return}
+  if(action==="resetBot"){socket.emit("training_bot_action",{trainingId,action:"reset"});return}
+  if(action==="resetSession"){
+    if(mode==="training")player.position.set(5,0,5);else player.position.set(0,0,0);
+    player.rotationY=0;velocityY=0;jumping=false;
+    socket.emit("training_reset",{trainingId});return;
+  }
+  if(["push","kick","boost"].includes(action))socket.emit("training_bot_action",{trainingId,action});
+}
+function togglePauseMenu(force){
+  const menu=$("pauseMenu");
+  const open=typeof force==="boolean"?force:menu.style.display!=="flex";
+  menu.style.display=open?"flex":"none";
+  if(open){
+    keys.w=keys.a=keys.s=keys.d=keys.shift=false;
+    jumpQueued=false;fireHeld=false;
+    try{controls.unlock()}catch{}
+  }
+  else if(matchPhase==="game"&&!/Android|iPhone|iPad/i.test(navigator.userAgent)){try{controls.lock()}catch{}}
+}
+$("resumeGame").addEventListener("click",()=>togglePauseMenu(false));
+$("pauseLeave").addEventListener("click",leaveGame);
+renderTrainingKeyHints();
 
 socket.on("training_init",data=>{
   if(!isTrainingMode)return;
@@ -451,6 +498,7 @@ socket.on("training_init",data=>{
   ensurePlayerVisual();
   if(data.spawn)player.position.set(data.spawn.x||0,data.spawn.y||0,data.spawn.z||0);
   $("trainingControls").style.display="block";
+  renderTrainingKeyHints();
   $("overlay").style.display="none";
   $("phase").textContent="TRAINING";
   if(data.bot)applyTrainingBot(data.bot);else removeTrainingBot();
@@ -591,7 +639,7 @@ function animate(){
   const now=performance.now(),dt=Math.min(.05,(now-previous)/1000);previous=now;
   const mv=window.sxMove||{x:0,y:0};
 
-  if(matchPhase==="game"&&player){
+  if(matchPhase==="game"&&player&&$("pauseMenu")?.style.display!=="flex"){
     if(mv.x||mv.y){keys.a=mv.x<-.18;keys.d=mv.x>.18;keys.w=mv.y<-.18;keys.s=mv.y>.18}
     const dir=new THREE.Vector3();
     camera.getWorldDirection(dir);dir.y=0;dir.normalize();

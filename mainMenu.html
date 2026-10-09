@@ -56,6 +56,10 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;background:lin
 .pill{border:1px solid #cad0ff24;background:#1116388f;border-radius:5px;padding:7px 10px;color:#e4e8ff;font-size:11px}
 .content{flex:1;overflow:auto;padding:16px 20px 24px}
 .screen{display:none;max-width:1600px;margin:0 auto}.screen.active{display:block}
+.keybind-list{display:grid;grid-template-columns:1fr;gap:7px;margin-top:12px}
+.keybind-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel)}
+.keybind-button{min-width:76px;font-weight:900;letter-spacing:1px}
+.keybind-button.waiting{border-color:var(--accent);color:var(--accent);box-shadow:0 0 14px color-mix(in srgb,var(--accent) 28%,transparent)}
 .home-layout{display:grid;grid-template-columns:minmax(265px,330px) minmax(170px,220px) minmax(315px,1fr);gap:12px;align-items:start}
 .panel{background:linear-gradient(145deg,#161b45db,#111837db);border:1px solid #c3ccff26;box-shadow:0 8px 24px #090a251c;border-radius:4px;overflow:hidden}
 .panelhead{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#0b1230b3;border-bottom:1px solid #c3ccff16;font-size:10px;font-weight:900;letter-spacing:1.2px;color:#c5c9e9}
@@ -225,7 +229,20 @@ button:disabled{opacity:.45;cursor:not-allowed}
 
 <section id="stats" class="screen"><div class="sectionhead"><h2>СТАТИСТИКА</h2></div><div class="cardgrid"><div class="statcard"><small>XP</small><strong id="statsXP">0</strong></div><div class="statcard"><small>GOLD</small><strong id="statsGold">0</strong></div><div class="statcard"><small>COMPETITIVE MMR</small><strong id="statsComp">1000</strong></div><div class="statcard"><small>ALLIES MMR</small><strong id="statsAllies">1000</strong></div></div></section>
 
-<section id="settings" class="screen"><div class="sectionhead"><h2>НАЛАШТУВАННЯ</h2></div><div class="panel panelbody"><h3 style="margin:0 0 8px">ТЕМА ІНТЕРФЕЙСУ</h3><div class="muted">Обери один із трьох неонових стилів. Вибір зберігається на цьому пристрої.</div><div class="theme-picker"><button class="theme-option" data-theme-choice="cyan">01 · CYBER CYAN</button><button class="theme-option" data-theme-choice="violet">02 · NEON VIOLET</button><button class="theme-option" data-theme-choice="red">03 · RED ALERT</button></div><h3>КЕРУВАННЯ</h3><label>Чутливість миші <input id="sens" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">ADS <input id="ads" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">Crosshair <input id="crossSize" type="range" min="8" max="36" step="1" style="width:100%"></label><label style="display:block;margin-top:16px">Gap <input id="crossGap" type="range" min="0" max="12" step="1" style="width:100%"></label></div></section>
+<section id="settings" class="screen"><div class="sectionhead"><h2>НАЛАШТУВАННЯ</h2></div><div class="panel panelbody"><h3 style="margin:0 0 8px">ТЕМА ІНТЕРФЕЙСУ</h3><div class="muted">Обери один із трьох неонових стилів. Вибір зберігається на цьому пристрої.</div><div class="theme-picker"><button class="theme-option" data-theme-choice="cyan">01 · CYBER CYAN</button><button class="theme-option" data-theme-choice="violet">02 · NEON VIOLET</button><button class="theme-option" data-theme-choice="red">03 · RED ALERT</button></div><h3>КЕРУВАННЯ</h3><label>Чутливість миші <input id="sens" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">ADS <input id="ads" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">Crosshair <input id="crossSize" type="range" min="8" max="36" step="1" style="width:100%"></label><label style="display:block;margin-top:16px">Gap <input id="crossGap" type="range" min="0" max="12" step="1" style="width:100%"></label>
+<h3 style="margin-top:24px">КЛАВІШІ ТРЕНУВАННЯ</h3>
+<div class="muted">Натисни кнопку дії, а потім потрібну клавішу. Прив’язки зберігаються на цьому пристрої.</div>
+<div class="keybind-list">
+  <div class="keybind-row"><span>Створити бота</span><button type="button" class="secondary keybind-button" data-bind-action="spawnBot">N</button></div>
+  <div class="keybind-row"><span>Push бота</span><button type="button" class="secondary keybind-button" data-bind-action="push">J</button></div>
+  <div class="keybind-row"><span>Kick бота</span><button type="button" class="secondary keybind-button" data-bind-action="kick">K</button></div>
+  <div class="keybind-row"><span>Boost бота</span><button type="button" class="secondary keybind-button" data-bind-action="boost">L</button></div>
+  <div class="keybind-row"><span>Скинути бота</span><button type="button" class="secondary keybind-button" data-bind-action="resetBot">U</button></div>
+  <div class="keybind-row"><span>Скинути тренування</span><button type="button" class="secondary keybind-button" data-bind-action="resetSession">I</button></div>
+  <div class="keybind-row"><span>Меню в грі</span><button type="button" class="secondary keybind-button" data-bind-action="menu">M</button></div>
+</div>
+<button id="resetKeybinds" type="button" class="secondary" style="margin-top:12px">СКИНУТИ ПРИВ’ЯЗКИ</button>
+<div id="keybindStatus" class="muted" role="status" style="margin-top:8px"></div></div></section>
 
 </main>
 </div>
@@ -277,10 +294,26 @@ function show(view){
   document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("active",s.id===view));
   document.querySelectorAll(".rail button[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
   $("title") && ($("title").textContent=view.toUpperCase());
+  if(view==="profile")refreshProfileIdentity();
   if(view==="friends")loadFriends();
   if(view==="clan")loadClan();
   if(view==="inventory")loadInventory();
   if(view==="market")loadMarket();
+}
+async function refreshProfileIdentity(){
+  const uuidEl=$("profilePageUuid");
+  if(uuidEl)uuidEl.textContent=me?.uuid||"Завантаження UUID…";
+  try{
+    let fresh=(await api("/api/me")).user;
+    if(!fresh?.uuid){
+      const fallback=await api("/api/user-data?id="+encodeURIComponent(me?.id||""));
+      fresh=fallback.user||fresh;
+    }
+    if(fresh){me={...me,...fresh};render();}
+    if(uuidEl)uuidEl.textContent=me?.uuid||"UUID не повернув сервер";
+  }catch{
+    if(uuidEl)uuidEl.textContent=me?.uuid||"UUID не вдалося завантажити";
+  }
 }
 function render(){
   if(!me)return;
@@ -300,7 +333,7 @@ function render(){
   $("profileAvatar").src=me.playerAvatar||"/avatars/default.jpg";
   $("profilePageNick").textContent=me.nickname||"PLAYER";
   $("profilePageId").textContent=id;
-  $("profilePageUuid").textContent=me.uuid||"UUID відсутній";
+  $("profilePageUuid").textContent=me.uuid||"Завантаження UUID…";
   $("profileXP").textContent=me.XP||0;$("profileGold").textContent=me.gold||0;
   $("profileComp").textContent=me.MMRCompetitive||1000;$("profileAllies").textContent=me.MMRAllies||1000;
   $("statsXP").textContent=me.XP||0;$("statsGold").textContent=me.gold||0;
@@ -341,7 +374,11 @@ $("cancelSearch").addEventListener("click",cancelSearch);
 $("refreshClan").addEventListener("click",loadClan);
 $("refreshMarket").addEventListener("click",loadMarket);
 $("copyId").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(cleanId(me.id));$("copyId").textContent="СКОПІЙОВАНО ✓"}catch{}});
-$("copyUuid").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(me.uuid||"");$("copyUuid").textContent="СКОПІЙОВАНО ✓"}catch{}});
+$("copyUuid").addEventListener("click",async()=>{
+  const uuid=me?.uuid||$("profilePageUuid").textContent;
+  if(!uuid||uuid.includes("UUID ")||uuid.includes("Завантаження"))return notifyToast("UUID ще не завантажено.");
+  try{await navigator.clipboard.writeText(uuid);$("copyUuid").textContent="СКОПІЙОВАНО ✓"}catch{notifyToast("Не вдалося скопіювати UUID.")}
+});
 $("findFriend").addEventListener("click",findFriend);
 
 function openPlay(){
@@ -578,11 +615,75 @@ $("inventoryList").addEventListener("click",e=>{const b=e.target.closest("[data-
 async function loadMarket(){try{const d=await api("/api/market/items");$("marketList").innerHTML=d.items.map(x=>"<div class='row'><div><b>"+esc(x.skinName)+"</b><div class='muted'>"+esc(x.sellerNick)+" · "+esc(x.rarity)+"</div></div><div class='actions'><b>"+x.price+" G</b><button class='primary' data-buy='"+esc(x.lotId)+"'>КУПИТИ</button></div></div>").join("")||"<div class='muted'>Ринок порожній.</div>"}catch{}}
 $("marketList").addEventListener("click",e=>{const b=e.target.closest("[data-buy]");if(!b)return;api("/api/market/buy",{method:"POST",body:JSON.stringify({lotId:b.dataset.buy})}).then(async()=>{me=(await api("/api/me")).user;render();loadMarket();loadInventory()}).catch(err=>alert(err.message))});
 
+const DEFAULT_KEYBINDS={spawnBot:"KeyN",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
+const KEYBIND_LABELS={spawnBot:"Створити бота",push:"Push бота",kick:"Kick бота",boost:"Boost бота",resetBot:"Скинути бота",resetSession:"Скинути тренування",menu:"Меню в грі"};
+let keybindCapture=null;
+function readKeybinds(){
+  try{
+    const stored=JSON.parse(localStorage.getItem("sx_settings")||"{}").keybinds||{};
+    const result={...DEFAULT_KEYBINDS};
+    for(const action of Object.keys(result))if(typeof stored[action]==="string"&&stored[action])result[action]=stored[action];
+    return result;
+  }catch{return {...DEFAULT_KEYBINDS}}
+}
+function keyLabel(code){
+  if(!code)return "—";
+  if(code.startsWith("Key"))return code.slice(3);
+  if(code.startsWith("Digit"))return code.slice(5);
+  return ({Space:"SPACE",Escape:"ESC",ShiftLeft:"L-SHIFT",ShiftRight:"R-SHIFT",ControlLeft:"L-CTRL",ControlRight:"R-CTRL",AltLeft:"L-ALT",AltRight:"R-ALT",ArrowUp:"↑",ArrowDown:"↓",ArrowLeft:"←",ArrowRight:"→"})[code]||code.replace(/^Numpad/,"NUM ");
+}
+function updateKeybindButtons(){
+  const binds=readKeybinds();
+  document.querySelectorAll("[data-bind-action]").forEach(button=>{
+    const action=button.dataset.bindAction;
+    button.textContent=keyLabel(binds[action]);
+    button.classList.toggle("waiting",keybindCapture===action);
+    button.setAttribute("aria-label",KEYBIND_LABELS[action]+": "+keyLabel(binds[action]));
+  });
+}
 function settings(){
   let d={sensitivity:1,ads:1,crosshairSize:20,crosshairGap:0};
   try{d=Object.assign(d,JSON.parse(localStorage.getItem("sx_settings")||"{}"))}catch{}
   ["sens","ads","crossSize","crossGap"].forEach((id,i)=>$(id).value=[d.sensitivity,d.ads,d.crosshairSize,d.crosshairGap][i]);
-  ["sens","ads","crossSize","crossGap"].forEach(id=>$(id).addEventListener("input",()=>localStorage.setItem("sx_settings",JSON.stringify({sensitivity:Number($("sens").value),ads:Number($("ads").value),crosshairSize:Number($("crossSize").value),crosshairGap:Number($("crossGap").value)}))));
+  function saveSettings(){
+    let current={};
+    try{current=JSON.parse(localStorage.getItem("sx_settings")||"{}")}catch{}
+    current={...current,sensitivity:Number($("sens").value),ads:Number($("ads").value),crosshairSize:Number($("crossSize").value),crosshairGap:Number($("crossGap").value),keybinds:readKeybinds()};
+    localStorage.setItem("sx_settings",JSON.stringify(current));
+  }
+  ["sens","ads","crossSize","crossGap"].forEach(id=>$(id).addEventListener("input",saveSettings));
+  document.querySelectorAll("[data-bind-action]").forEach(button=>button.addEventListener("click",()=>{
+    keybindCapture=button.dataset.bindAction;
+    $("keybindStatus").textContent="Натисни клавішу для: "+KEYBIND_LABELS[keybindCapture]+" (Esc — скасувати).";
+    updateKeybindButtons();
+  }));
+  $("resetKeybinds").addEventListener("click",()=>{
+    let current={};
+    try{current=JSON.parse(localStorage.getItem("sx_settings")||"{}")}catch{}
+    current.keybinds={...DEFAULT_KEYBINDS};
+    localStorage.setItem("sx_settings",JSON.stringify(current));
+    keybindCapture=null;$("keybindStatus").textContent="Стандартні клавіші відновлено.";
+    updateKeybindButtons();
+  });
+  document.addEventListener("keydown",event=>{
+    if(!keybindCapture)return;
+    event.preventDefault();event.stopPropagation();
+    if(event.code==="Escape"){keybindCapture=null;$("keybindStatus").textContent="Зміну скасовано.";updateKeybindButtons();return}
+    if(["ControlLeft","ControlRight","AltLeft","AltRight","ShiftLeft","ShiftRight"].includes(event.code)){
+      $("keybindStatus").textContent="Обери звичайну клавішу або F-клавішу.";
+      return;
+    }
+    const binds=readKeybinds();
+    const conflict=Object.keys(binds).find(action=>action!==keybindCapture&&binds[action]===event.code);
+    if(conflict){$("keybindStatus").textContent="Ця клавіша вже призначена: "+KEYBIND_LABELS[conflict]+".";return}
+    binds[keybindCapture]=event.code;
+    let current={};
+    try{current=JSON.parse(localStorage.getItem("sx_settings")||"{}")}catch{}
+    current.keybinds=binds;localStorage.setItem("sx_settings",JSON.stringify(current));
+    $("keybindStatus").textContent=KEYBIND_LABELS[keybindCapture]+" → "+keyLabel(event.code);
+    keybindCapture=null;updateKeybindButtons();
+  },true);
+  updateKeybindButtons();
   applyTheme(selectedTheme);
   renderMapSelection();
 }
