@@ -1090,7 +1090,7 @@ function togglePauseMenu(force){
     jumpQueued=false;fireHeld=false;
     try{controls.unlock()}catch{}
   }
-  else if(matchPhase==="game"&&!/Android|iPhone|iPad/i.test(navigator.userAgent)){try{controls.lock()}catch{}}
+  else if(matchPhase==="game"&&!isMobileDevice){try{controls.lock()}catch{}}
 }
 $("resumeGame").addEventListener("click",()=>togglePauseMenu(false));
 $("pauseLeave").addEventListener("click",leaveGame);
@@ -1312,6 +1312,31 @@ socket.on("player_connection_state",data=>{
 
 // mobile controls: track each touch independently so move/look/fire can be used together.
 const stick=$("stick"),thumb=stick.querySelector("i");
+function applyMobileHudLayout(){
+  let config={};
+  try{config=JSON.parse(localStorage.getItem("sx_mobile_hud_layout_v1")||"{}")||{}}catch{}
+  const ids={move:"stick",fire:"fireBtn",jump:"jumpBtn",reload:"reloadBtn",crouch:"crouchBtn",sprint:"sprintBtn",map:"mapBtn"};
+  const sizes=config.sizes||{},positions=config.positions||{},opacity=Math.max(35,Math.min(100,Number(config.opacity)||82))/100;
+  for(const [key,id] of Object.entries(ids)){
+    const el=$(id);if(!el)continue;
+    const scale=Math.max(50,Math.min(150,Number(sizes[key]??config.size)||100))/100;
+    const pos=positions[key];
+    el.style.opacity=String(opacity);
+    if(Array.isArray(pos)&&pos.length===2&&Number.isFinite(Number(pos[0]))&&Number.isFinite(Number(pos[1]))){
+      el.style.left=Math.max(5,Math.min(95,Number(pos[0])))+"%";
+      el.style.top=Math.max(8,Math.min(92,Number(pos[1])))+"%";
+      el.style.right="auto";el.style.bottom="auto";
+      el.style.transform="translate(-50%,-50%) scale("+scale+")";
+      el.style.transformOrigin="center center";
+    }else{
+      el.style.left="";el.style.top="";el.style.right="";el.style.bottom="";
+      el.style.transform="scale("+scale+")";
+      el.style.transformOrigin=key==="move"?"left bottom":"right bottom";
+    }
+  }
+}
+applyMobileHudLayout();
+window.addEventListener("resize",applyMobileHudLayout);
 let stickActive=false,stickTouchId=null;
 window.sxMove={x:0,y:0};
 function touchById(list,id){
@@ -1366,7 +1391,7 @@ document.addEventListener("touchmove",e=>{
 },{passive:true});
 const releaseLookTouch=e=>{
   if(lookTouchId===null||!Array.from(e?.changedTouches||[]).some(t=>t.identifier===lookTouchId))return;
-  lookTouch=null;lookTouchId=null;
+  lookTouch=null;lookTouchId=null;setFullMapOpen(false);
 };
 document.addEventListener("touchend",releaseLookTouch);
 document.addEventListener("touchcancel",releaseLookTouch);
