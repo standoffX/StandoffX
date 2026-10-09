@@ -454,7 +454,7 @@ app.use((req, res, next) => {
   } catch {
     return res.status(400).end();
   }
-  const normalized = path.posix.normalize("/" + pathname.replace(/\\/g, "/")).replace(/^\\/+/, "");
+  const normalized = path.posix.normalize("/" + pathname.replace(/\\/g, "/")).replace(/^\/+/, "");
   const segments = normalized.split("/").filter(Boolean);
   const rootName = (segments[0] || "").toLowerCase();
   const privateRootFile = segments.length === 1 && /\.(?:json|js|md|lock|ya?ml|env)$/i.test(rootName);
