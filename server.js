@@ -1045,6 +1045,12 @@ app.post("/api/clans/kick", requireAuth, (req, res) => {
   }
   target.clan = null;
   clan.officers = (clan.officers || []).filter(id => id !== target.id);
+  for (const client of io.sockets.sockets.values()) {
+    if (client.user?.id === target.id) {
+      client.leave("clan:" + clan.tag);
+      client.emit("clan_chat_error", { message: "Тебе виключили з клану." });
+    }
+  }
   saveUsers();
   saveClans();
   res.json({ success: true });
@@ -1076,18 +1082,29 @@ app.post("/api/clans/disband", requireAuth, (req, res) => {
   const clan = req.user.clan ? clans[req.user.clan] : null;
   if (!clan || clan.ownerId !== req.user.id) return res.status(403).json({ success: false });
 
+  const dissolvedTag = clan.tag;
+  const affectedIds = new Set(users.filter(user => user.clan === dissolvedTag).map(user => user.id));
   for (const u of users) {
-    if (u.clan === clan.tag) u.clan = null;
+    if (affectedIds.has(u.id)) u.clan = null;
   }
-  delete clans[clan.tag];
+  for (const client of io.sockets.sockets.values()) {
+    if (client.user && affectedIds.has(client.user.id)) {
+      client.leave("clan:" + dissolvedTag);
+      client.emit("clan_chat_error", { message: "Клан розпущено." });
+    }
+  }
+  delete clans[dissolvedTag];
+  delete messages["clan:" + dissolvedTag];
   saveUsers();
   saveClans();
+  saveMessages();
   res.json({ success: true });
 });
 
 app.post("/api/clans/leave", requireAuth, (req, res) => {
   if (!req.user.clan) return res.json({ success: true });
-  const clan = clans[req.user.clan];
+  const leavingTag = req.user.clan;
+  const clan = clans[leavingTag];
   if (!clan) {
     req.user.clan = null;
     saveUsers();
@@ -1112,6 +1129,9 @@ app.post("/api/clans/leave", requireAuth, (req, res) => {
     clan.officers = (clan.officers || []).filter(id => id !== req.user.id);
   }
 
+  for (const client of io.sockets.sockets.values()) {
+    if (client.user?.id === req.user.id) client.leave("clan:" + leavingTag);
+  }
   saveUsers();
   saveClans();
   res.json({ success: true });
@@ -2101,6 +2121,11 @@ io.on("connection", socket => {
     });
   });
 
+  socket.on("leave_clan_chat", ({ tag } = {}) => {
+    const clanTag = cleanText(tag, 5).toUpperCase();
+    if (clanTag) socket.leave("clan:" + clanTag);
+  });
+
   socket.on("send_clan_msg", ({ tag, text } = {}) => {
     const user = socket.user;
     const clanTag = cleanText(tag || user.clan, 5).toUpperCase();
@@ -2410,6 +2435,9 @@ app.post("/api/admin/users/create", requireAdmin, (req, res) => {
 app.delete("/api/admin/users/:id", requireAdmin, (req, res) => {
   const id = normalizeId(req.params.id);
   if (id === ADMIN_ID) return res.status(400).json({ success: false, message: "Master account cannot be deleted." });
+  for (const client of io.sockets.sockets.values()) {
+    if (client.user?.id === id) client.disconnect(true);
+  }
   const i = users.findIndex(u => u.id === id);
   if (i < 0) return res.status(404).json({ success: false, message: "User not found" });
   users.splice(i, 1);
