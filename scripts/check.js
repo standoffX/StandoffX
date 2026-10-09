@@ -91,14 +91,23 @@ assert.match(server, /ready < current\.players\.length/, "lobbies must time out 
 assert.match(server, /const activeMatches = new Map\(\);[^\n]*in-memory only/);
 assert.match(server, /const trainingSessions = new Map\(\);[^\n]*never written to MongoDB/);
 assert.match(server, /app\.post\("\/api\/admin\/atlas\/check"/);
+assert.match(server, /tls: true/, "Atlas TLS must stay enabled without disabling certificate verification");
+assert.match(server, /function publicUser\(user, options = \{\}\)/, "UUID is opt-in on user payloads");
+assert.match(server, /options\.includeUuid === true/, "UUID is only included for the account owner");
+assert.match(server, /data\?\.testerBots === true && canUseTesterModes\(user\)/, "the server authorizes tester bot matches");
+assert.match(server, /isBot: Boolean\(p\.isBot\)/, "match roster includes bot status");
 assert.match(server, /isTester/);
-assert.match(menu, /data-mode="training"/);
-assert.match(menu, /data-mode="field_test"/);
+assert.match(menu, /data-test-gameplay="prototype"/, "testers can launch the prototype");
+assert.match(menu, /data-test-gameplay="real"/, "testers can play a full team match with bots");
+assert.doesNotMatch(menu, /data-mode="(?:training|field_test)"/, "prototype and real gameplay are not separate public modes");
+assert.match(menu, /localStorage.getItem\("sx_test_gameplay"\)/, "the tester choice persists locally");
+assert.match(menu, /testerBots:canTest\(\)&&testGameplayMode==="real"/, "only testers request bot matches");
 assert.match(menu, /id="modeModal"/, "Play must show a mode selection modal");
 assert.match(menu, /id="confirmModeBtn"/, "mode selection must have an explicit confirmation button");
 assert.match(menu, /renderWaitPlayers\(d\.players\|\|\[\]\)/, "queue UI must render the waiting roster");
 assert.match(menu, /playerId=esc\(cleanId\(p\.userId\|\|p\.id\|\|["']—["']\)\)/, "queue UI must display player IDs");
-assert.match(game, /class='player-id'>ID /, "waiting lobby must display player IDs");
+assert.match(game, /class='player-id'>/, "waiting lobby must show player identifiers");
+assert.match(game, /p\.isBot\?"БОТ":"ID "\+playerId/, "idle match bots are clearly labelled");
 assert.match(menu, /join_clan_chat/, "menu must connect to the clan chat");
 assert.match(menu, /send_clan_msg/, "menu must send clan chat messages");
 assert.match(menu, /data-clan-action='transfer'/, "clan owner UI must expose transfer ownership");
@@ -163,5 +172,110 @@ const routes = [...server.matchAll(/app\.(get|post|put|patch|delete)\(["']([^"']
   .map(match => match[1].toUpperCase() + " " + match[2]);
 const duplicates = routes.filter((route, index) => routes.indexOf(route) !== index);
 assert.deepEqual([...new Set(duplicates)], [], "HTTP routes must not be duplicated");
+
+assert.match(server, /HILL_TOWN: \{ id: "HILL_TOWN"/, "server must allow the Hill Town map");
+assert.match(server, /id: "allies"[\s\S]*?requiredPlayers: 4/, "Allies must have a four-player server queue");
+assert.match(server, /!\["team_fight", "allies"\]\.includes\(match\.mode\)/, "team combat handler must accept Allies");
+assert.match(menu, /data-mode="allies"/, "menu must offer Allies");
+assert.match(menu, /data-mode="team_fight"/, "menu must offer Team Fight");
+assert.match(menu, /data-map="HILL_TOWN"/, "menu must offer Hill Town");
+assert.match(game, /async function buildHillTownMap\(\)/, "game must assemble the new map from modular assets");
+assert.match(game, /HILL_TOWN_MANIFEST_URL/, "game must load the public CC0 map asset manifest");
+assert.match(game, /async function loadHeldWeapon\(\)/, "game must load a first-person weapon model");
+assert.match(game, /e\.code==="Escape"\)\{e\.preventDefault\(\);leaveGame\(\);return\}/, "Escape must return to the lobby from any match phase");
+assert.match(game, /if\(selectedMap==="FIELD_ARENA"\)\{/, "prototype must honor the selected map rather than forcing the field arena");
+assert.doesNotMatch(game, / · UUID "\+uuid/, "the match lobby must not display UUIDs");
+
+assert.match(game, /function makeVisual\(color\)[\s\S]*?new THREE\.CylinderGeometry[\s\S]*?function setSoldierTint/, "soldiers must have a multi-part procedural 3D model");
+assert.match(game, /function animateSoldier\(model,dt,now,moving=false,inAir=false\)/, "player models must animate without relying on external model downloads");
+assert.match(game, /animateSoldier\(e\.mesh,dt,now,e\.anim==="Running"\|\|e\.anim==="Walking",e\.anim==="Jump"\)/, "remote player movement must drive the walk/jump animation");
+assert.match(game, /if\(e\.code===binds\.menu\)\{e\.preventDefault\(\);if\(matchPhase==="game"\)togglePauseMenu\(\);return\}/, "M opens the in-game pause menu instead of accidentally leaving the match");
+assert.match(game, /stick\.addEventListener\("touchcancel",releaseStick\)/, "cancelled mobile joystick touches must release movement");
+assert.match(game, /\$\("fireBtn"\)\.addEventListener\("touchcancel",\(\)=>fireHeld=false\)/, "cancelled mobile fire touches must stop shooting");
+assert.match(game, /socket\.on\("player_left"/, "departed players must be removed from the scene");
+assert.match(game, /e\.pos\.set\(data\.x,data\.y,data\.z\);e\.mesh\.position\.copy\(e\.pos\);e\.anim="Idle"/, "a respawn must update both the displayed and authoritative remote position");
+assert.match(game, /let connectedToGameplay=socket\.connected/, "the client must rejoin the match after a Socket.IO reconnection");
+assert.match(game, /matchPhase="finished"/, "the player must stop moving and shooting after match results");
+
+assert.match(server, /const mode = \["allies", "team_fight"\]\.includes\(data\?\.mode\) \? data\.mode : "allies"/, "public matchmaking must reject obsolete/private modes");
+assert.match(server, /current\.players\.filter\(p => !p\.isBot\)\.length === 0 \|\| current\.players\.length < 2/, "bot matches must be cleaned after the last human disconnects");
+assert.match(menu, /if\(!\["allies","team_fight"\]\.includes\(selectedMode\)\)\{selectedMode="allies";localStorage\.setItem\("sx_mode",selectedMode\)\}/, "obsolete local storage mode values must not break the lobby");
+assert.match(game, /let lookTouchId=null/, "mobile look must use independent touch IDs");
+assert.match(game, /document\.addEventListener\("touchcancel",releaseLookTouch\)/, "cancelled look touches must clear their state");
+assert.match(game, /window\.addEventListener\("blur",clearHeldInputs\)/, "focus loss must release all held controls");
+assert.match(game, /document\.addEventListener\("visibilitychange",\(\)=>\{if\(document\.hidden\)clearHeldInputs\(\)\}\)/, "backgrounding the tab must release held controls");
+
+assert.match(game, /setTimeout\(\(\)=>controller\.abort\(\),8000\)/, "a stalled map manifest fetch must abort instead of hanging the lobby");
+assert.match(game, /setTimeout\(\(\)=>\{[\s\S]{0,160}3D asset loading timed out/, "a stalled GLB request must resolve into the map fallback path");
+
+assert.match(server, /function removeFromQueue\(identity, socketId = null\)/, "queue removal must support ownership by the exact socket");
+assert.match(server, /if \(removeFromQueue\(socket\.user\.uuid \|\| socket\.user\.id, socket\.id\)\) emitQueueCount\(io\)/, "stale tabs must not cancel a newer socket's queue");
+assert.match(server, /const existingQueueIndex = matchmakingQueue\.findIndex\(p => p\.userId === user\.id\)/, "duplicate queue requests must be handled rather than hanging silently");
+assert.match(server, /Пошук перенесено в інше вікно/, "an older tab must be notified when search moves to a new connection");
+
+assert.match(server, /if \(!player \|\| player\.hp <= 0\) return;\s*handleTeamShot/, "dead players must not be able to shoot on the server");
+assert.match(server, /if \(!player \|\| player\.socketId !== socket\.id \|\| player\.hp <= 0\) return;\s*if \(!validateMove/, "dead players must not be able to move on the server");
+assert.match(game, /id="deathNotice"/, "players must receive clear feedback when eliminated");
+assert.match(game, /matchPhase!=="game"\|\|reloading\|\|hp<=0/, "dead clients cannot fire or reload");
+assert.match(game, /matchPhase==="game"&&player&&hp>0/, "local movement must freeze until respawn");
+
+assert.match(game, /mapLoadFinished\?"none":"flex"/, "the prototype must keep its loading screen until the map is ready");
+assert.match(game, /matchPhase==="game"&&player&&hp>0&&mapLoadFinished/, "movement must wait until the selected map has finished loading");
+assert.match(game, /matchPhase!=="game"\|\|reloading\|\|hp<=0\|\|!mapLoadFinished/, "shooting and reloading must be blocked until the map loads");
+
+assert.match(game, /function setSoldierDown\(model,down\)/, "eliminated soldiers must visibly drop until respawn");
+assert.match(game, /if\(victim&&data\.killed\)/, "the kill event must update the victim model");
+assert.match(game, /hitConfirmTimer=setTimeout\(\(\)=>crosshair\.classList\.remove\("hit"\),150\)/, "the shooter must receive visual hit confirmation");
+assert.match(game, /setSoldierDown\(e\.mesh,false\);setSoldierTint\(e\.mesh,colorFor\(e\.role,e\.team\)\)/, "respawning enemies must return to their normal pose and team colors");
+
+assert.match(game, /if\(p\.hp<=0\)\{p\.anim="Dead";setSoldierDown\(p\.mesh,true\)\}/, "rejoining clients must render eliminated players as down until respawn");
+
+assert.match(game, /const camera=new THREE\.PerspectiveCamera\([^;]+\);\s*\/\/ Camera-attached weapon and view models must belong to the rendered scene graph\.\s*scene\.add\(camera\);/, "camera-mounted weapon models must be in the scene graph to render");
+
+assert.match(game, /function buildLocalHillTownFallback\(\)/, "Hill Town must have a playable fallback made from local geometry");
+assert.match(game, /buildLocalHillTownFallback\(\);finishClientReady\(\)/, "a failed remote Hill Town asset load must still start the match using town geometry");
+assert.doesNotMatch(game, /Remote models unavailable; using local fallback\.\",error\);\s*buildFieldArena\(\)/, "Hill Town must not silently turn into a field arena when the CDN fails");
+
+assert.match(server, /players\.some\(candidate => candidate\.isBot\) \? \(p\.isBot \? "B" : "A"\)/, "all tester bots must be on the opposing team and be shootable targets");
+
+assert.match(server, /player\.pos\.y = Math\.max\(0, Math\.min\(2\.25, y\)\)/, "match movement must reject impossible fly heights");
+assert.match(server, /previous\.y = Math\.max\(0, Math\.min\(2\.25, y\)\)/, "training movement must reject impossible fly heights");
+
+const validateMoveFunction = server.match(/function validateMove\(player, data\) \{[\s\S]*?\n\}/);
+assert.ok(validateMoveFunction, "the server movement validator must be available for behavioral tests");
+const validateMove = vm.runInNewContext("(" + validateMoveFunction[0] + ")");
+const movingPlayer = {
+  lastMoveAt: Date.now() - 120,
+  prevMoveTime: Date.now() - 120,
+  pos: { x: 0, y: 0, z: 0 },
+  rotY: 0,
+  anim: "Idle"
+};
+assert.equal(validateMove(movingPlayer, { x: 100, y: 100, z: 0, rotY: 0, anim: "Running" }), true);
+assert.ok(movingPlayer.pos.x > 0 && movingPlayer.pos.x <= 4.5, "large planar movement must be rate-limited to the validator maximum");
+assert.equal(movingPlayer.pos.y, 2.25, "vertical position must remain within the supported jump height");
+assert.equal(movingPlayer.anim, "Running");
+const beforeInvalidMove = { ...movingPlayer.pos };
+const invalidPlayer = {
+  lastMoveAt: Date.now() - 120,
+  prevMoveTime: Date.now() - 120,
+  pos: { ...movingPlayer.pos },
+  rotY: 0,
+  anim: "Idle"
+};
+assert.equal(validateMove(invalidPlayer, { x: "not-a-number", y: 0, z: 0, rotY: 0, anim: "Teleport" }), false);
+assert.deepEqual(invalidPlayer.pos, beforeInvalidMove, "invalid movement must not change authoritative coordinates");
+const unknownAnimationPlayer = {
+  lastMoveAt: Date.now() - 120,
+  prevMoveTime: Date.now() - 120,
+  pos: { x: 0, y: 0, z: 0 },
+  rotY: 0,
+  anim: "Idle"
+};
+assert.equal(validateMove(unknownAnimationPlayer, { x: 0.1, y: 0, z: 0, rotY: 0, anim: "Teleport" }), true);
+assert.equal(unknownAnimationPlayer.anim, "Idle", "unknown animation states must be rejected");
+
+assert.match(server, /if \(mongoClient !== client\) return/, "a stale MongoDB close event must not clear a newer client");
+assert.match(server, /const failedClient = mongoClient;\s*mongoClient = null;\s*mongoDb = null;\s*mongoStatus\.connected = false;\s*mongoStatus\.state = "error";\s*mongoStatus\.lastError = cleanText\(err\.message, 240\);\s*try \{ await failedClient\?\.close\(\); \} catch \{\}/, "Atlas ping failures must reset the broken client so a later health check can reconnect");
 
 console.log("OK project invariants, tester-only tools, Atlas endpoint, and unique HTTP routes");

@@ -157,9 +157,13 @@ async function checkMongoConnection() {
     mongoStatus.lastError = null;
     return { ok: true, status: publicMongoStatus(), message: "MongoDB Atlas ping succeeded." };
   } catch (err) {
+    const failedClient = mongoClient;
+    mongoClient = null;
+    mongoDb = null;
     mongoStatus.connected = false;
     mongoStatus.state = "error";
     mongoStatus.lastError = cleanText(err.message, 240);
+    try { await failedClient?.close(); } catch {}
     return { ok: false, status: publicMongoStatus(), message: mongoStatus.lastError };
   }
 }
@@ -178,14 +182,21 @@ async function initMongo() {
   mongoStatus.state = "connecting";
   mongoStatus.lastError = null;
   try {
-    mongoClient = new MongoClient(uri, { serverSelectionTimeoutMS: 8000, connectTimeoutMS: 8000, maxPoolSize: 5, appName: "StandoffX" });
-    mongoClient.on("close", () => {
+    const atlasTlsRequired = /^mongodb\+srv:\/\//i.test(uri) || /\.mongodb\.net(?:[:/?]|$)/i.test(uri);
+    const client = new MongoClient(uri, { ...(atlasTlsRequired ? { tls: true } : {}), serverSelectionTimeoutMS: 8000, connectTimeoutMS: 8000, maxPoolSize: 5, appName: "StandoffX" });
+    mongoClient = client;
+    client.on("close", () => {
+      // Do not let an old client's close event clear a newer connection.
+      if (mongoClient !== client) return;
+      mongoClient = null;
+      mongoDb = null;
       mongoStatus.connected = false;
       if (mongoStatus.state === "connected") mongoStatus.state = "disconnected";
       console.warn("[DB] MongoDB connection closed.");
     });
-    await mongoClient.connect();
-    mongoDb = mongoClient.db(mongoStatus.database);
+    await client.connect();
+    if (mongoClient !== client) throw new Error("MongoDB client closed during connection.");
+    mongoDb = client.db(mongoStatus.database);
     await mongoDb.command({ ping: 1 });
     mongoStatus.connected = true;
     mongoStatus.state = "connected";
@@ -224,12 +235,13 @@ async function initMongo() {
     console.log("[DB] MongoDB Atlas connected:", mongoStatus.database);
     return true;
   } catch (err) {
-    try { await mongoClient?.close(); } catch {}
+    const failedClient = mongoClient;
     mongoClient = null;
     mongoDb = null;
     mongoStatus.connected = false;
     mongoStatus.state = "error";
     mongoStatus.lastError = cleanText(err.message, 240);
+    try { await failedClient?.close(); } catch {}
     console.error("[DB] MongoDB Atlas connection failed:", mongoStatus.lastError);
     return false;
   }
@@ -244,8 +256,12 @@ function mongoSave(name, data) {
   ).catch(err => {
     mongoStatus.lastError = cleanText(err.message, 240);
     if (err.name === "MongoNetworkError" || err.name === "MongoServerSelectionError") {
+      const failedClient = mongoClient;
+      mongoClient = null;
+      mongoDb = null;
       mongoStatus.connected = false;
       mongoStatus.state = "error";
+      try { failedClient?.close().catch(() => {}); } catch {}
     }
     console.error("[DB] Write failed:", mongoStatus.lastError);
   });
@@ -327,9 +343,10 @@ function findUser(idOrNickname, options = {}) {
   });
 }
 
-function publicUser(user) {
+function publicUser(user, options = {}) {
   if (!user) return null;
-  const { password, passwordHash, ...safe } = user;
+  const { password, passwordHash, uuid, ...safe } = user;
+  if (options.includeUuid === true && typeof uuid === "string") safe.uuid = uuid;
   safe.friendsList = Array.isArray(user.friendsList) ? user.friendsList : [];
   safe.incomingRequests = Array.isArray(user.incomingRequests) ? user.incomingRequests : [];
   safe.blocked = Array.isArray(user.blocked) ? user.blocked : [];
@@ -658,7 +675,7 @@ app.post("/api/register", registrationRateLimit, (req, res) => {
   res.json({
     success: true,
     redirect: "/game",
-    user: publicUser(user),
+    user: publicUser(user, { includeUuid: true }),
     createdId: user.id,
     message: "Акаунт створено."
   });
@@ -720,7 +737,7 @@ app.post("/api/login", loginRateLimit, (req, res) => {
 
   const token = createSession(user.uuid || user.id);
   setSessionCookie(res, token);
-  res.json({ success: true, redirect: "/game", user: publicUser(user) });
+  res.json({ success: true, redirect: "/game", user: publicUser(user, { includeUuid: true }) });
 });
 
 app.post("/api/logout", requireAuth, (req, res) => {
@@ -733,7 +750,7 @@ app.post("/api/logout", requireAuth, (req, res) => {
 });
 
 app.get("/api/me", requireAuth, (req, res) => {
-  res.json({ success: true, user: publicUser(req.user) });
+  res.json({ success: true, user: publicUser(req.user, { includeUuid: true }) });
 });
 
 app.get("/api/user-data", requireAuth, (req, res) => {
@@ -743,7 +760,7 @@ app.get("/api/user-data", requireAuth, (req, res) => {
     .map(id => users.find(u => u.id === id))
     .filter(Boolean)
     .map(publicUser);
-  res.json({ success: true, user: publicUser(target), friends });
+  res.json({ success: true, user: publicUser(target, { includeUuid: target.id === req.user.id }), friends });
 });
 
 app.post("/api/sync-user", requireAuth, (req, res) => {
@@ -1283,7 +1300,8 @@ const JOIN_TIMEOUT_SECONDS = 35;
 const PLAYABLE_MAPS = Object.freeze({
   M3_Maze: { id: "M3_Maze", name: "M3 MAZE", kind: "model" },
   FIELD_ARENA: { id: "FIELD_ARENA", name: "FIELD ARENA", kind: "arena" },
-  NEON_YARD: { id: "NEON_YARD", name: "NEON YARD", kind: "neon" }
+  NEON_YARD: { id: "NEON_YARD", name: "NEON YARD", kind: "neon" },
+  HILL_TOWN: { id: "HILL_TOWN", name: "HILL TOWN", kind: "hill-town" }
 });
 function normalizeMapId(value) {
   const id = cleanText(value, 32);
@@ -1291,6 +1309,13 @@ function normalizeMapId(value) {
 }
 
 const MODE_CONFIGS = {
+  allies: {
+    id: "allies",
+    name: "СОЮЗНИКИ",
+    short: "AL",
+    map: "HILL_TOWN",
+    requiredPlayers: 4
+  },
   hide_seek: {
     id: "hide_seek",
     name: "HIDE & SEEK",
@@ -1302,14 +1327,14 @@ const MODE_CONFIGS = {
     id: "team_fight",
     name: "TEAM FIGHT",
     short: "TF",
-    map: "M3_Maze",
+    map: "HILL_TOWN",
     requiredPlayers: 4
   }
 };
 
 const TESTER_MODE_CONFIGS = {
-  training: { id: "training", name: "TRAINING", map: "M3_Maze", kind: "bot-training" },
-  field_test: { id: "field_test", name: "FIELD TEST", map: "FIELD_ARENA", kind: "free-range" }
+  training: { id: "training", name: "TRAINING", map: "HILL_TOWN", kind: "bot-training" },
+  field_test: { id: "field_test", name: "FIELD TEST", map: "HILL_TOWN", kind: "free-range" }
 };
 
 function canUseTesterModes(user) {
@@ -1322,17 +1347,26 @@ const SPAWNS = [
   { x: 15, y: 0, z: 5 },
   { x: 15, y: 0, z: 25 }
 ];
+const HILL_TOWN_SPAWNS = [
+  { x: -20, y: 0, z: -14 },
+  { x: 20, y: 0, z: -14 },
+  { x: -20, y: 0, z: 14 },
+  { x: 20, y: 0, z: 14 }
+];
 
 function getModeConfig(mode) {
-  return MODE_CONFIGS[mode] || MODE_CONFIGS.hide_seek;
+  return MODE_CONFIGS[mode] || MODE_CONFIGS.allies;
 }
 
 function getRequiredPlayers(mode) {
   return Number(getModeConfig(mode).requiredPlayers) || DEFAULT_MATCH_SIZE;
 }
 
-function removeFromQueue(identity) {
-  const idx = matchmakingQueue.findIndex(p => p.uuid === identity || (!p.uuid && p.userId === identity));
+function removeFromQueue(identity, socketId = null) {
+  const idx = matchmakingQueue.findIndex(p =>
+    (p.uuid === identity || (!p.uuid && p.userId === identity)) &&
+    (!socketId || p.socketId === socketId)
+  );
   if (idx !== -1) {
     matchmakingQueue.splice(idx, 1);
     return true;
@@ -1358,7 +1392,6 @@ function emitQueueCount(io) {
       mapName: PLAYABLE_MAPS[entry.map]?.name || PLAYABLE_MAPS.M3_Maze.name,
       players: modePlayers.map(p => ({
         userId: p.userId,
-        uuid: p.uuid,
         nickname: p.nickname,
         connected: true,
         ready: false
@@ -1367,18 +1400,19 @@ function emitQueueCount(io) {
   }
 }
 
-function createMatch(io, mode, mapId = "M3_Maze") {
+function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const safeMapId = normalizeMapId(mapId);
-  const candidates = matchmakingQueue.filter(p => p.mode === mode && p.map === safeMapId);
+  const candidates = Array.isArray(forcedCandidates) ? forcedCandidates : matchmakingQueue.filter(p => p.mode === mode && p.map === safeMapId);
   const requiredPlayers = getRequiredPlayers(mode);
   if (candidates.length < requiredPlayers) return;
 
   const players = candidates.slice(0, requiredPlayers);
-  for (const p of players) removeFromQueue(p.uuid || p.userId);
+  for (const p of players) if (!p.isBot) removeFromQueue(p.uuid || p.userId);
 
   const cfg = getModeConfig(mode);
   const matchId = "match_" + Date.now() + "_" + crypto.randomBytes(2).toString("hex");
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
+  const matchSpawns = safeMapId === "HILL_TOWN" ? HILL_TOWN_SPAWNS : SPAWNS;
 
   const match = {
     id: matchId,
@@ -1387,23 +1421,26 @@ function createMatch(io, mode, mapId = "M3_Maze") {
     map: safeMapId,
     mapName: PLAYABLE_MAPS[safeMapId]?.name || PLAYABLE_MAPS.M3_Maze.name,
     players: players.map((p, i) => ({
-      socketId: p.socketId,
+      socketId: p.socketId || null,
       userId: p.userId,
-      uuid: p.uuid,
+      uuid: p.uuid || "",
+      isBot: Boolean(p.isBot),
       nickname: p.nickname,
       role: mode === "hide_seek" ? (i === hunterIndex ? "hunter" : "runner") : (i % 2 === 0 ? "teamA" : "teamB"),
-      team: mode === "team_fight" ? (i % 2 === 0 ? "A" : "B") : null,
+      team: (mode === "team_fight" || mode === "allies")
+        ? (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i % 2 === 0 ? "A" : "B"))
+        : null,
       hp: 100,
       score: 0,
       kills: 0,
       deaths: 0,
-      spawn: { ...SPAWNS[i] },
-      pos: { ...SPAWNS[i] },
+      spawn: { ...matchSpawns[i % matchSpawns.length] },
+      pos: { ...matchSpawns[i % matchSpawns.length] },
       rotY: 0,
       anim: "Idle",
       lastMoveAt: 0,
       prevMoveTime: 0,
-      ready: false,
+      ready: Boolean(p.isBot),
       joinedAt: null,
       disconnectTimer: null
     })),
@@ -1421,6 +1458,7 @@ function createMatch(io, mode, mapId = "M3_Maze") {
   emitQueueCount(io);
 
   for (const p of match.players) {
+    if (!p.socketId || p.isBot) continue;
     io.to(p.socketId).emit("match_found", {
       matchId,
       userId: p.userId,
@@ -1434,8 +1472,8 @@ function createMatch(io, mode, mapId = "M3_Maze") {
   match.joinTimer = setTimeout(() => {
     const current = activeMatches.get(matchId);
     if (!current || current.started || current.finished) return;
-    const connected = current.players.filter(p => Boolean(p.socketId)).length;
-    const ready = current.players.filter(p => p.ready).length;
+    const connected = current.players.filter(p => p.isBot || Boolean(p.socketId)).length;
+    const ready = current.players.filter(p => p.isBot || p.ready).length;
     if (connected < current.players.length || ready < current.players.length) {
       for (const p of current.players) {
         if (p.socketId) io.to(p.socketId).emit("search_error", {
@@ -1450,8 +1488,8 @@ function createMatch(io, mode, mapId = "M3_Maze") {
 }
 
 function emitMatchWaiting(io, match) {
-  const connected = match.players.filter(p => Boolean(p.socketId)).length;
-  const ready = match.players.filter(p => p.ready).length;
+  const connected = match.players.filter(p => p.isBot || Boolean(p.socketId)).length;
+  const ready = match.players.filter(p => p.isBot || p.ready).length;
   io.to(match.id).emit("match_waiting", {
     connected,
     ready,
@@ -1461,8 +1499,9 @@ function emitMatchWaiting(io, match) {
     players: match.players.map(p => ({
       userId: p.userId,
       nickname: p.nickname,
-      connected: Boolean(p.socketId),
-      ready: Boolean(p.ready)
+      connected: p.isBot || Boolean(p.socketId),
+      ready: p.isBot || Boolean(p.ready),
+      isBot: Boolean(p.isBot)
     }))
   });
 }
@@ -1484,17 +1523,30 @@ function cleanMatch(io, matchId, returnToMenu = true) {
 
 function startMatchWhenReady(io, match) {
   if (match.started || match.phase !== "waiting") return;
-  const allConnected = match.players.every(p => Boolean(p.socketId));
-  const allReady = match.players.every(p => p.ready);
+  const allConnected = match.players.every(p => p.isBot || Boolean(p.socketId));
+  const allReady = match.players.every(p => p.isBot || p.ready);
   if (!allConnected || !allReady) {
     emitMatchWaiting(io, match);
     return;
   }
 
   match.started = true;
-  match.phase = "warmup";
   if (match.joinTimer) clearTimeout(match.joinTimer);
 
+  if (match.players.some(p => p.isBot)) {
+    match.phase = "game";
+    match.remaining = GAME_SECONDS;
+    io.to(match.id).emit("match_phase", { phase: "game", time: match.remaining, mode: match.mode, modeName: match.modeName });
+    io.to(match.id).emit("match_start_now", { mode: match.mode, modeName: match.modeName, testerBots: true });
+    match.timer = setInterval(() => {
+      match.remaining -= 1;
+      io.to(match.id).emit("timer_update", { time: match.remaining, phase: "game" });
+      if (match.remaining <= 0) finishMatch(io, match.id);
+    }, 1000);
+    return;
+  }
+
+  match.phase = "warmup";
   let warmup = WARMUP_SECONDS;
   match.phaseRemaining = warmup;
   io.to(match.id).emit("match_phase", {
@@ -1596,7 +1648,7 @@ function respawnPlayer(match, player) {
 }
 
 function handleTeamShot(io, match, shooter, data) {
-  if (match.mode !== "team_fight" || match.phase !== "game") return;
+  if (!["team_fight", "allies"].includes(match.mode) || match.phase !== "game") return;
 
   const now = Date.now();
   if (now - (shooter.lastShotAt || 0) < 120) return;
@@ -1697,7 +1749,7 @@ function validateMove(player, data) {
     player.pos.x = x;
     player.pos.z = z;
   }
-  player.pos.y = Math.max(-2, Math.min(100, y));
+  player.pos.y = Math.max(0, Math.min(2.25, y));
   player.rotY = rotY;
   player.anim = ["Idle", "Running", "Jump", "Walking"].includes(data.anim) ? data.anim : "Idle";
   return true;
@@ -1769,17 +1821,19 @@ io.on("connection", socket => {
     if (!cfg) return socket.emit("training_error", { message: "Невідомий тестовий режим." });
 
     const previous = trainingSessions.get(user.id);
+    const sessionMap = mode === "field_test" ? normalizeMapId(data?.map) : cfg.map;
+    const spawnPosition = mode === "training" ? { x: 5, y: 0, z: 5 } : (sessionMap === "NEON_YARD" ? { x: 0, y: 0, z: 12 } : { x: 0, y: 0, z: 0 });
     const session = {
       id: "practice_" + crypto.randomBytes(10).toString("hex"),
       userId: user.id,
       nickname: user.nickname,
       mode: cfg.id,
       modeName: cfg.name,
-      map: cfg.map,
+      map: sessionMap,
       socketId: socket.id,
-      playerPos: mode === "training" ? { x: 5, y: 0, z: 5 } : { x: 0, y: 0, z: 0 },
+      playerPos: spawnPosition,
       playerRotY: 0,
-      bot: null,
+      bot: mode === "field_test" ? { id: "training_bot", nickname: "БОТ", role: "runner", team: "B", hp: 100, maxHp: 100, hits: 0, x: spawnPosition.x, y: 0, z: spawnPosition.z - 3, rotY: Math.PI, action: "idle", updatedAt: Date.now() } : null,
       lastMoveAt: 0,
       lastActionAt: 0,
       createdAt: Date.now()
@@ -1791,7 +1845,7 @@ io.on("connection", socket => {
       userId: user.id,
       mode: cfg.id,
       modeName: cfg.name,
-      map: cfg.map,
+      map: session.map,
       uuid: user.uuid
     });
   });
@@ -1837,7 +1891,7 @@ io.on("connection", socket => {
       previous.x = x;
       previous.z = z;
     }
-    previous.y = Math.max(0, Math.min(20, y));
+    previous.y = Math.max(0, Math.min(2.25, y));
     session.playerRotY = Number.isFinite(viewY) ? viewY : rotY;
   });
 
@@ -1980,11 +2034,29 @@ io.on("connection", socket => {
   socket.on("start_search", data => {
     const user = socket.user;
     if (playerMatch(user.uuid || user.id)) return socket.emit("search_error", { message: "Ти вже в матчі." });
-    if (matchmakingQueue.some(p => p.userId === user.id)) return;
+    const existingQueueIndex = matchmakingQueue.findIndex(p => p.userId === user.id);
+    if (existingQueueIndex !== -1) {
+      const [existing] = matchmakingQueue.splice(existingQueueIndex, 1);
+      if (existing.socketId && existing.socketId !== socket.id) {
+        io.to(existing.socketId).emit("search_error", { message: "Пошук перенесено в інше вікно." });
+      }
+    }
 
-    const mode = Object.prototype.hasOwnProperty.call(MODE_CONFIGS, data?.mode) ? data.mode : "hide_seek";
+    const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
     const map = normalizeMapId(data?.map);
     removeFromQueue(user.uuid || user.id);
+
+    if (data?.testerBots === true && canUseTesterModes(user) && ["allies", "team_fight"].includes(mode)) {
+      const realPlayer = { socketId: socket.id, userId: user.id, nickname: user.nickname, uuid: user.uuid, mode, map, isBot: false };
+      const bots = Array.from({ length: Math.max(0, getRequiredPlayers(mode) - 1) }, (_, index) => ({
+        socketId: null,
+        userId: "BOT_" + crypto.randomBytes(4).toString("hex"),
+        nickname: "БОТ " + String(index + 1).padStart(2, "0"),
+        uuid: "", mode, map, isBot: true
+      }));
+      createMatch(io, mode, map, [realPlayer, ...bots]);
+      return;
+    }
 
     matchmakingQueue.push({
       socketId: socket.id,
@@ -2001,7 +2073,7 @@ io.on("connection", socket => {
   });
 
   socket.on("cancel_search", () => {
-    if (removeFromQueue(socket.user.uuid || socket.user.id)) emitQueueCount(io);
+    if (removeFromQueue(socket.user.uuid || socket.user.id, socket.id)) emitQueueCount(io);
   });
 
   socket.on("leave_match", data => {
@@ -2025,7 +2097,7 @@ io.on("connection", socket => {
 
     match.players.splice(index, 1);
     io.to(matchId).emit("player_left", { userId: player.userId });
-    if (match.players.length < 2) cleanMatch(io, matchId, true);
+    if (match.players.filter(p => !p.isBot).length === 0 || match.players.length < 2) cleanMatch(io, matchId, true);
     else emitMatchWaiting(io, match);
   });
 
@@ -2062,8 +2134,8 @@ io.on("connection", socket => {
       },
       players: match.players.map(p => ({
         userId: p.userId,
-        uuid: p.uuid || "",
         nickname: p.nickname,
+        isBot: Boolean(p.isBot),
         role: p.role,
         team: p.team,
         score: p.score,
@@ -2081,7 +2153,6 @@ io.on("connection", socket => {
         socket.emit("enemy_moved", {
           id: other.socketId,
           userId: other.userId,
-          uuid: other.uuid || "",
           nickname: other.nickname,
           role: other.role,
           team: other.team,
@@ -2128,7 +2199,7 @@ io.on("connection", socket => {
     const match = activeMatches.get(cleanText(data?.matchId, 100));
     if (!match) return;
     const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
-    if (!player) return;
+    if (!player || player.hp <= 0) return;
     handleTeamShot(io, match, player, data);
   });
 
@@ -2136,7 +2207,7 @@ io.on("connection", socket => {
     const match = activeMatches.get(cleanText(data?.matchId, 100));
     if (!match) return;
     const player = match.players.find(p => p.userId === socket.user.id);
-    if (!player || player.socketId !== socket.id) return;
+    if (!player || player.socketId !== socket.id || player.hp <= 0) return;
     if (!validateMove(player, data)) return;
 
     if (match.phase === "game") handleCatch(io, match, player);
@@ -2144,7 +2215,6 @@ io.on("connection", socket => {
     socket.to(match.id).emit("enemy_moved", {
       id: socket.id,
       userId: player.userId,
-      uuid: player.uuid || "",
       nickname: player.nickname,
       role: player.role,
       team: player.team,
@@ -2235,7 +2305,7 @@ io.on("connection", socket => {
   });
 
   socket.on("disconnect", () => {
-    removeFromQueue(socket.user?.uuid || socket.user?.id);
+    removeFromQueue(socket.user?.uuid || socket.user?.id, socket.id);
 
     if (socket.user) {
       socket.user.status = false;
@@ -2277,7 +2347,7 @@ io.on("connection", socket => {
         expired.disconnectTimer = null;
         io.to(matchId).emit("player_left", { userId: expired.userId });
 
-        if (current.players.length < 2) cleanMatch(io, matchId, true);
+        if (current.players.filter(p => !p.isBot).length === 0 || current.players.length < 2) cleanMatch(io, matchId, true);
         else emitMatchWaiting(io, current);
       }, 15000);
     }

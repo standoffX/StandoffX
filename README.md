@@ -14,11 +14,12 @@ StandoffX — browser FPS prototype на Three.js + Socket.IO.
 - marketplace із перевіркою ownership;
 - одноразові promo codes;
 - Socket.IO matchmaking;
-- режими HIDE & SEEK та TEAM FIGHT для всіх гравців;
-- тестерські режими TRAINING та FIELD TEST;
-- TRAINING: створення тест-бота, push/kick/boost/reset і стрільба по боту;
-- FIELD TEST: окреме відкрите тестове поле, стрільба і тренувальні цілі;
-- окрема ознака isTester в адмінці; доступ до тестових режимів додатково перевіряє сервер;
+- режими ALLIES та TEAM FIGHT для всіх гравців;
+- карта HILL TOWN, що збирається з модульних 3D-ресурсів;
+- перемикач **ПРОТОТИП / РЕАЛЬНА ГРА** тільки для тестерів;
+- прототип дозволяє вибрати будь-яку карту, оглянути зброю та стріляти по нерухомій мішені;
+- тестерська реальна гра запускає звичайний режим ALLIES або TEAM FIGHT з трьома нерухомими ботами;
+- доступ до тестерських можливостей перевіряє сервер; звичайні гравці не можуть запросити ботів;
 - лобі очікування всіх гравців + client-ready;
 - 10 с розминки + 15 с стартового відліку;
 - матчі зберігаються тільки в памʼяті Socket.IO, не в MongoDB;
@@ -26,6 +27,12 @@ StandoffX — browser FPS prototype на Three.js + Socket.IO.
 - rate-limited movement validation;
 - reconnect-aware player identity;
 - Three.js gameplay client;
+- procedural tactical soldier models with running and jumping animations (no extra character CDN needed);
+- map-model CDN requests have time limits and fall back to local geometry when assets are unavailable;
+- public matchmaking is limited to ALLIES and TEAM FIGHT, even if a client submits an obsolete mode value;
+- mobile joystick and fire-button cancellation handling;
+- match rejoin after temporary Socket.IO reconnects, plus correct enemy despawn/respawn cleanup;
+- `Escape` always leaves for the lobby; `M` toggles the in-game pause menu;
 - fallback map, якщо 3D map не завантажилась;
 - /api/health з безпечним статусом MongoDB Atlas;
 - адміністративний Atlas ping через /api/admin/atlas/check;
@@ -62,6 +69,8 @@ Render автоматично передає `PORT`.
 
 `MONGO_URI` також підтримується як сумісний alias для `MONGODB_URI`. Не додавай TLS key/cert для звичайного Render Web Service: TLS завершує Render. Залиш Start Command як `node server.js`.
 
+Для MongoDB Node.js driver 7 потрібен **Node.js 20.19.0 або новіший**. Якщо Atlas ping повертає TLS alert, перевір runtime Node, скопіюй свіжий URI з Atlas → Connect → Drivers, URL-кодуй спецсимволи в паролі БД, перевір IP Access List для IP застосунку та вихідний TCP-доступ до порту 27017. Не вимикай TLS і не використовуй `tlsAllowInvalidCertificates`. `/api/admin/atlas/check` виконує справжній DB ping; звичайна мережева команда `ping` для цього не підходить.
+
 **Важливо про сховище:** без MongoDB активується JSON fallback. На Render локальні файли не є надійним постійним сховищем після redeploy/restart, тому для реальних акаунтів налаштуй Atlas та перевір статус у `/api/health` або в адмінці. Усі матчі залишаються в памʼяті процесу й не зберігаються в БД.
 
 ## HTTPS
@@ -74,18 +83,14 @@ TLS_KEY_PATH=/path/to/key.pem
 TLS_CERT_PATH=/path/to/cert.pem
 ```
 
-## Моделі
+## 3D-ресурси
 
-Клієнт може підхоплювати моделі зброї з кореня:
+- **HILL TOWN** — модульне середовище для тактичного FPS з 3DAssets.dev, ліцензія CC0 1.0. Клієнт отримує маніфест моделей і завантажує окремі GLB без додаткових декодерів: [сторінка набору](https://3dassets.dev/packs/tactical-shooter-hill-town), [маніфест](https://3dassets.dev/api/v1/packs/tactical-shooter-hill-town).
+- **Зброя від першої особи** — клієнт спершу пробує завантажити модель Attacker Assault Rifle з того самого CC0-набору. Якщо ресурс або маніфест недоступний, показується вбудована процедурна AK-подібна модель, щоб зброя не зникала повністю.
+- **Запасний варіант карти** — за недоступності окремих моделей клієнт пробує завантажити [повну стартову сцену набору](https://cdn.3dassets.dev/assets/27595/v1/model.glb), а якщо мережеве завантаження не вдається — використовує локальну тестову арену.
+- **Окрема CC0-модель AK-47** також є в [каталозі Quaternius на Poly Pizza](https://poly.pizza/m/em1Hi9GuCv); вона наведена як альтернатива, а не як файл, що вбудований у репозиторій.
 
-- `Pistol.glb`
-- `Revolver.glb`
-- `P90.glb`
-- `ak-47.glb`
-- `Shotgun.glb`
-- `SniperRifle.glb`
-
-Якщо конкретної моделі немає, клієнт має залишатися працездатним без неї.
+Ресурси завантажуються з CDN, тому для першого завантаження карти та зброї потрібне підключення до Інтернету.
 
 ## Перевірка
 
