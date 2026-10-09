@@ -208,4 +208,9 @@ assert.match(game, /document\.addEventListener\("visibilitychange",\(\)=>\{if\(d
 assert.match(game, /setTimeout\(\(\)=>controller\.abort\(\),8000\)/, "a stalled map manifest fetch must abort instead of hanging the lobby");
 assert.match(game, /setTimeout\(\(\)=>\{[\s\S]{0,160}3D asset loading timed out/, "a stalled GLB request must resolve into the map fallback path");
 
+assert.match(server, /function removeFromQueue\(identity, socketId = null\)/, "queue removal must support ownership by the exact socket");
+assert.match(server, /if \(removeFromQueue\(socket\.user\.uuid \|\| socket\.user\.id, socket\.id\)\) emitQueueCount\(io\)/, "stale tabs must not cancel a newer socket's queue");
+assert.match(server, /const existingQueueIndex = matchmakingQueue\.findIndex\(p => p\.userId === user\.id\)/, "duplicate queue requests must be handled rather than hanging silently");
+assert.match(server, /Пошук перенесено в інше вікно/, "an older tab must be notified when search moves to a new connection");
+
 console.log("OK project invariants, tester-only tools, Atlas endpoint, and unique HTTP routes");
