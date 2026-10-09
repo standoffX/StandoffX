@@ -41,7 +41,6 @@ const menu = read("mainMenu.html");
 const admin = read("admin.html");
 const game = read("play2.html");
 const ui = read("ui.css");
-const ui = read("ui.css");
 assert.match(server, /function requireAuth\(req, res, next\)[\s\S]*?req\.user = user;\s*next\(\);/);
 assert.match(server, /function finishMatch\(io, matchId\)/, "game timer must have a finish handler");
 assert.match(server, /const ADMIN_PASSWORD = String\(process\.env\.ADMIN_PASSWORD \|\| ""\)/, "admin password must only come from the environment");
