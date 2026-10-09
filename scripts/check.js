@@ -219,4 +219,8 @@ assert.match(game, /id="deathNotice"/, "players must receive clear feedback when
 assert.match(game, /matchPhase!=="game"\|\|reloading\|\|hp<=0/, "dead clients cannot fire or reload");
 assert.match(game, /matchPhase==="game"&&player&&hp>0/, "local movement must freeze until respawn");
 
+assert.match(game, /mapLoadFinished\?"none":"flex"/, "the prototype must keep its loading screen until the map is ready");
+assert.match(game, /matchPhase==="game"&&player&&hp>0&&mapLoadFinished/, "movement must wait until the selected map has finished loading");
+assert.match(game, /matchPhase!=="game"\|\|reloading\|\|hp<=0\|\|!mapLoadFinished/, "shooting and reloading must be blocked until the map loads");
+
 console.log("OK project invariants, tester-only tools, Atlas endpoint, and unique HTTP routes");
