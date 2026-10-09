@@ -157,9 +157,13 @@ async function checkMongoConnection() {
     mongoStatus.lastError = null;
     return { ok: true, status: publicMongoStatus(), message: "MongoDB Atlas ping succeeded." };
   } catch (err) {
+    const failedClient = mongoClient;
+    mongoClient = null;
+    mongoDb = null;
     mongoStatus.connected = false;
     mongoStatus.state = "error";
     mongoStatus.lastError = cleanText(err.message, 240);
+    try { await failedClient?.close(); } catch {}
     return { ok: false, status: publicMongoStatus(), message: mongoStatus.lastError };
   }
 }
@@ -179,14 +183,20 @@ async function initMongo() {
   mongoStatus.lastError = null;
   try {
     const atlasTlsRequired = /^mongodb\+srv:\/\//i.test(uri) || /\.mongodb\.net(?:[:/?]|$)/i.test(uri);
-    mongoClient = new MongoClient(uri, { ...(atlasTlsRequired ? { tls: true } : {}), serverSelectionTimeoutMS: 8000, connectTimeoutMS: 8000, maxPoolSize: 5, appName: "StandoffX" });
-    mongoClient.on("close", () => {
+    const client = new MongoClient(uri, { ...(atlasTlsRequired ? { tls: true } : {}), serverSelectionTimeoutMS: 8000, connectTimeoutMS: 8000, maxPoolSize: 5, appName: "StandoffX" });
+    mongoClient = client;
+    client.on("close", () => {
+      // Do not let an old client's close event clear a newer connection.
+      if (mongoClient !== client) return;
+      mongoClient = null;
+      mongoDb = null;
       mongoStatus.connected = false;
       if (mongoStatus.state === "connected") mongoStatus.state = "disconnected";
       console.warn("[DB] MongoDB connection closed.");
     });
-    await mongoClient.connect();
-    mongoDb = mongoClient.db(mongoStatus.database);
+    await client.connect();
+    if (mongoClient !== client) throw new Error("MongoDB client closed during connection.");
+    mongoDb = client.db(mongoStatus.database);
     await mongoDb.command({ ping: 1 });
     mongoStatus.connected = true;
     mongoStatus.state = "connected";
@@ -225,12 +235,13 @@ async function initMongo() {
     console.log("[DB] MongoDB Atlas connected:", mongoStatus.database);
     return true;
   } catch (err) {
-    try { await mongoClient?.close(); } catch {}
+    const failedClient = mongoClient;
     mongoClient = null;
     mongoDb = null;
     mongoStatus.connected = false;
     mongoStatus.state = "error";
     mongoStatus.lastError = cleanText(err.message, 240);
+    try { await failedClient?.close(); } catch {}
     console.error("[DB] MongoDB Atlas connection failed:", mongoStatus.lastError);
     return false;
   }
@@ -245,8 +256,12 @@ function mongoSave(name, data) {
   ).catch(err => {
     mongoStatus.lastError = cleanText(err.message, 240);
     if (err.name === "MongoNetworkError" || err.name === "MongoServerSelectionError") {
+      const failedClient = mongoClient;
+      mongoClient = null;
+      mongoDb = null;
       mongoStatus.connected = false;
       mongoStatus.state = "error";
+      try { failedClient?.close().catch(() => {}); } catch {}
     }
     console.error("[DB] Write failed:", mongoStatus.lastError);
   });
