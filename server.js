@@ -1412,7 +1412,9 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
       isBot: Boolean(p.isBot),
       nickname: p.nickname,
       role: mode === "hide_seek" ? (i === hunterIndex ? "hunter" : "runner") : (i % 2 === 0 ? "teamA" : "teamB"),
-      team: (mode === "team_fight" || mode === "allies") ? (i % 2 === 0 ? "A" : "B") : null,
+      team: (mode === "team_fight" || mode === "allies")
+        ? (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i % 2 === 0 ? "A" : "B"))
+        : null,
       hp: 100,
       score: 0,
       kills: 0,
