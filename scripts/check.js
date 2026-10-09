@@ -255,7 +255,7 @@ assert.match(ui, /grid-template-columns:minmax\(260px,1fr\) minmax\(250px,\.95fr
 assert.match(game, /matchPhase="finished"/, "the player must stop moving and shooting after match results");
 
 assert.match(server, /const mode = \["allies", "team_fight"\]\.includes\(data\?\.mode\) \? data\.mode : "allies"/, "public matchmaking must reject obsolete/private modes");
-assert.match(server, /current\.players\.filter\(p => !p\.isBot\)\.length === 0 \|\| current\.players\.length < 2/, "bot matches must be cleaned after the last human disconnects");
+assert.match(server, /match\.players\.filter\(p => !p\.isBot\)\.length === 0 \|\| match\.players\.length < 2/, "voluntary leaving must still clean an empty bot match");
 assert.match(menu, /if\(!\["allies","team_fight"\]\.includes\(selectedMode\)\)\{selectedMode="allies";localStorage\.setItem\("sx_mode",selectedMode\)\}/, "obsolete local storage mode values must not break the lobby");
 assert.match(game, /let lookTouchId=null/, "mobile look must use independent touch IDs");
 assert.match(game, /document\.addEventListener\("touchcancel",releaseLookTouch\)/, "cancelled look touches must clear their state");
