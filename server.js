@@ -1821,8 +1821,8 @@ io.on("connection", socket => {
     if (!cfg) return socket.emit("training_error", { message: "Невідомий тестовий режим." });
 
     const previous = trainingSessions.get(user.id);
-    const sessionMap = mode === "field_test" ? normalizeMapId(data?.map) : cfg.map;
-    const spawnPosition = mode === "training" ? { x: 5, y: 0, z: 5 } : (sessionMap === "NEON_YARD" ? { x: 0, y: 0, z: 12 } : { x: 0, y: 0, z: 0 });
+    const sessionMap = ["field_test", "training"].includes(mode) ? normalizeMapId(data?.map) : cfg.map;
+    const spawnPosition = sessionMap === "NEON_YARD" ? { x: 0, y: 0, z: 12 } : (mode === "training" ? { x: 5, y: 0, z: 5 } : { x: 0, y: 0, z: 0 });
     const session = {
       id: "practice_" + crypto.randomBytes(10).toString("hex"),
       userId: user.id,
@@ -1833,7 +1833,8 @@ io.on("connection", socket => {
       socketId: socket.id,
       playerPos: spawnPosition,
       playerRotY: 0,
-      bot: mode === "field_test" ? { id: "training_bot", nickname: "БОТ", role: "runner", team: "B", hp: 100, maxHp: 100, hits: 0, x: spawnPosition.x, y: 0, z: spawnPosition.z - 3, rotY: Math.PI, action: "idle", updatedAt: Date.now() } : null,
+      bot: ["field_test", "training"].includes(mode) ? { id: "training_bot", nickname: "ТРЕНУВАЛЬНА МІШЕНЬ", role: "runner", team: "B", hp: 100, maxHp: 100, hits: 0, x: spawnPosition.x, y: 0, z: spawnPosition.z - 8, rotY: Math.PI, action: "idle", updatedAt: Date.now() } : null,
+      spawnPosition: { ...spawnPosition },
       lastMoveAt: 0,
       lastActionAt: 0,
       createdAt: Date.now()
@@ -1881,7 +1882,7 @@ io.on("connection", socket => {
     if (![x, y, z, rotY].every(Number.isFinite)) return;
 
     const previous = session.playerPos;
-    const maxStep = 0.55;
+    const maxStep = 0.9;
     const dx = x - previous.x, dz = z - previous.z;
     const distance = Math.hypot(dx, dz);
     if (distance > maxStep) {
@@ -2018,9 +2019,14 @@ io.on("connection", socket => {
   socket.on("training_reset", data => {
     const session = trainingSessions.get(socket.user?.id);
     if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
-    session.playerPos = session.mode === "training" ? { x: 5, y: 0, z: 5 } : { x: 0, y: 0, z: 0 };
+    session.playerPos = { ...(session.spawnPosition || (session.mode === "training" ? { x: 5, y: 0, z: 5 } : { x: 0, y: 0, z: 0 })) };
     session.playerRotY = 0;
-    session.bot = null;
+    session.bot = {
+      id: "training_bot", nickname: "ТРЕНУВАЛЬНА МІШЕНЬ", role: "runner", team: "B",
+      hp: 100, maxHp: 100, hits: 0,
+      x: session.playerPos.x, y: 0, z: session.playerPos.z - 8,
+      rotY: Math.PI, action: "idle", updatedAt: Date.now()
+    };
     io.to(session.id).emit("training_state", { bot: null, reset: true, message: "Тренування скинуто." });
   });
 
