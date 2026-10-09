@@ -202,9 +202,7 @@ async function initMongo() {
 
     const atlasClans = await load("state_clans", clans);
     if (atlasClans && typeof atlasClans === "object" && !Array.isArray(atlasClans)) {
-      clans = Object.fromEntries(
-        Object.entries(atlasClans).filter(([, clan]) => clan && typeof clan === "object" && !Array.isArray(clan))
-      );
+      clans = normalizeClanState(atlasClans);
     }
 
     const atlasMessages = await load("state_messages", messages);
@@ -216,7 +214,12 @@ async function initMongo() {
     const atlasMarket = await load("state_market", market);
     if (Array.isArray(atlasMarket)) market = atlasMarket.filter(lot => lot && typeof lot === "object" && !Array.isArray(lot));
 
-    for (const user of users) ensureUserShape(user);
+    for (const user of users) {
+      ensureUserShape(user);
+      if (user.clan && !clans[user.clan]) user.clan = null;
+    }
+    saveUsers();
+    saveClans();
     console.log("[DB] MongoDB Atlas connected:", mongoStatus.database);
     return true;
   } catch (err) {
@@ -320,10 +323,35 @@ function ensureUserShape(user) {
   user.MMRCompetitive = Number(user.MMRCompetitive) || 1000;
   user.MMRAllies = Number(user.MMRAllies) || 1000;
   user.status = Boolean(user.status);
+  user.clan = user.clan ? cleanText(user.clan, 5).toUpperCase() : null;
   user.isVerified = Boolean(user.isVerified);
   user.isBanned = user.id === ADMIN_ID ? false : Boolean(user.isBanned);
   user.isAdmin = user.id === ADMIN_ID ? true : Boolean(user.isAdmin);
   user.isTester = user.id === ADMIN_ID ? true : Boolean(user.isTester);
+}
+
+function normalizeClanState(rawClans) {
+  const source = rawClans && typeof rawClans === "object" && !Array.isArray(rawClans) ? rawClans : {};
+  const normalized = {};
+  for (const [key, raw] of Object.entries(source)) {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    const tag = cleanText(raw.tag || key, 5).toUpperCase();
+    if (!/^[A-Z0-9]{2,5}$/.test(tag)) continue;
+    normalized[tag] = {
+      ...raw,
+      id: cleanText(raw.id || tag, 40),
+      name: cleanText(raw.name || tag, 24),
+      tag,
+      ownerId: normalizeId(raw.ownerId || raw.owner || ""),
+      description: cleanText(raw.description || "", 120),
+      level: Math.max(1, Number(raw.level) || 1),
+      xp: Math.max(0, Number(raw.xp) || 0),
+      memberLimit: Math.max(5, Math.min(50, Number(raw.memberLimit) || 30)),
+      officers: Array.isArray(raw.officers) ? [...new Set(raw.officers.map(normalizeId).filter(Boolean))] : [],
+      requests: Array.isArray(raw.requests) ? [...new Set(raw.requests.map(normalizeId).filter(Boolean))] : []
+    };
+  }
+  return normalized;
 }
 
 for (const user of users) ensureUserShape(user);
@@ -339,17 +367,11 @@ if (users.some(u => u.clan === "67") && !clans["67"]) {
   };
   saveClans();
 }
-for (const clan of Object.values(clans)) {
-  clan.name = cleanText(clan.name || clan.tag || "Clan", 24);
-  clan.tag = cleanText(clan.tag || clan.name, 5).toUpperCase();
-  clan.ownerId = normalizeId(clan.ownerId || clan.owner || "");
-  clan.level = Number(clan.level) || 1;
-  clan.xp = Number(clan.xp) || 0;
-  clan.description = cleanText(clan.description || "", 120);
-  clan.memberLimit = Math.max(5, Math.min(50, Number(clan.memberLimit) || 30));
-  clan.officers = Array.isArray(clan.officers) ? [...new Set(clan.officers.map(normalizeId))] : [];
-  clan.requests = Array.isArray(clan.requests) ? [...new Set(clan.requests.map(normalizeId))] : [];
+clans = normalizeClanState(clans);
+for (const user of users) {
+  if (user.clan && !clans[user.clan]) user.clan = null;
 }
+
 saveClans();
 
 const sessions = new Map();
@@ -885,6 +907,50 @@ app.post("/api/clans/my", requireAuth, (req, res) => {
   });
 });
 
+app.post("/api/clans/update", transactionRateLimit, requireAuth, (req, res) => {
+  const clan = req.user.clan ? clans[req.user.clan] : null;
+  if (!clan || clan.ownerId !== req.user.id) {
+    return res.status(403).json({ success: false, message: "Редагувати клан може лише власник." });
+  }
+
+  const name = cleanText(req.body.name ?? clan.name, 24);
+  const description = cleanText(req.body.description ?? clan.description, 120);
+  const limit = req.body.memberLimit === undefined ? clan.memberLimit : Number(req.body.memberLimit);
+  const memberCount = users.filter(user => user.clan === clan.tag).length;
+
+  if (!/^[\p{L}\p{N} _-]{3,24}$/u.test(name)) {
+    return res.status(400).json({ success: false, message: "Назва клану: 3–24 символи." });
+  }
+  if (!Number.isInteger(limit) || limit < 5 || limit > 50 || limit < memberCount) {
+    return res.status(400).json({ success: false, message: "Ліміт має бути 5–50 і не меншим за кількість учасників." });
+  }
+
+  clan.name = name;
+  clan.description = description;
+  clan.memberLimit = limit;
+  saveClans();
+  res.json({ success: true, clan });
+});
+
+app.post("/api/clans/transfer", transactionRateLimit, requireAuth, (req, res) => {
+  const clan = req.user.clan ? clans[req.user.clan] : null;
+  if (!clan || clan.ownerId !== req.user.id) {
+    return res.status(403).json({ success: false, message: "Передати клан може лише власник." });
+  }
+
+  const targetId = normalizeId(req.body.userId);
+  const target = users.find(user => user.id === targetId && user.clan === clan.tag);
+  if (!target) return res.status(404).json({ success: false, message: "Новий власник має бути учасником клану." });
+  if (target.id === req.user.id) return res.status(400).json({ success: false, message: "Ти вже власник клану." });
+
+  const previousOwnerId = clan.ownerId;
+  clan.ownerId = target.id;
+  clan.officers = Array.isArray(clan.officers) ? clan.officers.filter(id => id !== target.id) : [];
+  if (!clan.officers.includes(previousOwnerId)) clan.officers.push(previousOwnerId);
+  saveClans();
+  res.json({ success: true, clan });
+});
+
 app.post("/api/clans/request", transactionRateLimit, requireAuth, (req, res) => {
   const tag = cleanText(req.body.clanId || req.body.tag, 5).toUpperCase();
   const clan = clans[tag];
@@ -897,6 +963,19 @@ app.post("/api/clans/request", transactionRateLimit, requireAuth, (req, res) => 
   clan.requests = Array.isArray(clan.requests) ? clan.requests : [];
   if (!clan.requests.includes(req.user.id)) clan.requests.push(req.user.id);
   saveClans();
+
+  const recipientIds = new Set([clan.ownerId, ...(clan.officers || [])]);
+  for (const client of io.sockets.sockets.values()) {
+    if (client.user && recipientIds.has(client.user.id)) {
+      client.emit("clan_request_notification", {
+        tag: clan.tag,
+        clanName: clan.name,
+        userId: req.user.id,
+        nickname: req.user.nickname
+      });
+    }
+  }
+
   res.json({ success: true, message: "Заявку відправлено." });
 });
 
@@ -2006,6 +2085,47 @@ io.on("connection", socket => {
     });
   });
 
+  socket.on("join_clan_chat", ({ tag } = {}) => {
+    const user = socket.user;
+    const clanTag = cleanText(tag || user.clan, 5).toUpperCase();
+    const clan = clans[clanTag];
+    if (!clan || user.clan !== clanTag) {
+      return socket.emit("clan_chat_error", { message: "Чат доступний лише учасникам свого клану." });
+    }
+
+    const room = "clan:" + clanTag;
+    socket.join(room);
+    socket.emit("clan_chat_history", {
+      tag: clanTag,
+      messages: Array.isArray(messages[room]) ? messages[room] : []
+    });
+  });
+
+  socket.on("send_clan_msg", ({ tag, text } = {}) => {
+    const user = socket.user;
+    const clanTag = cleanText(tag || user.clan, 5).toUpperCase();
+    const clan = clans[clanTag];
+    const body = cleanText(text, 1000);
+    if (!clan || user.clan !== clanTag) {
+      return socket.emit("clan_chat_error", { message: "Ти більше не учасник цього клану." });
+    }
+    if (!body) return;
+
+    const room = "clan:" + clanTag;
+    const msg = {
+      senderId: user.id,
+      senderName: user.nickname,
+      text: body,
+      time: new Date().toISOString(),
+      clanTag
+    };
+    messages[room] = Array.isArray(messages[room]) ? messages[room] : [];
+    messages[room].push(msg);
+    if (messages[room].length > 200) messages[room].splice(0, messages[room].length - 200);
+    saveMessages();
+    io.to(room).emit("clan_chat_message", msg);
+  });
+
   socket.on("join_chat", ({ friendId } = {}) => {
     const user = socket.user;
     const friend = users.find(u => u.id === normalizeId(friendId));
@@ -2299,15 +2419,71 @@ app.delete("/api/admin/users/:id", requireAdmin, (req, res) => {
     u.incomingRequests = (u.incomingRequests || []).filter(x => x !== id);
     u.blocked = (u.blocked || []).filter(x => x !== id);
   }
-  for (const clan of Object.values(clans)) {
+  for (const [tag, clan] of Object.entries(clans)) {
     clan.requests = (clan.requests || []).filter(x => x !== id);
     clan.officers = (clan.officers || []).filter(x => x !== id);
+    if (clan.ownerId === id) {
+      const members = users
+        .filter(user => user.clan === tag)
+        .sort((a, b) => ((clan.officers || []).includes(a.id) ? 0 : 1) - ((clan.officers || []).includes(b.id) ? 0 : 1));
+      if (members.length) {
+        clan.ownerId = members[0].id;
+        clan.officers = (clan.officers || []).filter(memberId => memberId !== members[0].id);
+      } else {
+        delete clans[tag];
+        delete messages["clan:" + tag];
+      }
+    }
   }
   for (const [token, data] of sessions.entries()) if (data.userId === id) sessions.delete(token);
   delete inventory[id];
   saveUsers();
   saveClans();
   saveInventory();
+  saveMessages();
+  res.json({ success: true });
+});
+
+app.post("/api/admin/clans/update", transactionRateLimit, requireAdmin, (req, res) => {
+  const tag = cleanText(req.body.tag, 5).toUpperCase();
+  const clan = clans[tag];
+  if (!clan) return res.status(404).json({ success: false, message: "Клан не знайдено." });
+
+  const name = cleanText(req.body.name ?? clan.name, 24);
+  const description = cleanText(req.body.description ?? clan.description, 120);
+  const limit = req.body.memberLimit === undefined ? clan.memberLimit : Number(req.body.memberLimit);
+  const memberCount = users.filter(user => user.clan === tag).length;
+  if (!/^[\p{L}\p{N} _-]{3,24}$/u.test(name)) {
+    return res.status(400).json({ success: false, message: "Назва клану: 3–24 символи." });
+  }
+  if (!Number.isInteger(limit) || limit < 5 || limit > 50 || limit < memberCount) {
+    return res.status(400).json({ success: false, message: "Ліміт має бути 5–50 і не меншим за кількість учасників." });
+  }
+
+  clan.name = name;
+  clan.description = description;
+  clan.memberLimit = limit;
+  saveClans();
+  res.json({ success: true, clan });
+});
+
+app.post("/api/admin/clans/delete", transactionRateLimit, requireAdmin, (req, res) => {
+  const tag = cleanText(req.body.tag, 5).toUpperCase();
+  const clan = clans[tag];
+  if (!clan) return res.status(404).json({ success: false, message: "Клан не знайдено." });
+
+  for (const user of users) if (user.clan === tag) user.clan = null;
+  for (const client of io.sockets.sockets.values()) {
+    if (client.user?.clan === tag) {
+      client.leave("clan:" + tag);
+      client.emit("clan_chat_error", { message: "Клан було видалено адміністрацією." });
+    }
+  }
+  delete clans[tag];
+  delete messages["clan:" + tag];
+  saveUsers();
+  saveClans();
+  saveMessages();
   res.json({ success: true });
 });
 
