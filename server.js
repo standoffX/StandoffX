@@ -411,6 +411,7 @@ function isAdmin(user) {
 function requireAdmin(req, res, next) {
   const user = requestUser(req);
   if (!user) return res.status(401).json({ success: false, message: "Авторизація потрібна." });
+  if (user.isBanned && user.id !== ADMIN_ID) return res.status(403).json({ success: false, message: "Акаунт заблоковано." });
   if (!isAdmin(user)) return res.status(403).json({ success: false, message: "Тільки адміністратор." });
   req.user = user;
   next();
@@ -441,9 +442,15 @@ app.use(express.urlencoded({ extended: false, limit: "1mb" }));
 const BLOCKED_STATIC_DIRS = new Set([".git", ".github", "node_modules", "scripts", "data"]);
 const PROTECTED_STATIC_PAGES = new Set(["admin.html", "mainmenu.html"]);
 app.use((req, res, next) => {
-  let pathname;
+  let pathname = req.path;
   try {
-    pathname = decodeURIComponent(req.path);
+    // Decode repeatedly so double-encoded filenames cannot bypass the static-file guard.
+    for (let i = 0; i < 4; i += 1) {
+      const decoded = decodeURIComponent(pathname);
+      if (decoded === pathname) break;
+      pathname = decoded;
+    }
+    if (/%[0-9a-f]{2}/i.test(pathname)) return res.status(400).end();
   } catch {
     return res.status(400).end();
   }
@@ -508,10 +515,18 @@ const transactionRateLimit = createRateLimit({
 });
 app.use("/avatars", express.static(AVATARS_DIR, { maxAge: "1d" }));
 
+const IMAGE_EXTENSIONS = Object.freeze({
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif"
+});
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, AVATARS_DIR),
   filename: (_req, file, cb) => {
-    cb(null, `${Date.now()}-${crypto.randomBytes(3).toString("hex")}${path.extname(file.originalname).toLowerCase()}`);
+    const extension = IMAGE_EXTENSIONS[file.mimetype];
+    if (!extension) return cb(new Error("Дозволені тільки зображення"));
+    cb(null, `${Date.now()}-${crypto.randomBytes(3).toString("hex")}${extension}`);
   }
 });
 
@@ -519,8 +534,8 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-    cb(null, allowed.has(file.mimetype));
+    if (!IMAGE_EXTENSIONS[file.mimetype]) return cb(new Error("Дозволені тільки зображення"));
+    cb(null, true);
   }
 });
 
@@ -1591,7 +1606,7 @@ io.on("connection", socket => {
   const cookies = parseCookies(socket.handshake.headers.cookie || "");
   socket.user = sessionUserFromToken(cookies.standoffx_session);
 
-  if (!socket.user) {
+  if (!socket.user || (socket.user.isBanned && socket.user.id !== ADMIN_ID)) {
     socket.emit("auth_required");
     socket.disconnect(true);
     return;
@@ -2154,6 +2169,10 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
   const nextIdRaw = normalizeId(req.body.id ?? u.id);
   const nextNick = cleanText(req.body.nickname ?? u.nickname, 24);
   const nextClan = cleanText(req.body.clan ?? "", 5).toUpperCase();
+  const nextPassword = req.body.password === undefined ? "" : String(req.body.password);
+  if (!isMaster && req.body.password !== undefined && nextPassword.length && (nextPassword.length < 6 || nextPassword.length > 128)) {
+    return res.status(400).json({ success: false, message: "Пароль: 6–128 символів." });
+  }
 
   if (!/^[\p{L}\p{N}_-]{3,24}$/u.test(nextNick)) {
     return res.status(400).json({ success: false, message: "Некоректний nickname." });
@@ -2187,12 +2206,8 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
   }
 
   u.nickname = nextNick;
-  if (!isMaster && req.body.password !== undefined && String(req.body.password).length) {
-    const password = String(req.body.password);
-    if (password.length < 6 || password.length > 128) {
-      return res.status(400).json({ success: false, message: "Пароль: 6–128 символів." });
-    }
-    u.passwordHash = hashPassword(password);
+  if (!isMaster && req.body.password !== undefined && nextPassword.length) {
+    u.passwordHash = hashPassword(nextPassword);
     delete u.password;
   }
   if (req.body.gold !== undefined) u.gold = Math.max(0, Number(req.body.gold) || 0);
