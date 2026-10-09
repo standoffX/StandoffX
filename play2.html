@@ -22,7 +22,7 @@
 #results{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;background:#05080def}.resultBox{padding:28px;width:min(420px,90vw);background:#111821;border:1px solid #ffffff14;border-radius:11px;text-align:center}.resultBox h2{margin:0 0 12px}.resultBox .reward{font-size:20px;font-weight:900}.resultBox button{margin-top:18px;width:100%;height:44px;border:0;border-radius:6px;background:#327cff;color:white;font-weight:900}
 #mobile{display:none;position:fixed;inset:0;z-index:20;pointer-events:none}
 #leaveGameDesktop{position:fixed;right:14px;top:14px;z-index:25;pointer-events:auto;border:1px solid #ffffff28;background:#0b111bd9;color:#fff;border-radius:6px;padding:10px 13px;font-size:11px;font-weight:900;cursor:pointer}
-@media(max-width:800px),(pointer:coarse){#leaveGameDesktop{display:none}}.stick{position:absolute;left:20px;bottom:25px;width:125px;height:125px;border-radius:50%;background:#ffffff0d;border:1px solid #ffffff1c;pointer-events:auto;touch-action:none}.stick i{position:absolute;left:35px;top:35px;width:55px;height:55px;border-radius:50%;background:#ffffff22}.mbtn{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid #ffffff1d;background:#0b111bd9;color:#fff;font-size:10px;font-weight:950;pointer-events:auto;touch-action:none}.fire{right:18px;bottom:54px;background:#3e6fb3e6}.jump{right:92px;bottom:128px}.reload{right:92px;bottom:54px}.crouch{right:18px;bottom:128px;background:#7258a8e8}.sprint{right:24px;bottom:202px;background:#237f78e8;width:58px;height:52px;border-radius:14px}.leave{right:20px;top:20px;width:48px;height:40px;border-radius:6px}
+@media(max-width:800px),(pointer:coarse){#leaveGameDesktop{display:none}}.stick{position:absolute;left:20px;bottom:25px;width:125px;height:125px;border-radius:50%;background:#ffffff0d;border:1px solid #ffffff1c;pointer-events:auto;touch-action:none}.stick i{position:absolute;left:35px;top:35px;width:55px;height:55px;border-radius:50%;background:#ffffff22}.mbtn{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid #ffffff1d;background:#0b111bd9;color:#fff;font-size:10px;font-weight:950;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none}.mbtn.active{border-color:#d7f4ff;background:#d7f4ff35;box-shadow:0 0 18px #78cfff33}.fire{right:18px;bottom:54px;background:#3e6fb3e6}.jump{right:92px;bottom:128px}.reload{right:92px;bottom:54px}.crouch{right:18px;bottom:128px;background:#7258a8e8}.sprint{right:24px;bottom:202px;background:#237f78e8;width:58px;height:52px;border-radius:14px}.leave{right:20px;top:20px;width:48px;height:40px;border-radius:6px}
 #trainingControls button:hover{filter:brightness(1.15)}
 .training-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .training-action-grid button{display:flex;align-items:center;justify-content:space-between;gap:5px;min-width:0;min-height:32px;padding:6px 7px;border:1px solid #1de9ff35;border-radius:4px;background:#101e2de8;color:#eaf8ff;font-size:9px;font-weight:900;letter-spacing:.2px;text-align:left;cursor:pointer;touch-action:manipulation}
@@ -949,8 +949,7 @@ function runTrainingAction(action){
   if(action==="spawnBot"){socket.emit("training_spawn_bot",{trainingId});return}
   if(action==="resetBot"){socket.emit("training_bot_action",{trainingId,action:"reset"});return}
   if(action==="resetSession"){
-    if(mode==="training")player.position.set(5,0,5);else player.position.set(0,0,0);
-    player.rotationY=0;velocityY=0;jumping=false;
+    player.rotationY=0;velocityY=0;jumping=false;isCrouching=false;
     socket.emit("training_reset",{trainingId});return;
   }
   if(["push","kick","boost"].includes(action))socket.emit("training_bot_action",{trainingId,action});
@@ -1008,7 +1007,14 @@ function removeTrainingBot(){
 }
 socket.on("training_state",data=>{
   if(!isTrainingMode)return;
-  if(data.reset||data.bot===null)removeTrainingBot();
+  if(data.reset){
+    removeTrainingBot();
+    if(data.spawn&&player){
+      player.position.set(Number(data.spawn.x)||0,Number(data.spawn.y)||0,Number(data.spawn.z)||0);
+      player.rotationY=0;velocityY=0;jumping=false;isCrouching=false;updateVisual();
+    }
+    if(data.bot)applyTrainingBot(data.bot);
+  }else if(data.bot===null)removeTrainingBot();
   else if(data.bot)applyTrainingBot(data.bot);
   if(data.message==="HIT")$("botStatus").textContent="ПОПАДАННЯ · "+$("botStatus").textContent;
 });
@@ -1249,7 +1255,7 @@ function animate(){
     velocityY-=28*dt;player.position.y+=velocityY*dt;
     if(player.position.y<=0){player.position.y=0;velocityY=0;jumping=false}
     if(!isThird){camera.position.set(player.position.x,player.position.y+(isCrouching?1.05:1.58),player.position.z)}
-    else{const offset=new THREE.Vector3(0,2.5,5).applyQuaternion(camera.quaternion);camera.position.copy(player.position).add(offset)}
+    else{const offset=new THREE.Vector3(0,isCrouching?1.65:2.5,5).applyQuaternion(camera.quaternion);camera.position.copy(player.position).add(offset)}
     updateVisual();sendMove();
   }
   if(playerVisual)animateSoldier(playerVisual,dt,now,keys.w||keys.s||keys.a||keys.d,jumping,isCrouching);
