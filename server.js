@@ -286,8 +286,19 @@ function normalizeId(value) {
 }
 
 function displayId(id) {
-  const q = normalizeId(id);
-  return q;
+  return normalizeId(id);
+}
+
+function playerIdExists(id) {
+  const key = normalizeId(id).toLowerCase();
+  return users.some(user => normalizeId(user.id).toLowerCase() === key);
+}
+
+function newPlayerId() {
+  let id;
+  do { id = String(crypto.randomInt(1000000, 10000000)); }
+  while (id.toLowerCase() === ADMIN_ID.toLowerCase() || playerIdExists(id));
+  return id;
 }
 
 function findUser(idOrNickname, options = {}) {
