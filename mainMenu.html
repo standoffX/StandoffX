@@ -352,6 +352,7 @@ function openPlay(){
     socket.on("training_error",d=>{socket.disconnect();socket=null;alert(d.message||"Помилка тренування")});
     socket.on("training_started",d=>{
       sessionStorage.setItem("myPlayerId",d.userId);
+      sessionStorage.setItem("myPlayerUUID",d.uuid||me.uuid||"");
       sessionStorage.setItem("selectedMode",d.mode);
       sessionStorage.setItem("selectedMap",d.map||"FIELD_ARENA");
       sessionStorage.setItem("trainingId",d.trainingId);
@@ -376,7 +377,7 @@ function openPlay(){
       :"Очікуємо інших гравців...";
   });
   socket.on("match_found",d=>{
-    sessionStorage.setItem("myPlayerId",d.userId);sessionStorage.setItem("currentMatchId",d.matchId);
+    sessionStorage.setItem("myPlayerId",d.userId);sessionStorage.setItem("myPlayerUUID",d.uuid||me.uuid||"");sessionStorage.setItem("currentMatchId",d.matchId);
     sessionStorage.setItem("selectedMap",d.map||"M3_Maze");sessionStorage.setItem("selectedMode",d.mode||selectedMode);
     location.href="/play2.html";
   });
