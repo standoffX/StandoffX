@@ -24,7 +24,15 @@
 #leaveGameDesktop{position:fixed;right:14px;top:14px;z-index:25;pointer-events:auto;border:1px solid #ffffff28;background:#0b111bd9;color:#fff;border-radius:6px;padding:10px 13px;font-size:11px;font-weight:900;cursor:pointer}
 @media(max-width:800px),(pointer:coarse){#leaveGameDesktop{display:none}}.stick{position:absolute;left:20px;bottom:25px;width:125px;height:125px;border-radius:50%;background:#ffffff0d;border:1px solid #ffffff1c;pointer-events:auto;touch-action:none}.stick i{position:absolute;left:35px;top:35px;width:55px;height:55px;border-radius:50%;background:#ffffff22}.mbtn{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid #ffffff1d;background:#0b111bd9;color:#fff;font-size:10px;font-weight:950;pointer-events:auto;touch-action:none}.fire{right:20px;bottom:64px;background:#3e6fb3e6}.jump{right:100px;bottom:145px}.reload{right:102px;bottom:64px}.leave{right:20px;top:20px;width:48px;height:40px;border-radius:6px}
 #trainingControls button:hover{filter:brightness(1.15)}
-@media(max-width:800px){#trainingControls{top:auto;left:8px;right:auto;bottom:190px;width:155px;padding:8px}.fire{bottom:44px}}
+.field-controls{position:fixed;top:72px;right:14px;width:220px;z-index:15;padding:13px;background:linear-gradient(145deg,#0b1728ed,#060a13ed);border:1px solid #20e8ff66;border-radius:9px;box-shadow:0 14px 35px #0008,inset 0 1px #ffffff13;color:#edf7ff;pointer-events:auto}
+.field-kicker{font-size:9px;letter-spacing:1.7px;font-weight:950;color:#20e8ff}
+.field-map{display:block;margin-top:8px;font-size:17px;font-weight:950;letter-spacing:.4px}
+.field-coords{margin-top:9px;padding:8px;background:#06101c;border:1px solid #20e8ff28;border-radius:5px;color:#c6f8ff;font:10px ui-monospace,SFMono-Regular,Consolas,monospace;white-space:nowrap}
+.field-status{display:flex;align-items:center;gap:6px;margin-top:9px;color:#8ea5ba;font-size:9px;font-weight:850;letter-spacing:.6px}
+.field-dot{width:6px;height:6px;border-radius:50%;background:#74ffcb;box-shadow:0 0 10px #74ffcb;flex:0 0 auto}
+.field-help{margin:9px 0;color:#8fa2b9;font-size:10px;line-height:1.5}
+#resetFieldPosition{width:100%;padding:10px;background:#20e8ff;color:#04111b;border:0;border-radius:5px;font-size:10px;font-weight:950;letter-spacing:.5px}
+@media(max-width:800px){#trainingControls{top:58px;left:auto;right:8px;bottom:auto;width:min(178px,calc(100vw - 16px));padding:9px}.field-controls{top:58px;left:auto;right:8px;width:min(190px,calc(100vw - 16px));padding:10px}.field-map{font-size:15px}.fire{bottom:44px}}
 @media(max-width:800px),(pointer:coarse){#mobile{display:block}#hint{display:none}.top{top:8px}.players{grid-template-columns:1fr}.panel{max-height:90vh;overflow:auto}}
 </style>
 </head>
@@ -65,6 +73,14 @@
   </div>
   <button id="resetTraining" style="width:100%;margin-top:7px;padding:8px;background:#632e40;color:#fff;border:0;border-radius:5px">RESET SESSION</button>
 </div>
+<div id="fieldControls" class="field-controls" style="display:none">
+  <div class="field-kicker">STANDOFFX / MAP LAB</div>
+  <strong id="fieldMapName" class="field-map">FIELD ARENA</strong>
+  <div id="fieldCoords" class="field-coords">X 0.0 · Y 0.0 · Z 0.0</div>
+  <div class="field-status"><span class="field-dot"></span> FREE ROAM · NO TIMER</div>
+  <p class="field-help">Досліджуй проходи, укриття та межі карти. Ворогів і пошуку матчу немає.</p>
+  <button id="resetFieldPosition" type="button">↺ ПОВЕРНУТИСЯ НА СТАРТ</button>
+</div>
 
 <div id="mobile">
   <div id="stick" class="stick"><i></i></div>
@@ -91,6 +107,7 @@ const myUuid=sessionStorage.getItem("myPlayerUUID")||"";
 const matchId=sessionStorage.getItem("currentMatchId");
 const mode=sessionStorage.getItem("selectedMode")||"hide_seek";
 const selectedMap=sessionStorage.getItem("selectedMap")||"M3_Maze";
+const MAP_LABELS={M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD"};
 const isTrainingMode=mode==="training"||mode==="field_test";
 const trainingId=sessionStorage.getItem("trainingId")||matchId;
 if(!myId||(!matchId&&!isTrainingMode)){location.href="/game";throw new Error("No active match")}
@@ -236,7 +253,7 @@ function loadMap(){
     finishClientReady();
     return;
   }
-  if(selectedMap==="FIELD_ARENA"||mode==="field_test"){
+  if(selectedMap==="FIELD_ARENA"){
     buildFieldArena();
     finishClientReady();
     return;
@@ -352,7 +369,7 @@ function finishClientReady(){
     $("overlayTitle").textContent=mode==="field_test"?"FIELD TEST":"TRAINING";
     $("phase").textContent="ГОТОВО";
     $("overlayText").textContent="Тестовий режим";
-    $("trainingControls").style.display="block";
+    updateTesterPanels();
     $("ammo").style.display="block";
     $("overlay").style.display="none";
     return;
@@ -361,6 +378,11 @@ function finishClientReady(){
   socket.emit("client_ready",{matchId});
 }
 
+function updateTesterPanels(){
+  $("trainingControls").style.display=mode==="training"?"block":"none";
+  $("fieldControls").style.display=mode==="field_test"?"block":"none";
+  $("fieldMapName").textContent=MAP_LABELS[selectedMap]||"M3 MAZE";
+}
 function updateWaiting(data){
   const list=data.players||[];
   $("players").innerHTML=list.map(p=>{
@@ -442,6 +464,14 @@ $("resetTraining").addEventListener("click",()=>{
   if(mode==="training")player.position.set(5,0,5);else player.position.set(0,0,0);player.rotationY=0;velocityY=0;jumping=false;
   socket.emit("training_reset",{trainingId});
 });
+$("resetFieldPosition").addEventListener("click",()=>{
+  if(!player)return;
+  player.position.set(0,0,0);player.rotationY=0;velocityY=0;jumping=false;jumpQueued=false;
+  keys.w=keys.a=keys.s=keys.d=false;
+  camera.rotation.set(0,0,0);
+  socket.emit("training_reset",{trainingId});
+  sendMove(true);
+});
 document.querySelectorAll("[data-bot-action]").forEach(b=>b.addEventListener("click",()=>socket.emit("training_bot_action",{trainingId,action:b.dataset.botAction})));
 
 socket.on("training_init",data=>{
@@ -450,9 +480,9 @@ socket.on("training_init",data=>{
   matchPhase="game";canControl=true;
   ensurePlayerVisual();
   if(data.spawn)player.position.set(data.spawn.x||0,data.spawn.y||0,data.spawn.z||0);
-  $("trainingControls").style.display="block";
+  updateTesterPanels();
   $("overlay").style.display="none";
-  $("phase").textContent="TRAINING";
+  $("phase").textContent=mode==="field_test"?"ДОСЛІДЖЕННЯ КАРТИ":"TRAINING";
   if(data.bot)applyTrainingBot(data.bot);else removeTrainingBot();
 });
 function applyTrainingBot(bot){
@@ -586,6 +616,7 @@ document.addEventListener("touchmove",e=>{
 document.addEventListener("touchend",()=>lookTouch=null);
 
 let previous=performance.now();
+let lastFieldTelemetry=0;
 function animate(){
   requestAnimationFrame(animate);
   const now=performance.now(),dt=Math.min(.05,(now-previous)/1000);previous=now;
@@ -613,6 +644,10 @@ function animate(){
     updateVisual();sendMove();
   }
   Object.values(enemies).forEach(e=>{e.mesh.position.lerp(e.pos,.35)});
+  if(mode==="field_test"&&player&&now-lastFieldTelemetry>150){
+    $("fieldCoords").textContent="X "+player.position.x.toFixed(1)+" · Y "+player.position.y.toFixed(1)+" · Z "+player.position.z.toFixed(1);
+    lastFieldTelemetry=now;
+  }
   renderer.render(scene,camera);
 }
 
