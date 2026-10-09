@@ -139,7 +139,7 @@ renderer.domElement.addEventListener("click",requestMouseLook);
 document.addEventListener("pointerlockchange",()=>{
   const locked=document.pointerLockElement===renderer.domElement;
   if(locked){
-    $("clickHint").textContent="Миша: огляд · ESC: звільнити курсор · WASD: рух";
+    $("clickHint").textContent="Миша: огляд · ESC: у лобі · WASD: рух";
   }else if(matchPhase==="game"&&$("pauseMenu")?.style.display!=="flex"){
     $("clickHint").textContent="Клікни в ігрову область, щоб увімкнути огляд мишкою.";
   }
@@ -499,7 +499,7 @@ function loadMap(){
     finishClientReady();
     return;
   }
-  if(selectedMap==="FIELD_ARENA"||mode==="field_test"){
+  if(selectedMap==="FIELD_ARENA"){
     buildFieldArena();
     finishClientReady();
     return;
@@ -612,7 +612,7 @@ function finishClientReady(){
   ensurePlayerVisual();
   if(isTrainingMode){
     matchPhase="game";
-    $("overlayTitle").textContent=mode==="field_test"?"FIELD TEST":"TRAINING";
+    $("overlayTitle").textContent=mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":"ТРЕНУВАННЯ";
     $("phase").textContent="ГОТОВО";
     $("overlayText").textContent="Тестовий режим";
     $("trainingControls").style.display="block";
@@ -630,8 +630,7 @@ function updateWaiting(data){
     const cls=(p.connected?"online ":"")+(p.ready?"ready":"");
     const nickname=String(p.nickname||"PLAYER").replace(/[&<>"]/g,"");
     const playerId=String(p.userId||"—").replace(/[&<>"]/g,"");
-    const uuid=String(p.uuid||"").slice(0,8).replace(/[&<>"]/g,"");
-    return "<div class='player "+cls+"'><span class='dot'></span><b>"+nickname+"</b><div class='player-id'>ID "+playerId+(uuid?" · UUID "+uuid+"…":"")+"</div><div style='margin-top:4px;color:#7d8ca0;font-size:10px'>"+(p.ready?"ГОТОВ":"ПІДКЛЮЧЕННЯ")+"</div></div>"
+    return "<div class='player "+cls+"'><span class='dot'></span><b>"+nickname+"</b><div class='player-id'>ID "+playerId+"</div><div style='margin-top:4px;color:#7d8ca0;font-size:10px'>"+(p.ready?"ГОТОВ":"ПІДКЛЮЧЕННЯ")+"</div></div>"
   }).join("");
   $("phase").textContent=data.ready>=data.required?"ВСІ ГОТОВІ":("ГОТОВНІ: "+(data.ready||0)+"/"+data.required);
   $("bigTimer").textContent=(data.connected||0)+"/"+data.required;
@@ -662,9 +661,9 @@ function queueJump(){if(matchPhase==="game")jumpQueued=true}
 
 addEventListener("keydown",e=>{
   if(e.repeat)return;
-  if(e.code==="Escape"&&matchPhase==="game"){e.preventDefault();togglePauseMenu();return}
+  if(e.code==="Escape"&&matchPhase==="game"){e.preventDefault();leaveGame();return}
   const binds=readTrainingBinds();
-  if(e.code===binds.menu){e.preventDefault();togglePauseMenu();return}
+  if(e.code===binds.menu){e.preventDefault();leaveGame();return}
   if(isTrainingMode&&matchPhase==="game"){
     const action=Object.keys(binds).find(name=>name!=="menu"&&binds[name]===e.code);
     if(action){e.preventDefault();runTrainingAction(action);return}
@@ -690,7 +689,7 @@ addEventListener("mousedown",e=>{if(e.button===0&&$("pauseMenu")?.style.display!
 
 function setOverlayGame(){
   $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":mode==="training"?"ТРЕНУВАННЯ":"HIDE & SEEK";
-  $("clickHint").textContent="Клікни для огляду мишкою. WASD — рух · ESC — меню паузи";
+  $("clickHint").textContent="Клікни для огляду мишкою. WASD — рух · ESC — у лобі";
   if(/Android|iPhone|iPad/i.test(navigator.userAgent)) $("overlay").style.display="none";
 }
 function leaveGame(){
@@ -773,7 +772,7 @@ socket.on("init_match",data=>{
   ensurePlayerVisual();
   const authoritativePosition=data.me?.position||data.me?.spawn;
   if(authoritativePosition)player.position.set(authoritativePosition.x||0,authoritativePosition.y||0,authoritativePosition.z||0);
-  (data.players||[]).forEach(p=>{if(myUuid?String(p.uuid||"")!==myUuid:String(p.userId)!==String(myId))applyEnemy(p)});
+  (data.players||[]).forEach(p=>{if(String(p.userId)!==String(myId))applyEnemy(p)});
   updateVisual();
 });
 socket.on("match_waiting",data=>{
