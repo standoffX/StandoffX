@@ -2106,7 +2106,7 @@ io.on("connection", socket => {
     const distance = Math.hypot(dx, dz);
     if (distance > maxStep) { dx = dx / distance * maxStep; dz = dz / distance * maxStep; }
     if(session.map === "HILL_TOWN"){
-      const collisionMap={map:session.map,worldObjects:{mapId:session.map,doors:{},wood:{}}};
+      const collisionMap={map:session.map,worldObjects:session.worldObjects||createMapWorldState(session.map)};
       const nextX=previous.x+dx,nextZ=previous.z+dz;
       if(!isMapPositionBlocked(collisionMap,nextX,previous.z))previous.x=nextX;
       if(!isMapPositionBlocked(collisionMap,previous.x,nextZ))previous.z=nextZ;
