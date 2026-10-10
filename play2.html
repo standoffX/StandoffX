@@ -438,13 +438,13 @@ async function loadHillTownStarterFallback(){
     const map=await loadGLBScene(HILL_TOWN_STARTER_URL);
     map.scale.x*=HILL_TOWN_SCALE;map.scale.z*=HILL_TOWN_SCALE;
     map.traverse(node=>{if(node.isMesh){node.castShadow=false;node.receiveShadow=false;mapObjects.push(node)}});
-    scene.add(map);mapLoaded=true;mapLoadFinished=true;
+    scene.add(map);addGameplayInteractables();mapLoaded=true;mapLoadFinished=true;
     $("progress").style.width="100%";
     $("phase").textContent="HILL TOWN";
     finishClientReady();
   }catch(error){
     console.warn("[HILL_TOWN] Remote models unavailable; using local town geometry.",error);
-    buildLocalHillTownFallback();finishClientReady();
+    buildLocalHillTownFallback();addGameplayInteractables();finishClientReady();
   }
 }
 async function buildHillTownMap(){
@@ -509,6 +509,7 @@ async function buildHillTownMap(){
     prop("olive",-20,8,0);prop("olive",20,-8,0);
     prop("lamp",-24,0,Math.PI/2);prop("lamp",24,0,-Math.PI/2);
     addGameplayInteractables();
+    addGameplayInteractables();
     mapLoadFinished=true;mapLoaded=true;hillTownBuilding=false;
     scene.background=new THREE.Color(0xc8d3d8);
     scene.fog=new THREE.Fog(0xc8d3d8,95,250);
@@ -525,6 +526,7 @@ async function buildHillTownMap(){
 // Small, deterministic gameplay interactions: hinged doors and breakable wooden cover.
 const interactiveDoors=[];
 const breakableWood=[];
+let gameplayInteractablesBuilt=false;
 function addGameplayDoor(x,z,rotationY=0,label="ДВЕРІ"){
   const s=HILL_TOWN_SCALE,group=new THREE.Group();
   group.position.set(x*s,0,z*s);group.rotation.y=rotationY;
@@ -590,7 +592,8 @@ function damageBreakableWood(direction){
   }
 }
 function addGameplayInteractables(){
-  if(selectedMap!=="HILL_TOWN")return;
+  if(gameplayInteractablesBuilt||selectedMap!=="HILL_TOWN")return;
+  gameplayInteractablesBuilt=true;
   // These hinged doors sit in the two central lane openings, not across spawn exits.
   addGameplayDoor(-1.4,-10,0);
   addGameplayDoor(1.4,10,Math.PI);
