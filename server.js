@@ -2308,10 +2308,11 @@ io.on("connection", socket => {
     const match = activeMatches.get(matchId);
     if (!match) return;
 
-    const index = match.players.findIndex(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && (p.socketId === socket.id || p.socketId === null));
+    const index = match.players.findIndex(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id));
     if (index < 0) return;
 
     const player = match.players[index];
+    if (player.socketId && player.socketId !== socket.id) io.to(player.socketId).emit("kick_to_menu", { reason: "Матч завершено з іншої вкладки." });
     if (player.disconnectTimer) clearTimeout(player.disconnectTimer);
     player.disconnectTimer = null;
     player.socketId = null;
