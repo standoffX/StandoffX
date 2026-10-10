@@ -213,7 +213,7 @@ assert.doesNotMatch(server, /bot\.hp = Math\.max\(0, bot\.hp - \(Number\(data\.d
 assert.match(menu, /data-mode="allies"/, "menu must offer Allies");
 assert.match(menu, /data-mode="team_fight"/, "menu must offer Team Fight");
 assert.match(menu, /data-map="HILL_TOWN"/, "menu must offer Hill Town");
-assert.match(game, /async function buildHillTownMap\(\)/, "game must assemble the new map from modular assets");
+assert.match(game, /function buildCompetitiveMap\(\)/, "the local competitive map must load without external 3D assets");
 assert.match(game, /HILL_TOWN_MANIFEST_URL/, "game must load the public CC0 map asset manifest");
 assert.match(game, /async function loadHeldWeapon\(\)/, "game must load a first-person weapon model");
 assert.match(game, /function makeFallbackP350\(\)/, "the client must render the P350 pistol when equipped");
@@ -260,7 +260,8 @@ assert.match(server, /worldObjects: match\.worldObjects/, "reconnecting players 
 
 assert.match(game, /NEON_YARD_SCALE=2/, "Neon Yard must have an enlarged play area");
 assert.match(game, /FIELD_ARENA_SCALE=2/, "Field Arena must have an enlarged play area");
-assert.match(game, /map\.scale\.setScalar\(82\.5\)/, "the M3 map must be enlarged too");
+assert.match(game, /const uniformScale=horizontalSpan>0\?180\/horizontalSpan:1/, "M3 must be uniformly normalized instead of stretched");
+assert.match(game, /loadedMapLimit=Math\.max\(finalBounds\.getSize\(new THREE\.Vector3\(\)\)\.x,finalBounds\.getSize\(new THREE\.Vector3\(\)\)\.z\)\/2\+4/, "normalized maps must use their real world bounds");
 assert.match(game, /function rebuildCollisionIndex\(\)/, "map geometry must be registered for solid collision");
 assert.match(game, /function blockedAt\(x,z\)/, "the player must be blocked by solid map objects");
 assert.match(game, /function moveWithCollision\(direction,distance\)/, "movement must use small collision-tested steps instead of crossing walls at sprint speed");
