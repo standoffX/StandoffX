@@ -925,7 +925,7 @@ function updateDoorInteractionHint(now){
   const wallMat=new THREE.MeshStandardMaterial({color:0x4e5965,roughness:1});
   const boxMat=new THREE.MeshStandardMaterial({color:0x626a70,roughness:.9});
   const addBox=(x,y,z,w,h,d,mat)=>{
-    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w*FIELD_ARENA_SCALE,h,d*FIELD_ARENA_SCALE),mat);mesh.position.set(x*FIELD_ARENA_SCALE,y,z*FIELD_ARENA_SCALE);mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w*FIELD_ARENA_SCALE,h,d*FIELD_ARENA_SCALE),mat);mesh.position.set(x*FIELD_ARENA_SCALE,y,z*FIELD_ARENA_SCALE);mesh.castShadow=false;mesh.receiveShadow=false;mesh.userData.forceCollision=true;scene.add(mesh);mapObjects.push(mesh);
   };
   addBox(0,4,-150,300,8,3,wallMat);addBox(0,4,150,300,8,3,wallMat);
   addBox(-150,4,0,3,8,300,wallMat);addBox(150,4,0,3,8,300,wallMat);
@@ -947,7 +947,7 @@ function buildNeonYard(){
   const violetMat=new THREE.MeshStandardMaterial({color:0x251039,emissive:0x8b35ff,emissiveIntensity:.8,roughness:.4,metalness:.2});
   const addBox=(x,y,z,w,h,d,mat)=>{
     const mesh=new THREE.Mesh(new THREE.BoxGeometry(w*NEON_YARD_SCALE,h,d*NEON_YARD_SCALE),mat);
-    mesh.position.set(x*NEON_YARD_SCALE,y,z*NEON_YARD_SCALE);mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
+    mesh.position.set(x*NEON_YARD_SCALE,y,z*NEON_YARD_SCALE);mesh.castShadow=false;mesh.receiveShadow=false;mesh.userData.forceCollision=true;scene.add(mesh);mapObjects.push(mesh);
   };
   addBox(0,4,-88,180,8,3,wallMat);addBox(0,4,88,180,8,3,wallMat);
   addBox(-88,4,0,3,8,180,wallMat);addBox(88,4,0,3,8,180,wallMat);
@@ -1578,15 +1578,16 @@ $("trainingControls").addEventListener("touchstart",e=>e.stopPropagation(),{pass
 
 socket.on("training_init",data=>{
   if(!isTrainingMode)return;
+  if(data.worldObjects)applyMapWorldState(data.worldObjects);
   $("reconnectBtn").style.display="none";$("reconnectExitBtn").style.display="none";document.body.classList.remove("reconnecting");
   updateWeaponHud();
   $("modeName").textContent=data.modeName||mode.toUpperCase();
   matchPhase="game";canControl=true;
   ensurePlayerVisual();
   if(data.spawn)player.position.set(data.spawn.x||0,data.spawn.y||0,data.spawn.z||0);
-  $("trainingControls").style.display="block";
+  $("trainingControls").style.display=(mode==="field_test"||mode==="training")?"block":"none";
   renderTrainingKeyHints();
-  $("overlayTitle").textContent=mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":"ТРЕНУВАННЯ";
+  $("overlayTitle").textContent=mode==="field_test"?"ПРОТОТИП · БОТИ":mode==="free_play"?"ВІЛЬНА ГРА":"ТРЕНУВАННЯ";
   $("overlayText").textContent=mapLoadFinished?"Готово.":"Завантажуємо карту…";
   $("overlay").style.display=mapLoadFinished?"none":"flex";
   $("phase").textContent=mapLoadFinished?"ГОТОВО":"ЗАВАНТАЖЕННЯ КАРТИ";
@@ -1595,14 +1596,14 @@ socket.on("training_init",data=>{
 function applyTrainingBot(bot){
   if(!bot){removeTrainingBot();return}
   applyEnemy({userId:"training_bot",id:"training_bot",nickname:bot.nickname||"Training Bot",role:"runner",team:"B",hp:bot.hp,x:bot.x,y:bot.y,z:bot.z,rotY:bot.rotY||0,anim:bot.action==="boost"?"Jump":"Idle",score:0});
-  $("botStatus").textContent="BOT · HP "+bot.hp+"/"+(bot.maxHp||100)+" · HITS "+(bot.hits||0);
+  $("botStatus").textContent="БОТ · HP "+bot.hp+"/"+(bot.maxHp||100)+" · ВЛУЧАНЬ "+(bot.hits||0);
   const enemy=enemies["training_bot"];
   if(enemy)setSoldierTint(enemy.mesh,bot.hp<=0?0x777777:0xffbd67);
 }
 function removeTrainingBot(){
   const bot=enemies["training_bot"];
   if(bot){scene.remove(bot.mesh);delete enemies["training_bot"];}
-  $("botStatus").textContent="Бота ще немає";
+  $("botStatus").textContent=mode==="free_play"?"ВІЛЬНА ГРА · ІНШИХ ГРАВЦІВ НЕМАЄ":"Бота ще немає";
 }
 socket.on("training_state",data=>{
   if(!isTrainingMode)return;
