@@ -632,15 +632,15 @@ let player=null;
 let playerVisual=null;
 const enemies={};
 const raycaster=new THREE.Raycaster();
-const HILL_TOWN_SCALE=1,NEON_YARD_SCALE=1.25,FIELD_ARENA_SCALE=1.25,FALLBACK_ARENA_SCALE=1.4;
+const HILL_TOWN_SCALE=1,NEON_YARD_SCALE=2.25,FIELD_ARENA_SCALE=2.15,FALLBACK_ARENA_SCALE=3;
 const HILL_TOWN_STATIC_SOLIDS=(()=>{
   const solids=[
     {id:"border_north",x:0,z:-46,w:94,d:1.4,h:5.5,kind:"wall"},
     {id:"border_south",x:0,z:46,w:94,d:1.4,h:5.5,kind:"wall"},
     {id:"border_west",x:-46,z:0,w:1.4,d:94,h:5.5,kind:"wall"},
     {id:"border_east",x:46,z:0,w:1.4,d:94,h:5.5,kind:"wall"},
-    {id:"mid_wall_n",x:0,z:-11,w:.75,d:10,h:4.6,kind:"wall"},
-    {id:"mid_wall_s",x:0,z:11,w:.75,d:10,h:4.6,kind:"wall"}
+    {id:"mid_wall_n",x:0,z:-9.75,w:.75,d:12.5,h:4.6,kind:"wall"},
+    {id:"mid_wall_s",x:0,z:9.75,w:.75,d:12.5,h:4.6,kind:"wall"}
   ];
   for(const cx of [-22,22])for(const cz of [-24,24]){
     solids.push(
@@ -650,8 +650,8 @@ const HILL_TOWN_STATIC_SOLIDS=(()=>{
     const innerX=cx+(cx<0?7:-7),outerX=cx+(cx<0?-7:7);
     solids.push({id:"house_"+cx+"_"+cz+"_outer",x:outerX,z:cz,w:.6,d:12,h:4.4,kind:"wall"});
     solids.push(
-      {id:"house_"+cx+"_"+cz+"_inner_n",x:innerX,z:cz-4,w:.6,d:3.7,h:4.4,kind:"wall"},
-      {id:"house_"+cx+"_"+cz+"_inner_s",x:innerX,z:cz+4,w:.6,d:3.7,h:4.4,kind:"wall"}
+      {id:"house_"+cx+"_"+cz+"_inner_n",x:innerX,z:cz-3.8,w:.6,d:5.2,h:4.4,kind:"wall"},
+      {id:"house_"+cx+"_"+cz+"_inner_s",x:innerX,z:cz+3.8,w:.6,d:5.2,h:4.4,kind:"wall"}
     );
   }
   for(const [i,x,z] of [[1,-10,-10],[2,10,10],[3,-10,10],[4,10,-10],[5,-31,-10],[6,31,10],[7,-31,10],[8,31,-10]])
@@ -1204,7 +1204,7 @@ function rebuildCollisionIndex(){
   collisionIndexReady=true;
 }
 function worldLimit(){
-  return ({HILL_TOWN:45.5,NEON_YARD:115,FIELD_ARENA:165,M3_Maze:90})[selectedMap]||90;
+  return ({HILL_TOWN:45.5,NEON_YARD:205,FIELD_ARENA:330,M3_Maze:232})[selectedMap]||232;
 }
 function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
