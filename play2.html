@@ -633,6 +633,7 @@ let playerVisual=null;
 const enemies={};
 const raycaster=new THREE.Raycaster();
 const HILL_TOWN_SCALE=1,NEON_YARD_SCALE=2.25,FIELD_ARENA_SCALE=2.15,FALLBACK_ARENA_SCALE=3;
+let loadedMapLimit=null;
 const HILL_TOWN_STATIC_SOLIDS=(()=>{
   const solids=[
     {id:"border_north",x:0,z:-46,w:94,d:1.4,h:5.5,kind:"wall"},
