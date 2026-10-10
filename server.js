@@ -1340,7 +1340,7 @@ const HILL_TOWN_STATIC_SOLIDS = Object.freeze((() => {
 })());
 
 const HILL_TOWN_DOORS = Object.freeze([
-  { id: "door_mid", x: 0, z: 0, w: .28, d: 5.8, h: 2.8 },
+  { id: "door_mid", x: 0, z: 0, w: 5.8, d: .28, h: 2.8 },
   ...[-22, 22].flatMap(cx => [-24, 24].map(cz => ({
     id: "door_house_" + (cx < 0 ? "west_" : "east_") + (cz < 0 ? "north" : "south"),
     x: cx + (cx < 0 ? 6.7 : -6.7), z: cz, w: .28, d: 2.35, h: 2.65
@@ -1449,7 +1449,8 @@ const MODE_CONFIGS = {
 
 const TESTER_MODE_CONFIGS = {
   training: { id: "training", name: "TRAINING", map: "HILL_TOWN", kind: "bot-training" },
-  field_test: { id: "field_test", name: "FIELD TEST", map: "HILL_TOWN", kind: "free-range" }
+  field_test: { id: "field_test", name: "ПРОТОТИП · БОТИ", map: "HILL_TOWN", kind: "bot-prototype" },
+  free_play: { id: "free_play", name: "ВІЛЬНА ГРА", map: "HILL_TOWN", kind: "solo" }
 };
 
 function canUseTesterModes(user) {
@@ -1463,10 +1464,10 @@ const SPAWNS = [
   { x: 15, y: 0, z: 25 }
 ];
 const HILL_TOWN_SPAWNS = [
-  { x: -20, y: 0, z: -14 },
-  { x: 20, y: 0, z: -14 },
-  { x: -20, y: 0, z: 14 },
-  { x: 20, y: 0, z: 14 }
+  { x: -39, y: 0, z: -5 },
+  { x: 39, y: 0, z: -5 },
+  { x: -39, y: 0, z: 5 },
+  { x: 39, y: 0, z: 5 }
 ];
 
 function getModeConfig(mode) {
@@ -2021,15 +2022,15 @@ io.on("connection", socket => {
     const user = socket.user;
     const mode = cleanText(data?.mode, 32);
     const cfg = TESTER_MODE_CONFIGS[mode];
-    if (!canUseTesterModes(user)) {
-      return socket.emit("training_error", { message: "Цей режим доступний лише тестерам." });
+    if (!cfg) return socket.emit("training_error", { message: "Невідомий режим." });
+    if (mode !== "free_play" && !canUseTesterModes(user)) {
+      return socket.emit("training_error", { message: "Режим із ботами доступний лише тестерам." });
     }
-    if (!cfg) return socket.emit("training_error", { message: "Невідомий тестовий режим." });
 
     const previous = trainingSessions.get(user.id);
-    const sessionMap = ["field_test", "training"].includes(mode) ? normalizeMapId(data?.map) : cfg.map;
+    const sessionMap = ["field_test", "training", "free_play"].includes(mode) ? normalizeMapId(data?.map) : cfg.map;
     const TRAINING_SPAWNS = {
-      HILL_TOWN: {x:0,y:0,z:42},
+      HILL_TOWN: {x:0,y:0,z:38},
       NEON_YARD: {x:0,y:0,z:115},
       FIELD_ARENA: {x:0,y:0,z:0},
       M3_Maze: {x:5,y:0,z:5}
@@ -2045,7 +2046,7 @@ io.on("connection", socket => {
       socketId: socket.id,
       playerPos: spawnPosition,
       playerRotY: 0,
-      bot: ["field_test", "training"].includes(mode) ? { id: "training_bot", nickname: "ТРЕНУВАЛЬНА МІШЕНЬ", role: "runner", team: "B", hp: 100, maxHp: 100, hits: 0, x: spawnPosition.x, y: 0, z: spawnPosition.z - 8, rotY: Math.PI, action: "idle", updatedAt: Date.now() } : null,
+      bot: ["field_test", "training"].includes(mode) ? { id: "training_bot", nickname: "ПРОТОТИП-БОТ", role: "runner", team: "B", hp: 100, maxHp: 100, hits: 0, x: spawnPosition.x - 2, y: 0, z: spawnPosition.z - 8, rotY: Math.PI, action: "idle", updatedAt: Date.now() } : null,
       spawnPosition: { ...spawnPosition },
       lastMoveAt: 0,
       lastActionAt: 0,
@@ -2066,8 +2067,8 @@ io.on("connection", socket => {
 
   socket.on("join_training", data => {
     const user = socket.user;
-    if (!canUseTesterModes(user)) return socket.emit("kick_to_menu", { reason: "Режим доступний лише тестерам." });
     const session = trainingSessions.get(user.id);
+    if (session && session.mode !== "free_play" && !canUseTesterModes(user)) return socket.emit("kick_to_menu", { reason: "Режим із ботами доступний лише тестерам." });
     if (!session || session.id !== cleanText(data?.trainingId, 100)) {
       return socket.emit("kick_to_menu", { reason: "Тренувальну сесію не знайдено." });
     }
@@ -2096,14 +2097,16 @@ io.on("connection", socket => {
 
     const previous = session.playerPos;
     const maxStep = 0.9;
-    const dx = x - previous.x, dz = z - previous.z;
+    let dx = x - previous.x, dz = z - previous.z;
     const distance = Math.hypot(dx, dz);
-    if (distance > maxStep) {
-      previous.x += dx / distance * maxStep;
-      previous.z += dz / distance * maxStep;
-    } else {
-      previous.x = x;
-      previous.z = z;
+    if (distance > maxStep) { dx = dx / distance * maxStep; dz = dz / distance * maxStep; }
+    if(session.map === "HILL_TOWN"){
+      const collisionMap={map:session.map,worldObjects:{mapId:session.map,doors:{},wood:{}}};
+      const nextX=previous.x+dx,nextZ=previous.z+dz;
+      if(!isMapPositionBlocked(collisionMap,nextX,previous.z))previous.x=nextX;
+      if(!isMapPositionBlocked(collisionMap,previous.x,nextZ))previous.z=nextZ;
+    }else{
+      previous.x+=dx;previous.z+=dz;
     }
     previous.y = Math.max(0, Math.min(2.25, y));
     session.playerRotY = Number.isFinite(viewY) ? viewY : rotY;
