@@ -659,7 +659,7 @@ const HILL_TOWN_STATIC_SOLIDS=(()=>{
   return solids;
 })();
 const HILL_TOWN_DOOR_LAYOUT=[
-  {id:"door_mid",x:0,z:0,w:.28,d:5.8,h:2.8},
+  {id:"door_mid",x:0,z:0,w:5.8,d:.28,h:2.8},
   ...[-22,22].flatMap(cx=>[-24,24].map(cz=>({
     id:"door_house_"+(cx<0?"west_":"east_")+(cz<0?"north":"south"),
     x:cx+(cx<0?6.7:-6.7),z:cz,w:.28,d:2.35,h:2.65
@@ -883,7 +883,7 @@ function buildCompetitiveMap(){
   applyMapWorldState(currentMapWorldState||{mapId:"HILL_TOWN",doors:{},wood:{}});
 }
 function nearestInteractiveDoor(){
-  if(selectedMap!=="HILL_TOWN"||!player||isTrainingMode)return null;
+  if(selectedMap!=="HILL_TOWN"||!player)return null;
   let closest=null,closestDistance=3.5;
   for(const door of HILL_TOWN_DOOR_LAYOUT){
     const dist=Math.hypot(player.position.x-door.x,player.position.z-door.z);
@@ -893,8 +893,8 @@ function nearestInteractiveDoor(){
 }
 function requestDoorInteraction(){
   const near=nearestInteractiveDoor();
-  if(!near||!matchId||isTrainingMode)return;
-  socket.emit("map_interact",{matchId,objectId:near.door.id});
+  if(!near||!matchId)return;
+  socket.emit("map_interact",{matchId:isTrainingMode?trainingId:matchId,objectId:near.door.id});
 }
 function updateDoorInteractionHint(now){
   if(now-lastDoorPromptUpdate<160)return;
