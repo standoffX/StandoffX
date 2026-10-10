@@ -1308,6 +1308,121 @@ function normalizeMapId(value) {
   return Object.prototype.hasOwnProperty.call(PLAYABLE_MAPS, id) ? id : "M3_Maze";
 }
 
+const HILL_TOWN_STATIC_SOLIDS = Object.freeze((() => {
+  const solids = [
+    { id: "border_north", x: 0, z: -46, w: 94, d: 1.4, h: 5.5, kind: "wall" },
+    { id: "border_south", x: 0, z: 46, w: 94, d: 1.4, h: 5.5, kind: "wall" },
+    { id: "border_west", x: -46, z: 0, w: 1.4, d: 94, h: 5.5, kind: "wall" },
+    { id: "border_east", x: 46, z: 0, w: 1.4, d: 94, h: 5.5, kind: "wall" },
+    { id: "mid_wall_n", x: 0, z: -25, w: .75, d: 38, h: 4.6, kind: "wall" },
+    { id: "mid_wall_s", x: 0, z: 25, w: .75, d: 38, h: 4.6, kind: "wall" }
+  ];
+  for (const cx of [-22, 22]) {
+    for (const cz of [-24, 24]) {
+      solids.push(
+        { id: "house_" + cx + "_" + cz + "_north", x: cx, z: cz - 6, w: 14, d: .6, h: 4.4, kind: "wall" },
+        { id: "house_" + cx + "_" + cz + "_south", x: cx, z: cz + 6, w: 14, d: .6, h: 4.4, kind: "wall" }
+      );
+      const innerX = cx + (cx < 0 ? 7 : -7);
+      const outerX = cx + (cx < 0 ? -7 : 7);
+      solids.push({ id: "house_" + cx + "_" + cz + "_outer", x: outerX, z: cz, w: .6, d: 12, h: 4.4, kind: "wall" });
+      solids.push(
+        { id: "house_" + cx + "_" + cz + "_inner_n", x: innerX, z: cz - 4, w: .6, d: 3.7, h: 4.4, kind: "wall" },
+        { id: "house_" + cx + "_" + cz + "_inner_s", x: innerX, z: cz + 4, w: .6, d: 3.7, h: 4.4, kind: "wall" }
+      );
+    }
+  }
+  for (const [i, x, z] of [
+    [1, -10, -10], [2, 10, 10], [3, -10, 10], [4, 10, -10],
+    [5, -31, -10], [6, 31, 10], [7, -31, 10], [8, 31, -10]
+  ]) solids.push({ id: "stone_cover_" + i, x, z, w: 2.2, d: 2.2, h: 1.8, kind: "cover" });
+  return solids;
+})());
+
+const HILL_TOWN_DOORS = Object.freeze([
+  { id: "door_mid", x: 0, z: 0, w: .28, d: 5.8, h: 2.8 },
+  ...[-22, 22].flatMap(cx => [-24, 24].map(cz => ({
+    id: "door_house_" + (cx < 0 ? "west_" : "east_") + (cz < 0 ? "north" : "south"),
+    x: cx + (cx < 0 ? 6.7 : -6.7), z: cz, w: .28, d: 2.35, h: 2.65
+  })))
+]);
+
+const HILL_TOWN_WOOD = Object.freeze([
+  { id: "wood_left_north", x: -11, z: -14, w: 3.5, d: .42, h: 1.65, hp: 100 },
+  { id: "wood_right_south", x: 11, z: 14, w: 3.5, d: .42, h: 1.65, hp: 100 },
+  { id: "wood_left_south", x: -11, z: 14, w: 3.5, d: .42, h: 1.65, hp: 100 },
+  { id: "wood_right_north", x: 11, z: -14, w: 3.5, d: .42, h: 1.65, hp: 100 },
+  { id: "wood_west_mid", x: -31, z: 0, w: .42, d: 3.5, h: 1.65, hp: 100 },
+  { id: "wood_east_mid", x: 31, z: 0, w: .42, d: 3.5, h: 1.65, hp: 100 }
+]);
+
+function createMapWorldState(mapId) {
+  if (mapId !== "HILL_TOWN") return { mapId, doors: {}, wood: {} };
+  return {
+    mapId,
+    doors: Object.fromEntries(HILL_TOWN_DOORS.map(door => [door.id, { open: false }])),
+    wood: Object.fromEntries(HILL_TOWN_WOOD.map(item => [item.id, { hp: item.hp, destroyed: false }]))
+  };
+}
+
+function getMapCollisionBoxes(match) {
+  if (!match || match.map !== "HILL_TOWN") return [];
+  const boxes = [...HILL_TOWN_STATIC_SOLIDS];
+  for (const door of HILL_TOWN_DOORS) {
+    if (!match.worldObjects?.doors?.[door.id]?.open) boxes.push({ ...door, kind: "door" });
+  }
+  for (const item of HILL_TOWN_WOOD) {
+    const state = match.worldObjects?.wood?.[item.id];
+    if (!state?.destroyed && (Number(state?.hp ?? item.hp) > 0)) boxes.push({ ...item, kind: "wood" });
+  }
+  return boxes;
+}
+
+function isMapPositionBlocked(match, x, z, radius = .38) {
+  if (!match || match.map !== "HILL_TOWN") return false;
+  if (Math.abs(x) > 45.1 || Math.abs(z) > 45.1) return true;
+  return getMapCollisionBoxes(match).some(box =>
+    Math.abs(x - box.x) < box.w / 2 + radius &&
+    Math.abs(z - box.z) < box.d / 2 + radius
+  );
+}
+
+function rayRectDistance(originX, originZ, dirX, dirZ, box, maxDistance) {
+  let near = 0;
+  let far = maxDistance;
+  for (const [origin, dir, min, max] of [
+    [originX, dirX, box.x - box.w / 2, box.x + box.w / 2],
+    [originZ, dirZ, box.z - box.d / 2, box.z + box.d / 2]
+  ]) {
+    if (Math.abs(dir) < 1e-6) {
+      if (origin < min || origin > max) return null;
+      continue;
+    }
+    let a = (min - origin) / dir;
+    let b = (max - origin) / dir;
+    if (a > b) [a, b] = [b, a];
+    near = Math.max(near, a);
+    far = Math.min(far, b);
+    if (near > far) return null;
+  }
+  if (far < .15 || near > maxDistance) return null;
+  return near >= .15 ? near : far;
+}
+
+function findFirstMapBlocker(match, origin, aim, maxDistance) {
+  if (!match || match.map !== "HILL_TOWN") return null;
+  const horizontalLength = Math.hypot(aim.x, aim.z);
+  if (horizontalLength < .01) return null;
+  const dx = aim.x / horizontalLength, dz = aim.z / horizontalLength;
+  let nearest = null;
+  for (const box of getMapCollisionBoxes(match)) {
+    const distance = rayRectDistance(origin.x, origin.z, dx, dz, box, maxDistance);
+    if (distance === null || (nearest && distance >= nearest.distance)) continue;
+    nearest = { ...box, distance };
+  }
+  return nearest;
+}
+
 const MODE_CONFIGS = {
   allies: {
     id: "allies",
@@ -1413,7 +1528,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const matchId = "match_" + Date.now() + "_" + crypto.randomBytes(2).toString("hex");
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
   const MATCH_SPAWNS = {
-    HILL_TOWN: [{x:-42,y:0,z:-40},{x:42,y:0,z:-40},{x:-42,y:0,z:40},{x:42,y:0,z:40}],
+    HILL_TOWN: [{x:-39,y:0,z:-5},{x:39,y:0,z:-5},{x:-39,y:0,z:5},{x:39,y:0,z:5}],
     NEON_YARD: [{x:-82,y:0,z:-82},{x:82,y:0,z:-82},{x:-82,y:0,z:82},{x:82,y:0,z:82}],
     FIELD_ARENA: [{x:-110,y:0,z:-110},{x:110,y:0,z:-110},{x:-110,y:0,z:110},{x:110,y:0,z:110}]
   };
@@ -1425,6 +1540,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     modeName: cfg.name,
     map: safeMapId,
     mapName: PLAYABLE_MAPS[safeMapId]?.name || PLAYABLE_MAPS.M3_Maze.name,
+    worldObjects: createMapWorldState(safeMapId),
     players: players.map((p, i) => ({
       socketId: p.socketId || null,
       userId: p.userId,
@@ -1795,7 +1911,7 @@ class THREE_LIKE_VECTOR {
   }
 }
 
-function validateMove(player, data) {
+function validateMove(player, data, match = null) {
   const now = Date.now();
   if (now - player.lastMoveAt < 33) return false;
   player.lastMoveAt = now;
@@ -1808,18 +1924,26 @@ function validateMove(player, data) {
   player.prevMoveTime = now;
 
   const maxStep = Math.max(0.35, 18 * elapsed);
-  const dx = x - prev.x;
-  const dz = z - prev.z;
+  let dx = x - prev.x;
+  let dz = z - prev.z;
   const planarDistance = Math.hypot(dx, dz);
-
   if (planarDistance > maxStep) {
     const scale = maxStep / planarDistance;
-    player.pos.x += dx * scale;
-    player.pos.z += dz * scale;
-  } else {
-    player.pos.x = x;
-    player.pos.z = z;
+    dx *= scale;
+    dz *= scale;
   }
+
+  if (match?.map === "HILL_TOWN") {
+    const nextX = prev.x + dx;
+    const nextZ = prev.z + dz;
+    // Match the client's collision solver: test each axis so players can slide along walls.
+    if (!isMapPositionBlocked(match, nextX, prev.z)) prev.x = nextX;
+    if (!isMapPositionBlocked(match, prev.x, nextZ)) prev.z = nextZ;
+  } else {
+    prev.x += dx;
+    prev.z += dz;
+  }
+
   player.pos.y = Math.max(0, Math.min(2.25, y));
   player.rotY = rotY;
   player.anim = ["Idle", "Running", "Jump", "Walking", "Crouch"].includes(data.anim) ? data.anim : "Idle";
@@ -2215,6 +2339,7 @@ io.on("connection", socket => {
       map: match.map,
       mode: match.mode,
       modeName: match.modeName,
+      worldObjects: match.worldObjects,
       me: {
         userId: player.userId,
         uuid: player.uuid || "",
@@ -2303,7 +2428,7 @@ io.on("connection", socket => {
     if (!match) return;
     const player = match.players.find(p => p.userId === socket.user.id);
     if (!player || player.socketId !== socket.id || player.hp <= 0) return;
-    if (!validateMove(player, data)) return;
+    if (!validateMove(player, data, match)) return;
 
     if (match.phase === "game") handleCatch(io, match, player);
 
