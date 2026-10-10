@@ -99,6 +99,11 @@ assert.match(server, /data\?\.testerBots === true && canUseTesterModes\(user\)/,
 assert.match(server, /isBot: Boolean\(p\.isBot\)/, "match roster includes bot status");
 assert.match(server, /isTester/);
 assert.match(menu, /data-test-gameplay="prototype"/, "testers can launch the prototype");
+assert.match(menu, /data-test-gameplay="real"[^>]*>ГРА/, "the tester's full-match option must be labelled Game, not Test");
+assert.match(menu, /real:"ГРА"/, "the selected tester mode must use the Game label");
+assert.match(menu, /COMING SOON/, "not-yet-built ranks and news must be labelled Coming Soon");
+assert.match(menu, /class="promo-col panel"/, "the main menu must include the news/updates panel");
+assert.match(menu, /sx_abandoned_match/, "the lobby must finish a queued leave request after reconnecting");
 assert.match(menu, /data-test-gameplay="real"/, "testers can play a full team match with bots");
 assert.match(menu, /data-test-gameplay="training"/, "testers can launch a dedicated training session");
 assert.match(menu, /mode:testGameplayMode==="training"\?"training":"field_test"/, "training selector must start the actual training session");
@@ -238,6 +243,12 @@ assert.match(game, /id="fullMapCanvas"/, "tactical map must render the entire se
 assert.match(game, /e\.code==="KeyF"/, "holding F must open the tactical map");
 assert.match(game, /e\.team!==myTeam/, "radar must show own team only instead of revealing all enemies");
 assert.match(game, /id="reconnectBtn"/, "the in-match overlay must offer a manual reconnect button");
+assert.match(game, /id="reconnectExitBtn"/, "the reconnect overlay must offer an exit action beneath Connect");
+assert.match(game, /id="loadingDetails"/, "the loading overlay must identify the resources being loaded");
+assert.match(game, /id="mapLoadStatus"/, "the loading overlay must show map status");
+assert.match(game, /id="weaponLoadStatus"/, "the loading overlay must show weapon status");
+assert.match(game, /id="connectionLoadStatus"/, "the loading overlay must show server connection status");
+assert.ok(game.includes('localStorage.setItem("sx_abandoned_match"'), "leaving during a network outage must queue match cleanup");
 assert.match(game, /socket\.on\("player_connection_state"/, "players should stay on the map when teammates temporarily disconnect");
 assert.match(menu, /id="resumeMatchBtn"/, "the lobby must offer reconnect to a previously interrupted match");
 assert.match(menu, /data-size-control="fire"/, "the mobile layout editor must let players size the fire button separately");
@@ -250,6 +261,8 @@ assert.match(server, /}, 90000\);/, "reconnect grace must last long enough to ge
 assert.match(server, /never end\/delete a match[\s\S]{0,220}if \(current\.phase === "game"\)/, "gameplay disconnect timeout must keep the match alive");
 assert.match(server, /const MATCH_SPAWNS =/, "scaled maps must use safe per-map spawn points");
 assert.match(server, /io\.to\(matchId\)\.emit\("player_connection_state", \{ userId: player\.userId, connected: false/, "disconnect should not broadcast a permanent player-left event");
+assert.match(server, /p\.socketId === socket\.id \|\| p\.socketId === null/, "an authenticated player can explicitly leave their disconnected match slot");
+assert.match(server, /if \(session\.socketId !== null && session\.socketId !== socket\.id\) return/, "an authenticated tester can close a disconnected training session");
 assert.match(game, /function addTownFallbackArch\(/, "fallback town doors must preserve walkable archways");
 assert.match(ui, /grid-template-columns:minmax\(260px,1fr\) minmax\(250px,\.95fr\) minmax\(300px,1\.12fr\)/, "lobby layout must stay roomy on desktop");
 assert.match(game, /matchPhase="finished"/, "the player must stop moving and shooting after match results");

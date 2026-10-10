@@ -19,6 +19,16 @@
 .players{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:18px}.player{padding:11px;background:#0a1017;border:1px solid #ffffff0d;border-radius:7px;text-align:left;min-width:0}.player .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#465366;margin-right:7px}.player.online .dot{background:#4ad985}.player.ready .dot{background:#4d8fff}.player-id{margin-top:4px;color:#8d9db8;font-size:9px;overflow-wrap:anywhere}
 #progressWrap{margin:15px auto 0;max-width:360px;height:5px;background:#202a38;border-radius:99px;overflow:hidden}#progress{height:100%;width:0;background:#4d8fff;transition:width .15s}
 #clickHint{margin-top:16px;color:#9aa7b8;font-size:11px}
+#loadingDetails{display:grid;gap:6px;width:min(420px,100%);margin:13px auto 0;text-align:left}
+.loading-detail{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:8px 10px;border:1px solid #ffffff10;background:#0a111bd9;border-radius:5px;font-size:10px}
+.loading-detail span{color:#94a8c2;font-weight:800;letter-spacing:1px}
+.loading-detail b{color:#78baff;font-size:10px;text-align:right;font-weight:900}
+.loading-detail.is-done b{color:#83e8bc}
+.loading-detail.is-error b{color:#ffb5a6}
+#reconnectBtn.reconnect-primary{display:block;width:min(360px,100%);min-height:48px;margin:16px auto 0;padding:13px 18px;border:1px solid #bceaff;border-radius:4px;background:linear-gradient(105deg,#5aaeff,#3478e7);color:#fff;font-size:13px;font-weight:1000;letter-spacing:1px;box-shadow:0 8px 24px #2b7ce744}
+#reconnectBtn.reconnect-primary:hover{filter:brightness(1.1)}
+#reconnectExitBtn{display:block;width:min(360px,100%);min-height:40px;margin:8px auto 0;padding:10px 18px;border:1px solid #a6b6cc42;border-radius:4px;background:#141c2a;color:#d4deed;font-size:11px;font-weight:900;letter-spacing:1px}
+#reconnectExitBtn:hover{background:#202b3b;color:#fff}
 #results{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;background:#05080def}.resultBox{padding:28px;width:min(420px,90vw);background:#111821;border:1px solid #ffffff14;border-radius:11px;text-align:center}.resultBox h2{margin:0 0 12px}.resultBox .reward{font-size:20px;font-weight:900}.resultBox button{margin-top:18px;width:100%;height:44px;border:0;border-radius:6px;background:#327cff;color:white;font-weight:900}
 #mobile{display:none;position:fixed;inset:0;z-index:20;pointer-events:none}
 #leaveGameDesktop{position:fixed;right:14px;top:14px;z-index:25;pointer-events:auto;border:1px solid #ffffff28;background:#0b111bd9;color:#fff;border-radius:6px;padding:10px 13px;font-size:11px;font-weight:900;cursor:pointer}
@@ -70,11 +80,17 @@ body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
     <h1 id="overlayTitle">ПІДКЛЮЧЕННЯ ДО МАТЧУ</h1>
     <div id="phase">Синхронізація...</div>
     <div id="bigTimer">—</div>
-    <p id="overlayText">Підключаємо всіх гравців і завантажуємо карту.</p>
+    <p id="overlayText">Завантажуються карта, зброя та дані матчу. Це може зайняти кілька секунд.</p>
     <div id="progressWrap"><div id="progress"></div></div>
+    <div id="loadingDetails" aria-live="polite">
+      <div class="loading-detail is-active"><span>КАРТА</span><b id="mapLoadStatus">ОЧІКУЄМО…</b></div>
+      <div class="loading-detail is-active"><span>ЗБРОЯ</span><b id="weaponLoadStatus">ОЧІКУЄМО…</b></div>
+      <div class="loading-detail is-active"><span>СЕРВЕР</span><b id="connectionLoadStatus">ПІДКЛЮЧЕННЯ…</b></div>
+    </div>
     <div id="players" class="players"></div>
     <div id="clickHint">Клікни для огляду мишкою. WASD — рух · Shift — біг · Ctrl — присісти · F — карта</div>
-    <button id="reconnectBtn" type="button" style="display:none;margin-top:14px;padding:12px 18px;border:1px solid #87dfff;border-radius:6px;background:#103047;color:#eafaff;font-weight:900;cursor:pointer">↻ ПЕРЕПІДКЛЮЧИТИСЯ</button>
+    <button id="reconnectBtn" class="reconnect-primary" type="button" style="display:none">ПІДКЛЮЧИТИСЯ</button>
+    <button id="reconnectExitBtn" type="button" style="display:none">ВИЙТИ З МАТЧУ</button>
   </div>
 </div>
 
@@ -137,6 +153,18 @@ import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
 import {PointerLockControls} from "three/addons/controls/PointerLockControls.js";
 
 const $=id=>document.getElementById(id);
+function setLoadingDetail(id,message,state="active"){
+  const node=$(id);
+  if(!node)return;
+  node.textContent=message;
+  const row=node.closest(".loading-detail");
+  if(row){
+    row.classList.toggle("is-active",state==="active");
+    row.classList.toggle("is-done",state==="done");
+    row.classList.toggle("is-error",state==="error");
+  }
+}
+const MAP_LOADING_NAMES={HILL_TOWN:"HILL TOWN",M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD"};
 const isMobileDevice=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||
   (navigator.maxTouchPoints>1&&matchMedia("(pointer: coarse)").matches)||
   (innerWidth<=760&&navigator.maxTouchPoints>0);
@@ -413,8 +441,9 @@ async function loadHillTownStarterFallback(){
 async function buildHillTownMap(){
   if(mapLoadFinished||hillTownBuilding)return;
   hillTownBuilding=true;
-  $("phase").textContent="ЗАВАНТАЖЕННЯ HILL TOWN";
-  $("overlayText").textContent="Завантаження моделей карти з ліцензією CC0…";
+  $("phase").textContent="ЗАВАНТАЖУЄТЬСЯ КАРТА · HILL TOWN";
+  $("overlayText").textContent="Завантажуються моделі та геометрія Hill Town, далі налаштуємо колізії.";
+  setLoadingDetail("mapLoadStatus","ЗАВАНТАЖЕННЯ МОДЕЛЕЙ…","active");
   $("progress").style.width="12%";
   try{
     const names=["floor","plaster","ochre","window","door","arch","crate","sandbag","stall","olive","lamp","rifle"];
@@ -424,6 +453,8 @@ async function buildHillTownMap(){
     const assets=Object.fromEntries(results);
     if(!assets.floor||(!assets.plaster&&!assets.ochre))throw new Error("Hill Town manifest did not return floor/wall models");
     $("progress").style.width="65%";
+    $("overlayText").textContent="Моделі завантажено. Розставляємо будівлі, укриття та колізії…";
+    setLoadingDetail("mapLoadStatus","РОЗМІЩЕННЯ ОБ’ЄКТІВ…","active");
     // 13 x 13 metre-aligned cobblestone tiles form the walkable ground.
     for(let z=-24;z<=24;z+=4){
       for(let x=-24;x<=24;x+=4)addAssetInstance(assets.floor,x,-.12,z,0,false);
@@ -506,6 +537,7 @@ function makeFallbackAK(){
   sight.position.set(0,.1,-.15);heldWeaponRoot.add(sight);
 }
 async function loadHeldWeapon(){
+  setLoadingDetail("weaponLoadStatus","ЗАВАНТАЖЕННЯ МОДЕЛІ…","active");
   if(!heldWeaponRoot){
     heldWeaponRoot=new THREE.Group();
     heldWeaponRoot.position.set(.29,-.29,heldWeaponBaseZ);
@@ -515,7 +547,7 @@ async function loadHeldWeapon(){
   try{
     const manifest=await loadHillTownManifest();
     const url=findHillTownAssetUrl(manifest,ASSET_MATCHES.rifle);
-    if(!url)return;
+    if(!url){setLoadingDetail("weaponLoadStatus","ГОТОВО · ВБУДОВАНА ЗБРОЯ","done");return;}
     const model=await loadGLBScene(url);
     const box=new THREE.Box3().setFromObject(model);
     const size=box.getSize(new THREE.Vector3());
@@ -529,7 +561,11 @@ async function loadHeldWeapon(){
     model.traverse(node=>{if(node.isMesh){node.castShadow=false;node.receiveShadow=false}});
     heldWeaponRoot.add(model);
     heldWeaponRoot.userData.realModel=true;
-  }catch(error){console.warn("[WEAPON] Keeping built-in AK-style fallback.",error)}
+    setLoadingDetail("weaponLoadStatus","ГОТОВО","done");
+  }catch(error){
+    console.warn("[WEAPON] Keeping built-in AK-style fallback.",error);
+    setLoadingDetail("weaponLoadStatus","ГОТОВО · ВБУДОВАНА ЗБРОЯ","done");
+  }
 }
 
 let mapLoaded=false;
@@ -562,6 +598,7 @@ let collisionBoxes=[];
 let collisionIndexReady=false;
 let isCrouching=false;
 let isFullMapOpen=false;
+let isLeavingMatch=false;
 
 const keys={w:false,s:false,a:false,d:false,shift:false};
 const DEFAULT_TRAINING_BINDS={spawnBot:"KeyN",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
@@ -642,7 +679,11 @@ function addFallbackArena(){
 }
 
 function loadMap(){
-  $("phase").textContent="ЗАВАНТАЖЕННЯ КАРТИ";
+  const mapLabel=MAP_LOADING_NAMES[selectedMap]||String(selectedMap||"КАРТА");
+  setLoadingDetail("mapLoadStatus","ЗАВАНТАЖУЄТЬСЯ "+mapLabel+"…","active");
+  $("overlayTitle").textContent="ЗАВАНТАЖЕННЯ МАТЧУ";
+  $("phase").textContent="ЗАВАНТАЖУЄТЬСЯ КАРТА · "+mapLabel;
+  $("overlayText").textContent="Завантажуються текстури, геометрія та колізії карти "+mapLabel+". Це може зайняти кілька секунд.";
   if(selectedMap==="HILL_TOWN"){
     buildHillTownMap();
     return;
@@ -969,6 +1010,8 @@ function sendMove(force=false){
 }
 function finishClientReady(){
   if(!mapLoadFinished)return;
+  const mapLabel=MAP_LOADING_NAMES[selectedMap]||String(selectedMap||"КАРТА");
+  setLoadingDetail("mapLoadStatus",mapLabel+" · ГОТОВО","done");
   rebuildCollisionIndex();
   ensurePlayerVisual();
   if(isTrainingMode){
@@ -981,7 +1024,7 @@ function finishClientReady(){
     $("overlay").style.display="none";
     return;
   }
-  $("overlayText").textContent="Карта готова. Чекаємо інших гравців...";
+  $("overlayText").textContent="Карта та колізії готові. Очікуємо підтвердження готовності гравців із сервера…";
   socket.emit("client_ready",{matchId});
 }
 
@@ -1056,17 +1099,43 @@ function setOverlayGame(){
   if(isMobileDevice) $("overlay").style.display="none";
 }
 function leaveGame(){
-  try{localStorage.removeItem("sx_active_match")}catch{}
+  if(isLeavingMatch)return;
+  isLeavingMatch=true;
   try{
-    if(socket && socket.connected){
+    localStorage.removeItem("sx_active_match");
+    localStorage.setItem("sx_abandoned_match",JSON.stringify({
+      kind:isTrainingMode?"training":"match",
+      matchId:matchId||"",
+      trainingId:trainingId||""
+    }));
+  }catch{}
+  const sendLeave=()=>{
+    try{
       if(isTrainingMode)socket.emit("end_training",{trainingId});
       else socket.emit("leave_match",{matchId});
-    }
-  }catch{}
-  setTimeout(()=>{
-    try{socket?.disconnect()}catch{}
-    location.href="/game";
-  },180);
+    }catch{}
+  };
+  let navigating=false;
+  const navigate=()=>{
+    if(navigating)return;
+    navigating=true;
+    setTimeout(()=>{
+      try{socket?.disconnect()}catch{}
+      location.href="/game";
+    },180);
+  };
+  if(socket?.connected){sendLeave();navigate();return}
+  if(socket){
+    const connectTimeout=setTimeout(navigate,1800);
+    socket.once("connect",()=>{
+      sendLeave();
+      clearTimeout(connectTimeout);
+      navigate();
+    });
+    try{socket.connect()}catch{navigate()}
+    return;
+  }
+  navigate();
 }
 $("menuResult").addEventListener("click",leaveGame);
 $("leaveGameDesktop").addEventListener("click",leaveGame);
@@ -1108,7 +1177,7 @@ $("trainingControls").addEventListener("touchstart",e=>e.stopPropagation(),{pass
 
 socket.on("training_init",data=>{
   if(!isTrainingMode)return;
-  $("reconnectBtn").style.display="none";
+  $("reconnectBtn").style.display="none";$("reconnectExitBtn").style.display="none";document.body.classList.remove("reconnecting");
   $("modeName").textContent=data.modeName||mode.toUpperCase();
   matchPhase="game";canControl=true;
   ensurePlayerVisual();
@@ -1151,7 +1220,7 @@ socket.on("init_match",data=>{
   try{
     if(!isTrainingMode)localStorage.setItem("sx_active_match",JSON.stringify({matchId:data.matchId||matchId,userId:myId,uuid:myUuid,map:data.map||selectedMap,mode:data.mode||mode,updatedAt:Date.now()}));
   }catch{}
-  $("reconnectBtn").style.display="none";
+  $("reconnectBtn").style.display="none";$("reconnectExitBtn").style.display="none";document.body.classList.remove("reconnecting");
   if(data.mode)sessionStorage.setItem("selectedMode",data.mode);
   if(data.map)sessionStorage.setItem("selectedMap",data.map);
   myRole=data.me?.role||"runner";myTeam=data.me?.team||null;score=data.me?.score||0;hp=data.me?.hp||100;
@@ -1280,29 +1349,15 @@ socket.on("go_to_menu",()=>{try{localStorage.removeItem("sx_active_match")}catch
 socket.on("kick_to_menu",()=>{try{localStorage.removeItem("sx_active_match")}catch{}location.href="/game"});
 socket.on("auth_required",()=>location.href="/");
 function showReconnectPanel(message="З’єднання перервано. Автоматично перепідключаємося…"){
+  document.body.classList.add("reconnecting");
   $("overlayTitle").textContent="ПЕРЕПІДКЛЮЧЕННЯ";
   $("phase").textContent="ЗВ’ЯЗОК ІЗ СЕРВЕРОМ";
   $("overlayText").textContent=message;
-  $("reconnectBtn").style.display="inline-flex";
+  setLoadingDetail("connectionLoadStatus","З’ЄДНАННЯ ВТРАЧЕНО","error");
+  $("reconnectBtn").style.display="block";
+  $("reconnectExitBtn").style.display="block";
   $("reconnectBtn").disabled=false;
-  $("reconnectBtn").textContent="↻ ПЕРЕПІДКЛЮЧИТИСЯ";
-  $("overlay").style.display="flex";
-}
-$("reconnectBtn").addEventListener("click",e=>{
-  e.preventDefault();e.stopPropagation();
-  $("reconnectBtn").disabled=true;$("reconnectBtn").textContent="ПІДКЛЮЧАЄМОСЯ…";
-  if(socket.connected){
-    if(isTrainingMode)socket.emit("join_training",{trainingId});
-    else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
-  }else socket.connect();
-});
-function showReconnectPanel(message="З’єднання перервано. Автоматично перепідключаємося…"){
-  $("overlayTitle").textContent="ПЕРЕПІДКЛЮЧЕННЯ";
-  $("phase").textContent="ЗВ’ЯЗОК ІЗ СЕРВЕРОМ";
-  $("overlayText").textContent=message;
-  $("reconnectBtn").style.display="inline-flex";
-  $("reconnectBtn").disabled=false;
-  $("reconnectBtn").textContent="↻ ПЕРЕПІДКЛЮЧИТИСЯ";
+  $("reconnectBtn").textContent="ПІДКЛЮЧИТИСЯ";
   $("overlay").style.display="flex";
 }
 $("reconnectBtn").addEventListener("click",e=>{
@@ -1314,6 +1369,10 @@ $("reconnectBtn").addEventListener("click",e=>{
     else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
   }else socket.connect();
 });
+$("reconnectExitBtn").addEventListener("click",e=>{
+  e.preventDefault();e.stopPropagation();
+  leaveGame();
+});
 socket.on("connect_error",err=>{
   showReconnectPanel("Сервер поки недоступний. Натисни кнопку, щоб повторити підключення.");
   console.warn("[Socket.IO] Gameplay connection failed; retrying.",err?.message||err);
@@ -1321,7 +1380,8 @@ socket.on("connect_error",err=>{
 socket.on("disconnect",()=>{
   keys.w=keys.a=keys.s=keys.d=keys.shift=false;isCrouching=false;
   jumpQueued=false;fireHeld=false;
-  showReconnectPanel("Гру не завершено. Натисни «ПЕРЕПІДКЛЮЧИТИСЯ», щоб повернутися в ту саму катку.");
+  setLoadingDetail("connectionLoadStatus","З’ЄДНАННЯ ВТРАЧЕНО","error");
+  showReconnectPanel("Матч збережено. Натисни синю кнопку «ПІДКЛЮЧИТИСЯ», щоб повернутися, або «ВИЙТИ З МАТЧУ», щоб завершити його.");
 });
 socket.on("player_connection_state",data=>{
   const enemy=Object.values(enemies).find(e=>String(e.userId)===String(data?.userId));
@@ -1476,6 +1536,8 @@ addEventListener("resize",()=>{
 
 let connectedToGameplay=socket.connected;
 socket.on("connect",()=>{
+  setLoadingDetail("connectionLoadStatus","ПІДКЛЮЧЕНО","done");
+  if(isLeavingMatch){connectedToGameplay=true;return}
   if(!connectedToGameplay){connectedToGameplay=true;return}
   if(isTrainingMode)socket.emit("join_training",{trainingId});
   else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
