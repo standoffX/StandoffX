@@ -248,7 +248,7 @@ assert.match(game, /id="loadingDetails"/, "the loading overlay must identify the
 assert.match(game, /id="mapLoadStatus"/, "the loading overlay must show map status");
 assert.match(game, /id="weaponLoadStatus"/, "the loading overlay must show weapon status");
 assert.match(game, /id="connectionLoadStatus"/, "the loading overlay must show server connection status");
-assert.match(game, /localStorage\\.setItem\\("sx_abandoned_match"/, "leaving during a network outage must queue match cleanup");
+assert.ok(game.includes('localStorage.setItem("sx_abandoned_match"'), "leaving during a network outage must queue match cleanup");
 assert.match(game, /socket\.on\("player_connection_state"/, "players should stay on the map when teammates temporarily disconnect");
 assert.match(menu, /id="resumeMatchBtn"/, "the lobby must offer reconnect to a previously interrupted match");
 assert.match(menu, /data-size-control="fire"/, "the mobile layout editor must let players size the fire button separately");
