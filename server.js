@@ -1314,8 +1314,8 @@ const HILL_TOWN_STATIC_SOLIDS = Object.freeze((() => {
     { id: "border_south", x: 0, z: 46, w: 94, d: 1.4, h: 5.5, kind: "wall" },
     { id: "border_west", x: -46, z: 0, w: 1.4, d: 94, h: 5.5, kind: "wall" },
     { id: "border_east", x: 46, z: 0, w: 1.4, d: 94, h: 5.5, kind: "wall" },
-    { id: "mid_wall_n", x: 0, z: -25, w: .75, d: 38, h: 4.6, kind: "wall" },
-    { id: "mid_wall_s", x: 0, z: 25, w: .75, d: 38, h: 4.6, kind: "wall" }
+    { id: "mid_wall_n", x: 0, z: -11, w: .75, d: 10, h: 4.6, kind: "wall" },
+    { id: "mid_wall_s", x: 0, z: 11, w: .75, d: 10, h: 4.6, kind: "wall" }
   ];
   for (const cx of [-22, 22]) {
     for (const cz of [-24, 24]) {
