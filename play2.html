@@ -963,11 +963,12 @@ function buildNeonYard(){
 }
 function addFallbackArena(){
   if(mapLoadFinished)return;
+  loadedMapLimit=232;
   mapLoadFinished=true;
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(160*FALLBACK_ARENA_SCALE,160*FALLBACK_ARENA_SCALE),new THREE.MeshStandardMaterial({color:0x303943,roughness:1}));
   floor.rotation.x=-Math.PI/2;scene.add(floor);mapObjects.push(floor);
   const wallMat=new THREE.MeshStandardMaterial({color:0x4b5662,roughness:.9});
-  const addSolid=(x,y,z,w,h,d)=>{const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),wallMat);wall.position.set(x,y,z);wall.castShadow=false;wall.receiveShadow=false;scene.add(wall);mapObjects.push(wall)};
+  const addSolid=(x,y,z,w,h,d)=>{const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),wallMat);wall.position.set(x,y,z);wall.castShadow=false;wall.receiveShadow=false;wall.userData.forceCollision=true;scene.add(wall);mapObjects.push(wall)};
   addSolid(0,6,-238,480,12,6);addSolid(0,6,238,480,12,6);addSolid(-238,6,0,6,12,480);addSolid(238,6,0,6,12,480);
   for(const [x,z,w,d] of [[-90,-90,14,14],[-90,90,14,14],[90,-90,14,14],[90,90,14,14],[0,0,28,8],[-42,18,24,8],[45,-24,24,8],[0,125,18,18]])addSolid(x,2.5,z,w,5,d);
   $("progress").style.width="100%";
