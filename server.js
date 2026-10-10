@@ -2298,6 +2298,43 @@ io.on("connection", socket => {
     handleTeamShot(io, match, player, data);
   });
 
+  socket.on("map_door_state", data => {
+    const doorIndex = Number(data?.doorIndex);
+    const open = data?.open === true;
+    if (!Number.isInteger(doorIndex) || doorIndex < 0 || doorIndex > 3) return;
+    const match = activeMatches.get(cleanText(data?.matchId, 100));
+    if (match) {
+      const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
+      if (!player || player.hp <= 0 || match.map !== "HILL_TOWN") return;
+      const doors = [[-3.57,-25.5],[3.57,25.5],[-25.5,3.57],[25.5,-3.57]];
+      const [x,z] = doors[doorIndex];
+      if (Math.hypot(player.pos.x-x, player.pos.z-z) > 18) return;
+      socket.to(match.id).emit("map_door_state", { doorIndex, open });
+      return;
+    }
+    const session = trainingSessions.get(socket.user?.id);
+    if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || session.map !== "HILL_TOWN") return;
+    const doors = [[-3.57,-25.5],[3.57,25.5],[-25.5,3.57],[25.5,-3.57]];
+    const [x,z] = doors[doorIndex];
+    if (Math.hypot(session.playerPos.x-x, session.playerPos.z-z) > 18) return;
+    socket.to(session.id).emit("map_door_state", { doorIndex, open });
+  });
+
+  socket.on("map_wood_destroyed", data => {
+    const woodIndex = Number(data?.woodIndex);
+    if (!Number.isInteger(woodIndex) || woodIndex < 0 || woodIndex > 19) return;
+    const match = activeMatches.get(cleanText(data?.matchId, 100));
+    if (match) {
+      const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
+      if (!player || player.hp <= 0 || match.map !== "HILL_TOWN") return;
+      socket.to(match.id).emit("map_wood_destroyed", { woodIndex });
+      return;
+    }
+    const session = trainingSessions.get(socket.user?.id);
+    if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || session.map !== "HILL_TOWN") return;
+    socket.to(session.id).emit("map_wood_destroyed", { woodIndex });
+  });
+
   socket.on("player_moved", data => {
     const match = activeMatches.get(cleanText(data?.matchId, 100));
     if (!match) return;
