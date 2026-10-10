@@ -199,12 +199,31 @@ assert.deepEqual([...new Set(duplicates)], [], "HTTP routes must not be duplicat
 assert.match(server, /HILL_TOWN: \{ id: "HILL_TOWN"/, "server must allow the Hill Town map");
 assert.match(server, /id: "allies"[\s\S]*?requiredPlayers: 4/, "Allies must have a four-player server queue");
 assert.match(server, /!\["team_fight", "allies"\]\.includes\(match\.mode\)/, "team combat handler must accept Allies");
+assert.match(server, /const WEAPON_BALANCE = Object\.freeze\(/, "server must maintain the authoritative weapon balance table");
+assert.match(server, /const damage = calculateWeaponDamage\(weaponId, hitZone, bestDistance\)/, "server calculates damage instead of trusting the client");
+assert.match(server, /best\.hp = Math\.max\(0, best\.hp - damage\)/, "a hit reduces HP by the equipped weapon's damage");
+assert.match(server, /if \(!killed\) return;/, "the victim only respawns when their HP reaches zero");
+assert.match(server, /session\.lastShotAt \|\| 0\) < weapon\.fireDelay/, "training shots are rate-limited per weapon");
+assert.doesNotMatch(server, /bot\.hp = Math\.max\(0, bot\.hp - \(Number\(data\.damage\) \|\| 34\)\)/, "training clients cannot choose arbitrary damage values");
 assert.match(menu, /data-mode="allies"/, "menu must offer Allies");
 assert.match(menu, /data-mode="team_fight"/, "menu must offer Team Fight");
 assert.match(menu, /data-map="HILL_TOWN"/, "menu must offer Hill Town");
 assert.match(game, /async function buildHillTownMap\(\)/, "game must assemble the new map from modular assets");
 assert.match(game, /HILL_TOWN_MANIFEST_URL/, "game must load the public CC0 map asset manifest");
 assert.match(game, /async function loadHeldWeapon\(\)/, "game must load a first-person weapon model");
+assert.match(game, /function makeFallbackP350\(\)/, "the client must render the P350 pistol when equipped");
+assert.match(game, /function makeFallbackKnife\(\)/, "the client must render a knife when equipped");
+assert.match(game, /if\(e\.code==="Digit1"\)[\s\S]{0,100}selectWeapon\("akr"\)/, "1 must equip the AKR");
+assert.match(game, /if\(e\.code==="Digit2"\)[\s\S]{0,100}selectWeapon\("p350"\)/, "2 must equip the P350");
+assert.match(game, /if\(e\.code==="Digit3"\)[\s\S]{0,100}selectWeapon\("knife"\)/, "3 must equip the knife");
+assert.match(game, /e\.button===2\)\{e\.preventDefault\(\);toggleAimingDownSights\(\)/, "right mouse must toggle AKR aiming on/off");
+assert.match(game, /camera\.fov=aimingDownSights\?48:74/, "AKR aiming must change camera FOV and restore normal view on a second click");
+assert.match(game, /id="weaponBtn"/, "mobile HUD must include weapon switching");
+assert.match(game, /weapon:"weaponBtn"/, "mobile weapon switch must use saved HUD position and size");
+assert.match(menu, /data-layout-control="weapon"/, "mobile HUD editor must preview the weapon switch");
+assert.match(menu, /data-size-control="weapon"/, "mobile HUD editor must allow an independent weapon button size");
+assert.match(game, /socket\.emit\("team_shoot",\{matchId,weapon:selectedWeapon/, "the client must identify which weapon is fired");
+assert.match(game, /socket\.emit\("training_shoot",\{trainingId,weapon:selectedWeapon/, "training shots must identify the equipped weapon");
 assert.match(game, /e\.code==="Escape"\)\{e\.preventDefault\(\);leaveGame\(\);return\}/, "Escape must return to the lobby from any match phase");
 assert.match(game, /if\(selectedMap==="FIELD_ARENA"\)\{/, "prototype must honor the selected map rather than forcing the field arena");
 assert.doesNotMatch(game, / · UUID "\+uuid/, "the match lobby must not display UUIDs");
@@ -352,4 +371,21 @@ assert.equal(unknownAnimationPlayer.anim, "Idle", "unknown animation states must
 assert.match(server, /if \(mongoClient !== client\) return/, "a stale MongoDB close event must not clear a newer client");
 assert.match(server, /const failedClient = mongoClient;\s*mongoClient = null;\s*mongoDb = null;\s*mongoStatus\.connected = false;\s*mongoStatus\.state = "error";\s*mongoStatus\.lastError = cleanText\(err\.message, 240\);\s*try \{ await failedClient\?\.close\(\); \} catch \{\}/, "Atlas ping failures must reset the broken client so a later health check can reconnect");
 
-console.log("OK project invariants, tester-only tools, Atlas endpoint, and unique HTTP routes");
+const weaponStart = server.indexOf("const WEAPON_BALANCE = Object.freeze(");
+const weaponEnd = server.indexOf("function handleTeamShot", weaponStart);
+assert.ok(weaponStart >= 0 && weaponEnd > weaponStart, "the authoritative weapon helper block must exist");
+const weaponHelpers = vm.runInNewContext(
+  "(()=>{" + server.slice(weaponStart, weaponEnd) + ";return {WEAPON_BALANCE,normalizeWeaponId,calculateWeaponDamage,detectWeaponHitZone}})()",
+  { cleanText: (value, max = 200) => String(value ?? "").slice(0, max) }
+);
+assert.equal(weaponHelpers.normalizeWeaponId("unknown"), "akr", "invalid weapon IDs must fall back to AKR");
+assert.equal(weaponHelpers.calculateWeaponDamage("akr", "head", 5), 164, "AKR head damage at five metres must use the balance table");
+assert.equal(weaponHelpers.calculateWeaponDamage("akr", "body", 10), 34, "AKR body damage must fall off with distance");
+assert.equal(weaponHelpers.calculateWeaponDamage("p350", "stomach", 5), 49, "P350 stomach damage at five metres must use the balance table");
+assert.equal(weaponHelpers.calculateWeaponDamage("p350", "head", 25), 51, "P350 head damage must fall off at long range");
+assert.equal(weaponHelpers.calculateWeaponDamage("knife", "body", 1), 110, "knife melee damage must be close-range damage, not rifle damage");
+assert.equal(weaponHelpers.detectWeaponHitZone({x:0,y:0,z:0},{x:0,y:0,z:-10},{x:0,y:0,z:-1},10), "head", "camera-height aim should classify as a headshot");
+assert.equal(weaponHelpers.detectWeaponHitZone({x:0,y:0,z:0},{x:0,y:0,z:-10},{x:0,y:-0.08,z:-1},10), "stomach", "downward aim should classify stomach hits");
+assert.equal(weaponHelpers.detectWeaponHitZone({x:0,y:0,z:0},{x:0,y:0,z:-10},{x:0,y:-0.15,z:-1},10), "legs", "steeper downward aim should classify leg hits");
+
+console.log("OK project invariants, weapon damage balance, ADS, tester-only tools, Atlas endpoint, and unique HTTP routes");
