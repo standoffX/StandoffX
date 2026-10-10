@@ -195,7 +195,7 @@ const myUuid=sessionStorage.getItem("myPlayerUUID")||"";
 const matchId=sessionStorage.getItem("currentMatchId");
 const mode=sessionStorage.getItem("selectedMode")||"allies";
 const selectedMap=sessionStorage.getItem("selectedMap")||"HILL_TOWN";
-const isTrainingMode=mode==="training"||mode==="field_test";
+const isTrainingMode=mode==="training"||mode==="field_test"||mode==="free_play";
 const isTeamCombat=mode==="allies"||mode==="team_fight";
 const trainingId=sessionStorage.getItem("trainingId")||matchId;
 if(!myId||(!matchId&&!isTrainingMode)){location.href="/game";throw new Error("No active match")}
