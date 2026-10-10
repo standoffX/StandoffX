@@ -315,3 +315,15 @@ html[data-sx-device="mobile"] body.lobby-screen #mobileLayoutEditor{display:bloc
   .lobby-screen .individual-size-list{grid-template-columns:minmax(0,1fr)}
   .lobby-screen #resumeMatchBtn{width:100%;min-height:40px}
 }
+
+
+/* Main menu: rank/news slots remain honest placeholders until those features ship. */
+.lobby-screen .coming-soon-tag{border:1px solid #82c8f355;background:#15374c;color:#a8e0ff;padding:4px 6px;font-size:8px;font-weight:1000;letter-spacing:1px}
+.lobby-screen .news-soon{min-height:72px;padding:12px 14px;background:linear-gradient(110deg,#102c41,#0a1c2a)}
+.lobby-screen .news-soon strong{display:block;color:#a6dfff;font-size:11px;letter-spacing:1.5px}
+.lobby-screen .news-soon p{margin:7px 0 0;color:#91adbf;font-size:10px;line-height:1.5}
+.lobby-screen .rankdesc#compMmr,.lobby-screen .rankdesc#alliesMmr{color:#91d7ff;font-size:8px;font-weight:1000;letter-spacing:.7px}
+.lobby-screen .promo-col{min-width:0}
+.lobby-screen .promo-col .promo-title{display:block;color:#f2f9ff;font-size:12px;line-height:1.45}
+.lobby-screen .promo-col .promo-title span{display:inline-block;margin-top:5px;color:#b8e7ff;font-size:10px;letter-spacing:2px}
+.lobby-screen .promo-col .promo img{filter:saturate(.7) contrast(1.08);opacity:.72}
