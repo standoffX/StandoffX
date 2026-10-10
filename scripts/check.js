@@ -237,7 +237,22 @@ assert.match(game, /\$\("fireBtn"\)\.addEventListener\("touchcancel",\(\)=>fireH
 assert.match(game, /socket\.on\("player_left"/, "departed players must be removed from the scene");
 assert.match(game, /e\.pos\.set\(data\.x,data\.y,data\.z\);e\.mesh\.position\.copy\(e\.pos\);e\.anim="Idle"/, "a respawn must update both the displayed and authoritative remote position");
 assert.match(game, /let connectedToGameplay=socket\.connected/, "the client must rejoin the match after a Socket.IO reconnection");
-assert.match(game, /const HILL_TOWN_SCALE=2\.55/, "Hill Town must be dramatically larger than its original footprint");
+assert.match(game, /const HILL_TOWN_SCALE=1/, "the competitive Hill Town must use fixed game-world units instead of stretching every asset");
+assert.match(game, /function buildCompetitiveMap\(\)/, "Allies and Team Fight must use the purpose-built compact combat map");
+assert.match(game, /const HILL_TOWN_DOOR_LAYOUT=/, "the competitive map must define interactive doors");
+assert.match(game, /const HILL_TOWN_WOOD_LAYOUT=/, "the competitive map must include destructible wood cover");
+assert.match(game, /buildCompetitiveMap\(\);\s*finishClientReady\(\);/, "Hill Town must load the local competitive map without waiting on a remote GLB");
+assert.match(game, /selectWeapon\(dx<0\?"p350":"knife"\)/, "mobile horizontal swipes must switch between pistol and knife");
+assert.match(game, /else if\(dy>0\)selectWeapon\("akr"\)/, "a downward mobile swipe must equip the AKR");
+assert.match(game, /socket\.emit\("map_interact",\{matchId,objectId:near\.door\.id\}\)/, "nearby doors must send a server-validated interaction");
+assert.match(game, /id="doorInteractBtn"/, "mobile HUD must provide an action button for doors");
+assert.match(game, /function applyMapObjectState\(data\)/, "door and wood state changes must sync across clients");
+assert.match(server, /function isMapPositionBlocked\(match, x, z, radius = \.38\)/, "the server must block movement through map geometry");
+assert.match(server, /function findFirstMapBlocker\(match, origin, aim, maxDistance\)/, "server hit detection must account for walls and cover");
+assert.match(server, /socket\.on\("map_interact"/, "door interactions must be checked by the server");
+assert.match(server, /state\.destroyed = state\.hp <= 0/, "wooden cover must break only after taking enough server damage");
+assert.match(server, /worldObjects: match\.worldObjects/, "reconnecting players must receive authoritative door and cover state");
+
 assert.match(game, /NEON_YARD_SCALE=2/, "Neon Yard must have an enlarged play area");
 assert.match(game, /FIELD_ARENA_SCALE=2/, "Field Arena must have an enlarged play area");
 assert.match(game, /map\.scale\.setScalar\(82\.5\)/, "the M3 map must be enlarged too");
@@ -270,6 +285,9 @@ assert.match(game, /id="connectionLoadStatus"/, "the loading overlay must show s
 assert.ok(game.includes('localStorage.setItem("sx_abandoned_match"'), "leaving during a network outage must queue match cleanup");
 assert.match(game, /socket\.on\("player_connection_state"/, "players should stay on the map when teammates temporarily disconnect");
 assert.match(menu, /id="resumeMatchBtn"/, "the lobby must offer reconnect to a previously interrupted match");
+assert.match(menu, /if\(playButton\)playButton\.style\.display=data\?"none":"inline-flex"/, "reconnect should replace Play while an old match is saved");
+assert.match(menu, /id="exitResumeMatchBtn"/, "the lobby must offer Exit below reconnect");
+assert.match(menu, /data-size-control="interact"/, "mobile HUD editor must let players resize the door action button");
 assert.match(menu, /data-size-control="fire"/, "the mobile layout editor must let players size the fire button separately");
 assert.match(menu, /data-size-control="crouch"/, "the mobile layout editor must let players size crouch separately");
 assert.match(menu, /data-size-control="sprint"/, "the mobile layout editor must let players size sprint separately");
@@ -280,7 +298,7 @@ assert.match(server, /}, 90000\);/, "reconnect grace must last long enough to ge
 assert.match(server, /never end\/delete a match[\s\S]{0,220}if \(current\.phase === "game"\)/, "gameplay disconnect timeout must keep the match alive");
 assert.match(server, /const MATCH_SPAWNS =/, "scaled maps must use safe per-map spawn points");
 assert.match(server, /io\.to\(matchId\)\.emit\("player_connection_state", \{ userId: player\.userId, connected: false/, "disconnect should not broadcast a permanent player-left event");
-assert.match(server, /p\.socketId === socket\.id \|\| p\.socketId === null/, "an authenticated player can explicitly leave their disconnected match slot");
+assert.match(server, /const index = match\.players\.findIndex\(p => \(p\.uuid \? p\.uuid === socket\.user\.uuid : p\.userId === socket\.user\.id\)\);/, "a player can explicitly leave their old match from the lobby tab");
 assert.match(server, /if \(session\.socketId !== null && session\.socketId !== socket\.id\) return/, "an authenticated tester can close a disconnected training session");
 assert.match(game, /function addTownFallbackArch\(/, "fallback town doors must preserve walkable archways");
 assert.match(ui, /grid-template-columns:minmax\(260px,1fr\) minmax\(250px,\.95fr\) minmax\(300px,1\.12fr\)/, "lobby layout must stay roomy on desktop");
