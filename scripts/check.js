@@ -221,6 +221,13 @@ assert.match(game, /function interactWithNearestDoor\(/, "doors can be opened an
 assert.match(game, /function addBreakableWood\(/, "Hill Town has breakable wooden cover");
 assert.match(game, /function damageBreakableWood\(/, "shooting can damage and destroy wooden cover");
 assert.match(game, /id="interactBtn"/, "mobile HUD has a door interaction button");
+assert.match(game, /socket\.emit\("map_door_state"/, "door state is sent to the server");
+assert.match(game, /socket\.emit\("map_wood_destroyed"/, "destroyed wooden cover is synchronized");
+assert.match(game, /socket\.on\("map_door_state"/, "clients apply other players' door changes");
+assert.match(game, /socket\.on\("map_wood_destroyed"/, "clients apply other players' wooden-cover destruction");
+assert.match(server, /socket\.on\("map_door_state"/, "server validates and broadcasts door changes");
+assert.match(server, /socket\.on\("map_wood_destroyed"/, "server validates and broadcasts destroyed wood");
+assert.match(server, /Math\.hypot\(player\.pos\.x-x, player\.pos\.z-z\) > 18/, "door changes require the player to be nearby");
 assert.match(game, /if\(e\.code==="Digit1"\)[\s\S]{0,100}selectWeapon\("akr"\)/, "1 must equip the AKR");
 assert.match(game, /if\(e\.code==="Digit2"\)[\s\S]{0,100}selectWeapon\("p350"\)/, "2 must equip the P350");
 assert.match(game, /if\(e\.code==="Digit3"\)[\s\S]{0,100}selectWeapon\("knife"\)/, "3 must equip the knife");
