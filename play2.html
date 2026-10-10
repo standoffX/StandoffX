@@ -11,7 +11,11 @@
 .top{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:8px 13px;background:#080d14d9;border:1px solid #ffffff12;border-radius:7px;white-space:nowrap}.top b{font-size:12px;letter-spacing:1px}.top span{font-size:26px;font-weight:950}.status{color:#5ba0ff}
 #score{position:absolute;top:14px;left:14px;padding:9px 12px;background:#080d14c9;border:1px solid #ffffff12;border-radius:7px;font-size:12px}.teamA{color:#63a1ff}.teamB{color:#ff6f7d}
 #hint{position:absolute;left:14px;bottom:14px;padding:8px 10px;background:#080d14b8;border:1px solid #ffffff0d;border-radius:6px;color:#bac5d4;font-size:11px}
-#ammo{position:absolute;right:16px;bottom:18px;text-align:right;text-shadow:0 2px 8px #000}.ammo-num{font-size:34px;font-weight:950}.ammo-sub{color:#9aa7b8;font-size:11px}
+#ammo{position:absolute;right:16px;bottom:18px;text-align:right;text-shadow:0 2px 8px #000}.ammo-name{font-size:11px;font-weight:1000;letter-spacing:1.6px;color:#d9efff}.ammo-num{font-size:34px;font-weight:950}.ammo-sub{color:#9aa7b8;font-size:10px;line-height:1.45}
+#weaponDamage{color:#a9c9e7;font-size:9px;letter-spacing:.3px}
+#damagePopup{display:none;position:absolute;left:50%;top:calc(50% - 54px);transform:translateX(-50%);padding:6px 9px;border:1px solid #8bc7ff55;border-radius:4px;background:#06182adb;color:#c4ecff;font-size:11px;font-weight:1000;letter-spacing:.8px;text-shadow:0 1px 5px #000;white-space:nowrap}
+#damagePopup.incoming{border-color:#ff718777;background:#310d19e8;color:#ff9aaa}
+.weaponButton{left:70%;top:19%;right:auto;bottom:auto;width:72px;height:42px;border-radius:9px;background:#203d5adf;border-color:#96d7ff66;font-size:9px;letter-spacing:.6px}
 #overlay{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:linear-gradient(180deg,#070b10ee,#070b10f5);padding:24px;cursor:pointer}
 #overlay .panel{width:min(580px,92vw);padding:26px;border:1px solid #ffffff12;background:#0f151ed9;border-radius:12px;box-shadow:0 30px 100px #000a}
 #overlay h1{margin:0 0 8px;font-size:34px;letter-spacing:-1px}#overlay p{margin:8px 0;color:#8391a5;font-size:13px}
@@ -99,7 +103,8 @@ body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
   <div id="score">SCORE 0</div>
   <div id="crosshair"><i></i></div>
   <div id="deathNotice" role="status" aria-live="polite">ТЕБЕ ЛІКВІДУВАЛИ</div>
-  <div id="ammo" style="display:none"><div class="ammo-num" id="ammoNum">30</div><div class="ammo-sub">/ 30 · R — RELOAD</div></div>
+  <div id="ammo" style="display:none"><div class="ammo-name" id="weaponName">AKR</div><div class="ammo-num" id="ammoNum">30</div><div class="ammo-sub" id="ammoSub">/ 30 · R — RELOAD</div><div class="ammo-sub" id="weaponDamage">5 м · ГОЛ 164 ТІЛ 35 ЖИВ 45 НОГ 27</div></div>
+  <div id="damagePopup" role="status" aria-live="polite"></div>
   <div id="hint">WASD — рух · Space — стрибок · Shift — швидкість · G — камера · LMB — вогонь · R — перезарядка</div>
 </div>
 <div id="radarWrap" aria-label="Радар команди"><canvas id="radarCanvas" width="220" height="220"></canvas><span>TEAM RADAR</span></div>
@@ -139,6 +144,7 @@ body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
   <button id="crouchBtn" class="mbtn crouch" type="button" aria-label="Присісти">CTRL</button>
   <button id="sprintBtn" class="mbtn sprint" type="button" aria-label="Бігти швидше">SPRINT</button>
   <button id="mapBtn" class="mbtn mapButton" type="button" aria-label="Відкрити карту">MAP</button>
+  <button id="weaponBtn" class="mbtn weaponButton" type="button" aria-label="Змінити зброю">АКР</button>
   <button id="leaveGameMobile" class="mbtn leave" type="button">×</button>
 </div>
 
@@ -249,8 +255,9 @@ const HILL_TOWN_STARTER_URL="https://cdn.3dassets.dev/assets/27595/v1/model.glb"
 let hillTownManifestPromise=null;
 let hillTownBuilding=false;
 let heldWeaponRoot=null;
-let heldWeaponBaseZ=-.42;
+let heldWeaponBaseX=.29,heldWeaponBaseY=-.29,heldWeaponBaseZ=-.42;
 let weaponKick=0;
+let akModelTemplate=null;
 const loadedAssetTemplates=new Map();
 const loadedAssetUrls=new Map();
 const ASSET_MATCHES={
@@ -511,8 +518,14 @@ async function buildHillTownMap(){
     await loadHillTownStarterFallback();
   }
 }
+function clearHeldWeapon(){
+  if(!heldWeaponRoot)return;
+  while(heldWeaponRoot.children.length)heldWeaponRoot.remove(heldWeaponRoot.children[0]);
+  heldWeaponRoot.userData.realModel=false;
+}
 function makeFallbackAK(){
   if(!heldWeaponRoot)return;
+  clearHeldWeapon();
   const metal=new THREE.MeshStandardMaterial({color:0x30383c,roughness:.48,metalness:.72});
   const darkMetal=new THREE.MeshStandardMaterial({color:0x15191b,roughness:.58,metalness:.45});
   const wood=new THREE.MeshStandardMaterial({color:0x755036,roughness:.82,metalness:.02});
@@ -536,6 +549,44 @@ function makeFallbackAK(){
   const sight=new THREE.Mesh(new THREE.BoxGeometry(.025,.04,.035),darkMetal);
   sight.position.set(0,.1,-.15);heldWeaponRoot.add(sight);
 }
+function makeFallbackP350(){
+  if(!heldWeaponRoot)return;
+  clearHeldWeapon();
+  const steel=new THREE.MeshStandardMaterial({color:0x303a45,roughness:.42,metalness:.78});
+  const slide=new THREE.MeshStandardMaterial({color:0x667582,roughness:.3,metalness:.82});
+  const grip=new THREE.MeshStandardMaterial({color:0x151c25,roughness:.82,metalness:.08});
+  const addPart=(w,h,d,x,y,z,mat,rx=0,ry=0,rz=0)=>{
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+    mesh.position.set(x,y,z);mesh.rotation.set(rx,ry,rz);mesh.castShadow=false;mesh.receiveShadow=false;heldWeaponRoot.add(mesh);
+  };
+  addPart(.105,.065,.29,0,.015,-.105,slide);
+  addPart(.088,.055,.17,0,-.035,.045,steel);
+  addPart(.075,.16,.105,0,-.105,.04,grip,-.22);
+  addPart(.07,.022,.025,0,.058,-.02,steel);
+  addPart(.018,.018,.2,0,-.002,-.32,steel);
+  addPart(.023,.023,.04,0,.002,-.41,slide);
+  addPart(.035,.026,.052,0,-.055,-.015,grip);
+  addPart(.028,.018,.105,0,-.02,-.07,steel);
+  heldWeaponRoot.userData.realModel=false;
+}
+function makeFallbackKnife(){
+  if(!heldWeaponRoot)return;
+  clearHeldWeapon();
+  const blade=new THREE.MeshStandardMaterial({color:0xc8d8e5,roughness:.24,metalness:.9});
+  const edge=new THREE.MeshStandardMaterial({color:0x71899a,roughness:.22,metalness:.9});
+  const handle=new THREE.MeshStandardMaterial({color:0x1c2a39,roughness:.75,metalness:.1});
+  const addPart=(w,h,d,x,y,z,mat,rx=0,ry=0,rz=0)=>{
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+    mesh.position.set(x,y,z);mesh.rotation.set(rx,ry,rz);mesh.castShadow=false;mesh.receiveShadow=false;heldWeaponRoot.add(mesh);
+  };
+  addPart(.035,.034,.16,0,-.01,.11,handle,.04);
+  addPart(.14,.022,.028,0,.005,.015,edge);
+  addPart(.032,.018,.27,0,.005,-.125,blade);
+  const point=new THREE.Mesh(new THREE.ConeGeometry(.022,.075,4),blade);
+  point.rotation.x=-Math.PI/2;point.position.set(0,.005,-.29);point.castShadow=false;point.receiveShadow=false;heldWeaponRoot.add(point);
+  addPart(.012,.01,.22,0,-.007,-.12,edge);
+  heldWeaponRoot.userData.realModel=false;
+}
 async function loadHeldWeapon(){
   setLoadingDetail("weaponLoadStatus","ЗАВАНТАЖЕННЯ МОДЕЛІ…","active");
   if(!heldWeaponRoot){
@@ -557,10 +608,9 @@ async function loadHeldWeapon(){
     const center=centeredBox.getCenter(new THREE.Vector3());
     model.position.sub(center);
     model.rotation.y=Math.PI;
-    while(heldWeaponRoot.children.length)heldWeaponRoot.remove(heldWeaponRoot.children[0]);
     model.traverse(node=>{if(node.isMesh){node.castShadow=false;node.receiveShadow=false}});
-    heldWeaponRoot.add(model);
-    heldWeaponRoot.userData.realModel=true;
+    akModelTemplate=model;
+    if(selectedWeapon==="akr")selectWeapon("akr",true);
     setLoadingDetail("weaponLoadStatus","ГОТОВО","done");
   }catch(error){
     console.warn("[WEAPON] Keeping built-in AK-style fallback.",error);
@@ -589,8 +639,17 @@ let isThird=false;
 let lastMoveSend=0;
 let lastShot=0;
 let hitConfirmTimer=null;
+let selectedWeapon="akr";
+const weaponAmmo={akr:30,p350:13,knife:Infinity};
 let ammo=30;
 let reloading=false;
+let aimingDownSights=false;
+let damagePopupTimer=null;
+const CLIENT_WEAPON_INFO={
+  akr:{label:"AKR",short:"АКР",kind:"rifle",magazine:30,reloadMs:1800,fireDelay:115,range:60,ads:true,damage:{head:164,body:35,stomach:45,legs:27}},
+  p350:{label:"P350",short:"P350",kind:"pistol",magazine:13,reloadMs:1350,fireDelay:260,range:29,ads:false,damage:{head:151,body:38,stomach:49,legs:30}},
+  knife:{label:"НІЖ",short:"НІЖ",kind:"melee",magazine:Infinity,reloadMs:0,fireDelay:420,range:2.8,ads:false,damage:{head:180,body:110,stomach:110,legs:110}}
+};
 let jumpQueued=false;
 let fireHeld=false;
 let lookTouch=null;
@@ -1043,20 +1102,111 @@ function updateWaiting(data){
     :"Усі зайшли. Чекаємо завантаження карти в кожного гравця.";
 }
 
+function updateWeaponHud(){
+  const info=CLIENT_WEAPON_INFO[selectedWeapon]||CLIENT_WEAPON_INFO.akr;
+  const name=$("weaponName"),number=$("ammoNum"),sub=$("ammoSub"),damage=$("weaponDamage"),button=$("weaponBtn");
+  if(name)name.textContent=info.label+(aimingDownSights?" · ADS":"");
+  if(number)number.textContent=info.kind==="melee"?"∞":(reloading?"—":String(ammo));
+  if(sub)sub.textContent=info.kind==="melee"?"БЛИЖНІЙ БІЙ · R НЕ ПОТРІБНО":"/ "+info.magazine+" · R — ПЕРЕЗАРЯДКА";
+  if(damage){
+    const d=info.damage;
+    damage.textContent=info.kind==="melee"
+      ?"ДАЛЬНІСТЬ "+info.range+" · ГОЛ "+d.head+" / ТІЛО "+d.body
+      :"5 м · ГОЛ "+d.head+" ТІЛ "+d.body+" ЖИВ "+d.stomach+" НОГ "+d.legs;
+  }
+  if(button){button.textContent=info.short;button.title=info.label+" · торкнись, щоб змінити зброю"}
+}
+function positionHeldWeapon(){
+  if(!heldWeaponRoot)return;
+  if(selectedWeapon==="akr"){
+    heldWeaponBaseX=aimingDownSights?.045:.29;
+    heldWeaponBaseY=aimingDownSights?-.245:-.29;
+    heldWeaponBaseZ=aimingDownSights?-.56:-.42;
+    heldWeaponRoot.scale.setScalar(aimingDownSights?.84:1);
+  }else if(selectedWeapon==="p350"){
+    heldWeaponBaseX=.29;heldWeaponBaseY=-.30;heldWeaponBaseZ=-.36;
+    heldWeaponRoot.scale.setScalar(1);
+  }else{
+    heldWeaponBaseX=.245;heldWeaponBaseY=-.285;heldWeaponBaseZ=-.31;
+    heldWeaponRoot.scale.setScalar(1.02);
+  }
+}
+function setAimingDownSights(value){
+  aimingDownSights=Boolean(value)&&selectedWeapon==="akr";
+  camera.fov=aimingDownSights?48:74;
+  camera.updateProjectionMatrix();
+  positionHeldWeapon();
+  updateWeaponHud();
+}
+function toggleAimingDownSights(){
+  if(selectedWeapon!=="akr"||matchPhase!=="game"||hp<=0||$("pauseMenu")?.style.display==="flex")return;
+  setAimingDownSights(!aimingDownSights);
+}
+function selectWeapon(weaponId,force=false){
+  if(!CLIENT_WEAPON_INFO[weaponId])return;
+  if(!force&&(matchPhase!=="game"||hp<=0||$("pauseMenu")?.style.display==="flex"))return;
+  if(selectedWeapon===weaponId&&heldWeaponRoot?.children.length&&!force){updateWeaponHud();return}
+  weaponAmmo[selectedWeapon]=ammo;
+  selectedWeapon=weaponId;
+  ammo=weaponAmmo[selectedWeapon]??CLIENT_WEAPON_INFO[selectedWeapon].magazine;
+  reloading=false;
+  aimingDownSights=false;
+  camera.fov=74;camera.updateProjectionMatrix();
+  if(!heldWeaponRoot){
+    heldWeaponRoot=new THREE.Group();
+    camera.add(heldWeaponRoot);
+  }
+  if(selectedWeapon==="akr"){
+    if(akModelTemplate){
+      clearHeldWeapon();
+      const model=akModelTemplate.clone(true);
+      heldWeaponRoot.add(model);
+      heldWeaponRoot.userData.realModel=true;
+    }else makeFallbackAK();
+  }else if(selectedWeapon==="p350")makeFallbackP350();
+  else makeFallbackKnife();
+  positionHeldWeapon();
+  updateWeaponHud();
+}
+function cycleWeapon(){
+  const order=["akr","p350","knife"];
+  selectWeapon(order[(order.indexOf(selectedWeapon)+1)%order.length]);
+}
+function showDamagePopup(message,incoming=false){
+  const node=$("damagePopup");
+  if(!node)return;
+  node.textContent=message;
+  node.classList.toggle("incoming",incoming);
+  node.style.display="block";
+  if(damagePopupTimer)clearTimeout(damagePopupTimer);
+  damagePopupTimer=setTimeout(()=>{node.style.display="none";},900);
+}
 function startReload(){
-  if((!isTeamCombat&&!isTrainingMode)||reloading||ammo>=30||matchPhase!=="game"||hp<=0||!mapLoadFinished)return;
-  reloading=true;$("ammoNum").textContent="—";
-  setTimeout(()=>{ammo=30;reloading=false;$("ammoNum").textContent=ammo},900);
+  const info=CLIENT_WEAPON_INFO[selectedWeapon];
+  if((!isTeamCombat&&!isTrainingMode)||info.kind==="melee"||reloading||ammo>=info.magazine||matchPhase!=="game"||hp<=0||!mapLoadFinished)return;
+  const reloadWeapon=selectedWeapon;
+  reloading=true;updateWeaponHud();
+  setTimeout(()=>{
+    weaponAmmo[reloadWeapon]=CLIENT_WEAPON_INFO[reloadWeapon].magazine;
+    if(selectedWeapon===reloadWeapon){ammo=weaponAmmo[reloadWeapon];reloading=false;updateWeaponHud()}
+  },info.reloadMs);
 }
 function shoot(){
   if($("pauseMenu")?.style.display==="flex"||(!isTeamCombat&&!isTrainingMode)||matchPhase!=="game"||reloading||hp<=0||!mapLoadFinished)return;
+  const info=CLIENT_WEAPON_INFO[selectedWeapon];
   const now=performance.now();
-  if(now-lastShot<125||ammo<=0){if(ammo<=0)startReload();return}
-  lastShot=now;weaponKick=Math.min(.09,weaponKick+.045);ammo--; $("ammoNum").textContent=ammo;
+  if(now-lastShot<info.fireDelay||ammo<=0){if(ammo<=0)startReload();return}
+  lastShot=now;
+  weaponKick=Math.min(info.kind==="melee"?.22:.09,weaponKick+(info.kind==="melee"?.11:.045));
+  if(info.kind!=="melee"){
+    ammo=Math.max(0,ammo-1);
+    weaponAmmo[selectedWeapon]=ammo;
+  }
+  updateWeaponHud();
   const dir=new THREE.Vector3();
   camera.getWorldDirection(dir);dir.normalize();
-  if(isTrainingMode)socket.emit("training_shoot",{trainingId,dx:dir.x,dy:dir.y,dz:dir.z,damage:34});
-  else socket.emit("team_shoot",{matchId,dx:dir.x,dy:dir.y,dz:dir.z});
+  if(isTrainingMode)socket.emit("training_shoot",{trainingId,weapon:selectedWeapon,dx:dir.x,dy:dir.y,dz:dir.z});
+  else socket.emit("team_shoot",{matchId,weapon:selectedWeapon,dx:dir.x,dy:dir.y,dz:dir.z});
 }
 function fireLoop(){
   if(fireHeld){shoot();requestAnimationFrame(fireLoop)}
@@ -1066,6 +1216,9 @@ function queueJump(){if(matchPhase==="game")jumpQueued=true}
 addEventListener("keydown",e=>{
   if(e.repeat)return;
   if(e.code==="Escape"){e.preventDefault();leaveGame();return}
+  if(e.code==="Digit1"){e.preventDefault();selectWeapon("akr");return}
+  if(e.code==="Digit2"){e.preventDefault();selectWeapon("p350");return}
+  if(e.code==="Digit3"){e.preventDefault();selectWeapon("knife");return}
   const binds=readTrainingBinds();
   if(e.code===binds.menu){e.preventDefault();if(matchPhase==="game")togglePauseMenu();return}
   if(isTrainingMode&&matchPhase==="game"){
@@ -1091,7 +1244,16 @@ addEventListener("keyup",e=>{
   if(e.code==="KeyD"||e.code==="ArrowRight")keys.d=false;
   if(e.code==="ShiftLeft"||e.code==="ShiftRight")keys.shift=false;
 });
-addEventListener("mousedown",e=>{if(e.button===0&&$("pauseMenu")?.style.display!=="flex")shoot()});
+addEventListener("contextmenu",e=>{if(!isMobileDevice)e.preventDefault()});
+addEventListener("mousedown",e=>{
+  if(isMobileDevice)return;
+  if(e.button===2){e.preventDefault();toggleAimingDownSights();return}
+  if(e.button===0&&$("pauseMenu")?.style.display!=="flex"){
+    fireHeld=true;shoot();fireLoop();
+  }
+});
+addEventListener("mouseup",e=>{if(e.button===0&&!isMobileDevice)fireHeld=false});
+$("weaponBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();cycleWeapon()});
 
 function setOverlayGame(){
   $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":mode==="training"?"ТРЕНУВАННЯ":"HIDE & SEEK";
@@ -1178,6 +1340,7 @@ $("trainingControls").addEventListener("touchstart",e=>e.stopPropagation(),{pass
 socket.on("training_init",data=>{
   if(!isTrainingMode)return;
   $("reconnectBtn").style.display="none";$("reconnectExitBtn").style.display="none";document.body.classList.remove("reconnecting");
+  updateWeaponHud();
   $("modeName").textContent=data.modeName||mode.toUpperCase();
   matchPhase="game";canControl=true;
   ensurePlayerVisual();
@@ -1213,7 +1376,10 @@ socket.on("training_state",data=>{
     if(data.bot)applyTrainingBot(data.bot);
   }else if(data.bot===null)removeTrainingBot();
   else if(data.bot)applyTrainingBot(data.bot);
-  if(data.message==="HIT")$("botStatus").textContent="ПОПАДАННЯ · "+$("botStatus").textContent;
+  if(data.message==="HIT"){
+    $("botStatus").textContent="ПОПАДАННЯ −"+(Number(data.hitDamage)||0)+" · "+(data.hitZone||"body").toUpperCase()+" · "+$("botStatus").textContent;
+    showDamagePopup("−"+(Number(data.hitDamage)||0)+" · "+String(data.hitZone||"BODY").toUpperCase());
+  }
 });
 
 socket.on("init_match",data=>{
@@ -1221,6 +1387,7 @@ socket.on("init_match",data=>{
     if(!isTrainingMode)localStorage.setItem("sx_active_match",JSON.stringify({matchId:data.matchId||matchId,userId:myId,uuid:myUuid,map:data.map||selectedMap,mode:data.mode||mode,updatedAt:Date.now()}));
   }catch{}
   $("reconnectBtn").style.display="none";$("reconnectExitBtn").style.display="none";document.body.classList.remove("reconnecting");
+  updateWeaponHud();
   if(data.mode)sessionStorage.setItem("selectedMode",data.mode);
   if(data.map)sessionStorage.setItem("selectedMap",data.map);
   myRole=data.me?.role||"runner";myTeam=data.me?.team||null;score=data.me?.score||0;hp=data.me?.hp||100;
@@ -1308,17 +1475,24 @@ socket.on("roles_updated",data=>{
 socket.on("player_hit",data=>{
   const targetId=String(data.targetId);
   const victim=enemies[targetId];
-  if(victim&&data.killed){
-    victim.hp=0;victim.anim="Dead";setSoldierDown(victim.mesh,true);
+  if(victim){
+    victim.hp=Math.max(0,Number(data.hp)||0);
+    if(data.killed){victim.anim="Dead";setSoldierDown(victim.mesh,true)}
   }
   if(targetId===String(myId)){
-    hp=0;keys.w=keys.a=keys.s=keys.d=keys.shift=false;isCrouching=false;jumpQueued=false;fireHeld=false;
-    setSoldierDown(playerVisual,true);
-    $("deathNotice").style.display="block";
+    hp=Math.max(0,Number(data.hp)||0);
+    showDamagePopup("−"+(Number(data.damage)||0)+" · "+String(data.hitZone||"BODY").toUpperCase(),!data.killed);
+    if(data.killed){
+      keys.w=keys.a=keys.s=keys.d=keys.shift=false;isCrouching=false;jumpQueued=false;fireHeld=false;
+      setAimingDownSights(false);
+      setSoldierDown(playerVisual,true);
+      $("deathNotice").style.display="block";
+    }
   }
   const shooter=String(data.shooterId)===String(myId);
   if(shooter){
-    score=data.score||score;$("score").textContent="SCORE "+score;
+    score=Number(data.score)||score;$("score").textContent="SCORE "+score;
+    showDamagePopup("−"+(Number(data.damage)||0)+" · "+String(data.hitZone||"BODY").toUpperCase());
     const crosshair=$("crosshair");crosshair.classList.add("hit");
     if(hitConfirmTimer)clearTimeout(hitConfirmTimer);
     hitConfirmTimer=setTimeout(()=>crosshair.classList.remove("hit"),150);
@@ -1397,7 +1571,7 @@ const stick=$("stick"),thumb=stick.querySelector("i");
 function applyMobileHudLayout(){
   let config={};
   try{config=JSON.parse(localStorage.getItem("sx_mobile_hud_layout_v1")||"{}")||{}}catch{}
-  const ids={move:"stick",fire:"fireBtn",jump:"jumpBtn",reload:"reloadBtn",crouch:"crouchBtn",sprint:"sprintBtn",map:"mapBtn"};
+  const ids={move:"stick",fire:"fireBtn",jump:"jumpBtn",reload:"reloadBtn",crouch:"crouchBtn",sprint:"sprintBtn",map:"mapBtn",weapon:"weaponBtn"};
   const sizes=config.sizes||{},positions=config.positions||{},opacity=Math.max(35,Math.min(100,Number(config.opacity)||82))/100;
   for(const [key,id] of Object.entries(ids)){
     const el=$(id);if(!el)continue;
@@ -1518,8 +1692,8 @@ function animate(){
     animateSoldier(e.mesh,dt,now,e.anim==="Running"||e.anim==="Walking",e.anim==="Jump",e.anim==="Crouch");
   });
   if(heldWeaponRoot){
-    heldWeaponRoot.position.x=.29+Math.sin(now*.0016)*.0018;
-    heldWeaponRoot.position.y=-.29+Math.abs(Math.sin(now*.006))* .0015;
+    heldWeaponRoot.position.x=heldWeaponBaseX+Math.sin(now*.0016)*.0018;
+    heldWeaponRoot.position.y=heldWeaponBaseY+Math.abs(Math.sin(now*.006))* .0015;
     heldWeaponRoot.position.z=heldWeaponBaseZ+weaponKick;
     weaponKick=Math.max(0,weaponKick-dt*.58);
     heldWeaponRoot.rotation.x=reloading?-.07:0;

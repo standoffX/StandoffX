@@ -1652,13 +1652,68 @@ function respawnPlayer(match, player) {
   player.anim = "Idle";
 }
 
+const WEAPON_BALANCE = Object.freeze({
+  akr: Object.freeze({
+    id: "akr", label: "AKR", type: "rifle", magazine: 30,
+    reloadMs: 1800, fireDelay: 115, range: 60, ads: true,
+    damage: Object.freeze({
+      head: [164, 162, 159, 153, 148],
+      body: [35, 34, 34, 33, 32],
+      stomach: [45, 44, 44, 42, 41],
+      legs: [27, 27, 26, 25, 24]
+    })
+  }),
+  p350: Object.freeze({
+    id: "p350", label: "P350", type: "pistol", magazine: 13,
+    reloadMs: 1350, fireDelay: 260, range: 29, ads: false,
+    damage: Object.freeze({
+      head: [151, 139, 121, 85, 51],
+      body: [38, 35, 30, 21, 13],
+      stomach: [49, 43, 38, 26, 16],
+      legs: [30, 26, 22, 16, 10]
+    })
+  }),
+  knife: Object.freeze({
+    id: "knife", label: "НІЖ", type: "melee", magazine: Infinity,
+    reloadMs: 0, fireDelay: 420, range: 2.8, ads: false,
+    damage: Object.freeze({
+      head: [180], body: [110], stomach: [110], legs: [110]
+    })
+  })
+});
+
+function normalizeWeaponId(value) {
+  const id = cleanText(value, 20).toLowerCase();
+  return Object.prototype.hasOwnProperty.call(WEAPON_BALANCE, id) ? id : "akr";
+}
+
+function calculateWeaponDamage(weaponId, zone, distance) {
+  const weapon = WEAPON_BALANCE[normalizeWeaponId(weaponId)];
+  const points = weapon.damage[zone] || weapon.damage.body;
+  if (weapon.type === "melee" || points.length === 1) return points[0];
+  const d = Math.max(5, Math.min(25, Number.isFinite(Number(distance)) ? Number(distance) : 5));
+  const position = (d - 5) / 5;
+  const low = Math.floor(position);
+  const high = Math.min(points.length - 1, low + 1);
+  return Math.max(1, Math.round(points[low] + (points[high] - points[low]) * (position - low)));
+}
+
+function detectWeaponHitZone(shooterPos, targetPos, aim, horizontalDistance) {
+  const horizontalAim = Math.max(0.01, Math.hypot(aim.x, aim.z));
+  const targetHeight = (Number(shooterPos.y) || 0) + 1.55
+    + (aim.y / horizontalAim) * horizontalDistance
+    - (Number(targetPos.y) || 0);
+  if (targetHeight >= 1.35) return "head";
+  if (targetHeight < 0.55) return "legs";
+  if (targetHeight < 0.98) return "stomach";
+  return "body";
+}
+
 function handleTeamShot(io, match, shooter, data) {
   if (!["team_fight", "allies"].includes(match.mode) || match.phase !== "game") return;
 
-  const now = Date.now();
-  if (now - (shooter.lastShotAt || 0) < 120) return;
-  shooter.lastShotAt = now;
-
+  const weaponId = normalizeWeaponId(data?.weapon);
+  const weapon = WEAPON_BALANCE[weaponId];
   const dx = Number(data?.dx);
   const dy = Number(data?.dy);
   const dz = Number(data?.dz);
@@ -1667,6 +1722,11 @@ function handleTeamShot(io, match, shooter, data) {
   const aim = new THREE_LIKE_VECTOR(dx, dy, dz);
   if (aim.length() < 0.01) return;
   aim.normalize();
+  if (Math.hypot(aim.x, aim.z) < 0.01) return;
+
+  const now = Date.now();
+  if (now - (shooter.lastShotAt || 0) < weapon.fireDelay) return;
+  shooter.lastShotAt = now;
 
   let best = null;
   let bestDistance = Infinity;
@@ -1675,14 +1735,12 @@ function handleTeamShot(io, match, shooter, data) {
     if (target.userId === shooter.userId || target.team === shooter.team || target.hp <= 0) continue;
 
     const vx = target.pos.x - shooter.pos.x;
-    const vy = (target.pos.y + 0.9) - (shooter.pos.y + 0.9);
     const vz = target.pos.z - shooter.pos.z;
-    const dist = Math.hypot(vx, vy, vz);
-    if (dist > 60 || dist < 0.5) continue;
+    const dist = Math.hypot(vx, vz);
+    if (weapon.type === "melee" ? (dist > weapon.range || dist < 0.25) : (dist > weapon.range || dist < 0.5)) continue;
 
-    const inv = 1 / dist;
-    const dot = aim.x * vx * inv + aim.y * vy * inv + aim.z * vz * inv;
-    if (dot < 0.985) continue;
+    const dot = (aim.x * vx + aim.z * vz) / (Math.max(0.01, Math.hypot(aim.x, aim.z)) * dist);
+    if (dot < (weapon.type === "melee" ? 0.72 : 0.985)) continue;
 
     if (dist < bestDistance) {
       best = target;
@@ -1692,20 +1750,28 @@ function handleTeamShot(io, match, shooter, data) {
 
   if (!best) return;
 
-  best.hp = 0;
-  best.deaths += 1;
-  shooter.kills += 1;
-  shooter.score += 1;
+  const hitZone = detectWeaponHitZone(shooter.pos, best.pos, aim, bestDistance);
+  const damage = calculateWeaponDamage(weaponId, hitZone, bestDistance);
+  best.hp = Math.max(0, best.hp - damage);
+  const killed = best.hp <= 0;
+  if (killed) {
+    best.deaths += 1;
+    shooter.kills += 1;
+    shooter.score += 1;
+  }
 
   io.to(match.id).emit("player_hit", {
     shooterId: shooter.userId,
     targetId: best.userId,
-    damage: 100,
-    killed: true,
-    hp: 0,
+    weapon: weaponId,
+    hitZone,
+    damage,
+    killed,
+    hp: best.hp,
     score: shooter.score
   });
 
+  if (!killed) return;
   setTimeout(() => {
     if (!activeMatches.has(match.id) || match.finished) return;
     respawnPlayer(match, best);
@@ -1848,6 +1914,7 @@ io.on("connection", socket => {
       spawnPosition: { ...spawnPosition },
       lastMoveAt: 0,
       lastActionAt: 0,
+      lastShotAt: 0,
       createdAt: Date.now()
     };
     if (previous?.bot?.despawnTimer) clearTimeout(previous.bot.despawnTimer);
@@ -1997,24 +2064,32 @@ io.on("connection", socket => {
     if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || !session.bot) return;
     if (session.mode !== "field_test" && session.mode !== "training") return;
 
+    const weaponId = normalizeWeaponId(data?.weapon);
+    const weapon = WEAPON_BALANCE[weaponId];
     const dx = Number(data.dx), dy = Number(data.dy), dz = Number(data.dz);
     if (![dx, dy, dz].every(Number.isFinite)) return;
     const length = Math.hypot(dx, dy, dz) || 1;
     const aim = { x: dx / length, y: dy / length, z: dz / length };
+    if (Math.hypot(aim.x, aim.z) < 0.01) return;
+    const now = Date.now();
+    if (now - (session.lastShotAt || 0) < weapon.fireDelay) return;
+    session.lastShotAt = now;
+
     const bot = session.bot;
     const vx = bot.x - session.playerPos.x;
-    const vy = bot.y + 0.9 - (session.playerPos.y + 1);
     const vz = bot.z - session.playerPos.z;
-    const dist = Math.hypot(vx, vy, vz);
-    if (dist > 70 || dist < 0.5) return;
-    const dot = aim.x * vx / dist + aim.y * vy / dist + aim.z * vz / dist;
-    if (dot < 0.975) return;
+    const dist = Math.hypot(vx, vz);
+    if (weapon.type === "melee" ? (dist > weapon.range || dist < 0.25) : (dist > weapon.range || dist < 0.5)) return;
+    const dot = (aim.x * vx + aim.z * vz) / (Math.max(0.01, Math.hypot(aim.x, aim.z)) * dist);
+    if (dot < (weapon.type === "melee" ? 0.72 : 0.975)) return;
 
-    bot.hp = Math.max(0, bot.hp - (Number(data.damage) || 34));
+    const hitZone = detectWeaponHitZone(session.playerPos, { x: bot.x, y: bot.y || 0, z: bot.z }, aim, dist);
+    const damage = calculateWeaponDamage(weaponId, hitZone, dist);
+    bot.hp = Math.max(0, bot.hp - damage);
     bot.hits += 1;
     bot.action = bot.hp <= 0 ? "knocked-out" : "hit";
-    bot.updatedAt = Date.now();
-    io.to(session.id).emit("training_state", { bot, hit: true, message: "HIT" });
+    bot.updatedAt = now;
+    io.to(session.id).emit("training_state", { bot, hit: true, hitDamage: damage, hitZone, weapon: weaponId, message: "HIT" });
     if (bot.hp <= 0) {
       setTimeout(() => {
         const current = trainingSessions.get(session.userId);
