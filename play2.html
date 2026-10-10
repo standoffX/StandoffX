@@ -15,7 +15,7 @@
 #weaponDamage{color:#a9c9e7;font-size:9px;letter-spacing:.3px}
 #damagePopup{display:none;position:absolute;left:50%;top:calc(50% - 54px);transform:translateX(-50%);padding:6px 9px;border:1px solid #8bc7ff55;border-radius:4px;background:#06182adb;color:#c4ecff;font-size:11px;font-weight:1000;letter-spacing:.8px;text-shadow:0 1px 5px #000;white-space:nowrap}
 #damagePopup.incoming{border-color:#ff718777;background:#310d19e8;color:#ff9aaa}
-.weaponButton{left:70%;top:19%;right:auto;bottom:auto;width:72px;height:42px;border-radius:9px;background:#203d5adf;border-color:#96d7ff66;font-size:9px;letter-spacing:.6px}
+
 .interactButton{left:70%;top:29%;right:auto;bottom:auto;width:76px;height:40px;border-radius:9px;background:#153b30e8;border-color:#70efb177;font-size:9px;letter-spacing:.4px}
 #overlay{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:linear-gradient(180deg,#070b10ee,#070b10f5);padding:24px;cursor:pointer}
 #overlay .panel{width:min(580px,92vw);padding:26px;border:1px solid #ffffff12;background:#0f151ed9;border-radius:12px;box-shadow:0 30px 100px #000a}
@@ -37,15 +37,20 @@
 #results{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;background:#05080def}.resultBox{padding:28px;width:min(420px,90vw);background:#111821;border:1px solid #ffffff14;border-radius:11px;text-align:center}.resultBox h2{margin:0 0 12px}.resultBox .reward{font-size:20px;font-weight:900}.resultBox button{margin-top:18px;width:100%;height:44px;border:0;border-radius:6px;background:#327cff;color:white;font-weight:900}
 #mobile{display:none;position:fixed;inset:0;z-index:20;pointer-events:none}
 #leaveGameDesktop{position:fixed;right:14px;top:14px;z-index:25;pointer-events:auto;border:1px solid #ffffff28;background:#0b111bd9;color:#fff;border-radius:6px;padding:10px 13px;font-size:11px;font-weight:900;cursor:pointer}
-@media(max-width:800px),(pointer:coarse){#leaveGameDesktop{display:none}}.stick{position:absolute;left:20px;bottom:25px;width:125px;height:125px;border-radius:50%;background:#ffffff0d;border:1px solid #ffffff1c;pointer-events:auto;touch-action:none}.stick i{position:absolute;left:35px;top:35px;width:55px;height:55px;border-radius:50%;background:#ffffff22}.mbtn{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid #ffffff1d;background:#0b111bd9;color:#fff;font-size:10px;font-weight:950;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none}.mbtn.active{border-color:#d7f4ff;background:#d7f4ff35;box-shadow:0 0 18px #78cfff33}.fire{right:18px;bottom:54px;background:#3e6fb3e6}.jump{right:92px;bottom:128px}.reload{right:92px;bottom:54px}.crouch{right:18px;bottom:128px;background:#7258a8e8}.sprint{right:24px;bottom:202px;background:#237f78e8;width:58px;height:52px;border-radius:14px}.leave{right:20px;top:20px;width:48px;height:40px;border-radius:6px}
-#trainingControls button:hover{filter:brightness(1.15)}
-.training-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
-.training-action-grid button{display:flex;align-items:center;justify-content:space-between;gap:5px;min-width:0;min-height:32px;padding:6px 7px;border:1px solid #1de9ff35;border-radius:4px;background:#101e2de8;color:#eaf8ff;font-size:9px;font-weight:900;letter-spacing:.2px;text-align:left;cursor:pointer;touch-action:manipulation}
-.training-action-grid button:hover{border-color:#1de9ff99;background:#143145}
-.training-action-grid kbd{flex:0 0 auto;display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 4px;border:1px solid #1de9ff60;border-radius:3px;background:#071520;color:#1de9ff;font:900 9px ui-monospace,monospace}
-#trainingControls{overscroll-behavior:contain;touch-action:pan-y}
-@media(max-width:800px){#trainingControls{top:auto;left:8px;right:auto;bottom:190px;width:196px;max-height:46vh;padding:8px}.training-action-grid button{min-height:29px;padding:5px;font-size:8px}.training-action-grid kbd{min-width:17px;height:17px}.fire{bottom:44px}}
-@media(max-width:800px){#trainingControls{top:54px;left:auto;right:8px;bottom:auto;width:min(205px,52vw);max-height:39vh;padding:8px}.fire{bottom:44px}.crouch{bottom:112px}.jump{bottom:112px}.sprint{bottom:190px}}
+@media(max-width:800px),(pointer:coarse){#leaveGameDesktop{display:none}}.stick{position:absolute;left:20px;bottom:24px;width:122px;height:122px;border-radius:50%;background:rgba(220,238,255,.07);border:1px solid rgba(220,240,255,.2);box-shadow:inset 0 0 22px rgba(180,220,255,.035);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none}
+.stick i{position:absolute;left:34px;top:34px;width:54px;height:54px;border-radius:50%;background:rgba(226,242,255,.15);border:1px solid rgba(230,246,255,.25);box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.mbtn{position:absolute;display:grid;place-items:center;width:58px;height:58px;border-radius:50%;border:1px solid rgba(232,246,255,.28);background:rgba(8,17,29,.24);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);box-shadow:0 2px 12px rgba(0,0,0,.12),inset 0 0 0 1px rgba(255,255,255,.035);color:rgba(255,255,255,.96);font-size:10px;font-weight:950;letter-spacing:.3px;pointer-events:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none;cursor:pointer}
+.mbtn:active{transform:scale(.96)}
+.mbtn.active{border-color:rgba(225,247,255,.72);background:rgba(215,244,255,.22);box-shadow:0 0 18px rgba(120,207,255,.16),inset 0 0 0 1px rgba(255,255,255,.08)}
+.fire{right:18px;bottom:46px;width:68px;height:68px;background:rgba(62,111,179,.32);border-color:rgba(155,204,255,.42)}
+.jump{right:94px;bottom:116px}
+.reload{right:94px;bottom:44px}
+.crouch{right:20px;bottom:116px;background:rgba(114,88,168,.27);border-color:rgba(193,160,255,.32)}
+.sprint{right:22px;bottom:188px;width:56px;height:48px;border-radius:15px;background:rgba(35,127,120,.27);border-color:rgba(122,241,224,.3)}
+.weaponButton{right:94px;bottom:188px;left:auto;top:auto;width:58px;height:48px;border-radius:14px;background:rgba(32,61,90,.3);border-color:rgba(150,215,255,.35);font-size:9px;letter-spacing:.6px}
+.leave{right:18px;top:18px;width:42px;height:42px;border-radius:50%;background:rgba(9,16,27,.28)}
+@media(max-width:800px){.stick{left:16px;bottom:20px;width:116px;height:116px}.stick i{left:32px;top:32px;width:52px;height:52px}.fire{right:14px;bottom:28px;width:62px;height:62px}.jump{right:82px;bottom:96px}.reload{right:82px;bottom:28px}.crouch{right:14px;bottom:96px}.sprint{right:14px;bottom:161px}.weaponButton{right:86px;bottom:161px}}
+
 @media(max-width:800px),(pointer:coarse){#mobile{display:block}#hint{display:none}.top{top:8px}.players{grid-template-columns:1fr}.panel{max-height:90vh;overflow:auto}}
 
 #radarWrap{position:fixed;top:14px;right:14px;width:154px;z-index:12;pointer-events:none;display:grid;justify-items:center;gap:3px;color:#bdeaff;font-size:8px;font-weight:900;letter-spacing:1.4px;text-shadow:0 1px 5px #000}
@@ -57,7 +62,7 @@
 #fullMapCanvas{display:block;width:100%;height:auto;max-height:76dvh;object-fit:contain;border:1px solid #9bdcff2c;background:#081721}
 #fullMapLegend{display:flex;flex-wrap:wrap;gap:14px;margin-top:9px;font-size:10px;font-weight:900;color:#bed5e4}
 .legend-me{color:#5af0bd}.legend-team{color:#71b9ff}.legend-wall{color:#9eabb8}
-.mapButton{left:162px;bottom:32px;width:50px;height:42px;border-radius:10px;background:#183446ee}
+.mapButton{left:162px;bottom:32px;width:50px;height:42px;border-radius:12px;background:rgba(24,52,70,.28);border-color:rgba(130,215,255,.32);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
 #reconnectBtn{align-items:center;justify-content:center;min-width:220px}
 body.device-desktop #mobile{display:none!important}
 body.device-desktop #leaveGameDesktop{display:block!important}
@@ -113,20 +118,6 @@ body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
 
 <div id="results"><div class="resultBox"><h2 id="resultTitle">МАТЧ ЗАВЕРШЕНО</h2><div id="resultText" class="reward"></div><button id="menuResult">У МЕНЮ</button></div></div>
 <button id="leaveGameDesktop" type="button">← МЕНЮ</button>
-<div id="trainingControls" style="display:none;position:fixed;right:14px;top:72px;width:min(270px,calc(100vw - 24px));max-height:72vh;overflow:auto;z-index:25;padding:12px;background:#090f1cf2;border:1px solid #1de9ff66;border-radius:8px;pointer-events:auto;backdrop-filter:blur(8px);color:#eef7ff">
-  <b style="font-size:11px;letter-spacing:1px;color:#1de9ff">ТРЕНУВАННЯ · КЕРУВАННЯ</b>
-  <div id="botStatus" style="margin:8px 0;color:#d7e4f5;font-size:11px">Бота ще немає</div>
-  <div class="training-action-grid" aria-label="Дії тренування">
-    <button type="button" data-training-action="spawnBot" title="N — створити бота">СТВОРИТИ БОТА <kbd>N</kbd></button>
-    <button type="button" data-training-action="resetBot" title="U — скинути бота">СКИНУТИ БОТА <kbd>U</kbd></button>
-    <button type="button" data-training-action="push" title="J — відштовхнути">PUSH <kbd>J</kbd></button>
-    <button type="button" data-training-action="kick" title="K — удар">KICK <kbd>K</kbd></button>
-    <button type="button" data-training-action="boost" title="L — підкинути">BOOST <kbd>L</kbd></button>
-    <button type="button" data-training-action="resetSession" title="I — скинути сесію">СКИНУТИ ВСЕ <kbd>I</kbd></button>
-  </div>
-  <div id="trainingKeyHints" style="display:grid;grid-template-columns:1fr auto;gap:5px;margin-top:10px;padding-top:9px;border-top:1px solid #ffffff18;color:#aebdd0;font-size:10px;line-height:1.4"></div>
-  <div style="margin-top:9px;color:#71849b;font-size:9px;line-height:1.45">Клавіші можна змінити в лобі: Налаштування → Клавіші тренування. ESC — одразу в лобі.</div>
-</div>
 <div id="pauseMenu" style="display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;background:#020611c9;backdrop-filter:blur(8px);pointer-events:auto">
   <div style="width:min(360px,calc(100vw - 36px));padding:24px;background:#091323;border:1px solid #1de9ff88;border-radius:14px;box-shadow:0 0 45px #00cfff22;color:#edf7ff;text-align:center">
     <div style="font-size:11px;letter-spacing:3px;color:#1de9ff">STANDOFFX</div>
@@ -1062,7 +1053,7 @@ function rebuildCollisionIndex(){
   collisionIndexReady=true;
 }
 function worldLimit(){
-  return ({HILL_TOWN:70,NEON_YARD:205,FIELD_ARENA:330,M3_Maze:232})[selectedMap]||232;
+  return ({HILL_TOWN:60,NEON_YARD:190,FIELD_ARENA:315,M3_Maze:232})[selectedMap]||232;
 }
 function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
@@ -1173,7 +1164,7 @@ function finishClientReady(){
     $("overlayTitle").textContent=mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":"ТРЕНУВАННЯ";
     $("phase").textContent="ГОТОВО";
     $("overlayText").textContent="Тестовий режим";
-    $("trainingControls").style.display="block";
+    
     $("ammo").style.display="block";
     $("overlay").style.display="none";
     return;
@@ -1350,7 +1341,26 @@ addEventListener("mousedown",e=>{
   }
 });
 addEventListener("mouseup",e=>{if(e.button===0&&!isMobileDevice)fireHeld=false});
-$("weaponBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();cycleWeapon()});
+let weaponSwipeStart=null,suppressWeaponClickUntil=0;
+$("weaponBtn").addEventListener("click",e=>{
+  e.preventDefault();e.stopPropagation();
+  if(Date.now()<suppressWeaponClickUntil)return;
+  cycleWeapon();
+});
+$("weaponBtn").addEventListener("touchstart",e=>{
+  const t=e.changedTouches[0];
+  if(t)weaponSwipeStart={x:t.clientX,y:t.clientY};
+},{passive:true});
+$("weaponBtn").addEventListener("touchend",e=>{
+  const t=e.changedTouches[0],start=weaponSwipeStart;
+  weaponSwipeStart=null;
+  if(!t||!start)return;
+  const dx=t.clientX-start.x,dy=t.clientY-start.y;
+  if(Math.abs(dx)<24||Math.abs(dx)<=Math.abs(dy))return;
+  suppressWeaponClickUntil=Date.now()+450;
+  selectWeapon(dx<0?"p350":"knife");
+  e.preventDefault();
+},{passive:false});
 $("interactBtn").addEventListener("touchstart",e=>{e.preventDefault();e.stopPropagation();interactWithNearestDoor()},{passive:false});
 $("interactBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();interactWithNearestDoor()});
 let weaponSwipeStart=null;
@@ -1440,17 +1450,6 @@ function togglePauseMenu(force){
 $("resumeGame").addEventListener("click",()=>togglePauseMenu(false));
 $("pauseLeave").addEventListener("click",leaveGame);
 renderTrainingKeyHints();
-$("trainingControls").addEventListener("click",e=>{
-  const button=e.target.closest("[data-training-action]");
-  if(!button||!isTrainingMode)return;
-  e.preventDefault();
-  e.stopPropagation();
-  runTrainingAction(button.dataset.trainingAction);
-});
-$("trainingControls").addEventListener("pointerdown",e=>e.stopPropagation());
-$("trainingControls").addEventListener("mousedown",e=>e.stopPropagation());
-$("trainingControls").addEventListener("touchstart",e=>e.stopPropagation(),{passive:true});
-
 socket.on("training_init",data=>{
   if(!isTrainingMode)return;
   $("reconnectBtn").style.display="none";$("reconnectExitBtn").style.display="none";document.body.classList.remove("reconnecting");
@@ -1459,7 +1458,7 @@ socket.on("training_init",data=>{
   matchPhase="game";canControl=true;
   ensurePlayerVisual();
   if(data.spawn)player.position.set(data.spawn.x||0,data.spawn.y||0,data.spawn.z||0);
-  $("trainingControls").style.display="block";
+  
   renderTrainingKeyHints();
   $("overlayTitle").textContent=mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":"ТРЕНУВАННЯ";
   $("overlayText").textContent=mapLoadFinished?"Готово.":"Завантажуємо карту…";
@@ -1470,14 +1469,16 @@ socket.on("training_init",data=>{
 function applyTrainingBot(bot){
   if(!bot){removeTrainingBot();return}
   applyEnemy({userId:"training_bot",id:"training_bot",nickname:bot.nickname||"Training Bot",role:"runner",team:"B",hp:bot.hp,x:bot.x,y:bot.y,z:bot.z,rotY:bot.rotY||0,anim:bot.action==="boost"?"Jump":"Idle",score:0});
-  $("botStatus").textContent="BOT · HP "+bot.hp+"/"+(bot.maxHp||100)+" · HITS "+(bot.hits||0);
+  const botStatus=$("botStatus");
+  if(botStatus)botStatus.textContent="BOT · HP "+bot.hp+"/"+(bot.maxHp||100)+" · HITS "+(bot.hits||0);
   const enemy=enemies["training_bot"];
   if(enemy)setSoldierTint(enemy.mesh,bot.hp<=0?0x777777:0xffbd67);
 }
 function removeTrainingBot(){
   const bot=enemies["training_bot"];
   if(bot){scene.remove(bot.mesh);delete enemies["training_bot"];}
-  $("botStatus").textContent="Бота ще немає";
+  const botStatus=$("botStatus");
+  if(botStatus)botStatus.textContent="Бота ще немає";
 }
 socket.on("training_state",data=>{
   if(!isTrainingMode)return;
@@ -1491,7 +1492,8 @@ socket.on("training_state",data=>{
   }else if(data.bot===null)removeTrainingBot();
   else if(data.bot)applyTrainingBot(data.bot);
   if(data.message==="HIT"){
-    $("botStatus").textContent="ПОПАДАННЯ −"+(Number(data.hitDamage)||0)+" · "+(data.hitZone||"body").toUpperCase()+" · "+$("botStatus").textContent;
+    const botStatus=$("botStatus");
+    if(botStatus)botStatus.textContent="ПОПАДАННЯ −"+(Number(data.hitDamage)||0)+" · "+(data.hitZone||"body").toUpperCase()+" · "+botStatus.textContent;
     showDamagePopup("−"+(Number(data.hitDamage)||0)+" · "+String(data.hitZone||"BODY").toUpperCase());
   }
 });
@@ -1697,7 +1699,7 @@ function applyMobileHudLayout(){
   let config={};
   try{config=JSON.parse(localStorage.getItem("sx_mobile_hud_layout_v1")||"{}")||{}}catch{}
   const ids={move:"stick",fire:"fireBtn",jump:"jumpBtn",reload:"reloadBtn",crouch:"crouchBtn",sprint:"sprintBtn",map:"mapBtn",weapon:"weaponBtn",interact:"interactBtn"};
-  const sizes=config.sizes||{},positions=config.positions||{},opacity=Math.max(35,Math.min(100,Number(config.opacity)||82))/100;
+  const sizes=config.sizes||{},positions=config.positions||{},opacity=Math.max(35,Math.min(100,Number(config.opacity)||64))/100;
   for(const [key,id] of Object.entries(ids)){
     const el=$(id);if(!el)continue;
     const scale=Math.max(50,Math.min(150,Number(sizes[key]??config.size)||100))/100;
