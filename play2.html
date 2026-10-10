@@ -1205,6 +1205,7 @@ function rebuildCollisionIndex(){
   collisionIndexReady=true;
 }
 function worldLimit(){
+  if(selectedMap==="M3_Maze"&&Number.isFinite(loadedMapLimit))return loadedMapLimit;
   return ({HILL_TOWN:45.1,NEON_YARD:205,FIELD_ARENA:330,M3_Maze:232})[selectedMap]||232;
 }
 function collisionPenaltyAt(x,z){
