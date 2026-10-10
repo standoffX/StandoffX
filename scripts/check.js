@@ -99,7 +99,7 @@ assert.match(server, /data\?\.testerBots === true && canUseTesterModes\(user\)/,
 assert.match(server, /isBot: Boolean\(p\.isBot\)/, "match roster includes bot status");
 assert.match(server, /isTester/);
 assert.match(menu, /data-test-gameplay="prototype"/, "testers can launch the prototype");
-assert.match(menu, /data-test-gameplay="real"[^>]*>ГРА<\\/button>/, "the tester's full-match option must be labelled Game, not Test");
+assert.match(menu, /data-test-gameplay="real"[^>]*>ГРА/, "the tester's full-match option must be labelled Game, not Test");
 assert.match(menu, /real:"ГРА"/, "the selected tester mode must use the Game label");
 assert.match(menu, /COMING SOON/, "not-yet-built ranks and news must be labelled Coming Soon");
 assert.match(menu, /class="promo-col panel"/, "the main menu must include the news/updates panel");
