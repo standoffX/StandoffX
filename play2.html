@@ -883,7 +883,7 @@ function buildCompetitiveMap(){
   applyMapWorldState(currentMapWorldState||{mapId:"HILL_TOWN",doors:{},wood:{}});
 }
 function nearestInteractiveDoor(){
-  if(selectedMap!=="HILL_TOWN"||!player)return null;
+  if(selectedMap!=="HILL_TOWN"||!player||isTrainingMode)return null;
   let closest=null,closestDistance=3.5;
   for(const door of HILL_TOWN_DOOR_LAYOUT){
     const dist=Math.hypot(player.position.x-door.x,player.position.z-door.z);
@@ -1204,7 +1204,7 @@ function rebuildCollisionIndex(){
   collisionIndexReady=true;
 }
 function worldLimit(){
-  return ({HILL_TOWN:45.5,NEON_YARD:205,FIELD_ARENA:330,M3_Maze:232})[selectedMap]||232;
+  return ({HILL_TOWN:45.1,NEON_YARD:205,FIELD_ARENA:330,M3_Maze:232})[selectedMap]||232;
 }
 function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
