@@ -1005,12 +1005,30 @@ function loadMap(){
     if(done)return;
     done=true;clearTimeout(timer);
     const map=g.scene;
-    map.scale.setScalar(82.5);
+    map.updateMatrixWorld(true);
+    const sourceBounds=new THREE.Box3().setFromObject(map);
+    const sourceSize=sourceBounds.getSize(new THREE.Vector3());
+    const horizontalSpan=Math.max(sourceSize.x,sourceSize.z);
+    // Fit the incoming model uniformly into a known play area instead of stretching it by a guessed factor.
+    const uniformScale=horizontalSpan>0?180/horizontalSpan:1;
+    map.scale.multiplyScalar(uniformScale);
+    map.updateMatrixWorld(true);
+    const normalizedBounds=new THREE.Box3().setFromObject(map);
+    const center=normalizedBounds.getCenter(new THREE.Vector3());
+    map.position.x-=center.x;
+    map.position.z-=center.z;
+    map.position.y-=normalizedBounds.min.y;
+    map.updateMatrixWorld(true);
+    const finalBounds=new THREE.Box3().setFromObject(map);
+    loadedMapLimit=Math.max(finalBounds.getSize(new THREE.Vector3()).x,finalBounds.getSize(new THREE.Vector3()).z)/2+4;
     map.traverse(n=>{
       if(n.isMesh){
         n.frustumCulled=true;
         n.castShadow=false;
         n.receiveShadow=false;
+        const bounds=new THREE.Box3().setFromObject(n);
+        const size=bounds.getSize(new THREE.Vector3());
+        if(size.y>.24&&size.y<18&&size.x<58&&size.z<58)n.userData.forceCollision=true;
         mapObjects.push(n);
       }
     });
