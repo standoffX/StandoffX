@@ -2058,7 +2058,34 @@ io.on("connection", socket => {
       createdAt: Date.now()
     };
     if (previous?.bot?.despawnTimer) clearTimeout(previous.bot.despawnTimer);
+    if (previous?.botAiTimer) clearInterval(previous.botAiTimer);
     trainingSessions.set(user.id, session);
+    // Prototype mode gets a lightweight roaming bot; free play intentionally stays empty.
+    if (mode === "field_test" && session.bot) {
+      session.botAiTimer = setInterval(() => {
+        if (trainingSessions.get(user.id) !== session || !session.bot) {
+          clearInterval(session.botAiTimer);
+          return;
+        }
+        const bot = session.bot;
+        const dx = session.playerPos.x - bot.x;
+        const dz = session.playerPos.z - bot.z;
+        const distance = Math.hypot(dx, dz) || 1;
+        const step = Math.min(0.34, Math.max(0, distance - 5.5) * 0.22);
+        let nextX = bot.x, nextZ = bot.z;
+        if (step > 0.01) {
+          nextX += dx / distance * step;
+          nextZ += dz / distance * step;
+          const collisionMap = { map: session.map, worldObjects: session.worldObjects };
+          if (!isMapPositionBlocked(collisionMap, nextX, bot.z, 0.3)) bot.x = nextX;
+          if (!isMapPositionBlocked(collisionMap, bot.x, nextZ, 0.3)) bot.z = nextZ;
+        }
+        bot.rotY = Math.atan2(session.playerPos.x - bot.x, session.playerPos.z - bot.z);
+        bot.action = step > 0.01 ? "Running" : "Idle";
+        bot.updatedAt = Date.now();
+        io.to(session.id).emit("training_state", { bot, message: "BOT_UPDATE" });
+      }, 220);
+    }
     socket.emit("training_started", {
       trainingId: session.id,
       userId: user.id,
@@ -2280,6 +2307,7 @@ io.on("connection", socket => {
     const session = trainingSessions.get(socket.user?.id);
     if (!session || session.id !== cleanText(data?.trainingId, 100)) return;
     if (session.socketId !== null && session.socketId !== socket.id) return;
+    if (session.botAiTimer) clearInterval(session.botAiTimer);
     trainingSessions.delete(socket.user.id);
   });
 
