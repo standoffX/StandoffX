@@ -260,7 +260,8 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
   <div class="playarea">
     <div class="playwrap">
       <button class="playbutton" id="playBtn"><span>▶ &nbsp; ГРАТИ</span></button>
-      <button class="secondary" id="resumeMatchBtn" type="button" style="display:none;min-width:220px;min-height:38px;border-color:#91d8fb;color:#dff6ff;font-weight:900">↻ ПЕРЕПІДКЛЮЧИТИСЯ ДО МАТЧУ</button>
+      <button class="secondary" id="resumeMatchBtn" type="button" style="display:none;min-width:220px;min-height:46px;border-color:#91d8fb;color:#dff6ff;font-weight:900;background:linear-gradient(105deg,#4ca8ff,#286be1);box-shadow:0 8px 24px #2b7ce744">ПІДКЛЮЧИТИСЯ</button>
+      <button class="secondary" id="exitResumeMatchBtn" type="button" style="display:none;min-width:220px;min-height:36px;border-color:#ffffff20;color:#cbd8e8;font-weight:850">ВИЙТИ</button>
       <div class="muted" id="selectedModeText">СОЮЗНИКИ</div><div class="muted" id="selectedMapText" style="font-size:9px;letter-spacing:1px">HILL TOWN</div>
     </div>
   </div>
@@ -302,6 +303,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
         <button type="button" class="layout-control" data-layout-control="sprint" aria-label="Біг">SPRINT</button>
         <button type="button" class="layout-control" data-layout-control="map" aria-label="Карта">MAP</button>
         <button type="button" class="layout-control" data-layout-control="weapon" aria-label="Зміна зброї">ЗБРОЯ</button>
+        <button type="button" class="layout-control" data-layout-control="interact" aria-label="Відкрити двері">ДВЕРІ</button>
       </div>
       <div class="layout-status" id="layoutStatus" role="status">Редактор вимкнений. Натисни «Редагувати», щоб переміщати кнопки.</div>
     </div>
@@ -316,6 +318,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
         <label>Біг <output id="sizeSprintValue">100%</output><input data-size-control="sprint" id="sizeSprint" type="range" min="50" max="150" step="5" value="100"></label>
         <label>Карта <output id="sizeMapValue">100%</output><input data-size-control="map" id="sizeMap" type="range" min="50" max="150" step="5" value="100"></label>
         <label>Зміна зброї <output id="sizeWeaponValue">100%</output><input data-size-control="weapon" id="sizeWeapon" type="range" min="50" max="150" step="5" value="100"></label>
+        <label>Двері / дія <output id="sizeInteractValue">100%</output><input data-size-control="interact" id="sizeInteract" type="range" min="50" max="150" step="5" value="100"></label>
       </div>
       <label>ПРОЗОРІСТЬ <output id="layoutOpacityValue">82%</output><input id="layoutOpacity" type="range" min="35" max="100" step="5" value="82"></label>
       <div class="layout-help">Перетягни кнопки та налаштуй їхній розмір і прозорість.</div>
@@ -368,7 +371,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
   const opacity=document.getElementById("layoutOpacity");
   const sizeInputs=[...root.querySelectorAll("[data-size-control]")];
   const controls=[...root.querySelectorAll("[data-layout-control]")];
-  const defaults={move:[14,70],aim:[50,50],fire:[85,68],jump:[86,39],reload:[73,83],crouch:[86,55],sprint:[76,28],map:[18,26],weapon:[70,19]};
+  const defaults={move:[14,70],aim:[50,50],fire:[85,68],jump:[86,39],reload:[73,83],crouch:[86,55],sprint:[76,28],map:[18,26],weapon:[70,19],interact:[18,40]};
   const key="sx_mobile_hud_layout_v1";
   let editing=false, active=null;
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
@@ -443,10 +446,12 @@ function readActiveMatch(){
   }catch{return null}
 }
 function updateReconnectButton(){
-  const button=$("resumeMatchBtn");
+  const button=$("resumeMatchBtn"),exitButton=$("exitResumeMatchBtn"),playButton=$("playBtn");
   if(!button)return;
   const data=readActiveMatch();
   button.style.display=data?"inline-flex":"none";
+  if(exitButton)exitButton.style.display=data?"inline-flex":"none";
+  if(playButton)playButton.style.display=data?"none":"inline-flex";
   button.title=data?"Повернутися до незавершеного матчу":"";
 }
 
@@ -555,6 +560,25 @@ document.querySelectorAll("[data-test-gameplay]").forEach(b=>b.addEventListener(
   renderMode();
 }));
 $("playBtn").addEventListener("click",()=>$("modeModal").classList.add("show"));
+$("exitResumeMatchBtn").addEventListener("click",()=>{
+  const saved=readActiveMatch();
+  try{
+    if(saved){
+      const pending={kind:["training","field_test"].includes(saved.mode)?"training":"match",matchId:saved.matchId||"",trainingId:saved.trainingId||saved.matchId||""};
+      localStorage.setItem("sx_abandoned_match",JSON.stringify(pending));
+      if(socialSocket?.connected){
+        if(pending.kind==="training")socialSocket.emit("end_training",{trainingId:pending.trainingId});
+        else socialSocket.emit("leave_match",{matchId:pending.matchId});
+        localStorage.removeItem("sx_abandoned_match");
+      }
+    }
+    localStorage.removeItem("sx_active_match");
+    sessionStorage.removeItem("currentMatchId");
+    sessionStorage.removeItem("trainingId");
+  }catch{}
+  updateReconnectButton();
+  notifyToast("Старий матч прибрано зі швидкого підключення.");
+});
 $("resumeMatchBtn").addEventListener("click",()=>{
   const saved=readActiveMatch();
   if(!saved){updateReconnectButton();notifyToast("Незавершений матч уже недоступний.");return}
