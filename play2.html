@@ -250,6 +250,10 @@ controls.addEventListener("unlock",()=>{
 
 const loader=new GLTFLoader();
 const mapObjects=[];
+const mapObjectRegistry=new Map();
+let currentMapWorldState=null;
+let nearestDoorId=null;
+let lastDoorPromptUpdate=0;
 const HILL_TOWN_MANIFEST_URL="https://3dassets.dev/api/v1/packs/tactical-shooter-hill-town";
 const HILL_TOWN_STARTER_URL="https://cdn.3dassets.dev/assets/27595/v1/model.glb";
 let hillTownManifestPromise=null;
@@ -624,7 +628,47 @@ let player=null;
 let playerVisual=null;
 const enemies={};
 const raycaster=new THREE.Raycaster();
-const HILL_TOWN_SCALE=2.55,NEON_YARD_SCALE=2.25,FIELD_ARENA_SCALE=2.15,FALLBACK_ARENA_SCALE=3;
+const HILL_TOWN_SCALE=1,NEON_YARD_SCALE=1.25,FIELD_ARENA_SCALE=1.25,FALLBACK_ARENA_SCALE=1.4;
+const HILL_TOWN_STATIC_SOLIDS=(()=>{
+  const solids=[
+    {id:"border_north",x:0,z:-46,w:94,d:1.4,h:5.5,kind:"wall"},
+    {id:"border_south",x:0,z:46,w:94,d:1.4,h:5.5,kind:"wall"},
+    {id:"border_west",x:-46,z:0,w:1.4,d:94,h:5.5,kind:"wall"},
+    {id:"border_east",x:46,z:0,w:1.4,d:94,h:5.5,kind:"wall"},
+    {id:"mid_wall_n",x:0,z:-25,w:.75,d:38,h:4.6,kind:"wall"},
+    {id:"mid_wall_s",x:0,z:25,w:.75,d:38,h:4.6,kind:"wall"}
+  ];
+  for(const cx of [-22,22])for(const cz of [-24,24]){
+    solids.push(
+      {id:"house_"+cx+"_"+cz+"_north",x:cx,z:cz-6,w:14,d:.6,h:4.4,kind:"wall"},
+      {id:"house_"+cx+"_"+cz+"_south",x:cx,z:cz+6,w:14,d:.6,h:4.4,kind:"wall"}
+    );
+    const innerX=cx+(cx<0?7:-7),outerX=cx+(cx<0?-7:7);
+    solids.push({id:"house_"+cx+"_"+cz+"_outer",x:outerX,z:cz,w:.6,d:12,h:4.4,kind:"wall"});
+    solids.push(
+      {id:"house_"+cx+"_"+cz+"_inner_n",x:innerX,z:cz-4,w:.6,d:3.7,h:4.4,kind:"wall"},
+      {id:"house_"+cx+"_"+cz+"_inner_s",x:innerX,z:cz+4,w:.6,d:3.7,h:4.4,kind:"wall"}
+    );
+  }
+  for(const [i,x,z] of [[1,-10,-10],[2,10,10],[3,-10,10],[4,10,-10],[5,-31,-10],[6,31,10],[7,-31,10],[8,31,-10]])
+    solids.push({id:"stone_cover_"+i,x,z,w:2.2,d:2.2,h:1.8,kind:"cover"});
+  return solids;
+})();
+const HILL_TOWN_DOOR_LAYOUT=[
+  {id:"door_mid",x:0,z:0,w:.28,d:5.8,h:2.8},
+  ...[-22,22].flatMap(cx=>[-24,24].map(cz=>({
+    id:"door_house_"+(cx<0?"west_":"east_")+(cz<0?"north":"south"),
+    x:cx+(cx<0?6.7:-6.7),z:cz,w:.28,d:2.35,h:2.65
+  })))
+];
+const HILL_TOWN_WOOD_LAYOUT=[
+  {id:"wood_left_north",x:-11,z:-14,w:3.5,d:.42,h:1.65,hp:100},
+  {id:"wood_right_south",x:11,z:14,w:3.5,d:.42,h:1.65,hp:100},
+  {id:"wood_left_south",x:-11,z:14,w:3.5,d:.42,h:1.65,hp:100},
+  {id:"wood_right_north",x:11,z:-14,w:3.5,d:.42,h:1.65,hp:100},
+  {id:"wood_west_mid",x:-31,z:0,w:.42,d:3.5,h:1.65,hp:100},
+  {id:"wood_east_mid",x:31,z:0,w:.42,d:3.5,h:1.65,hp:100}
+];
 
 let matchPhase="waiting";
 let myRole="runner";
@@ -679,7 +723,194 @@ function renderTrainingKeyHints(){
   el.innerHTML=["spawnBot","push","kick","boost","resetBot","resetSession"].map(action=>"<span>"+TRAINING_ACTION_NAMES[action]+"</span><b style='color:#1de9ff'>"+trainingKeyLabel(binds[action])+"</b>").join("");
 }
 
-function buildFieldArena(){
+function buildFieldArena(){function removeMapCollider(mesh){
+  if(!mesh)return;
+  const index=mapObjects.indexOf(mesh);
+  if(index>=0)mapObjects.splice(index,1);
+  collisionIndexReady=false;
+}
+function addMapCollider(mesh){
+  if(!mesh)return;
+  if(!mapObjects.includes(mesh))mapObjects.push(mesh);
+  mesh.userData.forceCollision=true;
+  collisionIndexReady=false;
+}
+function applyMapObjectState(data){
+  if(!data||data.mapId!=="HILL_TOWN")return;
+  currentMapWorldState=currentMapWorldState||{mapId:"HILL_TOWN",doors:{},wood:{}};
+  if(data.kind==="door"&&data.objectId){
+    currentMapWorldState.doors[data.objectId]={open:Boolean(data.open)};
+    const item=mapObjectRegistry.get(data.objectId);
+    if(item){
+      item.root.rotation.y=data.open?Math.PI/2:0;
+      item.root.visible=true;
+      if(data.open)removeMapCollider(item.collider);else addMapCollider(item.collider);
+    }
+  }else if(data.kind==="wood"&&data.objectId){
+    currentMapWorldState.wood[data.objectId]={hp:Math.max(0,Number(data.hp)||0),destroyed:Boolean(data.destroyed)};
+    const item=mapObjectRegistry.get(data.objectId);
+    if(item){
+      item.root.visible=!data.destroyed;
+      if(data.destroyed)removeMapCollider(item.collider);else addMapCollider(item.collider);
+      item.decorations?.forEach(mesh=>{mesh.visible=!data.destroyed});
+      if(item.material&&Number(data.hp)<55)item.material.color.setHex(0x3a261b);
+    }
+  }
+  if(player&&mapLoadFinished){collisionIndexReady=false;rebuildCollisionIndex()}
+}
+function applyMapWorldState(state){
+  if(state&&state.mapId==="HILL_TOWN")currentMapWorldState=state;
+  if(!mapLoadFinished||selectedMap!=="HILL_TOWN")return;
+  for(const door of HILL_TOWN_DOOR_LAYOUT){
+    const open=Boolean(currentMapWorldState?.doors?.[door.id]?.open);
+    const item=mapObjectRegistry.get(door.id);
+    if(!item)continue;
+    item.root.rotation.y=open?Math.PI/2:0;
+    item.root.visible=true;
+    if(open)removeMapCollider(item.collider);else addMapCollider(item.collider);
+  }
+  for(const wood of HILL_TOWN_WOOD_LAYOUT){
+    const state=currentMapWorldState?.wood?.[wood.id]||{hp:wood.hp,destroyed:false};
+    const item=mapObjectRegistry.get(wood.id);
+    if(!item)continue;
+    item.root.visible=!state.destroyed;
+    item.decorations?.forEach(mesh=>{mesh.visible=!state.destroyed});
+    if(item.material&&Number(state.hp)<55)item.material.color.setHex(0x3a261b);
+    if(state.destroyed)removeMapCollider(item.collider);else addMapCollider(item.collider);
+  }
+  collisionIndexReady=false;
+}
+function addCompetitiveSolid(solid){
+  const color=solid.kind==="cover"?0x626b70:0x8a8073;
+  const material=new THREE.MeshStandardMaterial({color,roughness:solid.kind==="cover"?.88:.94});
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(solid.w,solid.h,solid.d),material);
+  mesh.position.set(solid.x,solid.h/2,solid.z);
+  mesh.castShadow=false;mesh.receiveShadow=true;mesh.userData.forceCollision=true;
+  scene.add(mesh);mapObjects.push(mesh);
+  const trim=new THREE.Mesh(new THREE.BoxGeometry(solid.w+.08,.11,solid.d+.08),
+    new THREE.MeshStandardMaterial({color:solid.kind==="cover"?0x3e464b:0x655d52,roughness:1}));
+  trim.position.set(solid.x,solid.h-.06,solid.z);trim.castShadow=false;trim.receiveShadow=false;scene.add(trim);
+}
+function addCompetitiveDoor(door){
+  const root=new THREE.Group();
+  root.position.set(door.x,door.h/2,door.z);
+  const material=new THREE.MeshStandardMaterial({color:0x67452f,roughness:.92});
+  const collider=new THREE.Mesh(new THREE.BoxGeometry(door.w,door.h,door.d),material);
+  collider.userData.forceCollision=true;
+  root.add(collider);
+  const trimMaterial=new THREE.MeshStandardMaterial({color:0x38281e,roughness:1});
+  for(const y of [-door.h*.32,0,door.h*.32]){
+    const plank=new THREE.Mesh(new THREE.BoxGeometry(door.w+.04,.12,door.d*.94),trimMaterial);
+    plank.position.y=y;plank.castShadow=false;plank.receiveShadow=false;root.add(plank);
+  }
+  scene.add(root);
+  mapObjectRegistry.set(door.id,{kind:"door",root,collider,material});
+  const open=Boolean(currentMapWorldState?.doors?.[door.id]?.open);
+  root.rotation.y=open?Math.PI/2:0;
+  if(!open)mapObjects.push(collider);
+}
+function addCompetitiveWood(item){
+  const root=new THREE.Group();
+  root.position.set(item.x,item.h/2,item.z);
+  const material=new THREE.MeshStandardMaterial({color:0x66462e,roughness:.97});
+  const collider=new THREE.Mesh(new THREE.BoxGeometry(item.w,item.h,item.d),material);
+  collider.userData.forceCollision=true;
+  root.add(collider);
+  const decor=[];
+  const boardMaterial=new THREE.MeshStandardMaterial({color:0x98704a,roughness:1});
+  for(const y of [-item.h*.31,0,item.h*.31]){
+    const board=new THREE.Mesh(new THREE.BoxGeometry(item.w*.98,item.h*.23,item.d+.035),boardMaterial);
+    board.position.y=y;board.castShadow=false;board.receiveShadow=false;root.add(board);decor.push(board);
+  }
+  scene.add(root);
+  mapObjectRegistry.set(item.id,{kind:"wood",root,collider,material,decorations:decor});
+  const state=currentMapWorldState?.wood?.[item.id]||{hp:item.hp,destroyed:false};
+  root.visible=!state.destroyed;
+  decor.forEach(mesh=>mesh.visible=!state.destroyed);
+  if(state.destroyed)removeMapCollider(collider);else mapObjects.push(collider);
+}
+function buildCompetitiveMap(){
+  if(mapLoadFinished)return;
+  hillTownBuilding=false;
+  $("phase").textContent="HILL TOWN · ПІДГОТОВКА АРЕНИ";
+  $("overlayText").textContent="Будуємо компактну арену, колізії, двері та дерев’яні укриття…";
+  setLoadingDetail("mapLoadStatus","ГЕОМЕТРІЯ ТА КОЛІЗІЇ…","active");
+  scene.background=new THREE.Color(0x9aa8ae);
+  scene.fog=new THREE.Fog(0x9aa8ae,82,150);
+  const ground=new THREE.Mesh(new THREE.PlaneGeometry(92,92),new THREE.MeshStandardMaterial({color:0x747b75,roughness:1}));
+  ground.rotation.x=-Math.PI/2;ground.position.y=-.08;ground.receiveShadow=true;scene.add(ground);
+  const roadMat=new THREE.MeshStandardMaterial({color:0x353d43,roughness:.98});
+  const road=new THREE.Mesh(new THREE.PlaneGeometry(14,91),roadMat);
+  road.rotation.x=-Math.PI/2;road.position.set(0,-.055,0);scene.add(road);
+  const crossRoad=new THREE.Mesh(new THREE.PlaneGeometry(91,10),roadMat);
+  crossRoad.rotation.x=-Math.PI/2;crossRoad.position.set(0,-.05,0);scene.add(crossRoad);
+  const sidewalkMat=new THREE.MeshStandardMaterial({color:0xb0aaa0,roughness:1});
+  for(const x of [-40,-34,34,40]){
+    const strip=new THREE.Mesh(new THREE.PlaneGeometry(1.1,91),sidewalkMat);
+    strip.rotation.x=-Math.PI/2;strip.position.set(x,-.045,0);scene.add(strip);
+  }
+  const markingMat=new THREE.MeshStandardMaterial({color:0xe3d6a4,roughness:1,emissive:0x18170b});
+  for(let z=-40;z<=40;z+=7){
+    const dash=new THREE.Mesh(new THREE.PlaneGeometry(.15,3.2),markingMat);
+    dash.rotation.x=-Math.PI/2;dash.position.set(0,-.035,z);scene.add(dash);
+  }
+  const pavementMat=new THREE.MeshStandardMaterial({color:0x8f938e,roughness:1});
+  for(const [cx,cz] of [[-22,-24],[-22,24],[22,-24],[22,24]]){
+    const slab=new THREE.Mesh(new THREE.PlaneGeometry(13.4,11.4),pavementMat);
+    slab.rotation.x=-Math.PI/2;slab.position.set(cx,-.035,cz);scene.add(slab);
+    const roof=new THREE.Mesh(new THREE.BoxGeometry(13.5,.35,11.5),
+      new THREE.MeshStandardMaterial({color:0x555d62,roughness:.96}));
+    roof.position.set(cx,4.65,cz);roof.castShadow=false;roof.receiveShadow=false;scene.add(roof);
+    const roofLip=new THREE.Mesh(new THREE.BoxGeometry(13.8,.16,11.8),
+      new THREE.MeshStandardMaterial({color:0x343b41,roughness:.96}));
+    roofLip.position.set(cx,4.43,cz);scene.add(roofLip);
+  }
+  mapObjectRegistry.clear();
+  for(const solid of HILL_TOWN_STATIC_SOLIDS)addCompetitiveSolid(solid);
+  for(const door of HILL_TOWN_DOOR_LAYOUT)addCompetitiveDoor(door);
+  for(const wood of HILL_TOWN_WOOD_LAYOUT)addCompetitiveWood(wood);
+  const teamA=new THREE.Mesh(new THREE.PlaneGeometry(4,1.2),new THREE.MeshStandardMaterial({color:0x367fe2,roughness:.8,emissive:0x07142c}));
+  teamA.rotation.x=-Math.PI/2;teamA.position.set(-38,.01,0);scene.add(teamA);
+  const teamB=teamA.clone();teamB.material=teamA.material.clone();teamB.material.color.setHex(0xc44d48);teamB.material.emissive.setHex(0x260808);teamB.position.x=38;scene.add(teamB);
+  mapLoaded=true;mapLoadFinished=true;
+  $("progress").style.width="100%";
+  $("phase").textContent="HILL TOWN · ГОТОВО";
+  setLoadingDetail("mapLoadStatus","АРЕНА ГОТОВА","done");
+  applyMapWorldState(currentMapWorldState||{mapId:"HILL_TOWN",doors:{},wood:{}});
+}
+function nearestInteractiveDoor(){
+  if(selectedMap!=="HILL_TOWN"||!player)return null;
+  let closest=null,closestDistance=3.5;
+  for(const door of HILL_TOWN_DOOR_LAYOUT){
+    const dist=Math.hypot(player.position.x-door.x,player.position.z-door.z);
+    if(dist<closestDistance){closest=door;closestDistance=dist}
+  }
+  return closest?{door:closest,distance:closestDistance}:null;
+}
+function requestDoorInteraction(){
+  const near=nearestInteractiveDoor();
+  if(!near||!matchId||isTrainingMode)return;
+  socket.emit("map_interact",{matchId,objectId:near.door.id});
+}
+function updateDoorInteractionHint(now){
+  if(now-lastDoorPromptUpdate<160)return;
+  lastDoorPromptUpdate=now;
+  const near=nearestInteractiveDoor();
+  nearestDoorId=near?.door.id||null;
+  const state=nearestDoorId?currentMapWorldState?.doors?.[nearestDoorId]:null;
+  const label=state?.open?"ЗАЧИНИТИ ДВЕРІ":"ВІДЧИНИТИ ДВЕРІ";
+  const hint=$("doorHint");
+  if(hint){
+    hint.style.display=near&&!isMobileDevice?"block":"none";
+    if(near)hint.textContent="E · "+label;
+  }
+  const button=$("doorInteractBtn");
+  if(button){
+    button.style.display=near&&isMobileDevice?"block":"none";
+    if(near)button.textContent=state?.open?"ЗАЧИНИТИ":"ДВЕРІ · E";
+  }
+}
+
   if(mapLoadFinished)return;
   mapLoadFinished=true;
   scene.background=new THREE.Color(0x91a6b9);
@@ -744,7 +975,8 @@ function loadMap(){
   $("phase").textContent="ЗАВАНТАЖУЄТЬСЯ КАРТА · "+mapLabel;
   $("overlayText").textContent="Завантажуються текстури, геометрія та колізії карти "+mapLabel+". Це може зайняти кілька секунд.";
   if(selectedMap==="HILL_TOWN"){
-    buildHillTownMap();
+    buildCompetitiveMap();
+    finishClientReady();
     return;
   }
   if(selectedMap==="NEON_YARD"){
@@ -961,13 +1193,14 @@ function rebuildCollisionIndex(){
     if(bounds.isEmpty())continue;
     const size=bounds.getSize(new THREE.Vector3());
     // Skip flat floors, map-wide merged meshes and ceilings; keep individual solid walls/props.
-    if(size.y<.24||bounds.max.y<.16||size.y>18||size.x>58||size.z>58||(size.x>28&&size.z>28))continue;
+    if(size.y<.24||bounds.max.y<.16||size.y>18)continue;
+    if(!object.userData?.forceCollision&&(size.x>58||size.z>58||(size.x>28&&size.z>28)))continue;
     collisionBoxes.push(bounds);
   }
   collisionIndexReady=true;
 }
 function worldLimit(){
-  return ({HILL_TOWN:70,NEON_YARD:205,FIELD_ARENA:330,M3_Maze:232})[selectedMap]||232;
+  return ({HILL_TOWN:45.5,NEON_YARD:115,FIELD_ARENA:165,M3_Maze:90})[selectedMap]||90;
 }
 function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
