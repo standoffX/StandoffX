@@ -1616,7 +1616,7 @@ socket.on("training_init",data=>{
 });
 function applyTrainingBot(bot){
   if(!bot){removeTrainingBot();return}
-  applyEnemy({userId:"training_bot",id:"training_bot",nickname:bot.nickname||"Training Bot",role:"runner",team:"B",hp:bot.hp,x:bot.x,y:bot.y,z:bot.z,rotY:bot.rotY||0,anim:bot.action==="boost"?"Jump":"Idle",score:0});
+  applyEnemy({userId:"training_bot",id:"training_bot",nickname:bot.nickname||"Training Bot",role:"runner",team:"B",hp:bot.hp,x:bot.x,y:bot.y,z:bot.z,rotY:bot.rotY||0,anim:bot.action==="boost"?"Jump":(["Running","Walking"].includes(bot.action)?"Running":"Idle"),score:0});
   $("botStatus").textContent="БОТ · HP "+bot.hp+"/"+(bot.maxHp||100)+" · ВЛУЧАНЬ "+(bot.hits||0);
   const enemy=enemies["training_bot"];
   if(enemy)setSoldierTint(enemy.mesh,bot.hp<=0?0x777777:0xffbd67);
