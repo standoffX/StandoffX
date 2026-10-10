@@ -313,7 +313,7 @@ assert.match(game, /matchPhase==="game"&&player&&hp>0&&mapLoadFinished/, "moveme
 assert.match(game, /matchPhase!=="game"\|\|reloading\|\|hp<=0\|\|!mapLoadFinished/, "shooting and reloading must be blocked until the map loads");
 
 assert.match(game, /function setSoldierDown\(model,down\)/, "eliminated soldiers must visibly drop until respawn");
-assert.match(game, /if\(victim&&data\.killed\)/, "the kill event must update the victim model");
+assert.match(game, /if\(victim\)\{[\s\S]{0,100}if\(data\.killed\)\{victim\.anim="Dead";setSoldierDown\(victim\.mesh,true\)\}\}/, "only lethal damage should mark the victim model as eliminated");
 assert.match(game, /hitConfirmTimer=setTimeout\(\(\)=>crosshair\.classList\.remove\("hit"\),150\)/, "the shooter must receive visual hit confirmation");
 assert.match(game, /setSoldierDown\(e\.mesh,false\);setSoldierTint\(e\.mesh,colorFor\(e\.role,e\.team\)\)/, "respawning enemies must return to their normal pose and team colors");
 
