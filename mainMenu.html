@@ -317,7 +317,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
         <label>Карта <output id="sizeMapValue">100%</output><input data-size-control="map" id="sizeMap" type="range" min="50" max="150" step="5" value="100"></label>
         <label>Зміна зброї <output id="sizeWeaponValue">100%</output><input data-size-control="weapon" id="sizeWeapon" type="range" min="50" max="150" step="5" value="100"></label>
       </div>
-      <label>ПРОЗОРІСТЬ <output id="layoutOpacityValue">82%</output><input id="layoutOpacity" type="range" min="35" max="100" step="5" value="82"></label>
+      <label>ПРОЗОРІСТЬ <output id="layoutOpacityValue">64%</output><input id="layoutOpacity" type="range" min="35" max="100" step="5" value="64"></label>
       <div class="layout-help">Перетягни кнопки та налаштуй їхній розмір і прозорість.</div>
       <button type="button" class="secondary layout-reset" id="layoutReset">СКИНУТИ РОЗКЛАДКУ</button>
     </div>
@@ -368,8 +368,8 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
   const opacity=document.getElementById("layoutOpacity");
   const sizeInputs=[...root.querySelectorAll("[data-size-control]")];
   const controls=[...root.querySelectorAll("[data-layout-control]")];
-  const defaults={move:[14,70],aim:[50,50],fire:[85,68],jump:[86,39],reload:[73,83],crouch:[86,55],sprint:[76,28],map:[18,26],weapon:[70,19]};
-  const key="sx_mobile_hud_layout_v1";
+  const defaults={move:[15,85],aim:[50,50],fire:[88,91],jump:[74,84],reload:[74,92],crouch:[91,84],sprint:[91,76],map:[36,92],weapon:[74,76]};
+  const key="sx_mobile_hud_layout_v2";
   let editing=false, active=null;
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   function read(){try{return JSON.parse(localStorage.getItem(key)||"{}")}catch{return {}}}
@@ -413,7 +413,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
   size.addEventListener("input",()=>{sizeInputs.forEach(input=>input.value=size.value);const data=read();data.size=Number(size.value);data.sizes={};try{localStorage.setItem(key,JSON.stringify(data))}catch{}apply();save()});
   sizeInputs.forEach(input=>input.addEventListener("input",()=>{save();apply();save()}));
   opacity.addEventListener("input",()=>{apply();save()});
-  document.getElementById("layoutReset").addEventListener("click",()=>{try{localStorage.removeItem(key)}catch{}controls.forEach(el=>{el.style.left="";el.style.top=""});size.value=100;opacity.value=82;sizeInputs.forEach(input=>input.value=100);apply();save();status.textContent="Розкладку скинуто."});
+  document.getElementById("layoutReset").addEventListener("click",()=>{try{localStorage.removeItem(key)}catch{}controls.forEach(el=>{el.style.left="";el.style.top=""});size.value=100;opacity.value=64;sizeInputs.forEach(input=>input.value=100);apply();save();status.textContent="Розкладку скинуто."});
   apply();
 })();
 </script>
