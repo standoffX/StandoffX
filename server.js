@@ -1830,15 +1830,13 @@ function handleTeamShot(io, match, shooter, data) {
 
   const weaponId = normalizeWeaponId(data?.weapon);
   const weapon = WEAPON_BALANCE[weaponId];
-  const dx = Number(data?.dx);
-  const dy = Number(data?.dy);
-  const dz = Number(data?.dz);
+  const dx = Number(data?.dx), dy = Number(data?.dy), dz = Number(data?.dz);
   if (![dx, dy, dz].every(Number.isFinite)) return;
-
   const aim = new THREE_LIKE_VECTOR(dx, dy, dz);
   if (aim.length() < 0.01) return;
   aim.normalize();
-  if (Math.hypot(aim.x, aim.z) < 0.01) return;
+  const horizontalLength = Math.hypot(aim.x, aim.z);
+  if (horizontalLength < 0.01) return;
 
   const now = Date.now();
   if (now - (shooter.lastShotAt || 0) < weapon.fireDelay) return;
@@ -1846,24 +1844,38 @@ function handleTeamShot(io, match, shooter, data) {
 
   let best = null;
   let bestDistance = Infinity;
+  const dirX = aim.x / horizontalLength, dirZ = aim.z / horizontalLength;
 
   for (const target of match.players) {
     if (target.userId === shooter.userId || target.team === shooter.team || target.hp <= 0) continue;
-
     const vx = target.pos.x - shooter.pos.x;
     const vz = target.pos.z - shooter.pos.z;
-    const dist = Math.hypot(vx, vz);
-    if (weapon.type === "melee" ? (dist > weapon.range || dist < 0.25) : (dist > weapon.range || dist < 0.5)) continue;
-
-    const dot = (aim.x * vx + aim.z * vz) / (Math.max(0.01, Math.hypot(aim.x, aim.z)) * dist);
-    if (dot < (weapon.type === "melee" ? 0.72 : 0.985)) continue;
-
-    if (dist < bestDistance) {
-      best = target;
-      bestDistance = dist;
-    }
+    const along = vx * dirX + vz * dirZ;
+    if (along < 0.25 || along > weapon.range) continue;
+    const perpendicular = Math.abs(dirX * vz - dirZ * vx);
+    if (perpendicular > (weapon.type === "melee" ? 1.0 : 0.58)) continue;
+    if (along < bestDistance) { best = target; bestDistance = along; }
   }
 
+  // Walls, closed doors and intact timber cover block hits. Timber barricades take
+  // weapon-specific damage and are removed for every connected player once broken.
+  const blocker = findFirstMapBlocker(match, shooter.pos, aim, weapon.range);
+  if (blocker && (!best || blocker.distance < bestDistance - 0.45)) {
+    if (blocker.kind === "wood" && weapon.type !== "melee") {
+      const state = match.worldObjects?.wood?.[blocker.id];
+      if (state && !state.destroyed) {
+        const damage = Math.max(12, calculateWeaponDamage(weaponId, "body", blocker.distance));
+        state.hp = Math.max(0, state.hp - damage);
+        state.destroyed = state.hp <= 0;
+        io.to(match.id).emit("map_object_state", {
+          mapId: match.map, objectId: blocker.id, kind: "wood",
+          hp: state.hp, destroyed: state.destroyed,
+          shooterId: shooter.userId
+        });
+      }
+    }
+    return;
+  }
   if (!best) return;
 
   const hitZone = detectWeaponHitZone(shooter.pos, best.pos, aim, bestDistance);
@@ -1900,7 +1912,6 @@ function handleTeamShot(io, match, shooter, data) {
     });
   }, 1200);
 }
-
 class THREE_LIKE_VECTOR {
   constructor(x, y, z) { this.x = x; this.y = y; this.z = z; }
   length() { return Math.hypot(this.x, this.y, this.z); }
@@ -2421,6 +2432,35 @@ io.on("connection", socket => {
     const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
     if (!player || player.hp <= 0) return;
     handleTeamShot(io, match, player, data);
+  });
+
+  socket.on("map_interact", data => {
+    const match = activeMatches.get(cleanText(data?.matchId, 100));
+    if (!match || match.map !== "HILL_TOWN" || match.phase !== "game") return;
+    const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
+    if (!player || player.hp <= 0) return;
+    const objectId = cleanText(data?.objectId, 48);
+    const door = HILL_TOWN_DOORS.find(item => item.id === objectId);
+    const state = match.worldObjects?.doors?.[objectId];
+    if (!door || !state) return;
+    if (Math.hypot(player.pos.x - door.x, player.pos.z - door.z) > 3.5) {
+      socket.emit("map_interact_error", { message: "Підійди ближче до дверей." });
+      return;
+    }
+    if (state.open) {
+      const somebodyInDoorway = match.players.some(other => other.userId !== player.userId && other.hp > 0 &&
+        Math.abs(other.pos.x - door.x) < door.w / 2 + .75 &&
+        Math.abs(other.pos.z - door.z) < door.d / 2 + .75);
+      if (somebodyInDoorway) {
+        socket.emit("map_interact_error", { message: "Не можна зачинити двері, поки хтось у проході." });
+        return;
+      }
+    }
+    state.open = !state.open;
+    io.to(match.id).emit("map_object_state", {
+      mapId: match.map, objectId, kind: "door", open: state.open,
+      actorId: player.userId
+    });
   });
 
   socket.on("player_moved", data => {
