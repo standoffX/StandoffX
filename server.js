@@ -2044,7 +2044,7 @@ io.on("connection", socket => {
   socket.on("end_training", data => {
     const session = trainingSessions.get(socket.user?.id);
     if (!session || session.id !== cleanText(data?.trainingId, 100)) return;
-    if (session.socketId !== socket.id) return;
+    if (session.socketId !== null && session.socketId !== socket.id) return;
     trainingSessions.delete(socket.user.id);
   });
 
@@ -2098,7 +2098,7 @@ io.on("connection", socket => {
     const match = activeMatches.get(matchId);
     if (!match) return;
 
-    const index = match.players.findIndex(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
+    const index = match.players.findIndex(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && (p.socketId === socket.id || p.socketId === null));
     if (index < 0) return;
 
     const player = match.players[index];
