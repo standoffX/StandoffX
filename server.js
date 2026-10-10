@@ -1418,7 +1418,10 @@ function findFirstMapBlocker(match, origin, aim, maxDistance) {
   for (const box of getMapCollisionBoxes(match)) {
     const distance = rayRectDistance(origin.x, origin.z, dx, dz, box, maxDistance);
     if (distance === null || (nearest && distance >= nearest.distance)) continue;
-    nearest = { ...box, distance };
+    // Shoot from eye height. Bullets aimed above a low crate/wood barrier pass over it.
+    const hitHeight = (Number(origin.y) || 0) + 1.55 + (aim.y / horizontalLength) * distance;
+    if (hitHeight > box.h + .1 || hitHeight < .05) continue;
+    nearest = { ...box, distance, hitHeight };
   }
   return nearest;
 }
@@ -2043,6 +2046,7 @@ io.on("connection", socket => {
       mode: cfg.id,
       modeName: cfg.name,
       map: sessionMap,
+      worldObjects: createMapWorldState(sessionMap),
       socketId: socket.id,
       playerPos: spawnPosition,
       playerRotY: 0,
@@ -2079,6 +2083,7 @@ io.on("connection", socket => {
       mode: session.mode,
       modeName: session.modeName,
       map: session.map,
+      worldObjects: session.worldObjects,
       spawn: { ...session.playerPos },
       bot: session.bot
     });
@@ -2199,8 +2204,8 @@ io.on("connection", socket => {
 
   socket.on("training_shoot", data => {
     const session = trainingSessions.get(socket.user?.id);
-    if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || !session.bot) return;
-    if (session.mode !== "field_test" && session.mode !== "training") return;
+    if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
+    if (!["field_test", "training", "free_play"].includes(session.mode)) return;
 
     const weaponId = normalizeWeaponId(data?.weapon);
     const weapon = WEAPON_BALANCE[weaponId];
@@ -2213,7 +2218,24 @@ io.on("connection", socket => {
     if (now - (session.lastShotAt || 0) < weapon.fireDelay) return;
     session.lastShotAt = now;
 
+    const blocker = findFirstMapBlocker({ map: session.map, worldObjects: session.worldObjects }, session.playerPos, aim, weapon.range);
+    if (blocker) {
+      if (blocker.kind === "wood" && weapon.type !== "melee") {
+        const state = session.worldObjects?.wood?.[blocker.id];
+        if (state && !state.destroyed) {
+          const damage = Math.max(12, calculateWeaponDamage(weaponId, "body", blocker.distance));
+          state.hp = Math.max(0, state.hp - damage);
+          state.destroyed = state.hp <= 0;
+          io.to(session.id).emit("map_object_state", {
+            mapId: session.map, objectId: blocker.id, kind: "wood",
+            hp: state.hp, destroyed: state.destroyed, shooterId: socket.user.id
+          });
+        }
+      }
+      return;
+    }
     const bot = session.bot;
+    if (!bot) return;
     const vx = bot.x - session.playerPos.x;
     const vz = bot.z - session.playerPos.z;
     const dist = Math.hypot(vx, vz);
@@ -2439,31 +2461,47 @@ io.on("connection", socket => {
   });
 
   socket.on("map_interact", data => {
-    const match = activeMatches.get(cleanText(data?.matchId, 100));
-    if (!match || match.map !== "HILL_TOWN" || match.phase !== "game") return;
-    const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
-    if (!player || player.hp <= 0) return;
+    const requestId = cleanText(data?.matchId, 100);
+    const match = activeMatches.get(requestId);
+    const session = trainingSessions.get(socket.user?.id);
+    const inMatch = Boolean(match && match.map === "HILL_TOWN" && match.phase === "game");
+    const inPractice = Boolean(!inMatch && session && session.id === requestId &&
+      session.socketId === socket.id && session.map === "HILL_TOWN");
+    if (!inMatch && !inPractice) return;
+
+    let actor = null;
+    let worldObjects = null;
+    let roomId = requestId;
+    if (inMatch) {
+      actor = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
+      worldObjects = match.worldObjects;
+    } else {
+      actor = { userId: socket.user.id, hp: 100, pos: session.playerPos };
+      worldObjects = session.worldObjects;
+    }
+    if (!actor || actor.hp <= 0 || !worldObjects) return;
     const objectId = cleanText(data?.objectId, 48);
     const door = HILL_TOWN_DOORS.find(item => item.id === objectId);
-    const state = match.worldObjects?.doors?.[objectId];
+    const state = worldObjects.doors?.[objectId];
     if (!door || !state) return;
-    if (Math.hypot(player.pos.x - door.x, player.pos.z - door.z) > 3.5) {
+    if (Math.hypot(actor.pos.x - door.x, actor.pos.z - door.z) > 3.5) {
       socket.emit("map_interact_error", { message: "Підійди ближче до дверей." });
       return;
     }
     if (state.open) {
-      const somebodyInDoorway = match.players.some(other => other.userId !== player.userId && other.hp > 0 &&
+      const occupants = inMatch ? match.players : [{ userId: actor.userId, hp: actor.hp, pos: actor.pos }];
+      const somebodyInDoorway = occupants.some(other => other.hp > 0 &&
         Math.abs(other.pos.x - door.x) < door.w / 2 + .75 &&
         Math.abs(other.pos.z - door.z) < door.d / 2 + .75);
       if (somebodyInDoorway) {
-        socket.emit("map_interact_error", { message: "Не можна зачинити двері, поки хтось у проході." });
+        socket.emit("map_interact_error", { message: "Відійди з проходу, щоб зачинити двері." });
         return;
       }
     }
     state.open = !state.open;
-    io.to(match.id).emit("map_object_state", {
-      mapId: match.map, objectId, kind: "door", open: state.open,
-      actorId: player.userId
+    io.to(roomId).emit("map_object_state", {
+      mapId: "HILL_TOWN", objectId, kind: "door", open: state.open,
+      actorId: actor.userId
     });
   });
 
