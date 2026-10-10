@@ -539,7 +539,7 @@ function addGameplayDoor(x,z,rotationY=0,label="ДВЕРІ"){
   const handle=new THREE.Mesh(new THREE.BoxGeometry(.06,.18,.1),metal);
   handle.position.set(.25*s,1.25,.14*s);group.add(handle);mapObjects.push(handle);
   scene.add(group);
-  const door={group,panel,brace,handle,x:x*s,z:z*s,open:false,label};
+  const door={group,panel,brace,handle,x:x*s,z:z*s,open:false,label,baseRotation:rotationY};
   interactiveDoors.push(door);
   return door;
 }
@@ -556,6 +556,18 @@ function addBreakableWood(x,z){
   const cap=new THREE.Mesh(new THREE.BoxGeometry(1.35*s,.12,1.1*s),dark);cap.position.y=1.18;cap.userData.breakableWood=true;cap.userData.hp=3;group.add(cap);breakableWood.push(cap);mapObjects.push(cap);
   scene.add(group);
 }
+function setGameplayDoorState(doorIndex,open){
+  const door=interactiveDoors[doorIndex];if(!door)return;
+  door.open=Boolean(open);
+  door.group.rotation.y=door.open?door.baseRotation+Math.PI/2:door.baseRotation;
+  for(const obj of [door.panel,door.brace,door.handle]){
+    const idx=mapObjects.indexOf(obj);
+    if(door.open&&idx>=0)mapObjects.splice(idx,1);
+    if(!door.open&&idx<0)mapObjects.push(obj);
+  }
+  rebuildCollisionIndex();
+  $("interactBtn").textContent=door.open?"E · ЗАЧИНИТИ":"E · ДВЕРІ";
+}
 function interactWithNearestDoor(){
   if(!player||matchPhase!=="game")return;
   let nearest=null,best=4.5*HILL_TOWN_SCALE;
@@ -564,15 +576,10 @@ function interactWithNearestDoor(){
     if(d<best){best=d;nearest=door}
   }
   if(!nearest){showDamagePopup("НЕМАЄ ДВЕРЕЙ ПОРУЧ");return}
-  nearest.open=!nearest.open;
-  nearest.group.rotation.y=(nearest.open?1:0)*Math.PI/2;
-  for(const obj of [nearest.panel,nearest.brace,nearest.handle]){
-    const idx=mapObjects.indexOf(obj);if(idx>=0)mapObjects.splice(idx,1);
-  }
-  if(!nearest.open)mapObjects.push(nearest.panel,nearest.brace,nearest.handle);
-  rebuildCollisionIndex();
+  setGameplayDoorState(interactiveDoors.indexOf(nearest),!nearest.open);
+  if(isTrainingMode)socket.emit("map_door_state",{trainingId,doorIndex:interactiveDoors.indexOf(nearest),open:nearest.open});
+  else socket.emit("map_door_state",{matchId,doorIndex:interactiveDoors.indexOf(nearest),open:nearest.open});
   showDamagePopup(nearest.open?"ДВЕРІ ВІДЧИНЕНО":"ДВЕРІ ЗАЧИНЕНО");
-  $("interactBtn").textContent=nearest.open?"E · ЗАЧИНИТИ":"E · ДВЕРІ";
 }
 function damageBreakableWood(direction){
   if(!player||selectedWeapon==="knife")return;
@@ -584,6 +591,11 @@ function damageBreakableWood(direction){
   if(obj.userData.hp<=0){
     obj.visible=false;
     const idx=mapObjects.indexOf(obj);if(idx>=0)mapObjects.splice(idx,1);
+    const woodIndex=breakableWood.indexOf(obj);
+    if(woodIndex>=0){
+      if(isTrainingMode)socket.emit("map_wood_destroyed",{trainingId,woodIndex});
+      else socket.emit("map_wood_destroyed",{matchId,woodIndex});
+    }
     rebuildCollisionIndex();
     showDamagePopup("ДЕРЕВ’ЯНЕ УКРИТТЯ ЗРУЙНОВАНО");
   }else{
@@ -1658,6 +1670,17 @@ socket.on("disconnect",()=>{
   jumpQueued=false;fireHeld=false;
   setLoadingDetail("connectionLoadStatus","З’ЄДНАННЯ ВТРАЧЕНО","error");
   showReconnectPanel("Матч збережено. Натисни синю кнопку «ПІДКЛЮЧИТИСЯ», щоб повернутися, або «ВИЙТИ З МАТЧУ», щоб завершити його.");
+});
+socket.on("map_door_state",data=>{
+  if(!Number.isInteger(Number(data?.doorIndex)))return;
+  setGameplayDoorState(Number(data.doorIndex),data.open===true);
+});
+socket.on("map_wood_destroyed",data=>{
+  const idx=Number(data?.woodIndex),obj=breakableWood[idx];
+  if(!Number.isInteger(idx)||!obj)return;
+  obj.visible=false;
+  const mapIndex=mapObjects.indexOf(obj);if(mapIndex>=0)mapObjects.splice(mapIndex,1);
+  rebuildCollisionIndex();
 });
 socket.on("player_connection_state",data=>{
   const enemy=Object.values(enemies).find(e=>String(e.userId)===String(data?.userId));
