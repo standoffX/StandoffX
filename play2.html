@@ -1697,7 +1697,7 @@ socket.on("player_connection_state",data=>{
 const stick=$("stick"),thumb=stick.querySelector("i");
 function applyMobileHudLayout(){
   let config={};
-  try{config=JSON.parse(localStorage.getItem("sx_mobile_hud_layout_v1")||"{}")||{}}catch{}
+  try{config=JSON.parse(localStorage.getItem("sx_mobile_hud_layout_v2")||"{}")||{}}catch{}
   const ids={move:"stick",fire:"fireBtn",jump:"jumpBtn",reload:"reloadBtn",crouch:"crouchBtn",sprint:"sprintBtn",map:"mapBtn",weapon:"weaponBtn",interact:"interactBtn"};
   const sizes=config.sizes||{},positions=config.positions||{},opacity=Math.max(35,Math.min(100,Number(config.opacity)||64))/100;
   for(const [key,id] of Object.entries(ids)){
