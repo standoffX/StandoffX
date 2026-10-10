@@ -429,6 +429,11 @@ if(!["allies","team_fight"].includes(selectedMode)){selectedMode="allies";localS
 if(selectedMode==="hide_seek")selectedMode="allies";
 if(!["allies","team_fight"].includes(selectedMode))selectedMode="allies";
 let selectedMap=localStorage.getItem("sx_map")||"HILL_TOWN";
+if(localStorage.getItem("sx_map_layout_version")!=="2"){
+  selectedMap="HILL_TOWN";
+  localStorage.setItem("sx_map",selectedMap);
+  localStorage.setItem("sx_map_layout_version","2");
+}
 if(!Object.prototype.hasOwnProperty.call({HILL_TOWN:1,M3_Maze:1,FIELD_ARENA:1,NEON_YARD:1},selectedMap))selectedMap="HILL_TOWN";
 let selectedTheme=localStorage.getItem("sx_theme")||"cyan";
 const THEMES=["cyan","violet","red"];
