@@ -115,13 +115,10 @@ assert.match(game, /transports:\["websocket"\]/, "gameplay socket must avoid pol
 assert.match(game, /reconnectionAttempts:Infinity/, "gameplay must automatically reconnect after Render restarts");
 assert.match(ui, /grid-template-columns:minmax\(260px,1fr\) minmax\(250px,\.95fr\) minmax\(300px,1\.12fr\)/, "desktop lobby columns must stay roomy");
 assert.match(ui, /@media\(max-width:980px\)/, "lobby must preserve its full three-column layout on common desktop widths");
-assert.match(game, /class="training-action-grid"/, "training must keep its full visible action panel");
-assert.match(game, /data-training-action="spawnBot"/, "training must expose a clickable spawn bot action");
-assert.match(game, /data-training-action="resetBot"/, "training must expose a clickable reset bot action");
-assert.match(game, /data-training-action="push"/, "training must expose a clickable push action");
-assert.match(game, /data-training-action="kick"/, "training must expose a clickable kick action");
-assert.match(game, /data-training-action="boost"/, "training must expose a clickable boost action");
-assert.match(game, /data-training-action="resetSession"/, "training must expose a clickable session reset action");
+assert.doesNotMatch(game, /<div id="trainingControls"/, "the in-match HUD must not show a bot-control panel");
+assert.doesNotMatch(game, /data-training-action="spawnBot"/, "bot spawning must not be offered as an on-screen action");
+assert.match(game, /background:rgba\(8,17,29,\.24\)/, "mobile buttons must use translucent backgrounds");
+assert.match(game, /selectWeapon\(dx<0\?"p350":"knife"\)/, "horizontal weapon swipes must select pistol or knife");
 assert.doesNotMatch(menu, /data-mode="(?:training|field_test)"/, "prototype and real gameplay are not separate public modes");
 assert.match(menu, /localStorage.getItem\("sx_test_gameplay"\)/, "the tester choice persists locally");
 assert.match(menu, /testerBots:canTest\(\)&&testGameplayMode==="real"/, "only testers request bot matches");
@@ -294,6 +291,8 @@ assert.match(ui, /html\[data-sx-device="desktop"\] body\.lobby-screen #mobileLay
 assert.match(server, /}, 90000\);/, "reconnect grace must last long enough to get back into the match");
 assert.match(server, /never end\/delete a match[\s\S]{0,220}if \(current\.phase === "game"\)/, "gameplay disconnect timeout must keep the match alive");
 assert.match(server, /const MATCH_SPAWNS =/, "scaled maps must use safe per-map spawn points");
+assert.match(server, /HILL_TOWN:\s*\[\{x:0,y:0,z:-52\},\{x:0,y:0,z:52\},\{x:-52,y:0,z:0\},\{x:52,y:0,z:0\}\]/, "Hill Town spawns must use open street lanes");
+assert.match(game, /HILL_TOWN:60,NEON_YARD:190,FIELD_ARENA:315/, "movement limits must stay inside the map walls");
 assert.match(server, /io\.to\(matchId\)\.emit\("player_connection_state", \{ userId: player\.userId, connected: false/, "disconnect should not broadcast a permanent player-left event");
 assert.match(server, /p\.socketId === socket\.id \|\| p\.socketId === null/, "an authenticated player can explicitly leave their disconnected match slot");
 assert.match(server, /if \(session\.socketId !== null && session\.socketId !== socket\.id\) return/, "an authenticated tester can close a disconnected training session");
