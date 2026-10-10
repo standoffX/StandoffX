@@ -213,6 +213,14 @@ assert.match(game, /HILL_TOWN_MANIFEST_URL/, "game must load the public CC0 map 
 assert.match(game, /async function loadHeldWeapon\(\)/, "game must load a first-person weapon model");
 assert.match(game, /function makeFallbackP350\(\)/, "the client must render the P350 pistol when equipped");
 assert.match(game, /function makeFallbackKnife\(\)/, "the client must render a knife when equipped");
+assert.match(game, /if\(Math\.abs\(dy\)>Math\.abs\(dx\)&&dy>0\)selectWeapon\("akr"\)/, "mobile downward swipe equips AKR");
+assert.match(game, /dx<0\)selectWeapon\("p350"\)/, "mobile left swipe equips P350");
+assert.match(game, /dx>0\)selectWeapon\("knife"\)/, "mobile right swipe equips knife");
+assert.match(game, /function addGameplayDoor\(/, "Hill Town has hinged door entities");
+assert.match(game, /function interactWithNearestDoor\(/, "doors can be opened and closed with E or the mobile interaction button");
+assert.match(game, /function addBreakableWood\(/, "Hill Town has breakable wooden cover");
+assert.match(game, /function damageBreakableWood\(/, "shooting can damage and destroy wooden cover");
+assert.match(game, /id="interactBtn"/, "mobile HUD has a door interaction button");
 assert.match(game, /if\(e\.code==="Digit1"\)[\s\S]{0,100}selectWeapon\("akr"\)/, "1 must equip the AKR");
 assert.match(game, /if\(e\.code==="Digit2"\)[\s\S]{0,100}selectWeapon\("p350"\)/, "2 must equip the P350");
 assert.match(game, /if\(e\.code==="Digit3"\)[\s\S]{0,100}selectWeapon\("knife"\)/, "3 must equip the knife");
