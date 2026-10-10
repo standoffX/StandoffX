@@ -37,6 +37,8 @@
 #mobile{display:none;position:fixed;inset:0;z-index:20;pointer-events:none}
 #leaveGameDesktop{position:fixed;right:14px;top:14px;z-index:25;pointer-events:auto;border:1px solid #ffffff28;background:#0b111bd9;color:#fff;border-radius:6px;padding:10px 13px;font-size:11px;font-weight:900;cursor:pointer}
 @media(max-width:800px),(pointer:coarse){#leaveGameDesktop{display:none}}.stick{position:absolute;left:20px;bottom:25px;width:125px;height:125px;border-radius:50%;background:#ffffff0d;border:1px solid #ffffff1c;pointer-events:auto;touch-action:none}.stick i{position:absolute;left:35px;top:35px;width:55px;height:55px;border-radius:50%;background:#ffffff22}.mbtn{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid #ffffff1d;background:#0b111bd9;color:#fff;font-size:10px;font-weight:950;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none}.mbtn.active{border-color:#d7f4ff;background:#d7f4ff35;box-shadow:0 0 18px #78cfff33}.fire{right:18px;bottom:54px;background:#3e6fb3e6}.jump{right:92px;bottom:128px}.reload{right:92px;bottom:54px}.crouch{right:18px;bottom:128px;background:#7258a8e8}.sprint{right:24px;bottom:202px;background:#237f78e8;width:58px;height:52px;border-radius:14px}.leave{right:20px;top:20px;width:48px;height:40px;border-radius:6px}
+#doorHint{display:none;position:fixed;left:50%;bottom:22%;transform:translateX(-50%);z-index:19;pointer-events:none;padding:8px 12px;border:1px solid #b6e5ff55;border-radius:4px;background:#0b1d2bed;color:#d5f1ff;font-size:11px;font-weight:950;letter-spacing:1px}
+.doorButton{left:162px;bottom:86px;width:64px;height:48px;border-radius:10px;background:#795331ef;border-color:#f2d2a766;font-size:8px}
 #trainingControls button:hover{filter:brightness(1.15)}
 .training-action-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
 .training-action-grid button{display:flex;align-items:center;justify-content:space-between;gap:5px;min-width:0;min-height:32px;padding:6px 7px;border:1px solid #1de9ff35;border-radius:4px;background:#101e2de8;color:#eaf8ff;font-size:9px;font-weight:900;letter-spacing:.2px;text-align:left;cursor:pointer;touch-action:manipulation}
@@ -135,6 +137,7 @@ body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
     <button id="pauseLeave" style="width:100%;padding:12px;margin-top:8px;border:1px solid #ffffff24;border-radius:7px;background:#172235;color:#edf7ff;font-weight:800">ПОВЕРНУТИСЯ В ЛОБІ</button>
   </div>
 </div>
+<div id="doorHint" role="status">E · ВІДЧИНИТИ ДВЕРІ</div>
 
 <div id="mobile">
   <div id="stick" class="stick"><i></i></div>
@@ -145,6 +148,7 @@ body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
   <button id="sprintBtn" class="mbtn sprint" type="button" aria-label="Бігти швидше">SPRINT</button>
   <button id="mapBtn" class="mbtn mapButton" type="button" aria-label="Відкрити карту">MAP</button>
   <button id="weaponBtn" class="mbtn weaponButton" type="button" aria-label="Змінити зброю">АКР</button>
+  <button id="doorInteractBtn" class="mbtn doorButton" type="button" aria-label="Відкрити або закрити двері" style="display:none">ДВЕРІ · E</button>
   <button id="leaveGameMobile" class="mbtn leave" type="button">×</button>
 </div>
 
@@ -635,8 +639,8 @@ const HILL_TOWN_STATIC_SOLIDS=(()=>{
     {id:"border_south",x:0,z:46,w:94,d:1.4,h:5.5,kind:"wall"},
     {id:"border_west",x:-46,z:0,w:1.4,d:94,h:5.5,kind:"wall"},
     {id:"border_east",x:46,z:0,w:1.4,d:94,h:5.5,kind:"wall"},
-    {id:"mid_wall_n",x:0,z:-25,w:.75,d:38,h:4.6,kind:"wall"},
-    {id:"mid_wall_s",x:0,z:25,w:.75,d:38,h:4.6,kind:"wall"}
+    {id:"mid_wall_n",x:0,z:-11,w:.75,d:10,h:4.6,kind:"wall"},
+    {id:"mid_wall_s",x:0,z:11,w:.75,d:10,h:4.6,kind:"wall"}
   ];
   for(const cx of [-22,22])for(const cz of [-24,24]){
     solids.push(
@@ -1290,6 +1294,7 @@ function setFullMapOpen(open){
 }
 $("mapBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();setFullMapOpen(!isFullMapOpen)});
 document.addEventListener("keydown",e=>{if(e.code==="KeyF"&&!e.repeat){e.preventDefault();setFullMapOpen(true)}});
+document.addEventListener("keydown",e=>{if(e.code==="KeyE"&&!e.repeat){e.preventDefault();requestDoorInteraction()}});
 document.addEventListener("keyup",e=>{if(e.code==="KeyF")setFullMapOpen(false)});
 document.addEventListener("visibilitychange",()=>{if(document.hidden)setFullMapOpen(false)});
 function sendMove(force=false){
@@ -1487,6 +1492,7 @@ addEventListener("mousedown",e=>{
 });
 addEventListener("mouseup",e=>{if(e.button===0&&!isMobileDevice)fireHeld=false});
 $("weaponBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();cycleWeapon()});
+$("doorInteractBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();requestDoorInteraction()});
 
 function setOverlayGame(){
   $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":mode==="training"?"ТРЕНУВАННЯ":"HIDE & SEEK";
@@ -1616,6 +1622,7 @@ socket.on("training_state",data=>{
 });
 
 socket.on("init_match",data=>{
+  if(data.worldObjects)applyMapWorldState(data.worldObjects);
   try{
     if(!isTrainingMode)localStorage.setItem("sx_active_match",JSON.stringify({matchId:data.matchId||matchId,userId:myId,uuid:myUuid,map:data.map||selectedMap,mode:data.mode||mode,updatedAt:Date.now()}));
   }catch{}
@@ -1629,9 +1636,12 @@ socket.on("init_match",data=>{
   ensurePlayerVisual();
   const authoritativePosition=data.me?.position||data.me?.spawn;
   if(authoritativePosition)player.position.set(authoritativePosition.x||0,authoritativePosition.y||0,authoritativePosition.z||0);
+  if(myTeam==="A")camera.rotation.y=-Math.PI/2;else if(myTeam==="B")camera.rotation.y=Math.PI/2;
   (data.players||[]).forEach(p=>{if(String(p.userId)!==String(myId))applyEnemy(p)});
   updateVisual();
 });
+socket.on("map_object_state",data=>{if(data?.mapId===selectedMap)applyMapObjectState(data)});
+socket.on("map_interact_error",data=>{if(data?.message)showDamagePopup(data.message,true)});
 socket.on("match_waiting",data=>{
   updateWaiting(data);
   if(data.modeName)$("modeName").textContent=data.modeName;
@@ -1804,7 +1814,7 @@ const stick=$("stick"),thumb=stick.querySelector("i");
 function applyMobileHudLayout(){
   let config={};
   try{config=JSON.parse(localStorage.getItem("sx_mobile_hud_layout_v1")||"{}")||{}}catch{}
-  const ids={move:"stick",fire:"fireBtn",jump:"jumpBtn",reload:"reloadBtn",crouch:"crouchBtn",sprint:"sprintBtn",map:"mapBtn",weapon:"weaponBtn"};
+  const ids={move:"stick",fire:"fireBtn",jump:"jumpBtn",reload:"reloadBtn",crouch:"crouchBtn",sprint:"sprintBtn",map:"mapBtn",weapon:"weaponBtn",interact:"doorInteractBtn"};
   const sizes=config.sizes||{},positions=config.positions||{},opacity=Math.max(35,Math.min(100,Number(config.opacity)||82))/100;
   for(const [key,id] of Object.entries(ids)){
     const el=$(id);if(!el)continue;
@@ -1864,10 +1874,11 @@ sprintBtn.addEventListener("touchstart",e=>{e.preventDefault();keys.shift=true;s
 sprintBtn.addEventListener("touchend",()=>{keys.shift=false;sprintBtn.classList.remove("active")});
 sprintBtn.addEventListener("touchcancel",()=>{keys.shift=false;sprintBtn.classList.remove("active")});
 let lookTouchId=null;
+let lookTouchStart=null;
 document.addEventListener("touchstart",e=>{
   if(e.target.closest("#mobile")||lookTouchId!==null)return;
   const t=e.changedTouches[0];if(!t)return;
-  lookTouchId=t.identifier;lookTouch={x:t.clientX,y:t.clientY};
+  lookTouchId=t.identifier;lookTouchStart={x:t.clientX,y:t.clientY};lookTouch={x:t.clientX,y:t.clientY};
 },{passive:true});
 document.addEventListener("touchmove",e=>{
   if(lookTouchId===null||!lookTouch)return;
@@ -1879,8 +1890,16 @@ document.addEventListener("touchmove",e=>{
   lookTouch={x:t.clientX,y:t.clientY};
 },{passive:true});
 const releaseLookTouch=e=>{
-  if(lookTouchId===null||!Array.from(e?.changedTouches||[]).some(t=>t.identifier===lookTouchId))return;
-  lookTouch=null;lookTouchId=null;setFullMapOpen(false);
+  const touch=Array.from(e?.changedTouches||[]).find(t=>t.identifier===lookTouchId);
+  if(lookTouchId===null||!touch)return;
+  if(isMobileDevice&&lookTouchStart){
+    const dx=touch.clientX-lookTouchStart.x,dy=touch.clientY-lookTouchStart.y;
+    if(Math.max(Math.abs(dx),Math.abs(dy))>72){
+      if(Math.abs(dx)>Math.abs(dy))selectWeapon(dx<0?"p350":"knife");
+      else if(dy>0)selectWeapon("akr");
+    }
+  }
+  lookTouch=null;lookTouchStart=null;lookTouchId=null;setFullMapOpen(false);
 };
 document.addEventListener("touchend",releaseLookTouch);
 document.addEventListener("touchcancel",releaseLookTouch);
@@ -1931,6 +1950,7 @@ function animate(){
     weaponKick=Math.max(0,weaponKick-dt*.58);
     heldWeaponRoot.rotation.x=reloading?-.07:0;
   }
+  updateDoorInteractionHint(now);
   drawTacticalMaps();
   renderer.render(scene,camera);
 }
