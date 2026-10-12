@@ -1433,9 +1433,13 @@ function startReload(){
   if((!isTeamCombat&&!isTrainingMode)||info.kind==="melee"||reloading||ammo>=info.magazine||matchPhase!=="game"||hp<=0||!mapLoadFinished)return;
   const reloadWeapon=selectedWeapon;
   reloading=true;updateWeaponHud();
+  playWeaponAnimation(reloadWeapon==="p350"?["magazine-open","slide-open"]:["reload","open"]);
   setTimeout(()=>{
     weaponAmmo[reloadWeapon]=CLIENT_WEAPON_INFO[reloadWeapon].magazine;
-    if(selectedWeapon===reloadWeapon){ammo=weaponAmmo[reloadWeapon];reloading=false;updateWeaponHud()}
+    if(selectedWeapon===reloadWeapon){
+      ammo=weaponAmmo[reloadWeapon];reloading=false;updateWeaponHud();
+      playWeaponAnimation(reloadWeapon==="p350"?["magazine-close","slide-close"]:["reload-close","close"]);
+    }
   },info.reloadMs);
 }
 function shoot(){
@@ -1452,7 +1456,19 @@ function shoot(){
   updateWeaponHud();
   const dir=new THREE.Vector3();
   camera.getWorldDirection(dir);dir.normalize();
-  damageBreakableWood(dir);
+  const impact=applyMapShotImpact(info);
+  if(info.kind!=="melee"){
+    const start=camera.position.clone().addScaledVector(dir,.35);
+    const end=impact||camera.position.clone().addScaledVector(dir,Math.min(info.range,22));
+    spawnTracer(start,end,selectedWeapon==="p350"?0xb9e5ff:0xffdda0,110);
+    const firedWeapon=selectedWeapon;
+    playWeaponAnimation(firedWeapon==="p350"?["slide-open","fire","shoot","open"]:["fire","shoot","bolt","open"]);
+    setTimeout(()=>{
+      if(selectedWeapon===firedWeapon)playWeaponAnimation(firedWeapon==="p350"?["slide-close","close"]:["bolt-close","close"]);
+    },75);
+  }else{
+    playWeaponAnimation(["slash","attack","swing"]);
+  }
   if(isTrainingMode)socket.emit("training_shoot",{trainingId,weapon:selectedWeapon,dx:dir.x,dy:dir.y,dz:dir.z});
   else socket.emit("team_shoot",{matchId,weapon:selectedWeapon,dx:dir.x,dy:dir.y,dz:dir.z});
 }
