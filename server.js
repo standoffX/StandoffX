@@ -1289,6 +1289,9 @@ app.post("/api/upload-avatar", requireAuth, upload.single("avatar"), (req, res) 
 // ---------- MATCHMAKING / GAME ----------
 
 const matchmakingQueue = [];
+const matchmakingFillTimers = new Map();
+const MATCHMAKING_FILL_WINDOW_MS = 3500;
+const MATCHMAKING_MIN_PLAYERS = 2;
 const activeMatches = new Map(); // in-memory only; never written to MongoDB
 const trainingSessions = new Map(); // private tester sessions; never written to MongoDB
 const DEFAULT_MATCH_SIZE = 3;
@@ -1361,6 +1364,11 @@ function getModeConfig(mode) {
 function getRequiredPlayers(mode) {
   return Number(getModeConfig(mode).requiredPlayers) || DEFAULT_MATCH_SIZE;
 }
+function getMinimumPlayers(mode) {
+  return ["allies", "team_fight"].includes(mode)
+    ? MATCHMAKING_MIN_PLAYERS
+    : getRequiredPlayers(mode);
+}
 
 function removeFromQueue(identity, socketId = null) {
   const idx = matchmakingQueue.findIndex(p =>
@@ -1404,8 +1412,10 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const safeMapId = normalizeMapId(mapId);
   const candidates = Array.isArray(forcedCandidates) ? forcedCandidates : matchmakingQueue.filter(p => p.mode === mode && p.map === safeMapId);
   const requiredPlayers = getRequiredPlayers(mode);
-  if (candidates.length < requiredPlayers) return;
+  const minimumPlayers = getMinimumPlayers(mode);
+  if (candidates.length < minimumPlayers) return;
 
+  // Give up to four players a short chance to arrive; then start a smaller match if needed.
   const players = candidates.slice(0, requiredPlayers);
   for (const p of players) if (!p.isBot) removeFromQueue(p.uuid || p.userId);
 
@@ -1413,7 +1423,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const matchId = "match_" + Date.now() + "_" + crypto.randomBytes(2).toString("hex");
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
   const MATCH_SPAWNS = {
-    HILL_TOWN: [{x:-42,y:0,z:-40},{x:42,y:0,z:-40},{x:-42,y:0,z:40},{x:42,y:0,z:40}],
+    HILL_TOWN: [{x:-52,y:0,z:-52},{x:52,y:0,z:-52},{x:-52,y:0,z:52},{x:52,y:0,z:52}],
     NEON_YARD: [{x:-82,y:0,z:-82},{x:82,y:0,z:-82},{x:-82,y:0,z:82},{x:82,y:0,z:82}],
     FIELD_ARENA: [{x:-110,y:0,z:-110},{x:110,y:0,z:-110},{x:-110,y:0,z:110},{x:110,y:0,z:110}]
   };
@@ -1456,7 +1466,8 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     timer: null,
     phaseTimer: null,
     joinTimer: null,
-    remaining: GAME_SECONDS
+    remaining: GAME_SECONDS,
+    doorOpen: [false, false, false, false]
   };
 
   activeMatches.set(matchId, match);
@@ -1490,6 +1501,18 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
       cleanMatch(io, matchId, true);
     }
   }, JOIN_TIMEOUT_SECONDS * 1000);
+}
+
+function scheduleMatchmaking(io, mode, mapId) {
+  const key = mode + ":" + mapId;
+  if (matchmakingFillTimers.has(key)) return;
+  const timer = setTimeout(() => {
+    matchmakingFillTimers.delete(key);
+    const candidates = matchmakingQueue.filter(p => p.mode === mode && p.map === mapId);
+    if (candidates.length >= getMinimumPlayers(mode)) createMatch(io, mode, mapId);
+    emitQueueCount(io);
+  }, MATCHMAKING_FILL_WINDOW_MS);
+  matchmakingFillTimers.set(key, timer);
 }
 
 function emitMatchWaiting(io, match) {
@@ -1795,13 +1818,18 @@ class THREE_LIKE_VECTOR {
   }
 }
 
-function validateMove(player, data) {
+function mapMovementLimit(mapId) {
+  return ({ HILL_TOWN: 65, NEON_YARD: 196, FIELD_ARENA: 320, M3_Maze: 228 })[mapId] || 228;
+}
+function validateMove(player, data, mapId = "M3_Maze") {
   const now = Date.now();
   if (now - player.lastMoveAt < 33) return false;
   player.lastMoveAt = now;
 
   const x = Number(data.x), y = Number(data.y), z = Number(data.z), rotY = Number(data.rotY);
   if (![x, y, z, rotY].every(Number.isFinite)) return false;
+  const bound = mapMovementLimit(mapId);
+  if (Math.abs(x) > bound || Math.abs(z) > bound) return false;
 
   const prev = player.pos;
   const elapsed = Math.min(0.25, Math.max(0.033, (now - (player.prevMoveTime || now)) / 1000));
@@ -1915,6 +1943,7 @@ io.on("connection", socket => {
       lastMoveAt: 0,
       lastActionAt: 0,
       lastShotAt: 0,
+      doorOpen: [false, false, false, false],
       createdAt: Date.now()
     };
     if (previous?.bot?.despawnTimer) clearTimeout(previous.bot.despawnTimer);
@@ -1959,6 +1988,8 @@ io.on("connection", socket => {
     const viewY = Number(data.viewY);
     if (![x, y, z, rotY].every(Number.isFinite)) return;
 
+    const bound = mapMovementLimit(session.map);
+    if (Math.abs(x) > bound || Math.abs(z) > bound) return;
     const previous = session.playerPos;
     const maxStep = 0.9;
     const dx = x - previous.x, dz = z - previous.z;
@@ -2161,7 +2192,7 @@ io.on("connection", socket => {
 
     socket.emit("search_started", { mode, modeName: MODE_CONFIGS[mode].name, map, mapName: PLAYABLE_MAPS[map].name });
     emitQueueCount(io);
-    createMatch(io, mode, map);
+    scheduleMatchmaking(io, mode, map);
   });
 
   socket.on("cancel_search", () => {
@@ -2309,6 +2340,7 @@ io.on("connection", socket => {
       const doors = [[-3.57,-25.5],[3.57,25.5],[-25.5,3.57],[25.5,-3.57]];
       const [x,z] = doors[doorIndex];
       if (Math.hypot(player.pos.x-x, player.pos.z-z) > 18) return;
+      match.doorOpen[doorIndex] = open;
       socket.to(match.id).emit("map_door_state", { doorIndex, open });
       return;
     }
@@ -2317,6 +2349,7 @@ io.on("connection", socket => {
     const doors = [[-3.57,-25.5],[3.57,25.5],[-25.5,3.57],[25.5,-3.57]];
     const [x,z] = doors[doorIndex];
     if (Math.hypot(session.playerPos.x-x, session.playerPos.z-z) > 18) return;
+    session.doorOpen[doorIndex] = open;
     socket.to(session.id).emit("map_door_state", { doorIndex, open });
   });
 
@@ -2340,7 +2373,7 @@ io.on("connection", socket => {
     if (!match) return;
     const player = match.players.find(p => p.userId === socket.user.id);
     if (!player || player.socketId !== socket.id || player.hp <= 0) return;
-    if (!validateMove(player, data)) return;
+    if (!validateMove(player, data, match.map)) return;
 
     if (match.phase === "game") handleCatch(io, match, player);
 
