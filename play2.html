@@ -447,156 +447,230 @@ async function loadHillTownStarterFallback(){
     buildLocalHillTownFallback();addGameplayInteractables();finishClientReady();
   }
 }
-async function buildHillTownMap(){
-  if(mapLoadFinished||hillTownBuilding)return;
+function buildHillTownMap(){
+  if(mapLoadFinished)return;
   hillTownBuilding=true;
-  $("phase").textContent="ЗАВАНТАЖУЄТЬСЯ КАРТА · HILL TOWN";
-  $("overlayText").textContent="Завантажуються моделі та геометрія Hill Town, далі налаштуємо колізії.";
-  setLoadingDetail("mapLoadStatus","ЗАВАНТАЖЕННЯ МОДЕЛЕЙ…","active");
-  $("progress").style.width="12%";
-  try{
-    const names=["floor","plaster","ochre","window","door","arch","crate","sandbag","stall","olive","lamp","rifle"];
-    const results=await Promise.all(names.map(async name=>{
-      try{return [name,await getHillTownTemplate(name)]}catch(error){console.warn("[HILL_TOWN] Model unavailable:",name,error);return [name,null]}
-    }));
-    const assets=Object.fromEntries(results);
-    if(!assets.floor||(!assets.plaster&&!assets.ochre))throw new Error("Hill Town manifest did not return floor/wall models");
-    $("progress").style.width="65%";
-    $("overlayText").textContent="Моделі завантажено. Розставляємо будівлі, укриття та колізії…";
-    setLoadingDetail("mapLoadStatus","РОЗМІЩЕННЯ ОБ’ЄКТІВ…","active");
-    // 13 x 13 metre-aligned cobblestone tiles form the walkable ground.
-    for(let z=-24;z<=24;z+=4){
-      for(let x=-24;x<=24;x+=4)addAssetInstance(assets.floor,x,-.12,z,0,false);
+  $("phase").textContent="ГОТУЄМО HILL TOWN";
+  $("overlayText").textContent="Збираємо локальну тактичну карту: стіни, проходи, укриття та двері. Без завантаження сцени з CDN.";
+  setLoadingDetail("mapLoadStatus","ЛОКАЛЬНА ГЕОМЕТРІЯ…","active");
+  $("progress").style.width="18%";
+  scene.background=new THREE.Color(0x9aabb4);
+  scene.fog=new THREE.Fog(0x9aabb4,115,235);
+
+  const mat=(color,roughness=.88,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
+  const groundMat=mat(0x838b86,1),roadMat=mat(0x414a51,1),pavementMat=mat(0xa4a397,1);
+  const wallMat=mat(0xb7a58b,.96),wallShadowMat=mat(0x827561,.98);
+  const roofMat=mat(0x4c5054,.92),windowMat=mat(0x304651,.3,.18);
+  const crateMat=mat(0x72513a,.98),steelMat=mat(0x58636b,.8,.18);
+  const spawnAMat=mat(0x174c91,.72,.18),spawnBMat=mat(0x812b38,.72,.18);
+
+  const addBox=(x,y,z,w,h,d,material,rotationY=0,collidable=true)=>{
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
+    mesh.position.set(x,y,z);mesh.rotation.y=rotationY;
+    mesh.castShadow=false;mesh.receiveShadow=false;
+    mesh.userData.mapSolid=Boolean(collidable);
+    scene.add(mesh);
+    if(collidable)mapObjects.push(mesh);
+    return mesh;
+  };
+  const addGround=(x,z,w,d,material)=>{
+    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,d),material);
+    mesh.rotation.x=-Math.PI/2;mesh.position.set(x,-.045,z);
+    mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);
+    return mesh;
+  };
+  const wallAlongZ=(x,start,end,material,thickness=.9,height=5.8)=>{
+    let cursor=start;
+    while(cursor<end-.001){
+      const length=Math.min(7.4,end-cursor);
+      addBox(x,height/2,cursor+length/2,thickness,height,length+.06,material);
+      cursor+=length;
     }
-    const variants=[assets.plaster,assets.ochre,assets.window,assets.door];
-    const placeWall=(x,z,rotationY=0,kind="wall")=>{
-      const variant=kind==="arch"?assets.arch:kind==="door"?assets.door:kind==="window"?assets.window:variants[(Math.abs(Math.round(x+z))%variants.length)];
-      if(variant)addAssetInstance(variant,x,0,z,rotationY,true);
-      else if(kind==="arch")addTownFallbackArch(x,z,rotationY);
-      else addTownFallbackWall(x,z,rotationY,kind==="door"?0x9b7958:0xb69a76);
-    };
-    // Outer wall ring and a handful of windows/doors break up the silhouette.
-    let index=0;
-    for(let v=-24;v<=24;v+=4){
-      placeWall(v,-26,0,index%5===0?"window":"wall");
-      placeWall(v,26,0,index%4===0?"door":"wall");
-      placeWall(-26,v,Math.PI/2,index%4===1?"window":"wall");
-      placeWall(26,v,Math.PI/2,index%5===2?"door":"wall");
-      index++;
+  };
+  const wallAlongX=(z,start,end,material,thickness=.9,height=5.8)=>{
+    let cursor=start;
+    while(cursor<end-.001){
+      const length=Math.min(7.4,end-cursor);
+      addBox(cursor+length/2,height/2,z,length+.06,height,thickness,material);
+      cursor+=length;
     }
-    // Internal lanes: open gaps keep the map traversable while giving cover.
-    for(const z of [-10,10]){
-      for(let x=-18;x<=18;x+=4){
-        if(Math.abs(x)<=2){if(x===0)placeWall(x,z,0,"arch");continue}
-        placeWall(x,z,0,Math.abs(x)===14?"window":"wall");
-      }
-    }
-    for(const x of [-10,10]){
-      for(let z=-18;z<=18;z+=4){
-        if(Math.abs(z)<=2)continue;
-        if((x<0&&z===6)||(x>0&&z===-6))continue;
-        placeWall(x,z,Math.PI/2,(z%8===0)?"window":"wall");
-      }
-    }
-    // Low cover and landmarks around the two combat lanes.
-    const prop=(name,x,z,rotationY=0)=>{
-      if(assets[name])addAssetInstance(assets[name],x,0,z,rotationY,true);
-      else addTownFallbackProp(x,z,name==="sandbag"?0x9b896c:0x85684a);
-    };
-    [[-18,-18],[18,-18],[-18,18],[18,18],[-4,-2],[4,2]].forEach(([x,z],i)=>prop("crate",x,z,(i%2)*Math.PI/2));
-    prop("sandbag",-8,0,Math.PI/2);prop("sandbag",8,0,Math.PI/2);
-    prop("stall",-16,4,0);prop("stall",16,-4,Math.PI);
-    prop("olive",-20,8,0);prop("olive",20,-8,0);
-    prop("lamp",-24,0,Math.PI/2);prop("lamp",24,0,-Math.PI/2);
-    addGameplayInteractables();
-    addGameplayInteractables();
-    mapLoadFinished=true;mapLoaded=true;hillTownBuilding=false;
-    scene.background=new THREE.Color(0xc8d3d8);
-    scene.fog=new THREE.Fog(0xc8d3d8,95,250);
-    $("progress").style.width="100%";
-    $("phase").textContent="HILL TOWN · ГОТОВО";
-    finishClientReady();
-  }catch(error){
-    console.warn("[HILL_TOWN] Modular map load failed; trying the CC0 starter scene.",error);
-    hillTownBuilding=false;
-    await loadHillTownStarterFallback();
+  };
+
+  // Fixed dimensions: playable floor is 112 x 96 units, with solid segmented boundary walls.
+  addGround(0,0,116,100,groundMat);
+  for(const laneZ of [-28,0,28]){
+    addGround(0,laneZ,108,7.5,roadMat);
+    addGround(0,laneZ-4.4,108,.34,pavementMat);
+    addGround(0,laneZ+4.4,108,.34,pavementMat);
+    for(let x=-50;x<52;x+=8)addGround(x+4,laneZ,4,.12,mat(0xc5c7c0,.9));
   }
+
+  wallAlongZ(-55.5,-48,48,wallShadowMat,1,6);
+  wallAlongZ(55.5,-48,48,wallShadowMat,1,6);
+  wallAlongX(-47.5,-55,55,wallShadowMat,1,6);
+  wallAlongX(47.5,-55,55,wallShadowMat,1,6);
+
+  // Three doorways in the central dividing wall connect the north, middle and south lanes.
+  const centralGaps=[[-29.8,-26.2],[-1.8,1.8],[26.2,29.8]];
+  let cursor=-46;
+  for(const [gapStart,gapEnd] of centralGaps){
+    if(gapStart>cursor)wallAlongZ(0,cursor,gapStart,wallMat,.9,5.1);
+    cursor=gapEnd;
+  }
+  if(cursor<46)wallAlongZ(0,cursor,46,wallMat,.9,5.1);
+
+  // Four compact building blocks sit between lanes; clear routes remain around each block.
+  for(const [x,z] of [[-20,-15],[-20,15],[20,-15],[20,15]]){
+    addBox(x,2.25,z,9.5,4.5,8.4,wallMat,0,true);
+    addBox(x,4.62,z,10,.34,8.9,roofMat,0,true);
+    addBox(x,2.6,z-4.23,1.6,1.05,.09,windowMat,0,true);
+    addBox(x,1.05,z+4.23,1.35,2.05,.12,crateMat,0,true);
+    addBox(x+Math.sign(x)*4.72,2.2,z,.12,2.5,1.5,wallShadowMat,0,true);
+  }
+
+  // Waist-high concrete/metal cover in each lane, keeping several routes open.
+  for(const [x,z,w,d] of [
+    [-36,-28,3.3,1.7],[-13,-28,2.5,1.8],[13,-28,2.5,1.8],[36,-28,3.3,1.7],
+    [-36,0,3.3,1.7],[-13,0,2.5,1.8],[13,0,2.5,1.8],[36,0,3.3,1.7],
+    [-36,28,3.3,1.7],[-13,28,2.5,1.8],[13,28,2.5,1.8],[36,28,3.3,1.7],
+    [-30,-12,2.4,2.4],[30,12,2.4,2.4],[-30,12,2.4,2.4],[30,-12,2.4,2.4]
+  ]){
+    addBox(x,.76,z,w,1.52,d,steelMat,0,true);
+    addBox(x,1.56,z,w+.14,.12,d+.14,wallShadowMat,0,true);
+  }
+
+  for(const [x,z] of [[-11,-37],[11,-37],[-11,37],[11,37],[-32,-8],[32,8],[-32,8],[32,-8]]){
+    addBox(x,.72,z,1.6,1.44,1.6,crateMat,0,true);
+    addBox(x,1.48,z,1.72,.12,1.72,roofMat,0,true);
+  }
+  addGround(-42,-28,8,8,spawnAMat);
+  addGround(-42,28,8,8,spawnAMat);
+  addGround(42,-28,8,8,spawnBMat);
+  addGround(42,28,8,8,spawnBMat);
+
+  addGameplayInteractables();
+  mapLoadFinished=true;mapLoaded=true;hillTownBuilding=false;
+  $("progress").style.width="100%";
+  $("phase").textContent="HILL TOWN · ГОТОВО";
+  setLoadingDetail("mapLoadStatus","HILL TOWN · ГОТОВО","done");
+  applyMapInteractionState(pendingMapInteractionState);
+  finishClientReady();
 }
 
 // Small, deterministic gameplay interactions: hinged doors and breakable wooden cover.
 const interactiveDoors=[];
 const breakableWood=[];
 let gameplayInteractablesBuilt=false;
+let pendingMapInteractionState=null;
 function addGameplayDoor(x,z,rotationY=0,label="ДВЕРІ"){
-  const s=HILL_TOWN_SCALE,group=new THREE.Group();
-  group.position.set(x*s,0,z*s);group.rotation.y=rotationY;
+  const s=1.15,width=2.6*s,group=new THREE.Group();
+  // x/z are the door centre in world units; the group origin is its hinge.
+  group.position.set(x-Math.cos(rotationY)*width/2,0,z+Math.sin(rotationY)*width/2);
+  group.rotation.y=rotationY;
   const mat=new THREE.MeshStandardMaterial({color:0x765038,roughness:.94});
   const metal=new THREE.MeshStandardMaterial({color:0x343d43,metalness:.6,roughness:.45});
-  const panel=new THREE.Mesh(new THREE.BoxGeometry(2.6*s,2.55,.2*s),mat);
-  panel.position.set(1.3*s,1.275,0);panel.castShadow=false;panel.receiveShadow=false;group.add(panel);mapObjects.push(panel);
-  const brace=new THREE.Mesh(new THREE.BoxGeometry(2.45*s,.1,.23*s),metal);
-  brace.position.set(1.3*s,1.9,0);group.add(brace);mapObjects.push(brace);
+  const panel=new THREE.Mesh(new THREE.BoxGeometry(width,2.55,.2*s),mat);
+  panel.position.set(width/2,1.275,0);panel.castShadow=false;panel.receiveShadow=false;group.add(panel);mapObjects.push(panel);
+  const brace=new THREE.Mesh(new THREE.BoxGeometry(width-.2,.1,.23*s),metal);
+  brace.position.set(width/2,1.9,0);group.add(brace);mapObjects.push(brace);
   const handle=new THREE.Mesh(new THREE.BoxGeometry(.06,.18,.1),metal);
   handle.position.set(.25*s,1.25,.14*s);group.add(handle);mapObjects.push(handle);
   scene.add(group);
-  const door={group,panel,brace,handle,x:x*s,z:z*s,open:false,label,baseRotation:rotationY};
+  const door={group,panel,brace,handle,x,z,open:false,label,baseRotation:rotationY};
   interactiveDoors.push(door);
   return door;
 }
-function addBreakableWood(x,z){
-  const s=HILL_TOWN_SCALE;
-  const group=new THREE.Group();group.position.set(x*s,0,z*s);
+function addBreakableWood(x,z,rotationY=Math.PI/2){
+  const group=new THREE.Group();group.position.set(x,0,z);group.rotation.y=rotationY;
   const wood=new THREE.MeshStandardMaterial({color:0x85572f,roughness:.98});
   const dark=new THREE.MeshStandardMaterial({color:0x49301e,roughness:1});
+  // Four planks and two posts create a breakable chest-high timber barricade.
   for(let i=0;i<4;i++){
-    const plank=new THREE.Mesh(new THREE.BoxGeometry(1.25*s,.22,.11*s),wood);
-    plank.position.set(0,.35+i*.24,0);plank.rotation.y=(i%2)*Math.PI/2;plank.userData.breakableWood=true;plank.userData.hp=3;plank.castShadow=false;plank.receiveShadow=false;
+    const plank=new THREE.Mesh(new THREE.BoxGeometry(3.35,.24,.26),wood);
+    plank.position.set(0,.48+i*.31,0);plank.userData.breakableWood=true;plank.userData.hp=3;
+    plank.castShadow=false;plank.receiveShadow=false;
     group.add(plank);breakableWood.push(plank);mapObjects.push(plank);
   }
-  const cap=new THREE.Mesh(new THREE.BoxGeometry(1.35*s,.12,1.1*s),dark);cap.position.y=1.18;cap.userData.breakableWood=true;cap.userData.hp=3;group.add(cap);breakableWood.push(cap);mapObjects.push(cap);
+  for(const xPost of [-1.58,1.58]){
+    const post=new THREE.Mesh(new THREE.BoxGeometry(.22,1.6,.3),dark);
+    post.position.set(xPost,.8,0);post.userData.breakableWood=true;post.userData.hp=3;
+    post.castShadow=false;post.receiveShadow=false;
+    group.add(post);breakableWood.push(post);mapObjects.push(post);
+  }
   scene.add(group);
+}
+function updateInteractButtonLabel(){
+  const button=$("interactBtn");if(!button)return;
+  if(!player){button.textContent="E · ДВЕРІ";return}
+  let nearest=null,best=5.5;
+  for(const door of interactiveDoors){
+    const d=Math.hypot(player.position.x-door.x,player.position.z-door.z);
+    if(d<best){best=d;nearest=door}
+  }
+  button.textContent=nearest?(nearest.open?"E · ЗАКРИТИ":"E · ВІДЧИНИТИ"):"E · ДВЕРІ";
 }
 function setGameplayDoorState(doorIndex,open){
   const door=interactiveDoors[doorIndex];if(!door)return;
   door.open=Boolean(open);
-  door.group.rotation.y=door.open?door.baseRotation+Math.PI/2:door.baseRotation;
+  door.group.rotation.y=door.baseRotation+(door.open?Math.PI/2:0);
   for(const obj of [door.panel,door.brace,door.handle]){
     const idx=mapObjects.indexOf(obj);
     if(door.open&&idx>=0)mapObjects.splice(idx,1);
     if(!door.open&&idx<0)mapObjects.push(obj);
   }
+  updateInteractButtonLabel();
   rebuildCollisionIndex();
-  $("interactBtn").textContent=door.open?"E · ЗАЧИНИТИ":"E · ДВЕРІ";
+}
+function applyDestroyedWood(woodIndex){
+  const idx=Number(woodIndex),obj=breakableWood[idx];
+  if(!Number.isInteger(idx)||idx<0||!obj)return;
+  obj.visible=false;
+  const mapIndex=mapObjects.indexOf(obj);if(mapIndex>=0)mapObjects.splice(mapIndex,1);
+  rebuildCollisionIndex();
+}
+function applyMapInteractionState(state){
+  if(!state||typeof state!=="object")return;
+  const normalized={
+    doors:Array.isArray(state.doors)?state.doors.slice(0,3).map(Boolean):[false,false,false],
+    destroyedWood:Array.isArray(state.destroyedWood)?state.destroyedWood.map(Number).filter(Number.isInteger):[]
+  };
+  pendingMapInteractionState=normalized;
+  if(!gameplayInteractablesBuilt)return;
+  normalized.doors.forEach((open,index)=>setGameplayDoorState(index,open));
+  normalized.destroyedWood.forEach(applyDestroyedWood);
+  rebuildCollisionIndex();
 }
 function interactWithNearestDoor(){
   if(!player||matchPhase!=="game")return;
-  let nearest=null,best=4.5*HILL_TOWN_SCALE;
+  let nearest=null,best=5.5;
   for(const door of interactiveDoors){
     const d=Math.hypot(player.position.x-door.x,player.position.z-door.z);
     if(d<best){best=d;nearest=door}
   }
   if(!nearest){showDamagePopup("НЕМАЄ ДВЕРЕЙ ПОРУЧ");return}
-  setGameplayDoorState(interactiveDoors.indexOf(nearest),!nearest.open);
-  if(isTrainingMode)socket.emit("map_door_state",{trainingId,doorIndex:interactiveDoors.indexOf(nearest),open:nearest.open});
-  else socket.emit("map_door_state",{matchId,doorIndex:interactiveDoors.indexOf(nearest),open:nearest.open});
-  showDamagePopup(nearest.open?"ДВЕРІ ВІДЧИНЕНО":"ДВЕРІ ЗАЧИНЕНО");
+  const doorIndex=interactiveDoors.indexOf(nearest),open=!nearest.open;
+  setGameplayDoorState(doorIndex,open);
+  if(isTrainingMode)socket.emit("map_door_state",{trainingId,doorIndex,open});
+  else socket.emit("map_door_state",{matchId,doorIndex,open});
+  showDamagePopup(open?"ДВЕРІ ВІДЧИНЕНО":"ДВЕРІ ЗАЧИНЕНО");
 }
-function damageBreakableWood(direction){
-  if(!player||selectedWeapon==="knife")return;
+function damageBreakableWood(){
+  if(!player||selectedWeapon==="knife"||selectedMap!=="HILL_TOWN")return;
+  scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);
   raycaster.setFromCamera(new THREE.Vector2(0,0),camera);
-  const hits=raycaster.intersectObjects(breakableWood.filter(o=>o.visible),false);
-  const hit=hits.find(h=>h.distance<CLIENT_WEAPON_INFO[selectedWeapon].range*HILL_TOWN_SCALE);
-  if(!hit)return;
+  const destructibles=breakableWood.filter(o=>o.visible);
+  const blockers=mapObjects.filter(o=>o?.visible&&!o.userData.breakableWood);
+  const hits=raycaster.intersectObjects([...blockers,...destructibles],false);
+  const hit=hits.find(h=>h.distance<CLIENT_WEAPON_INFO[selectedWeapon].range);
+  if(!hit||!hit.object.userData.breakableWood)return;
   const obj=hit.object;obj.userData.hp=(obj.userData.hp||3)-1;
   if(obj.userData.hp<=0){
-    obj.visible=false;
-    const idx=mapObjects.indexOf(obj);if(idx>=0)mapObjects.splice(idx,1);
     const woodIndex=breakableWood.indexOf(obj);
+    applyDestroyedWood(woodIndex);
     if(woodIndex>=0){
       if(isTrainingMode)socket.emit("map_wood_destroyed",{trainingId,woodIndex});
       else socket.emit("map_wood_destroyed",{matchId,woodIndex});
     }
-    rebuildCollisionIndex();
     showDamagePopup("ДЕРЕВ’ЯНЕ УКРИТТЯ ЗРУЙНОВАНО");
   }else{
     obj.material.color.setHex(0x60402a);
@@ -606,13 +680,13 @@ function damageBreakableWood(direction){
 function addGameplayInteractables(){
   if(gameplayInteractablesBuilt||selectedMap!=="HILL_TOWN")return;
   gameplayInteractablesBuilt=true;
-  // These hinged doors sit in the two central lane openings, not across spawn exits.
-  addGameplayDoor(-1.4,-10,0);
-  addGameplayDoor(1.4,10,Math.PI);
-  addGameplayDoor(-10,1.4,Math.PI/2);
-  addGameplayDoor(10,-1.4,-Math.PI/2);
-  [[-6,-5],[6,5],[-16,12],[16,-12]].forEach(([x,z])=>addBreakableWood(x,z));
+  addGameplayDoor(0,-28,Math.PI/2);
+  addGameplayDoor(0,0,Math.PI/2);
+  addGameplayDoor(0,28,Math.PI/2);
+  // Stable six-barricade layout; each barricade owns six indexed wood parts.
+  [[-25,-28],[25,-28],[-25,0],[25,0],[-25,28],[25,28]].forEach(([x,z])=>addBreakableWood(x,z,Math.PI/2));
 }
+
 function clearHeldWeapon(){
   if(!heldWeaponRoot)return;
   while(heldWeaponRoot.children.length)heldWeaponRoot.remove(heldWeaponRoot.children[0]);
@@ -1056,13 +1130,13 @@ function rebuildCollisionIndex(){
     if(bounds.isEmpty())continue;
     const size=bounds.getSize(new THREE.Vector3());
     // Skip flat floors, map-wide merged meshes and ceilings; keep individual solid walls/props.
-    if(size.y<.24||bounds.max.y<.16||size.y>18||size.x>58||size.z>58||(size.x>28&&size.z>28))continue;
+    if(size.y<.24||bounds.max.y<.16||size.y>18||(size.x>28&&size.z>28))continue;
     collisionBoxes.push(bounds);
   }
   collisionIndexReady=true;
 }
 function worldLimit(){
-  return ({HILL_TOWN:70,NEON_YARD:205,FIELD_ARENA:330,M3_Maze:232})[selectedMap]||232;
+  return ({HILL_TOWN:56,NEON_YARD:205,FIELD_ARENA:330,M3_Maze:232})[selectedMap]||232;
 }
 function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
@@ -1300,7 +1374,7 @@ function shoot(){
   updateWeaponHud();
   const dir=new THREE.Vector3();
   camera.getWorldDirection(dir);dir.normalize();
-  damageBreakableWood(dir);
+  damageBreakableWood();
   if(isTrainingMode)socket.emit("training_shoot",{trainingId,weapon:selectedWeapon,dx:dir.x,dy:dir.y,dz:dir.z});
   else socket.emit("team_shoot",{matchId,weapon:selectedWeapon,dx:dir.x,dy:dir.y,dz:dir.z});
 }
@@ -1350,23 +1424,28 @@ addEventListener("mousedown",e=>{
   }
 });
 addEventListener("mouseup",e=>{if(e.button===0&&!isMobileDevice)fireHeld=false});
-$("weaponBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();cycleWeapon()});
+$("weaponBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();if(weaponSwipeConsumed){weaponSwipeConsumed=false;return}cycleWeapon()});
 $("interactBtn").addEventListener("touchstart",e=>{e.preventDefault();e.stopPropagation();interactWithNearestDoor()},{passive:false});
 $("interactBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();interactWithNearestDoor()});
 let weaponSwipeStart=null;
+let weaponSwipeConsumed=false;
 document.addEventListener("touchstart",e=>{
-  if(!isMobileDevice||e.target.closest("#mobile")||e.target.closest("button")||e.target.closest("input"))return;
-  const t=e.changedTouches[0];if(t)weaponSwipeStart={id:t.identifier,x:t.clientX,y:t.clientY};
+  const onWeaponButton=Boolean(e.target.closest("#weaponBtn"));
+  if(!isMobileDevice||(!onWeaponButton&&(e.target.closest("#mobile")||e.target.closest("button")||e.target.closest("input")||e.target.closest("textarea"))))return;
+  const t=e.changedTouches[0];if(t)weaponSwipeStart={id:t.identifier,x:t.clientX,y:t.clientY,onWeaponButton};
 },{passive:true});
 document.addEventListener("touchend",e=>{
   if(!isMobileDevice||!weaponSwipeStart)return;
   const t=Array.from(e.changedTouches).find(v=>v.identifier===weaponSwipeStart.id);if(!t)return;
   const dx=t.clientX-weaponSwipeStart.x,dy=t.clientY-weaponSwipeStart.y;
+  const startedOnButton=weaponSwipeStart.onWeaponButton;
   weaponSwipeStart=null;
-  if(Math.max(Math.abs(dx),Math.abs(dy))<70)return;
-  if(Math.abs(dy)>Math.abs(dx)&&dy>0)selectWeapon("akr");
-  else if(Math.abs(dx)>Math.abs(dy)&&dx<0)selectWeapon("p350");
-  else if(Math.abs(dx)>Math.abs(dy)&&dx>0)selectWeapon("knife");
+  if(Math.max(Math.abs(dx),Math.abs(dy))<65)return;
+  weaponSwipeConsumed=startedOnButton;
+  if(weaponSwipeConsumed)setTimeout(()=>{weaponSwipeConsumed=false},500);
+  if(Math.abs(dy)>Math.abs(dx)&&dy>0){selectWeapon("akr");showDamagePopup("AKR · КАЛАШ")}
+  else if(Math.abs(dx)>Math.abs(dy)&&dx<0){selectWeapon("p350");showDamagePopup("P350 · ПІСТОЛЕТ")}
+  else if(Math.abs(dx)>Math.abs(dy)&&dx>0){selectWeapon("knife");showDamagePopup("НІЖ")}
 },{passive:true});
 
 function setOverlayGame(){
@@ -1671,16 +1750,25 @@ socket.on("disconnect",()=>{
   setLoadingDetail("connectionLoadStatus","З’ЄДНАННЯ ВТРАЧЕНО","error");
   showReconnectPanel("Матч збережено. Натисни синю кнопку «ПІДКЛЮЧИТИСЯ», щоб повернутися, або «ВИЙТИ З МАТЧУ», щоб завершити його.");
 });
+socket.on("map_interaction_state",data=>applyMapInteractionState(data));
 socket.on("map_door_state",data=>{
-  if(!Number.isInteger(Number(data?.doorIndex)))return;
-  setGameplayDoorState(Number(data.doorIndex),data.open===true);
+  const idx=Number(data?.doorIndex);
+  if(!Number.isInteger(idx)||idx<0||idx>2)return;
+  if(!gameplayInteractablesBuilt){
+    const prior=pendingMapInteractionState||{doors:[false,false,false],destroyedWood:[]};
+    prior.doors[idx]=data.open===true;pendingMapInteractionState=prior;return;
+  }
+  setGameplayDoorState(idx,data.open===true);
 });
 socket.on("map_wood_destroyed",data=>{
-  const idx=Number(data?.woodIndex),obj=breakableWood[idx];
-  if(!Number.isInteger(idx)||!obj)return;
-  obj.visible=false;
-  const mapIndex=mapObjects.indexOf(obj);if(mapIndex>=0)mapObjects.splice(mapIndex,1);
-  rebuildCollisionIndex();
+  const idx=Number(data?.woodIndex);
+  if(!Number.isInteger(idx)||idx<0||idx>=breakableWood.length)return;
+  if(!gameplayInteractablesBuilt){
+    const prior=pendingMapInteractionState||{doors:[false,false,false],destroyedWood:[]};
+    if(!prior.destroyedWood.includes(idx))prior.destroyedWood.push(idx);
+    pendingMapInteractionState=prior;return;
+  }
+  applyDestroyedWood(idx);
 });
 socket.on("player_connection_state",data=>{
   const enemy=Object.values(enemies).find(e=>String(e.userId)===String(data?.userId));
