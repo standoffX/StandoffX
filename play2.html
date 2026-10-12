@@ -825,35 +825,54 @@ function makeFallbackKnife(){
   addPart(.012,.01,.22,0,-.007,-.12,edge);
   heldWeaponRoot.userData.realModel=false;
 }
+const WEAPON_MODEL_URLS={
+  akr:"https://raw.githubusercontent.com/petroulacl/fps-asset-kit/main/weapons/flat_guns_west/Flat%20Guns%20West/GLB/Rifle_Assault_West.glb",
+  p350:"https://raw.githubusercontent.com/petroulacl/fps-asset-kit/main/weapons/flat_guns_west/Flat%20Guns%20West/GLB/Pistol_Compact_West.glb"
+};
+function normalizeWeaponModel(model,targetLength){
+  const originalBounds=new THREE.Box3().setFromObject(model);
+  const originalSize=originalBounds.getSize(new THREE.Vector3());
+  const longest=Math.max(originalSize.x,originalSize.y,originalSize.z);
+  if(longest>0)model.scale.setScalar(targetLength/longest);
+  model.updateMatrixWorld(true);
+  const bounds=new THREE.Box3().setFromObject(model);
+  const center=bounds.getCenter(new THREE.Vector3());
+  model.position.sub(center);
+  model.rotation.y=Math.PI;
+  model.traverse(node=>{
+    if(!node.isMesh)return;
+    node.castShadow=false;node.receiveShadow=false;node.frustumCulled=true;
+    if(node.material&&"roughness" in node.material)node.material.roughness=Math.max(.4,node.material.roughness||.5);
+  });
+  return model;
+}
+async function loadRemoteWeapon(url,targetLength){
+  return normalizeWeaponModel(await loadGLBScene(url),targetLength);
+}
 async function loadHeldWeapon(){
-  setLoadingDetail("weaponLoadStatus","ЗАВАНТАЖЕННЯ МОДЕЛІ…","active");
   if(!heldWeaponRoot){
     heldWeaponRoot=new THREE.Group();
     heldWeaponRoot.position.set(.29,-.29,heldWeaponBaseZ);
     camera.add(heldWeaponRoot);
   }
   makeFallbackAK();
-  try{
-    const manifest=await loadHillTownManifest();
-    const url=findHillTownAssetUrl(manifest,ASSET_MATCHES.rifle);
-    if(!url){setLoadingDetail("weaponLoadStatus","ГОТОВО · ВБУДОВАНА ЗБРОЯ","done");return;}
-    const model=await loadGLBScene(url);
-    const box=new THREE.Box3().setFromObject(model);
-    const size=box.getSize(new THREE.Vector3());
-    const longest=Math.max(size.x,size.z);
-    if(longest>0)model.scale.setScalar(.82/longest);
-    const centeredBox=new THREE.Box3().setFromObject(model);
-    const center=centeredBox.getCenter(new THREE.Vector3());
-    model.position.sub(center);
-    model.rotation.y=Math.PI;
-    model.traverse(node=>{if(node.isMesh){node.castShadow=false;node.receiveShadow=false}});
-    akModelTemplate=model;
-    if(selectedWeapon==="akr")selectWeapon("akr",true);
-    setLoadingDetail("weaponLoadStatus","ГОТОВО","done");
-  }catch(error){
-    console.warn("[WEAPON] Keeping built-in AK-style fallback.",error);
-    setLoadingDetail("weaponLoadStatus","ГОТОВО · ВБУДОВАНА ЗБРОЯ","done");
-  }
+  setLoadingDetail("weaponLoadStatus","ЗАВАНТАЖЕННЯ МОДЕЛЕЙ ЗБРОЇ…","active");
+  const jobs=[
+    loadRemoteWeapon(WEAPON_MODEL_URLS.akr,.9).then(model=>{
+      akModelTemplate=model;
+      if(selectedWeapon==="akr")selectWeapon("akr",true);
+      return "AKR";
+    }),
+    loadRemoteWeapon(WEAPON_MODEL_URLS.p350,.5).then(model=>{
+      p350ModelTemplate=model;
+      if(selectedWeapon==="p350")selectWeapon("p350",true);
+      return "P350";
+    })
+  ];
+  const results=await Promise.allSettled(jobs);
+  const ready=results.filter(result=>result.status==="fulfilled").length;
+  if(ready!==2)console.warn("[WEAPONS] Using local fallbacks for missing models.",results.filter(result=>result.status==="rejected").map(result=>result.reason));
+  setLoadingDetail("weaponLoadStatus",ready===2?"AKR + P350 · ГОТОВО":ready===1?"1 МОДЕЛЬ ГОТОВА · ІНША ЗАПАСНА":"ВБУДОВАНІ МОДЕЛІ ГОТОВІ","done");
 }
 
 let mapLoaded=false;
