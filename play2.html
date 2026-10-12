@@ -473,9 +473,9 @@ function buildHillTownMap(){
     if(collidable)mapObjects.push(mesh);
     return mesh;
   };
-  const addGround=(x,z,w,d,material)=>{
+  const addGround=(x,z,w,d,material,y=-.045)=>{
     const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,d),material);
-    mesh.rotation.x=-Math.PI/2;mesh.position.set(x,-.045,z);
+    mesh.rotation.x=-Math.PI/2;mesh.position.set(x,y,z);
     mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);
     return mesh;
   };
@@ -497,12 +497,12 @@ function buildHillTownMap(){
   };
 
   // Fixed dimensions: playable floor is 112 x 96 units, with solid segmented boundary walls.
-  addGround(0,0,116,100,groundMat);
+  addGround(0,0,116,100,groundMat,-.08);
   for(const laneZ of [-28,0,28]){
-    addGround(0,laneZ,108,7.5,roadMat);
-    addGround(0,laneZ-4.4,108,.34,pavementMat);
-    addGround(0,laneZ+4.4,108,.34,pavementMat);
-    for(let x=-50;x<52;x+=8)addGround(x+4,laneZ,4,.12,mat(0xc5c7c0,.9));
+    addGround(0,laneZ,108,7.5,roadMat,-.05);
+    addGround(0,laneZ-4.4,108,.34,pavementMat,-.035);
+    addGround(0,laneZ+4.4,108,.34,pavementMat,-.035);
+    for(let x=-50;x<52;x+=8)addGround(x+4,laneZ,4,.12,mat(0xc5c7c0,.9),-.025);
   }
 
   wallAlongZ(-55.5,-48,48,wallShadowMat,1,6);
@@ -543,10 +543,10 @@ function buildHillTownMap(){
     addBox(x,.72,z,1.6,1.44,1.6,crateMat,0,true);
     addBox(x,1.48,z,1.72,.12,1.72,roofMat,0,true);
   }
-  addGround(-42,-28,8,8,spawnAMat);
-  addGround(-42,28,8,8,spawnAMat);
-  addGround(42,-28,8,8,spawnBMat);
-  addGround(42,28,8,8,spawnBMat);
+  addGround(-42,-28,8,8,spawnAMat,-.015);
+  addGround(-42,28,8,8,spawnAMat,-.015);
+  addGround(42,-28,8,8,spawnBMat,-.015);
+  addGround(42,28,8,8,spawnBMat,-.015);
 
   addGameplayInteractables();
   mapLoadFinished=true;mapLoaded=true;hillTownBuilding=false;
