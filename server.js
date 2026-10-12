@@ -1818,11 +1818,8 @@ function handleTeamShot(io, match, shooter, data) {
 
   const weaponId = normalizeWeaponId(data?.weapon);
   const weapon = WEAPON_BALANCE[weaponId];
-  const dx = Number(data?.dx);
-  const dy = Number(data?.dy);
-  const dz = Number(data?.dz);
+  const dx = Number(data?.dx), dy = Number(data?.dy), dz = Number(data?.dz);
   if (![dx, dy, dz].every(Number.isFinite)) return;
-
   const aim = new THREE_LIKE_VECTOR(dx, dy, dz);
   if (aim.length() < 0.01) return;
   aim.normalize();
@@ -1832,75 +1829,53 @@ function handleTeamShot(io, match, shooter, data) {
   if (now - (shooter.lastShotAt || 0) < weapon.fireDelay) return;
   shooter.lastShotAt = now;
 
-  if(weapon.type!=="melee"){
-    const impact=data?.impact;
-    const impactDistance=impact&&[impact.x,impact.y,impact.z].every(value=>Number.isFinite(Number(value)))
-      ?Math.hypot(Number(impact.x)-shooter.pos.x,Number(impact.y)-(shooter.pos.y+1.42),Number(impact.z)-shooter.pos.z)
-      :Infinity;
-    const safeImpact=impactDistance<=weapon.range+1
-      ?{x:Number(impact.x),y:Number(impact.y),z:Number(impact.z)}
-      :null;
-    io.to(match.id).emit("player_shot",{
-      shooterId:shooter.userId,
-      x:shooter.pos.x,y:shooter.pos.y+1.42,z:shooter.pos.z,
-      dx:aim.x,dy:aim.y,dz:aim.z,weapon:weaponId,impact:safeImpact
+  let best = null, bestDistance = Infinity;
+  for (const target of match.players) {
+    if (target.userId === shooter.userId || target.team === shooter.team || target.hp <= 0) continue;
+    const vx = target.pos.x - shooter.pos.x, vz = target.pos.z - shooter.pos.z;
+    const dist = Math.hypot(vx, vz);
+    if (weapon.type === "melee" ? (dist > weapon.range || dist < 0.25) : (dist > weapon.range || dist < 0.5)) continue;
+    const dot = (aim.x * vx + aim.z * vz) / (Math.max(0.01, Math.hypot(aim.x, aim.z)) * dist);
+    if (dot < (weapon.type === "melee" ? 0.72 : 0.985)) continue;
+    if (dist < bestDistance) { best = target; bestDistance = dist; }
+  }
+
+  const targetBlocked = Boolean(best) && !validateMapLineOfSight(match.map, shooter.pos, best.pos, match.mapState || {});
+  if (weapon.type !== "melee") {
+    const supplied = data?.impact;
+    const suppliedDistance = supplied && [supplied.x, supplied.y, supplied.z].every(value => Number.isFinite(Number(value)))
+      ? Math.hypot(Number(supplied.x) - shooter.pos.x, Number(supplied.y) - (shooter.pos.y + 1.42), Number(supplied.z) - shooter.pos.z)
+      : Infinity;
+    let impact = suppliedDistance <= weapon.range + 1
+      ? { x: Number(supplied.x), y: Number(supplied.y), z: Number(supplied.z) }
+      : null;
+    // The server is authoritative about a hit impact; clients only suggest impacts on scenery.
+    if (best && !targetBlocked) impact = { x: best.pos.x, y: best.pos.y + 1.05, z: best.pos.z };
+    io.to(match.id).emit("player_shot", {
+      shooterId: shooter.userId,
+      x: shooter.pos.x, y: shooter.pos.y + 1.42, z: shooter.pos.z,
+      dx: aim.x, dy: aim.y, dz: aim.z, weapon: weaponId, impact
     });
   }
 
-  let best = null;
-  let bestDistance = Infinity;
-
-  for (const target of match.players) {
-    if (target.userId === shooter.userId || target.team === shooter.team || target.hp <= 0) continue;
-
-    const vx = target.pos.x - shooter.pos.x;
-    const vz = target.pos.z - shooter.pos.z;
-    const dist = Math.hypot(vx, vz);
-    if (weapon.type === "melee" ? (dist > weapon.range || dist < 0.25) : (dist > weapon.range || dist < 0.5)) continue;
-
-    const dot = (aim.x * vx + aim.z * vz) / (Math.max(0.01, Math.hypot(aim.x, aim.z)) * dist);
-    if (dot < (weapon.type === "melee" ? 0.72 : 0.985)) continue;
-
-    if (dist < bestDistance) {
-      best = target;
-      bestDistance = dist;
-    }
-  }
-
-  if (!best) return;
-  if(!validateMapLineOfSight(match.map,shooter.pos,best.pos,match.mapState||{}))return;
-
+  if (!best || targetBlocked) return;
   const hitZone = detectWeaponHitZone(shooter.pos, best.pos, aim, bestDistance);
   const damage = calculateWeaponDamage(weaponId, hitZone, bestDistance);
   best.hp = Math.max(0, best.hp - damage);
   const killed = best.hp <= 0;
-  if (killed) {
-    best.deaths += 1;
-    shooter.kills += 1;
-    shooter.score += 1;
-  }
+  if (killed) { best.deaths += 1; shooter.kills += 1; shooter.score += 1; }
 
   io.to(match.id).emit("player_hit", {
-    shooterId: shooter.userId,
-    targetId: best.userId,
-    weapon: weaponId,
-    hitZone,
-    damage,
-    killed,
-    hp: best.hp,
-    score: shooter.score
+    shooterId: shooter.userId, targetId: best.userId,
+    weapon: weaponId, hitZone, damage, killed, hp: best.hp, score: shooter.score
   });
-
   if (!killed) return;
+
   setTimeout(() => {
     if (!activeMatches.has(match.id) || match.finished) return;
     respawnPlayer(match, best);
     io.to(match.id).emit("player_respawn", {
-      userId: best.userId,
-      x: best.pos.x,
-      y: best.pos.y,
-      z: best.pos.z,
-      hp: best.hp
+      userId: best.userId, x: best.pos.x, y: best.pos.y, z: best.pos.z, hp: best.hp
     });
   }, 1200);
 }
