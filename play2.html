@@ -250,6 +250,7 @@ let heldWeaponRoot=null;
 let heldWeaponBaseX=.29,heldWeaponBaseY=-.29,heldWeaponBaseZ=-.42;
 let weaponKick=0;
 let akModelTemplate=null;
+let p350ModelTemplate=null;
 const loadedAssetTemplates=new Map();
 const loadedAssetUrls=new Map();
 const ASSET_MATCHES={
@@ -1402,8 +1403,14 @@ function selectWeapon(weaponId,force=false){
       heldWeaponRoot.add(model);
       heldWeaponRoot.userData.realModel=true;
     }else makeFallbackAK();
-  }else if(selectedWeapon==="p350")makeFallbackP350();
-  else makeFallbackKnife();
+  }else if(selectedWeapon==="p350"){
+    if(p350ModelTemplate){
+      clearHeldWeapon();
+      const model=p350ModelTemplate.clone(true);
+      heldWeaponRoot.add(model);
+      heldWeaponRoot.userData.realModel=true;
+    }else makeFallbackP350();
+  }else makeFallbackKnife();
   positionHeldWeapon();
   updateWeaponHud();
 }
