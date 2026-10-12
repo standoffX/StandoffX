@@ -1351,10 +1351,10 @@ const SPAWNS = [
   { x: 15, y: 0, z: 25 }
 ];
 const HILL_TOWN_SPAWNS = [
-  { x: -20, y: 0, z: -14 },
-  { x: 20, y: 0, z: -14 },
-  { x: -20, y: 0, z: 14 },
-  { x: 20, y: 0, z: 14 }
+  { x: -20, y: 0, z: -12 },
+  { x: 20, y: 0, z: 12 },
+  { x: -20, y: 0, z: 12 },
+  { x: 20, y: 0, z: -12 }
 ];
 
 function getModeConfig(mode) {
@@ -1423,7 +1423,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const matchId = "match_" + Date.now() + "_" + crypto.randomBytes(2).toString("hex");
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
   const MATCH_SPAWNS = {
-    HILL_TOWN: [{x:-52,y:0,z:-52},{x:52,y:0,z:-52},{x:-52,y:0,z:52},{x:52,y:0,z:52}],
+    HILL_TOWN: [{x:-20,y:0,z:-12},{x:20,y:0,z:12},{x:-20,y:0,z:12},{x:20,y:0,z:-12}],
     NEON_YARD: [{x:-82,y:0,z:-82},{x:82,y:0,z:-82},{x:-82,y:0,z:82},{x:82,y:0,z:82}],
     FIELD_ARENA: [{x:-110,y:0,z:-110},{x:110,y:0,z:-110},{x:-110,y:0,z:110},{x:110,y:0,z:110}]
   };
@@ -1467,7 +1467,8 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     phaseTimer: null,
     joinTimer: null,
     remaining: GAME_SECONDS,
-    doorOpen: [false, false, false, false]
+    doorOpen: [false, false, false, false],
+    woodDestroyed: []
   };
 
   activeMatches.set(matchId, match);
@@ -1732,6 +1733,38 @@ function detectWeaponHitZone(shooterPos, targetPos, aim, horizontalDistance) {
   return "body";
 }
 
+function planeCrossing(a, b, plane) {
+  return (a < plane - 0.001 && b > plane + 0.001) || (a > plane + 0.001 && b < plane - 0.001);
+}
+
+function hillTownCrossingBlocked(from, to, doorOpen = []) {
+  const dx = to.x - from.x;
+  const dz = to.z - from.z;
+  for (const zWall of [-10, 10]) {
+    if (!planeCrossing(from.z, to.z, zWall) || Math.abs(dz) < 1e-6) continue;
+    const t = (zWall - from.z) / dz;
+    const xAtWall = from.x + dx * t;
+    if (Math.abs(xAtWall) > 1.85) return true;
+    const doorIndex = zWall === -10 ? 0 : 1;
+    if (doorOpen[doorIndex] !== true) return true;
+  }
+  for (const xWall of [-10, 10]) {
+    if (!planeCrossing(from.x, to.x, xWall) || Math.abs(dx) < 1e-6) continue;
+    const t = (xWall - from.x) / dx;
+    const zAtWall = from.z + dz * t;
+    if (Math.abs(zAtWall) > 1.85) return true;
+    const doorIndex = xWall === -10 ? 2 : 3;
+    if (doorOpen[doorIndex] !== true) return true;
+  }
+  return false;
+}
+
+function isMapLineBlocked(mapId, from, to, doorOpen = []) {
+  if (mapId !== "HILL_TOWN") return false;
+  if (Math.abs(to.x) > 25.2 || Math.abs(to.z) > 25.2) return true;
+  return hillTownCrossingBlocked(from, to, doorOpen);
+}
+
 function handleTeamShot(io, match, shooter, data) {
   if (!["team_fight", "allies"].includes(match.mode) || match.phase !== "game") return;
 
@@ -1750,6 +1783,14 @@ function handleTeamShot(io, match, shooter, data) {
   const now = Date.now();
   if (now - (shooter.lastShotAt || 0) < weapon.fireDelay) return;
   shooter.lastShotAt = now;
+  io.to(match.id).emit("player_shot", {
+    shooterId: shooter.userId,
+    x: shooter.pos.x,
+    y: shooter.pos.y + 1.42,
+    z: shooter.pos.z,
+    dx: aim.x, dy: aim.y, dz: aim.z,
+    weapon: weaponId
+  });
 
   let best = null;
   let bestDistance = Infinity;
@@ -1771,7 +1812,7 @@ function handleTeamShot(io, match, shooter, data) {
     }
   }
 
-  if (!best) return;
+  if (!best || isMapLineBlocked(match.map, shooter.pos, best.pos, match.doorOpen)) return;
 
   const hitZone = detectWeaponHitZone(shooter.pos, best.pos, aim, bestDistance);
   const damage = calculateWeaponDamage(weaponId, hitZone, bestDistance);
@@ -1819,7 +1860,7 @@ class THREE_LIKE_VECTOR {
 }
 
 function mapMovementLimit(mapId) {
-  return ({ HILL_TOWN: 65, NEON_YARD: 196, FIELD_ARENA: 320, M3_Maze: 228 })[mapId] || 228;
+  return ({ HILL_TOWN: 25.2, NEON_YARD: 196, FIELD_ARENA: 320, M3_Maze: 228 })[mapId] || 228;
 }
 function validateMove(player, data, mapId = "M3_Maze") {
   const now = Date.now();
@@ -1839,6 +1880,9 @@ function validateMove(player, data, mapId = "M3_Maze") {
   const dx = x - prev.x;
   const dz = z - prev.z;
   const planarDistance = Math.hypot(dx, dz);
+  const limitedScale = planarDistance > Math.max(0.35, 18 * elapsed) ? Math.max(0.35, 18 * elapsed) / planarDistance : 1;
+  const requested = { x: prev.x + dx * limitedScale, z: prev.z + dz * limitedScale };
+  if (isMapLineBlocked(mapId, prev, requested, match?.doorOpen)) return false;
 
   if (planarDistance > maxStep) {
     const scale = maxStep / planarDistance;
@@ -1922,7 +1966,7 @@ io.on("connection", socket => {
     const previous = trainingSessions.get(user.id);
     const sessionMap = ["field_test", "training"].includes(mode) ? normalizeMapId(data?.map) : cfg.map;
     const TRAINING_SPAWNS = {
-      HILL_TOWN: {x:0,y:0,z:42},
+      HILL_TOWN: {x:0,y:0,z:0},
       NEON_YARD: {x:0,y:0,z:115},
       FIELD_ARENA: {x:0,y:0,z:0},
       M3_Maze: {x:5,y:0,z:5}
@@ -1944,6 +1988,7 @@ io.on("connection", socket => {
       lastActionAt: 0,
       lastShotAt: 0,
       doorOpen: [false, false, false, false],
+      woodDestroyed: [],
       createdAt: Date.now()
     };
     if (previous?.bot?.despawnTimer) clearTimeout(previous.bot.despawnTimer);
@@ -1973,7 +2018,9 @@ io.on("connection", socket => {
       modeName: session.modeName,
       map: session.map,
       spawn: { ...session.playerPos },
-      bot: session.bot
+      bot: session.bot,
+      doorOpen: [...(session.doorOpen || [false, false, false, false])],
+      woodDestroyed: [...(session.woodDestroyed || [])]
     });
     if (session.bot) socket.emit("training_state", { bot: session.bot });
   });
@@ -2169,6 +2216,19 @@ io.on("connection", socket => {
     const map = normalizeMapId(data?.map);
     removeFromQueue(user.uuid || user.id);
 
+    if (data?.prototype === true && ["allies", "team_fight"].includes(mode)) {
+      const realPlayer = { socketId: socket.id, userId: user.id, nickname: user.nickname, uuid: user.uuid, mode, map, isBot: false };
+      const bots = Array.from({ length: Math.max(0, getRequiredPlayers(mode) - 1) }, (_, index) => ({
+        socketId: null,
+        userId: "BOT_" + crypto.randomBytes(4).toString("hex"),
+        nickname: "БОТ " + String(index + 1).padStart(2, "0"),
+        uuid: "", mode, map, isBot: true
+      }));
+      socket.emit("search_started", { mode, modeName: MODE_CONFIGS[mode].name, map, mapName: PLAYABLE_MAPS[map].name, prototype: true });
+      createMatch(io, mode, map, [realPlayer, ...bots]);
+      return;
+    }
+
     if (data?.testerBots === true && canUseTesterModes(user) && ["allies", "team_fight"].includes(mode)) {
       const realPlayer = { socketId: socket.id, userId: user.id, nickname: user.nickname, uuid: user.uuid, mode, map, isBot: false };
       const bots = Array.from({ length: Math.max(0, getRequiredPlayers(mode) - 1) }, (_, index) => ({
@@ -2246,6 +2306,8 @@ io.on("connection", socket => {
       map: match.map,
       mode: match.mode,
       modeName: match.modeName,
+      doorOpen: [...(match.doorOpen || [false, false, false, false])],
+      woodDestroyed: [...(match.woodDestroyed || [])],
       me: {
         userId: player.userId,
         uuid: player.uuid || "",
@@ -2360,12 +2422,32 @@ io.on("connection", socket => {
     if (match) {
       const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
       if (!player || player.hp <= 0 || match.map !== "HILL_TOWN") return;
+      if (!match.woodDestroyed.includes(woodIndex)) match.woodDestroyed.push(woodIndex);
       socket.to(match.id).emit("map_wood_destroyed", { woodIndex });
       return;
     }
     const session = trainingSessions.get(socket.user?.id);
     if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || session.map !== "HILL_TOWN") return;
+    if (!session.woodDestroyed.includes(woodIndex)) session.woodDestroyed.push(woodIndex);
     socket.to(session.id).emit("map_wood_destroyed", { woodIndex });
+  });
+
+  socket.on("map_door_state", data => {
+    const doorIndex = Number(data?.doorIndex);
+    if (!Number.isInteger(doorIndex) || doorIndex < 0 || doorIndex > 3) return;
+    const open = data?.open === true;
+    const match = activeMatches.get(cleanText(data?.matchId, 100));
+    if (match) {
+      const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
+      if (!player || player.hp <= 0 || match.map !== "HILL_TOWN") return;
+      match.doorOpen[doorIndex] = open;
+      socket.to(match.id).emit("map_door_state", { doorIndex, open });
+      return;
+    }
+    const session = trainingSessions.get(socket.user?.id);
+    if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || session.map !== "HILL_TOWN") return;
+    session.doorOpen[doorIndex] = open;
+    socket.to(session.id).emit("map_door_state", { doorIndex, open });
   });
 
   socket.on("player_moved", data => {
