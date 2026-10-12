@@ -1800,8 +1800,8 @@ function segmentIntersectsRect2d(from,to,rect){
 const SERVER_MAP_LIMITS = Object.freeze({
   // Keep server limits just inside the physical perimeter walls built by the client.
   M3_Maze: { x: 231.5, z: 231.5 },
-  FIELD_ARENA: { x: 296.6, z: 296.6 },
-  NEON_YARD: { x: 172.6, z: 172.6 }
+  FIELD_ARENA: { x: 291.5, z: 291.5 },
+  NEON_YARD: { x: 167.5, z: 167.5 }
 });
 const SERVER_MAP_BLOCKERS = Object.freeze({
   FIELD_ARENA: [
@@ -1810,7 +1810,13 @@ const SERVER_MAP_BLOCKERS = Object.freeze({
     { minX: 36, maxX: 52, minZ: -29, maxZ: -19 },
     { minX: -58, maxX: -42, minZ: -41, maxZ: -31 },
     { minX: -12, maxX: 12, minZ: 65, maxZ: 75 },
-    { minX: 71, maxX: 81, minZ: 44, maxZ: 68 }
+    { minX: 71, maxX: 81, minZ: 44, maxZ: 68 },
+    { minX: -205, maxX: -175, minZ: -7, maxZ: 7 },
+    { minX: 175, maxX: 205, minZ: -7, maxZ: 7 },
+    { minX: -19, maxX: 19, minZ: 182, maxZ: 198 },
+    { minX: -19, maxX: 19, minZ: -198, maxZ: -182 },
+    { minX: -190, maxX: -170, minZ: 170, maxZ: 190 },
+    { minX: 170, maxX: 190, minZ: -190, maxZ: -170 }
   ],
   NEON_YARD: [
     { minX: -57, maxX: -39, minZ: -47, maxZ: -33 },
