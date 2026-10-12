@@ -198,20 +198,37 @@ const camera=new THREE.PerspectiveCamera(74,innerWidth/innerHeight,.08,700);
 // Camera-attached weapon and view models must belong to the rendered scene graph.
 scene.add(camera);
 const renderer=new THREE.WebGLRenderer({
-  antialias:false,
+  // Desktop gets antialiasing and soft shadows; touch devices keep a lighter profile.
+  antialias:!isMobileDevice,
   powerPreference:"high-performance",
   stencil:false,
   depth:true,
   preserveDrawingBuffer:false
 });
 renderer.setSize(innerWidth,innerHeight,false);
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25));
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?1.25:1.7));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.12;
+renderer.shadowMap.enabled=!isMobileDevice;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 $("game").appendChild(renderer.domElement);
 
-scene.add(new THREE.HemisphereLight(0xffffff,0x344252,1.15));
-const keyLight=new THREE.DirectionalLight(0xffffff,.7);
-keyLight.position.set(30,60,20);scene.add(keyLight);
+scene.add(new THREE.HemisphereLight(0xe7f3ff,0x4b4b43,1.35));
+scene.add(new THREE.AmbientLight(0xffffff,.22));
+const keyLight=new THREE.DirectionalLight(0xfff1dc,2.0);
+keyLight.position.set(-42,78,32);
+keyLight.castShadow=!isMobileDevice;
+keyLight.shadow.mapSize.set(isMobileDevice?512:1536,isMobileDevice?512:1536);
+keyLight.shadow.camera.left=-90;
+keyLight.shadow.camera.right=90;
+keyLight.shadow.camera.top=90;
+keyLight.shadow.camera.bottom=-90;
+keyLight.shadow.camera.near=.5;
+keyLight.shadow.camera.far=240;
+keyLight.shadow.bias=-.00016;
+keyLight.shadow.normalBias=.035;
+scene.add(keyLight);
 
 const controls=new PointerLockControls(camera,renderer.domElement);
 let canControl=false;
@@ -458,7 +475,8 @@ function buildHillTownMap(){
   const addBox=(x,y,z,w,h,d,material,rotationY=0,collidable=true)=>{
     const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
     mesh.position.set(x,y,z);mesh.rotation.y=rotationY;
-    mesh.castShadow=false;mesh.receiveShadow=false;
+    mesh.castShadow=!isMobileDevice&&Boolean(collidable);
+    mesh.receiveShadow=!isMobileDevice;
     mesh.userData.mapSolid=Boolean(collidable);
     scene.add(mesh);
     if(collidable)mapObjects.push(mesh);
@@ -467,7 +485,7 @@ function buildHillTownMap(){
   const addGround=(x,z,w,d,material,y=-.045)=>{
     const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,d),material);
     mesh.rotation.x=-Math.PI/2;mesh.position.set(x,y,z);
-    mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
+    mesh.castShadow=false;mesh.receiveShadow=!isMobileDevice;scene.add(mesh);mapObjects.push(mesh);
     return mesh;
   };
   const wallAlongZ=(x,start,end,material,thickness=.9,height=5.8)=>{
@@ -1031,8 +1049,8 @@ function loadMap(){
     map.traverse(n=>{
       if(n.isMesh){
         n.frustumCulled=true;
-        n.castShadow=false;
-        n.receiveShadow=false;
+        n.castShadow=!isMobileDevice;
+        n.receiveShadow=!isMobileDevice;
         mapObjects.push(n);
       }
     });
@@ -1226,7 +1244,7 @@ function rebuildCollisionIndex(){
   collisionIndexReady=true;
 }
 function worldLimit(){
-  return ({HILL_TOWN:56,NEON_YARD:205,FIELD_ARENA:330,M3_Maze:232})[selectedMap]||232;
+  return ({HILL_TOWN:54.2,NEON_YARD:170,FIELD_ARENA:296,M3_Maze:232})[selectedMap]||232;
 }
 function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
