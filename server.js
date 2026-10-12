@@ -2007,7 +2007,7 @@ io.on("connection", socket => {
     const previous = trainingSessions.get(user.id);
     const sessionMap = ["field_test", "training"].includes(mode) ? normalizeMapId(data?.map) : cfg.map;
     const TRAINING_SPAWNS = {
-      HILL_TOWN: {x:-38,y:0,z:0},
+      HILL_TOWN: {x:-42,y:0,z:0},
       NEON_YARD: {x:0,y:0,z:115},
       FIELD_ARENA: {x:0,y:0,z:0},
       M3_Maze: {x:5,y:0,z:5}
@@ -2032,7 +2032,29 @@ io.on("connection", socket => {
       createdAt: Date.now()
     };
     if (previous?.bot?.despawnTimer) clearTimeout(previous.bot.despawnTimer);
+    if (previous?.botTimer) clearInterval(previous.botTimer);
     trainingSessions.set(user.id, session);
+    if(session.mode==="field_test"&&session.bot){
+      session.botTimer=setInterval(()=>{
+        const current=trainingSessions.get(user.id);
+        if(current!==session||!current.bot||current.bot.hp<=0||!current.socketId)return;
+        const bot=current.bot,p=current.playerPos;
+        const dx=p.x-bot.x,dz=p.z-bot.z,dist=Math.hypot(dx,dz)||1;
+        bot.rotY=Math.atan2(-dx,-dz);
+        if(dist>3){
+          const step=Math.min(.48,dist-2.4),target={x:bot.x+dx/dist*step,z:bot.z+dz/dist*step};
+          if(current.map!=="HILL_TOWN"||!hillTownPathBlocked({x:bot.x,z:bot.z},target,current.mapState||{})){
+            bot.x=target.x;bot.z=target.z;bot.action="running";
+          }else{
+            bot.rotY+=Math.PI/2;bot.action="idle";
+          }
+        }else{
+          bot.action="idle";
+        }
+        bot.updatedAt=Date.now();
+        io.to(current.id).emit("training_state",{bot});
+      },260);
+    }
     socket.emit("training_started", {
       trainingId: session.id,
       userId: user.id,
@@ -2236,6 +2258,7 @@ io.on("connection", socket => {
     const session = trainingSessions.get(socket.user?.id);
     if (!session || session.id !== cleanText(data?.trainingId, 100)) return;
     if (session.socketId !== null && session.socketId !== socket.id) return;
+    if(session.botTimer)clearInterval(session.botTimer);
     trainingSessions.delete(socket.user.id);
   });
 
@@ -2408,6 +2431,41 @@ io.on("connection", socket => {
     const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
     if (!player || player.hp <= 0) return;
     handleTeamShot(io, match, player, data);
+  });
+
+  socket.on("map_door_shot", data => {
+    const doorIndex=Number(data?.doorIndex),weaponId=normalizeWeaponId(data?.weapon),weapon=WEAPON_BALANCE[weaponId];
+    if(!Number.isInteger(doorIndex)||doorIndex<0||doorIndex>=HILL_TOWN_DOOR_CENTERS.length||weapon.type==="melee")return;
+    const dx=Number(data?.dx),dy=Number(data?.dy),dz=Number(data?.dz);
+    if(![dx,dy,dz].every(Number.isFinite))return;
+    const aimLength=Math.hypot(dx,dy,dz);
+    if(aimLength<.01)return;
+    const aim={x:dx/aimLength,y:dy/aimLength,z:dz/aimLength};
+    const checkHit=(position)=>{
+      const [x,z]=HILL_TOWN_DOOR_CENTERS[doorIndex],vx=x-position.x,vz=z-position.z,dist=Math.hypot(vx,vz);
+      const horizontalAim=Math.hypot(aim.x,aim.z);
+      if(dist<.5||dist>weapon.range||horizontalAim<.01)return false;
+      const dot=(aim.x*vx+aim.z*vz)/(horizontalAim*dist);
+      const offAxis=Math.abs(aim.x*vz-aim.z*vx)/horizontalAim;
+      const predictedY=(Number(position.y)||0)+1.42+(aim.y/horizontalAim)*dist;
+      return dot>.994&&offAxis<1.65&&predictedY>.05&&predictedY<2.7;
+    };
+    const match=activeMatches.get(cleanText(data?.matchId,100));
+    if(match){
+      const player=match.players.find(p=>(p.uuid?p.uuid===socket.user.uuid:p.userId===socket.user.id)&&p.socketId===socket.id);
+      if(!player||player.hp<=0||match.phase!=="game"||match.map!=="HILL_TOWN"||!checkHit(player.pos))return;
+      if(!match.mapState)match.mapState=createMapInteractionState();
+      if(match.mapState.doors[doorIndex])return;
+      match.mapState.doors[doorIndex]=true;
+      io.to(match.id).emit("map_door_state",{doorIndex,open:true,byShot:true});
+      return;
+    }
+    const session=trainingSessions.get(socket.user?.id);
+    if(!session||session.socketId!==socket.id||session.id!==cleanText(data?.trainingId,100)||session.map!=="HILL_TOWN"||!checkHit(session.playerPos))return;
+    if(!session.mapState)session.mapState=createMapInteractionState();
+    if(session.mapState.doors[doorIndex])return;
+    session.mapState.doors[doorIndex]=true;
+    io.to(session.id).emit("map_door_state",{doorIndex,open:true,byShot:true});
   });
 
   socket.on("map_door_state", data => {
