@@ -1511,7 +1511,7 @@ function rebuildCollisionIndex(){
   collisionIndexReady=true;
 }
 function worldLimit(){
-  return ({HILL_TOWN:54.2,NEON_YARD:170,FIELD_ARENA:296,M3_Maze:232})[selectedMap]||232;
+  return ({HILL_TOWN:54.2,NEON_YARD:167,FIELD_ARENA:291,M3_Maze:230.5})[selectedMap]||230.5;
 }
 function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
