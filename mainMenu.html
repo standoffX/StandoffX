@@ -475,37 +475,35 @@ function applyTheme(theme){
   localStorage.setItem("sx_theme",selectedTheme);
   document.querySelectorAll("[data-theme-choice]").forEach(button=>button.classList.toggle("active",button.dataset.themeChoice===selectedTheme));
 }
+function availableMapIds(){
+  if(canTest()&&testGameplayMode==="prototype")return Object.keys(MAPS);
+  return MODE_MAPS[selectedMode]||MODE_MAPS.allies;
+}
 function renderMapSelection(){
-  document.querySelectorAll("[data-map]").forEach(button=>button.classList.toggle("active",button.dataset.map===selectedMap));
+  const allowed=availableMapIds();
+  if(!allowed.includes(selectedMap)){
+    selectedMap=allowed[0]||"HILL_TOWN";
+    localStorage.setItem("sx_map",selectedMap);
+  }
+  document.querySelectorAll("[data-map]").forEach(button=>{
+    const available=allowed.includes(button.dataset.map);
+    button.hidden=!available;
+    button.classList.toggle("active",button.dataset.map===selectedMap);
+    button.setAttribute("aria-pressed",String(button.dataset.map===selectedMap));
+  });
   const label=$("selectedMapText");
-  if(label)label.textContent=MAPS[selectedMap]||MAPS.M3_Maze;
+  if(label)label.textContent=MAPS[selectedMap]||"HILL TOWN";
 }
 function show(view){
   document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("active",s.id===view));
   document.querySelectorAll(".rail button[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
   $("title") && ($("title").textContent=view.toUpperCase());
-  if(view==="profile")refreshProfileIdentity();
   if(view==="friends")loadFriends();
   if(view==="clan")loadClan();
   if(view==="inventory")loadInventory();
   if(view==="market")loadMarket();
 }
-async function refreshProfileIdentity(){
-  const uuidEl=$("profilePageUuid");
-  if(uuidEl)uuidEl.textContent=me?.uuid||"Завантаження UUID…";
-  try{
-    let fresh=(await api("/api/me")).user;
-    if(!fresh?.uuid){
-      const fallback=await api("/api/user-data?id="+encodeURIComponent(me?.id||""));
-      fresh=fallback.user||fresh;
-    }
-    if(fresh){me={...me,...fresh};render();}
-    if(uuidEl)uuidEl.textContent=me?.uuid||"UUID не повернув сервер";
-  }catch{
-    if(uuidEl)uuidEl.textContent=me?.uuid||"UUID не вдалося завантажити";
-  }
-}
-function render(){
+function render(){function render(){
   if(!me)return;
   const id=cleanId(me.id);
   $("topId").textContent="ID "+id;
@@ -523,7 +521,6 @@ function render(){
   $("profileAvatar").src=me.playerAvatar||"/avatars/default.jpg";
   $("profilePageNick").textContent=me.nickname||"PLAYER";
   $("profilePageId").textContent=id;
-  $("profilePageUuid").textContent=me.uuid||"Завантаження UUID…";
   renderMapSelection();
   $("profileXP").textContent=me.XP||0;$("profileGold").textContent=me.gold||0;
   $("profileComp").textContent=me.MMRCompetitive||1000;$("profileAllies").textContent=me.MMRAllies||1000;
@@ -532,7 +529,7 @@ function render(){
   $("verifiedMark").textContent=me.isVerified?"✓ VERIFIED":"";
   $("adminBtn").style.display=(me.isAdmin||me.id==="Dev_01")?"grid":"none";
   const testerSwitch=$("testerGameplaySwitch");
-  if(testerSwitch)testerSwitch.style.display="flex";
+  if(testerSwitch)testerSwitch.style.display=canTest()?"flex":"none";
   const testerKeybinds=$("testKeybindSettings");
   if(testerKeybinds)testerKeybinds.style.display=canTest()?"block":"none";
   $("passXp").textContent=(me.XP||0)%1000+" / 1000 XP";
@@ -548,14 +545,15 @@ function renderMode(){
     b.setAttribute("aria-pressed",String(active));
   });
   const publicMode=MODES[selectedMode]||MODES.allies;
-  const gameplayLabel=testGameplayMode==="prototype"?"ПРОТОТИП · БОТИ":"ГРА · РЕАЛЬНІ ГРАВЦІ";
-  $("selectedModeText").textContent=gameplayLabel+" · "+publicMode;
-  if($("confirmModeBtn"))$("confirmModeBtn").textContent=testGameplayMode==="prototype"?"ЗАПУСТИТИ ПРОТОТИП":"ЗНАЙТИ РЕАЛЬНИХ ГРАВЦІВ";
+  const gameplayLabel=canTest()?(testGameplayMode==="prototype"?"ПРОТОТИП · БОТИ":"ГРА · РЕАЛЬНІ ГРАВЦІ"):"";
+  $("selectedModeText").textContent=(gameplayLabel?gameplayLabel+" · ":"")+publicMode;
+  if($("confirmModeBtn"))$("confirmModeBtn").textContent=canTest()&&testGameplayMode==="prototype"?"ЗАПУСТИТИ ПРОТОТИП":"ПОЧАТИ ПОШУК МАТЧУ";
+  renderMapSelection();
 }
 document.querySelectorAll(".rail button[data-view]").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.view==="admin"){location.href="/admin";return}show(b.dataset.view)}));
 document.querySelectorAll("[data-theme-choice]").forEach(button=>button.addEventListener("click",()=>applyTheme(button.dataset.themeChoice)));
 document.querySelectorAll("[data-map]").forEach(button=>button.addEventListener("click",()=>{
-  if(!MAPS[button.dataset.map])return;
+  if(!availableMapIds().includes(button.dataset.map))return;
   selectedMap=button.dataset.map;
   localStorage.setItem("sx_map",selectedMap);
   renderMapSelection();
@@ -564,6 +562,7 @@ document.querySelectorAll(".modebtn[data-mode]").forEach(b=>b.addEventListener("
   selectedMode=b.dataset.mode;localStorage.setItem("sx_mode",selectedMode);renderMode();
 }));
 document.querySelectorAll("[data-test-gameplay]").forEach(b=>b.addEventListener("click",()=>{
+  if(!canTest())return;
   testGameplayMode=b.dataset.testGameplay==="real"?"real":"prototype";
   localStorage.setItem("sx_test_gameplay",testGameplayMode);
   renderMode();
