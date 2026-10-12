@@ -115,6 +115,7 @@ function saveMessages() { writeJson(MESSAGES_PATH, messages); mongoSave("state_m
 function saveInventory() { writeJson(INVENTORY_PATH, inventory); mongoSave("state_inventory", inventory); }
 let mongoClient = null;
 let mongoDb = null;
+let mongoConnecting = false;
 const mongoStatus = {
   provider: "MongoDB Atlas",
   configured: Boolean(process.env.MONGODB_URI || process.env.MONGO_URI),
@@ -169,6 +170,9 @@ async function checkMongoConnection() {
 }
 
 async function initMongo() {
+  if (mongoConnecting) return false;
+  mongoConnecting = true;
+  mongoStatus.lastCheckAt = new Date().toISOString();
   const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
   mongoStatus.configured = Boolean(uri);
   mongoStatus.database = process.env.MONGODB_DB || "standoffx";
@@ -177,6 +181,7 @@ async function initMongo() {
     mongoStatus.state = "not_configured";
     mongoStatus.lastError = "MONGODB_URI/MONGO_URI is missing; JSON fallback is active.";
     console.warn("[DB] MongoDB Atlas is NOT configured. Set MONGODB_URI in Render Environment.");
+    mongoConnecting = false;
     return false;
   }
   mongoStatus.state = "connecting";
@@ -233,6 +238,7 @@ async function initMongo() {
     saveUsers();
     saveClans();
     console.log("[DB] MongoDB Atlas connected:", mongoStatus.database);
+    mongoConnecting = false;
     return true;
   } catch (err) {
     const failedClient = mongoClient;
@@ -243,9 +249,17 @@ async function initMongo() {
     mongoStatus.lastError = cleanText(err.message, 240);
     try { await failedClient?.close(); } catch {}
     console.error("[DB] MongoDB Atlas connection failed:", mongoStatus.lastError);
+    mongoConnecting = false;
     return false;
   }
 }
+
+const mongoReconnectTimer = setInterval(() => {
+  if (!mongoStatus.configured || mongoDb || mongoConnecting) return;
+  console.warn("[DB] Atlas is disconnected; retrying connection.");
+  void initMongo();
+}, 30000);
+mongoReconnectTimer.unref?.();
 
 function mongoSave(name, data) {
   if (!mongoDb) return;
