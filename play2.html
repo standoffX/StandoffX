@@ -742,6 +742,8 @@ function addGameplayInteractables(doorTemplate=null){
 }
 
 function clearHeldWeapon(){
+  if(activeWeaponMixer){activeWeaponMixer.stopAllAction();activeWeaponMixer=null}
+  activeWeaponAnimationClips=[];
   if(!heldWeaponRoot)return;
   while(heldWeaponRoot.children.length)heldWeaponRoot.remove(heldWeaponRoot.children[0]);
   heldWeaponRoot.userData.realModel=false;
@@ -1386,17 +1388,32 @@ function selectWeapon(weaponId,force=false){
     heldWeaponRoot=new THREE.Group();
     camera.add(heldWeaponRoot);
   }
-  if(selectedWeapon==="akr"){
-    if(akModelTemplate){
-      clearHeldWeapon();
-      const model=akModelTemplate.clone(true);
-      heldWeaponRoot.add(model);
-      heldWeaponRoot.userData.realModel=true;
-    }else makeFallbackAK();
-  }else if(selectedWeapon==="p350")makeFallbackP350();
+  clearHeldWeapon();
+  const template=weaponModelTemplates.get(selectedWeapon);
+  if(template){
+    const model=template.scene.clone(true);
+    heldWeaponRoot.add(model);
+    heldWeaponRoot.userData.realModel=true;
+    activeWeaponAnimationClips=Array.isArray(template.animations)?template.animations:[];
+    if(activeWeaponAnimationClips.length)activeWeaponMixer=new THREE.AnimationMixer(model);
+  }else if(selectedWeapon==="akr")makeFallbackAK();
+  else if(selectedWeapon==="p350")makeFallbackP350();
   else makeFallbackKnife();
   positionHeldWeapon();
   updateWeaponHud();
+}
+function playWeaponAnimation(pattern){
+  if(!activeWeaponMixer||!activeWeaponAnimationClips.length)return false;
+  const terms=Array.isArray(pattern)?pattern:[pattern];
+  const clip=activeWeaponAnimationClips.find(item=>terms.some(term=>item.name.toLowerCase().includes(term.toLowerCase())));
+  if(!clip)return false;
+  activeWeaponMixer.stopAllAction();
+  const action=activeWeaponMixer.clipAction(clip);
+  action.reset();
+  action.setLoop(THREE.LoopOnce,1);
+  action.clampWhenFinished=true;
+  action.play();
+  return true;
 }
 function cycleWeapon(){
   const order=["akr","p350","knife"];
