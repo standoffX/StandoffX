@@ -18,7 +18,9 @@ if (!ADMIN_PASSWORD) console.warn("[AUTH] ADMIN_PASSWORD is not set; master acco
 
 
 const ROOT = __dirname;
-const USERS_PATH = path.join(ROOT, "account.json");
+const DATA_DIR = path.join(ROOT, "data");
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+const USERS_PATH = path.join(DATA_DIR, "users.local.json");
 const CLANS_PATH = path.join(ROOT, "clans.json");
 const MESSAGES_PATH = path.join(ROOT, "messages.json");
 const MARKET_PATH = path.join(ROOT, "marketplace.json");
@@ -162,7 +164,7 @@ async function checkMongoConnection() {
     mongoDb = null;
     mongoStatus.connected = false;
     mongoStatus.state = "error";
-    mongoStatus.lastError = cleanText(err.message, 240);
+    mongoStatus.lastError = safeMongoError(err);
     try { await failedClient?.close(); } catch {}
     return { ok: false, status: publicMongoStatus(), message: mongoStatus.lastError };
   }
@@ -230,6 +232,16 @@ async function initMongo() {
       if (user.clan && !clans[user.clan]) user.clan = null;
     }
     migratePlayerIds();
+    // The verified badge is always manual. Clear legacy defaults once, then let admins grant it.
+    const verificationMigration = "verified-defaults-off-v1";
+    const alreadyMigrated = await mongoDb.collection("schema_migrations").findOne({ _id: verificationMigration });
+    if (!alreadyMigrated) {
+      for (const user of users) user.isVerified = false;
+      await mongoDb.collection("state_users").replaceOne(
+        { _id: "main" }, { _id: "main", data: users }, { upsert: true }
+      );
+      await mongoDb.collection("schema_migrations").insertOne({ _id: verificationMigration, appliedAt: new Date() });
+    }
     saveUsers();
     saveClans();
     console.log("[DB] MongoDB Atlas connected:", mongoStatus.database);
@@ -240,21 +252,30 @@ async function initMongo() {
     mongoDb = null;
     mongoStatus.connected = false;
     mongoStatus.state = "error";
-    mongoStatus.lastError = cleanText(err.message, 240);
+    mongoStatus.lastError = safeMongoError(err);
     try { await failedClient?.close(); } catch {}
     console.error("[DB] MongoDB Atlas connection failed:", mongoStatus.lastError);
     return false;
   }
 }
 
+const mongoWriteQueues = new Map();
+function safeMongoError(err) {
+  return cleanText(err?.message || "Unknown MongoDB error", 240)
+    .replace(/mongodb(?:\\+srv)?:\\/\\/[^\\s@]+@/gi, "mongodb+srv://[credentials-redacted]@")
+    .replace(/password=[^&\\s]+/gi, "password=[redacted]");
+}
 function mongoSave(name, data) {
   if (!mongoDb) return;
-  mongoDb.collection(name).replaceOne(
+  const db = mongoDb;
+  const snapshot = JSON.parse(JSON.stringify(data));
+  const previous = mongoWriteQueues.get(name) || Promise.resolve();
+  const write = previous.catch(() => {}).then(() => db.collection(name).replaceOne(
     { _id: "main" },
-    { _id: "main", data },
+    { _id: "main", data: snapshot },
     { upsert: true }
-  ).catch(err => {
-    mongoStatus.lastError = cleanText(err.message, 240);
+  )).catch(err => {
+    mongoStatus.lastError = safeMongoError(err);
     if (err.name === "MongoNetworkError" || err.name === "MongoServerSelectionError") {
       const failedClient = mongoClient;
       mongoClient = null;
@@ -265,6 +286,8 @@ function mongoSave(name, data) {
     }
     console.error("[DB] Write failed:", mongoStatus.lastError);
   });
+  mongoWriteQueues.set(name, write);
+  write.finally(() => { if (mongoWriteQueues.get(name) === write) mongoWriteQueues.delete(name); });
 }
 
 function saveMarket() {
@@ -1304,7 +1327,10 @@ const PLAYABLE_MAPS = Object.freeze({
   M3_Maze: { id: "M3_Maze", name: "M3 MAZE", kind: "model" },
   FIELD_ARENA: { id: "FIELD_ARENA", name: "FIELD ARENA", kind: "arena" },
   NEON_YARD: { id: "NEON_YARD", name: "NEON YARD", kind: "neon" },
-  HILL_TOWN: { id: "HILL_TOWN", name: "HILL TOWN", kind: "hill-town" }
+  HILL_TOWN: { id: "HILL_TOWN", name: "HILL TOWN", kind: "hill-town" },
+  TF_COURTYARD: { id: "TF_COURTYARD", name: "COURTYARD", kind: "team-fight" },
+  TF_DEPOT: { id: "TF_DEPOT", name: "DEPOT", kind: "team-fight" },
+  BOMB_RAVINE: { id: "BOMB_RAVINE", name: "RAVINE A/B", kind: "bomb-sites" }
 });
 function normalizeMapId(value) {
   const id = cleanText(value, 32);
@@ -1312,28 +1338,21 @@ function normalizeMapId(value) {
 }
 
 const MODE_CONFIGS = {
-  allies: {
-    id: "allies",
-    name: "СОЮЗНИКИ",
-    short: "AL",
-    map: "HILL_TOWN",
-    requiredPlayers: 4
-  },
-  hide_seek: {
-    id: "hide_seek",
-    name: "HIDE & SEEK",
-    short: "HS",
-    map: "M3_Maze",
-    requiredPlayers: 3
-  },
-  team_fight: {
-    id: "team_fight",
-    name: "TEAM FIGHT",
-    short: "TF",
-    map: "HILL_TOWN",
-    requiredPlayers: 4
-  }
+  allies: { id: "allies", name: "СОЮЗНИКИ", short: "AL", map: "HILL_TOWN", requiredPlayers: 4 },
+  hide_seek: { id: "hide_seek", name: "HIDE & SEEK", short: "HS", map: "M3_Maze", requiredPlayers: 3 },
+  team_fight: { id: "team_fight", name: "КОМАНДНИЙ БІЙ", short: "TF", map: "TF_COURTYARD", requiredPlayers: 6 },
+  bomb: { id: "bomb", name: "ЗАКЛАДКА БОМБИ", short: "BOMB", map: "BOMB_RAVINE", requiredPlayers: 6 }
 };
+const MODE_MAPS = Object.freeze({
+  allies: ["HILL_TOWN", "BOMB_RAVINE"],
+  team_fight: ["TF_COURTYARD", "TF_DEPOT"],
+  bomb: ["BOMB_RAVINE"]
+});
+function normalizeMapForMode(mode, mapId) {
+  const allowed = MODE_MAPS[mode] || MODE_MAPS.allies;
+  const requested = normalizeMapId(mapId);
+  return allowed.includes(requested) ? requested : MODE_CONFIGS[mode]?.map || "HILL_TOWN";
+}
 
 const TESTER_MODE_CONFIGS = {
   training: { id: "training", name: "TRAINING", map: "HILL_TOWN", kind: "bot-training" },
@@ -1351,10 +1370,10 @@ const SPAWNS = [
   { x: 15, y: 0, z: 25 }
 ];
 const HILL_TOWN_SPAWNS = [
-  { x: -20, y: 0, z: -12 },
-  { x: 20, y: 0, z: 12 },
-  { x: -20, y: 0, z: 12 },
-  { x: 20, y: 0, z: -12 }
+  { x: -20, y: 0, z: -14 },
+  { x: 20, y: 0, z: 14 },
+  { x: -20, y: 0, z: 14 },
+  { x: 20, y: 0, z: -14 }
 ];
 
 function getModeConfig(mode) {
@@ -1365,9 +1384,9 @@ function getRequiredPlayers(mode) {
   return Number(getModeConfig(mode).requiredPlayers) || DEFAULT_MATCH_SIZE;
 }
 function getMinimumPlayers(mode) {
-  return ["allies", "team_fight"].includes(mode)
-    ? MATCHMAKING_MIN_PLAYERS
-    : getRequiredPlayers(mode);
+  // Team Fight and Bomb must be full 3v3, not accidental 1v1 or 2v2.
+  if (["team_fight", "bomb"].includes(mode)) return getRequiredPlayers(mode);
+  return mode === "allies" ? MATCHMAKING_MIN_PLAYERS : getRequiredPlayers(mode);
 }
 
 function removeFromQueue(identity, socketId = null) {
