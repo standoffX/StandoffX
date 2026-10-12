@@ -369,7 +369,7 @@ function findUser(idOrNickname, options = {}) {
 function publicUser(user, options = {}) {
   if (!user) return null;
   const { password, passwordHash, uuid, ...safe } = user;
-  if (options.includeUuid === true && typeof uuid === "string") safe.uuid = uuid;
+
   safe.friendsList = Array.isArray(user.friendsList) ? user.friendsList : [];
   safe.incomingRequests = Array.isArray(user.incomingRequests) ? user.incomingRequests : [];
   safe.blocked = Array.isArray(user.blocked) ? user.blocked : [];
@@ -698,14 +698,14 @@ app.post("/api/register", registrationRateLimit, (req, res) => {
   res.json({
     success: true,
     redirect: "/game",
-    user: publicUser(user, { includeUuid: true }),
+    user: publicUser(user),
     createdId: user.id,
     message: "Акаунт створено."
   });
 });
 
 app.post("/api/login", loginRateLimit, (req, res) => {
-  const id = normalizeId(req.body.id || req.body.userId || req.body.uuid || "");
+  const id = normalizeId(req.body.id || "");
   const password = String(req.body.password || "");
 
   if (!id) {
@@ -738,8 +738,8 @@ app.post("/api/login", loginRateLimit, (req, res) => {
     if (!users.some(u => u.id === ADMIN_ID)) users.push(user);
     saveUsers();
   } else {
-    // UUID is the stable, globally unique identity; Player ID remains a shorter public identifier.
-    user = users.find(candidate => candidate.uuid === id) || findUser(id, { allowNickname: false });
+    // UUID remains an internal reference. Login accepts the public Player ID only.
+    user = findUser(id, { allowNickname: false });
   }
 
   if (!user || !verifyPassword(password, user.passwordHash || user.password)) {
@@ -760,7 +760,7 @@ app.post("/api/login", loginRateLimit, (req, res) => {
 
   const token = createSession(user.uuid || user.id);
   setSessionCookie(res, token);
-  res.json({ success: true, redirect: "/game", user: publicUser(user, { includeUuid: true }) });
+  res.json({ success: true, redirect: "/game", user: publicUser(user) });
 });
 
 app.post("/api/logout", requireAuth, (req, res) => {
@@ -773,7 +773,7 @@ app.post("/api/logout", requireAuth, (req, res) => {
 });
 
 app.get("/api/me", requireAuth, (req, res) => {
-  res.json({ success: true, user: publicUser(req.user, { includeUuid: true }) });
+  res.json({ success: true, user: publicUser(req.user) });
 });
 
 app.get("/api/user-data", requireAuth, (req, res) => {
@@ -783,7 +783,7 @@ app.get("/api/user-data", requireAuth, (req, res) => {
     .map(id => users.find(u => u.id === id))
     .filter(Boolean)
     .map(publicUser);
-  res.json({ success: true, user: publicUser(target, { includeUuid: target.id === req.user.id }), friends });
+  res.json({ success: true, user: publicUser(target), friends });
 });
 
 app.post("/api/sync-user", requireAuth, (req, res) => {
@@ -1581,6 +1581,9 @@ function cleanMatch(io, matchId, returnToMenu = true) {
   if (match.timer) clearInterval(match.timer);
   if (match.phaseTimer) clearInterval(match.phaseTimer);
   if (match.joinTimer) clearTimeout(match.joinTimer);
+  clearBombAction(match);
+  if (match.bomb?.explosionTimer) clearTimeout(match.bomb.explosionTimer);
+  if (match.bomb?.roundTimer) clearTimeout(match.bomb.roundTimer);
   if (returnToMenu) io.to(match.id).emit("go_to_menu");
   for (const p of match.players) {
     if (p.disconnectTimer) clearTimeout(p.disconnectTimer);
@@ -1787,6 +1790,12 @@ function handleBombInteraction(io, match, player, action) {
 function checkBombElimination(io, match) {
   const bomb = match?.bomb;
   if (!bomb || match.mode !== "bomb" || match.phase !== "game") return;
+  if (bomb.actionPlayerId && match.players.find(player => player.userId === bomb.actionPlayerId)?.hp <= 0) {
+    const previousAction = bomb.status;
+    clearBombAction(match);
+    if (previousAction === "planting") bomb.status = "carried";
+    if (previousAction === "defusing") bomb.status = "planted";
+  }
   const aliveAttackers = match.players.filter(player => player.team === bomb.attackTeam && player.hp > 0).length;
   const aliveDefenders = match.players.filter(player => player.team !== bomb.attackTeam && player.hp > 0).length;
   if (bomb.status !== "planted" && aliveAttackers === 0) {
@@ -1868,6 +1877,10 @@ function startMatchWhenReady(io, match) {
             mode: match.mode,
             modeName: match.modeName
           });
+          if (match.mode === "bomb") {
+            startBombRound(io, match);
+            return;
+          }
 
           match.timer = setInterval(() => {
             match.remaining -= 1;
@@ -1889,6 +1902,9 @@ function finishMatch(io, matchId) {
   if (match.timer) clearInterval(match.timer);
   if (match.phaseTimer) clearInterval(match.phaseTimer);
   if (match.joinTimer) clearTimeout(match.joinTimer);
+  clearBombAction(match);
+  if (match.bomb?.explosionTimer) clearTimeout(match.bomb.explosionTimer);
+  if (match.bomb?.roundTimer) clearTimeout(match.bomb.roundTimer);
 
   const ranked = [...match.players].sort((a, b) => b.score - a.score);
   const highestScore = ranked[0]?.score || 0;
@@ -1897,7 +1913,9 @@ function finishMatch(io, matchId) {
     const user = users.find(u => u.id === player.userId);
     if (!user) continue;
 
-    const won = highestScore > 0 && player.score === highestScore;
+    const won = match.mode === "bomb" && match.bomb?.winnerTeam
+      ? player.team === match.bomb.winnerTeam
+      : highestScore > 0 && player.score === highestScore;
     const gold = won ? 10 : 2;
     const xp = 50 + player.score * 20;
     user.gold = (Number(user.gold) || 0) + gold;
@@ -2292,7 +2310,6 @@ io.on("connection", socket => {
       mode: cfg.id,
       modeName: cfg.name,
       map: session.map,
-      uuid: user.uuid
     });
   });
 
@@ -2509,11 +2526,13 @@ io.on("connection", socket => {
       }
     }
 
-    const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
-    const map = normalizeMapId(data?.map);
+    const mode = ["allies", "team_fight", "bomb"].includes(data?.mode) ? data.mode : "allies";
+    const map = normalizeMapForMode(mode, data?.map);
     removeFromQueue(user.uuid || user.id);
 
-    if (data?.prototype === true && ["allies", "team_fight"].includes(mode)) {
+    // Bot matches are privileged test tooling only; public users cannot spoof prototype=true.
+    if ((data?.prototype === true || data?.testerBots === true) &&
+        canUseTesterModes(user) && ["allies", "team_fight"].includes(mode)) {
       const realPlayer = { socketId: socket.id, userId: user.id, nickname: user.nickname, uuid: user.uuid, mode, map, isBot: false };
       const bots = Array.from({ length: Math.max(0, getRequiredPlayers(mode) - 1) }, (_, index) => ({
         socketId: null,
@@ -2522,18 +2541,6 @@ io.on("connection", socket => {
         uuid: "", mode, map, isBot: true
       }));
       socket.emit("search_started", { mode, modeName: MODE_CONFIGS[mode].name, map, mapName: PLAYABLE_MAPS[map].name, prototype: true });
-      createMatch(io, mode, map, [realPlayer, ...bots]);
-      return;
-    }
-
-    if (data?.testerBots === true && canUseTesterModes(user) && ["allies", "team_fight"].includes(mode)) {
-      const realPlayer = { socketId: socket.id, userId: user.id, nickname: user.nickname, uuid: user.uuid, mode, map, isBot: false };
-      const bots = Array.from({ length: Math.max(0, getRequiredPlayers(mode) - 1) }, (_, index) => ({
-        socketId: null,
-        userId: "BOT_" + crypto.randomBytes(4).toString("hex"),
-        nickname: "БОТ " + String(index + 1).padStart(2, "0"),
-        uuid: "", mode, map, isBot: true
-      }));
       createMatch(io, mode, map, [realPlayer, ...bots]);
       return;
     }
@@ -2605,9 +2612,9 @@ io.on("connection", socket => {
       modeName: match.modeName,
       doorOpen: [...(match.doorOpen || [false, false, false, false])],
       woodDestroyed: [...(match.woodDestroyed || [])],
+      bomb: bombStatePayload(match),
       me: {
         userId: player.userId,
-        uuid: player.uuid || "",
         nickname: player.nickname,
         role: player.role,
         team: player.team,
@@ -2688,6 +2695,14 @@ io.on("connection", socket => {
     handleTeamShot(io, match, player, data);
   });
 
+  socket.on("bomb_interact", data => {
+    const match = activeMatches.get(cleanText(data?.matchId, 100));
+    if (!match || match.mode !== "bomb") return;
+    const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
+    if (!player) return;
+    handleBombInteraction(io, match, player, cleanText(data?.action, 16));
+  });
+
   socket.on("map_door_state", data => {
     const doorIndex = Number(data?.doorIndex);
     const open = data?.open === true;
@@ -2696,18 +2711,18 @@ io.on("connection", socket => {
     if (match) {
       const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
       if (!player || player.hp <= 0 || match.map !== "HILL_TOWN") return;
-      const doors = [[-3.57,-25.5],[3.57,25.5],[-25.5,3.57],[25.5,-3.57]];
+      const doors = [[0,-10],[0,10],[-10,0],[10,0]];
       const [x,z] = doors[doorIndex];
-      if (Math.hypot(player.pos.x-x, player.pos.z-z) > 18) return;
+      if (Math.hypot(player.pos.x-x, player.pos.z-z) > 4.5) return;
       match.doorOpen[doorIndex] = open;
       socket.to(match.id).emit("map_door_state", { doorIndex, open });
       return;
     }
     const session = trainingSessions.get(socket.user?.id);
     if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || session.map !== "HILL_TOWN") return;
-    const doors = [[-3.57,-25.5],[3.57,25.5],[-25.5,3.57],[25.5,-3.57]];
+    const doors = [[0,-10],[0,10],[-10,0],[10,0]];
     const [x,z] = doors[doorIndex];
-    if (Math.hypot(session.playerPos.x-x, session.playerPos.z-z) > 18) return;
+    if (Math.hypot(session.playerPos.x-x, session.playerPos.z-z) > 4.5) return;
     session.doorOpen[doorIndex] = open;
     socket.to(session.id).emit("map_door_state", { doorIndex, open });
   });
@@ -2729,25 +2744,7 @@ io.on("connection", socket => {
     socket.to(session.id).emit("map_wood_destroyed", { woodIndex });
   });
 
-  socket.on("map_door_state", data => {
-    const doorIndex = Number(data?.doorIndex);
-    if (!Number.isInteger(doorIndex) || doorIndex < 0 || doorIndex > 3) return;
-    const open = data?.open === true;
-    const match = activeMatches.get(cleanText(data?.matchId, 100));
-    if (match) {
-      const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
-      if (!player || player.hp <= 0 || match.map !== "HILL_TOWN") return;
-      match.doorOpen[doorIndex] = open;
-      socket.to(match.id).emit("map_door_state", { doorIndex, open });
-      return;
-    }
-    const session = trainingSessions.get(socket.user?.id);
-    if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || session.map !== "HILL_TOWN") return;
-    session.doorOpen[doorIndex] = open;
-    socket.to(session.id).emit("map_door_state", { doorIndex, open });
-  });
-
-  socket.on("player_moved", data => {
+    socket.on("player_moved", data => {
     const match = activeMatches.get(cleanText(data?.matchId, 100));
     if (!match) return;
     const player = match.players.find(p => p.userId === socket.user.id);
