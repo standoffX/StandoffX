@@ -1438,6 +1438,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
   const MATCH_SPAWNS = {
     HILL_TOWN: [{x:-42,y:0,z:-28},{x:42,y:0,z:-28},{x:-42,y:0,z:28},{x:42,y:0,z:28}],
+    M3_Maze: [{x:-195,y:0,z:-195},{x:195,y:0,z:-195},{x:-195,y:0,z:195},{x:195,y:0,z:195}],
     NEON_YARD: [{x:-82,y:0,z:-82},{x:82,y:0,z:-82},{x:-82,y:0,z:82},{x:82,y:0,z:82}],
     FIELD_ARENA: [{x:-110,y:0,z:-110},{x:110,y:0,z:-110},{x:-110,y:0,z:110},{x:110,y:0,z:110}]
   };
@@ -1799,7 +1800,7 @@ function segmentIntersectsRect2d(from,to,rect){
 
 const SERVER_MAP_LIMITS = Object.freeze({
   // Keep server limits just inside the physical perimeter walls built by the client.
-  M3_Maze: { x: 231.5, z: 231.5 },
+  M3_Maze: { x: 225.5, z: 225.5 },
   FIELD_ARENA: { x: 291.5, z: 291.5 },
   NEON_YARD: { x: 167.5, z: 167.5 }
 });
@@ -1827,9 +1828,40 @@ const SERVER_MAP_BLOCKERS = Object.freeze({
     { minX: -9, maxX: 9, minZ: 69, maxZ: 83 },
     { minX: -5, maxX: 5, minZ: -16, maxZ: 16 }
   ],
-  // M3_Maze is a legacy GLB. Until its geometry is represented server-side,
-  // its perimeter is authoritative; its internal mesh still uses client collision.
-  M3_Maze: []
+  // M3 Maze is fully procedural now; every solid wall/cover rectangle is shared
+  // with the client builder so movement and shot line-of-sight agree.
+  M3_Maze: [
+    { minX: -78, maxX: -74, minZ: -180, maxZ: -130 },
+    { minX: -78, maxX: -74, minZ: -100, maxZ: -30 },
+    { minX: -78, maxX: -74, minZ: 0, maxZ: 70 },
+    { minX: -78, maxX: -74, minZ: 100, maxZ: 180 },
+    { minX: 74, maxX: 78, minZ: -180, maxZ: -110 },
+    { minX: 74, maxX: 78, minZ: -95, maxZ: -45 },
+    { minX: 74, maxX: 78, minZ: -10, maxZ: 60 },
+    { minX: 74, maxX: 78, minZ: 110, maxZ: 180 },
+    { minX: -2, maxX: 2, minZ: -205, maxZ: -165 },
+    { minX: -2, maxX: 2, minZ: -155, maxZ: -105 },
+    { minX: -2, maxX: 2, minZ: -62.5, maxZ: -17.5 },
+    { minX: -2, maxX: 2, minZ: 55, maxZ: 95 },
+    { minX: -2, maxX: 2, minZ: 137.5, maxZ: 182.5 },
+    { minX: -180, maxX: -130, minZ: -78, maxZ: -74 },
+    { minX: -110, maxX: -60, minZ: -78, maxZ: -74 },
+    { minX: 0, maxX: 70, minZ: -78, maxZ: -74 },
+    { minX: 100, maxX: 180, minZ: -78, maxZ: -74 },
+    { minX: -180, maxX: -130, minZ: 74, maxZ: 78 },
+    { minX: -100, maxX: -30, minZ: 74, maxZ: 78 },
+    { minX: 0, maxX: 80, minZ: 74, maxZ: 78 },
+    { minX: 120, maxX: 180, minZ: 74, maxZ: 78 },
+    { minX: -156, maxX: -144, minZ: -156, maxZ: -144 },
+    { minX: 143, maxX: 157, minZ: -160, maxZ: -140 },
+    { minX: -159, maxX: -141, minZ: 145, maxZ: 155 },
+    { minX: 140, maxX: 160, minZ: 144, maxZ: 156 },
+    { minX: -32, maxX: -18, minZ: -137, maxZ: -123 },
+    { minX: 16, maxX: 28, minZ: 131, maxZ: 149 },
+    { minX: -156, maxX: -134, minZ: 19, maxZ: 31 },
+    { minX: 137.5, maxX: 152.5, minZ: -6, maxZ: 6 },
+    { minX: -6, maxX: 6, minZ: -30, maxZ: -10 }
+  ]
 });
 
 function mapPathBlocked(mapId, from, to, mapState = {}, radius = .42) {
