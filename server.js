@@ -1348,11 +1348,21 @@ const SPAWNS = [
   { x: 15, y: 0, z: 25 }
 ];
 const HILL_TOWN_SPAWNS = [
-  { x: -20, y: 0, z: -14 },
-  { x: 20, y: 0, z: -14 },
-  { x: -20, y: 0, z: 14 },
-  { x: 20, y: 0, z: 14 }
+  { x: -42, y: 0, z: -28 },
+  { x: 42, y: 0, z: -28 },
+  { x: -42, y: 0, z: 28 },
+  { x: 42, y: 0, z: 28 }
 ];
+const HILL_TOWN_DOOR_CENTERS = [[0, -28], [0, 0], [0, 28]];
+const HILL_TOWN_BARRICADES = [
+  { x: -25, z: -28 }, { x: 25, z: -28 },
+  { x: -25, z: 0 }, { x: 25, z: 0 },
+  { x: -25, z: 28 }, { x: 25, z: 28 }
+];
+const HILL_TOWN_PLANKS_PER_BARRICADE = 6;
+function createMapInteractionState() {
+  return { doors: [false, false, false], destroyedWood: [] };
+}
 
 function getModeConfig(mode) {
   return MODE_CONFIGS[mode] || MODE_CONFIGS.allies;
@@ -1413,7 +1423,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const matchId = "match_" + Date.now() + "_" + crypto.randomBytes(2).toString("hex");
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
   const MATCH_SPAWNS = {
-    HILL_TOWN: [{x:-42,y:0,z:-40},{x:42,y:0,z:-40},{x:-42,y:0,z:40},{x:42,y:0,z:40}],
+    HILL_TOWN: [{x:-42,y:0,z:-28},{x:42,y:0,z:-28},{x:-42,y:0,z:28},{x:42,y:0,z:28}],
     NEON_YARD: [{x:-82,y:0,z:-82},{x:82,y:0,z:-82},{x:-82,y:0,z:82},{x:82,y:0,z:82}],
     FIELD_ARENA: [{x:-110,y:0,z:-110},{x:110,y:0,z:-110},{x:-110,y:0,z:110},{x:110,y:0,z:110}]
   };
@@ -1425,6 +1435,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     modeName: cfg.name,
     map: safeMapId,
     mapName: PLAYABLE_MAPS[safeMapId]?.name || PLAYABLE_MAPS.M3_Maze.name,
+    mapState: safeMapId === "HILL_TOWN" ? createMapInteractionState() : null,
     players: players.map((p, i) => ({
       socketId: p.socketId || null,
       userId: p.userId,
@@ -1894,7 +1905,7 @@ io.on("connection", socket => {
     const previous = trainingSessions.get(user.id);
     const sessionMap = ["field_test", "training"].includes(mode) ? normalizeMapId(data?.map) : cfg.map;
     const TRAINING_SPAWNS = {
-      HILL_TOWN: {x:0,y:0,z:42},
+      HILL_TOWN: {x:-38,y:0,z:0},
       NEON_YARD: {x:0,y:0,z:115},
       FIELD_ARENA: {x:0,y:0,z:0},
       M3_Maze: {x:5,y:0,z:5}
@@ -1907,6 +1918,7 @@ io.on("connection", socket => {
       mode: cfg.id,
       modeName: cfg.name,
       map: sessionMap,
+      mapState: sessionMap === "HILL_TOWN" ? createMapInteractionState() : null,
       socketId: socket.id,
       playerPos: spawnPosition,
       playerRotY: 0,
@@ -1943,6 +1955,7 @@ io.on("connection", socket => {
       mode: session.mode,
       modeName: session.modeName,
       map: session.map,
+      mapState: session.mapState || null,
       spawn: { ...session.playerPos },
       bot: session.bot
     });
@@ -2173,12 +2186,19 @@ io.on("connection", socket => {
     const match = activeMatches.get(matchId);
     if (!match) return;
 
-    const index = match.players.findIndex(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && (p.socketId === socket.id || p.socketId === null));
+    const index = match.players.findIndex(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id));
     if (index < 0) return;
 
     const player = match.players[index];
     if (player.disconnectTimer) clearTimeout(player.disconnectTimer);
     player.disconnectTimer = null;
+    if (player.socketId && player.socketId !== socket.id) {
+      const gameplaySocket = io.sockets.sockets.get(player.socketId);
+      if (gameplaySocket) {
+        gameplaySocket.emit("go_to_menu");
+        gameplaySocket.leave(matchId);
+      }
+    }
     player.socketId = null;
     socket.leave(matchId);
 
@@ -2215,6 +2235,7 @@ io.on("connection", socket => {
       map: match.map,
       mode: match.mode,
       modeName: match.modeName,
+      mapState: match.mapState || null,
       me: {
         userId: player.userId,
         uuid: player.uuid || "",
@@ -2301,38 +2322,48 @@ io.on("connection", socket => {
   socket.on("map_door_state", data => {
     const doorIndex = Number(data?.doorIndex);
     const open = data?.open === true;
-    if (!Number.isInteger(doorIndex) || doorIndex < 0 || doorIndex > 3) return;
+    if (!Number.isInteger(doorIndex) || doorIndex < 0 || doorIndex >= HILL_TOWN_DOOR_CENTERS.length) return;
     const match = activeMatches.get(cleanText(data?.matchId, 100));
     if (match) {
       const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
       if (!player || player.hp <= 0 || match.map !== "HILL_TOWN") return;
-      const doors = [[-3.57,-25.5],[3.57,25.5],[-25.5,3.57],[25.5,-3.57]];
-      const [x,z] = doors[doorIndex];
-      if (Math.hypot(player.pos.x-x, player.pos.z-z) > 18) return;
-      socket.to(match.id).emit("map_door_state", { doorIndex, open });
+      const [x,z] = HILL_TOWN_DOOR_CENTERS[doorIndex];
+      if (Math.hypot(player.pos.x-x, player.pos.z-z) > 7.5) return;
+      if (!match.mapState) match.mapState=createMapInteractionState();
+      match.mapState.doors[doorIndex]=open;
+      io.to(match.id).emit("map_door_state", { doorIndex, open });
       return;
     }
     const session = trainingSessions.get(socket.user?.id);
     if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || session.map !== "HILL_TOWN") return;
-    const doors = [[-3.57,-25.5],[3.57,25.5],[-25.5,3.57],[25.5,-3.57]];
-    const [x,z] = doors[doorIndex];
-    if (Math.hypot(session.playerPos.x-x, session.playerPos.z-z) > 18) return;
-    socket.to(session.id).emit("map_door_state", { doorIndex, open });
+    const [x,z] = HILL_TOWN_DOOR_CENTERS[doorIndex];
+    if (Math.hypot(session.playerPos.x-x, session.playerPos.z-z) > 7.5) return;
+    if (!session.mapState) session.mapState=createMapInteractionState();
+    session.mapState.doors[doorIndex]=open;
+    io.to(session.id).emit("map_door_state", { doorIndex, open });
   });
 
   socket.on("map_wood_destroyed", data => {
     const woodIndex = Number(data?.woodIndex);
-    if (!Number.isInteger(woodIndex) || woodIndex < 0 || woodIndex > 19) return;
+    const totalWoodParts = HILL_TOWN_BARRICADES.length * HILL_TOWN_PLANKS_PER_BARRICADE;
+    if (!Number.isInteger(woodIndex) || woodIndex < 0 || woodIndex >= totalWoodParts) return;
+    const barricade = HILL_TOWN_BARRICADES[Math.floor(woodIndex / HILL_TOWN_PLANKS_PER_BARRICADE)];
     const match = activeMatches.get(cleanText(data?.matchId, 100));
     if (match) {
       const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
       if (!player || player.hp <= 0 || match.map !== "HILL_TOWN") return;
-      socket.to(match.id).emit("map_wood_destroyed", { woodIndex });
+      if (Math.hypot(player.pos.x-barricade.x, player.pos.z-barricade.z) > 20) return;
+      if (!match.mapState) match.mapState=createMapInteractionState();
+      if (!match.mapState.destroyedWood.includes(woodIndex)) match.mapState.destroyedWood.push(woodIndex);
+      io.to(match.id).emit("map_wood_destroyed", { woodIndex });
       return;
     }
     const session = trainingSessions.get(socket.user?.id);
     if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || session.map !== "HILL_TOWN") return;
-    socket.to(session.id).emit("map_wood_destroyed", { woodIndex });
+    if (Math.hypot(session.playerPos.x-barricade.x, session.playerPos.z-barricade.z) > 20) return;
+    if (!session.mapState) session.mapState=createMapInteractionState();
+    if (!session.mapState.destroyedWood.includes(woodIndex)) session.mapState.destroyedWood.push(woodIndex);
+    io.to(session.id).emit("map_wood_destroyed", { woodIndex });
   });
 
   socket.on("player_moved", data => {

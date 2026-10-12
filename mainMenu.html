@@ -18,6 +18,9 @@ body:before{background:linear-gradient(110deg,#02040d9c,transparent 48%),radial-
 .rail button.active,.rail button:hover{background:color-mix(in srgb,var(--blue) 12%,transparent);border-left-color:var(--blue);color:var(--blue)}
 .playbutton{width:220px;height:56px;border:1px solid var(--blue);border-radius:4px;background:linear-gradient(115deg,var(--blue),var(--accent));color:#050a16;font-weight:1000;font-size:15px;letter-spacing:1.2px;box-shadow:0 0 14px color-mix(in srgb,var(--glow) 38%,transparent),0 0 36px color-mix(in srgb,var(--glow) 18%,transparent);clip-path:polygon(0 0,100% 0,100% 75%,93% 100%,0 100%)}
 .playbutton:hover{filter:brightness(1.12);box-shadow:0 0 22px color-mix(in srgb,var(--glow) 50%,transparent)}
+.playbutton.reconnect-mode{background:linear-gradient(110deg,#68b9ff,#3479e8);border-color:#bfeaff;color:#fff;box-shadow:0 0 24px #3479e844;clip-path:none}
+#resumeMatchBtn{background:#141e2b!important;border-color:#a9bdd333!important;color:#d7e7f6!important;font-size:10px;letter-spacing:1px}
+#resumeMatchBtn:hover{background:#223146!important;color:#fff!important}
 .pill,.modebtn,.statcard,.listcard,.row{border-color:var(--line)}
 .modebtn.active{background:color-mix(in srgb,var(--blue) 17%,var(--bg));border-color:var(--blue);box-shadow:0 0 12px color-mix(in srgb,var(--glow) 13%,transparent)}
 .primary{background:var(--blue)!important;color:var(--bg)!important;border-color:var(--blue)!important}
@@ -260,7 +263,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
   <div class="playarea">
     <div class="playwrap">
       <button class="playbutton" id="playBtn"><span>▶ &nbsp; ГРАТИ</span></button>
-      <button class="secondary" id="resumeMatchBtn" type="button" style="display:none;min-width:220px;min-height:38px;border-color:#91d8fb;color:#dff6ff;font-weight:900">↻ ПЕРЕПІДКЛЮЧИТИСЯ ДО МАТЧУ</button>
+      <button class="secondary" id="resumeMatchBtn" type="button" style="display:none;min-width:220px;min-height:38px;border-color:#91d8fb;color:#dff6ff;font-weight:900">ВИЙТИ З МАТЧУ</button>
       <div class="muted" id="selectedModeText">СОЮЗНИКИ</div><div class="muted" id="selectedMapText" style="font-size:9px;letter-spacing:1px">HILL TOWN</div>
     </div>
   </div>
@@ -444,10 +447,58 @@ function readActiveMatch(){
 }
 function updateReconnectButton(){
   const button=$("resumeMatchBtn");
-  if(!button)return;
+  const playButton=$("playBtn");
+  const modeLabel=$("selectedModeText");
+  const mapLabel=$("selectedMapText");
   const data=readActiveMatch();
-  button.style.display=data?"inline-flex":"none";
-  button.title=data?"Повернутися до незавершеного матчу":"";
+  const hasMatch=Boolean(data);
+  if(playButton){
+    const label=playButton.querySelector("span");
+    if(label)label.textContent=hasMatch?"↻  ПІДКЛЮЧИТИСЯ":"▶  ГРАТИ";
+    playButton.classList.toggle("reconnect-mode",hasMatch);
+    playButton.setAttribute("aria-label",hasMatch?"Підключитися до незавершеного матчу":"Грати");
+  }
+  if(button){
+    button.style.display=hasMatch?"inline-flex":"none";
+    button.textContent="ВИЙТИ З МАТЧУ";
+    button.title=hasMatch?"Покинути старий матч і повернутися до меню":"";
+  }
+  if(modeLabel)modeLabel.style.display=hasMatch?"none":"";
+  if(mapLabel)mapLabel.style.display=hasMatch?"none":"";
+}
+function resumeSavedMatch(saved){
+  if(!saved?.matchId){
+    updateReconnectButton();notifyToast("Незавершений матч уже недоступний.");return;
+  }
+  sessionStorage.setItem("myPlayerId",String(saved.userId||me?.id||""));
+  sessionStorage.setItem("myPlayerUUID",String(saved.uuid||me?.uuid||""));
+  sessionStorage.setItem("currentMatchId",String(saved.matchId));
+  sessionStorage.setItem("selectedMap",String(saved.map||"HILL_TOWN"));
+  sessionStorage.setItem("selectedMode",String(saved.mode||"allies"));
+  location.href="/play2.html";
+}
+function exitSavedMatch(){
+  const saved=readActiveMatch();
+  if(!saved){updateReconnectButton();return}
+  try{
+    localStorage.setItem("sx_abandoned_match",JSON.stringify({
+      kind:"match",matchId:String(saved.matchId),userId:String(saved.userId||me?.id||""),
+      uuid:String(saved.uuid||me?.uuid||""),map:String(saved.map||"HILL_TOWN"),mode:String(saved.mode||"allies")
+    }));
+    localStorage.removeItem("sx_active_match");
+    sessionStorage.removeItem("currentMatchId");
+    sessionStorage.removeItem("trainingId");
+    initSocialSocket();
+    if(socialSocket?.connected){
+      socialSocket.emit("leave_match",{matchId:String(saved.matchId)});
+      localStorage.removeItem("sx_abandoned_match");
+    }
+    updateReconnectButton();
+    notifyToast("Старий матч покинуто. Тепер можна починати новий.");
+  }catch(error){
+    console.warn("[MATCH] Could not queue match exit.",error);
+    notifyToast("Не вдалося завершити старий матч. Перевір з’єднання.");
+  }
 }
 
 async function api(url,opt={}){
@@ -554,17 +605,12 @@ document.querySelectorAll("[data-test-gameplay]").forEach(b=>b.addEventListener(
   localStorage.setItem("sx_test_gameplay",testGameplayMode);
   renderMode();
 }));
-$("playBtn").addEventListener("click",()=>$("modeModal").classList.add("show"));
-$("resumeMatchBtn").addEventListener("click",()=>{
+$("playBtn").addEventListener("click",()=>{
   const saved=readActiveMatch();
-  if(!saved){updateReconnectButton();notifyToast("Незавершений матч уже недоступний.");return}
-  sessionStorage.setItem("myPlayerId",String(saved.userId||me?.id||""));
-  sessionStorage.setItem("myPlayerUUID",String(saved.uuid||me?.uuid||""));
-  sessionStorage.setItem("currentMatchId",String(saved.matchId));
-  sessionStorage.setItem("selectedMap",String(saved.map||"HILL_TOWN"));
-  sessionStorage.setItem("selectedMode",String(saved.mode||"allies"));
-  location.href="/play2.html";
+  if(saved){resumeSavedMatch(saved);return}
+  $("modeModal").classList.add("show");
 });
+$("resumeMatchBtn").addEventListener("click",exitSavedMatch);
 $("confirmModeBtn").addEventListener("click",()=>{
   $("modeModal").classList.remove("show");
   openPlay();
