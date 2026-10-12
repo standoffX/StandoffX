@@ -231,13 +231,13 @@ document.addEventListener("pointerlockchange",()=>{
   const locked=document.pointerLockElement===renderer.domElement;
   if(locked){
     $("clickHint").textContent="Миша: огляд · ESC: у лобі · WASD: рух";
-  }else if(matchPhase==="game"&&$("pauseMenu")?.style.display!=="flex"){
+  }else if(matchPhase==="game"){
     $("clickHint").textContent="Клікни в ігрову область, щоб увімкнути огляд мишкою.";
   }
 });
 controls.addEventListener("lock",()=>{if(matchPhase==="game")$("overlay").style.display="none"});
 controls.addEventListener("unlock",()=>{
-  if(matchPhase==="game"&&$("pauseMenu")?.style.display!=="flex")$("overlay").style.display="flex";
+  if(matchPhase==="game")$("overlay").style.display="flex";
 });
 
 const loader=new GLTFLoader();
@@ -1398,12 +1398,12 @@ function setAimingDownSights(value){
   updateWeaponHud();
 }
 function toggleAimingDownSights(){
-  if(selectedWeapon!=="akr"||matchPhase!=="game"||hp<=0||$("pauseMenu")?.style.display==="flex")return;
+  if(selectedWeapon!=="akr"||matchPhase!=="game"||hp<=0)return;
   setAimingDownSights(!aimingDownSights);
 }
 function selectWeapon(weaponId,force=false){
   if(!CLIENT_WEAPON_INFO[weaponId])return;
-  if(!force&&(matchPhase!=="game"||hp<=0||$("pauseMenu")?.style.display==="flex"))return;
+  if(!force&&(matchPhase!=="game"||hp<=0))return;
   if(selectedWeapon===weaponId&&heldWeaponRoot?.children.length&&!force){updateWeaponHud();return}
   weaponAmmo[selectedWeapon]=ammo;
   selectedWeapon=weaponId;
@@ -1968,7 +1968,7 @@ function animate(){
   const now=performance.now(),dt=Math.min(.05,(now-previous)/1000);previous=now;
   const mv=window.sxMove||{x:0,y:0};
 
-  if(matchPhase==="game"&&player&&hp>0&&mapLoadFinished&&$("pauseMenu")?.style.display!=="flex"){
+  if(matchPhase==="game"&&player&&hp>0&&mapLoadFinished){
     if(mv.x||mv.y){keys.a=mv.x<-.18;keys.d=mv.x>.18;keys.w=mv.y<-.18;keys.s=mv.y>.18}
     const dir=new THREE.Vector3();
     camera.getWorldDirection(dir);dir.y=0;dir.normalize();
