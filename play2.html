@@ -1528,7 +1528,6 @@ addEventListener("mousedown",e=>{
 });
 addEventListener("mouseup",e=>{if(e.button===0&&!isMobileDevice)fireHeld=false});
 $("weaponBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();if(weaponSwipeConsumed){weaponSwipeConsumed=false;return}cycleWeapon()});
-$("interactBtn").addEventListener("touchstart",e=>{e.preventDefault();e.stopPropagation();interactWithNearestDoor()},{passive:false});
 $("interactBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();interactWithNearestDoor()});
 let weaponSwipeStart=null;
 let weaponSwipeConsumed=false;
