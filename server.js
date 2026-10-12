@@ -1862,7 +1862,7 @@ class THREE_LIKE_VECTOR {
 function mapMovementLimit(mapId) {
   return ({ HILL_TOWN: 25.2, NEON_YARD: 196, FIELD_ARENA: 320, M3_Maze: 228 })[mapId] || 228;
 }
-function validateMove(player, data, mapId = "M3_Maze") {
+function validateMove(player, data, mapId = "M3_Maze", match = null) {
   const now = Date.now();
   if (now - player.lastMoveAt < 33) return false;
   player.lastMoveAt = now;
@@ -2041,6 +2041,10 @@ io.on("connection", socket => {
     const maxStep = 0.9;
     const dx = x - previous.x, dz = z - previous.z;
     const distance = Math.hypot(dx, dz);
+    const candidate = distance > maxStep && distance > 0
+      ? { x: previous.x + dx / distance * maxStep, z: previous.z + dz / distance * maxStep }
+      : { x, z };
+    if (isMapLineBlocked(session.map, previous, candidate, session.doorOpen)) return;
     if (distance > maxStep) {
       previous.x += dx / distance * maxStep;
       previous.z += dz / distance * maxStep;
@@ -2455,7 +2459,7 @@ io.on("connection", socket => {
     if (!match) return;
     const player = match.players.find(p => p.userId === socket.user.id);
     if (!player || player.socketId !== socket.id || player.hp <= 0) return;
-    if (!validateMove(player, data, match.map)) return;
+    if (!validateMove(player, data, match.map, match)) return;
 
     if (match.phase === "game") handleCatch(io, match, player);
 
