@@ -593,7 +593,7 @@ function damageBreakableWood(direction){
   if(!player||selectedWeapon==="knife")return;
   raycaster.setFromCamera(new THREE.Vector2(0,0),camera);
   const hits=raycaster.intersectObjects(breakableWood.filter(o=>o.visible),false);
-  const hit=hits.find(h=>h.distance<CLIENT_WEAPON_INFO[selectedWeapon].range*HILL_TOWN_SCALE);
+  const hit=hits.find(h=>h.distance<CLIENT_WEAPON_INFO[selectedWeapon].range);
   if(!hit)return;
   const obj=hit.object;obj.userData.hp=(obj.userData.hp||3)-1;
   if(obj.userData.hp<=0){
@@ -1070,7 +1070,7 @@ function rebuildCollisionIndex(){
   collisionIndexReady=true;
 }
 function worldLimit(){
-  return ({HILL_TOWN:70,NEON_YARD:205,FIELD_ARENA:330,M3_Maze:232})[selectedMap]||232;
+  return ({HILL_TOWN:65,NEON_YARD:196,FIELD_ARENA:320,M3_Maze:228})[selectedMap]||228;
 }
 function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
