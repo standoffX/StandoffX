@@ -1797,6 +1797,58 @@ function segmentIntersectsRect2d(from,to,rect){
   return tMax>=0&&tMin<=1;
 }
 
+const SERVER_MAP_LIMITS = Object.freeze({
+  // Keep server limits just inside the physical perimeter walls built by the client.
+  M3_Maze: { x: 231.5, z: 231.5 },
+  FIELD_ARENA: { x: 296.6, z: 296.6 },
+  NEON_YARD: { x: 172.6, z: 172.6 }
+});
+const SERVER_MAP_BLOCKERS = Object.freeze({
+  FIELD_ARENA: [
+    { minX: -38, maxX: -26, minZ: 9, maxZ: 19 },
+    { minX: 17, maxX: 31, minZ: 31, maxZ: 41 },
+    { minX: 36, maxX: 52, minZ: -29, maxZ: -19 },
+    { minX: -58, maxX: -42, minZ: -41, maxZ: -31 },
+    { minX: -12, maxX: 12, minZ: 65, maxZ: 75 },
+    { minX: 71, maxX: 81, minZ: 44, maxZ: 68 }
+  ],
+  NEON_YARD: [
+    { minX: -57, maxX: -39, minZ: -47, maxZ: -33 },
+    { minX: 39, maxX: 57, minZ: -47, maxZ: -33 },
+    { minX: -57, maxX: -39, minZ: 33, maxZ: 47 },
+    { minX: 39, maxX: 57, minZ: 33, maxZ: 47 },
+    { minX: -9, maxX: 9, minZ: -83, maxZ: -69 },
+    { minX: -9, maxX: 9, minZ: 69, maxZ: 83 },
+    { minX: -5, maxX: 5, minZ: -16, maxZ: 16 }
+  ],
+  // M3_Maze is a legacy GLB. Until its geometry is represented server-side,
+  // its perimeter is authoritative; its internal mesh still uses client collision.
+  M3_Maze: []
+});
+
+function mapPathBlocked(mapId, from, to, mapState = {}, radius = .42) {
+  if (mapId === "HILL_TOWN") return hillTownPathBlocked(from, to, mapState);
+  const bounds = SERVER_MAP_LIMITS[mapId];
+  if (!bounds) return false;
+  if (Math.abs(to.x) > bounds.x || Math.abs(to.z) > bounds.z) return true;
+
+  for (const rect of (SERVER_MAP_BLOCKERS[mapId] || [])) {
+    const expanded = {
+      minX: rect.minX - radius, maxX: rect.maxX + radius,
+      minZ: rect.minZ - radius, maxZ: rect.maxZ + radius
+    };
+    if (segmentIntersectsRect2d(from, to, expanded)) return true;
+  }
+  return false;
+}
+
+function nonHillMapShotBlocked(mapId, from, to) {
+  const bounds = SERVER_MAP_LIMITS[mapId];
+  if (!bounds) return false;
+  if (Math.abs(to.x) > bounds.x || Math.abs(to.z) > bounds.z) return true;
+  return (SERVER_MAP_BLOCKERS[mapId] || []).some(rect => segmentIntersectsRect2d(from, to, rect));
+}
+
 function isHillTownShotBlocked(from,to,mapState={}){
   if(Math.abs(to.x)>55||Math.abs(to.z)>47)return true;
   const doors=Array.isArray(mapState?.doors)?mapState.doors:[false,false,false];
@@ -1824,7 +1876,8 @@ function isHillTownShotBlocked(from,to,mapState={}){
 }
 
 function validateMapLineOfSight(mapId,from,to,mapState){
-  return mapId==="HILL_TOWN" ? !isHillTownShotBlocked(from,to,mapState) : true;
+  if(mapId==="HILL_TOWN")return !isHillTownShotBlocked(from,to,mapState);
+  return !nonHillMapShotBlocked(mapId,from,to);
 }
 
 function handleTeamShot(io, match, shooter, data) {
@@ -1926,7 +1979,7 @@ function validateMove(player, data, mapId = null, mapState = {}) {
     targetX=prev.x+dx*scale;
     targetZ=prev.z+dz*scale;
   }
-  if(mapId==="HILL_TOWN"&&hillTownPathBlocked(prev,{x:targetX,z:targetZ},mapState))return false;
+  if(mapId&&mapPathBlocked(mapId,prev,{x:targetX,z:targetZ},mapState))return false;
   player.pos.x=targetX;
   player.pos.z=targetZ;
   player.pos.y = Math.max(0, Math.min(2.25, y));
@@ -2101,7 +2154,7 @@ io.on("connection", socket => {
     const target=distance>maxStep
       ?{x:previous.x+dx/distance*maxStep,z:previous.z+dz/distance*maxStep}
       :{x,z};
-    if(session.map==="HILL_TOWN"&&hillTownPathBlocked(previous,target,session.mapState||{}))return;
+    if(mapPathBlocked(session.map,previous,target,session.mapState||{}))return;
     previous.x=target.x;
     previous.z=target.z;
     previous.y = Math.max(0, Math.min(2.25, y));
