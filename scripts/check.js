@@ -416,6 +416,9 @@ assert.equal(unknownAnimationPlayer.anim, "Idle", "unknown animation states must
 
 assert.match(server, /if \(mongoClient !== client\) return/, "a stale MongoDB close event must not clear a newer client");
 assert.match(server, /const failedClient = mongoClient;\s*mongoClient = null;\s*mongoDb = null;\s*mongoStatus\.connected = false;\s*mongoStatus\.state = "error";\s*mongoStatus\.lastError = cleanText\(err\.message, 240\);\s*try \{ await failedClient\?\.close\(\); \} catch \{\}/, "Atlas ping failures must reset the broken client so a later health check can reconnect");
+assert.match(server, /if \(mongoConnecting\) return false/, "simultaneous Atlas connection attempts must be coalesced");
+assert.match(server, /mongoStatus\.lastCheckAt = new Date\(\)\.toISOString\(\)/, "Atlas health must record each connection attempt");
+assert.match(server, /setInterval\(\(\) => \{\s*if \(!mongoStatus\.configured \|\| mongoDb \|\| mongoConnecting\) return;[\s\S]{0,120}void initMongo\(\);\s*\}, 30000\)/, "Atlas connection must recover automatically after a transient outage");
 
 const weaponStart = server.indexOf("const WEAPON_BALANCE = Object.freeze(");
 const weaponEnd = server.indexOf("function handleTeamShot", weaponStart);
