@@ -1604,7 +1604,7 @@ function bombStatePayload(match) {
     carrierId: bomb.carrierId,
     site: bomb.site,
     plantedAt: bomb.plantedAt,
-    fuseSeconds: bomb.status === "planted" ? Math.max(0, Math.ceil((40_000 - (Date.now() - (bomb.plantedAt || Date.now()))) / 1000)) : null,
+    fuseSeconds: ["planted", "defusing"].includes(bomb.status) ? Math.max(0, Math.ceil((40_000 - (Date.now() - (bomb.plantedAt || Date.now()))) / 1000)) : null,
     actionPlayerId: bomb.actionPlayerId
   };
 }
@@ -2035,13 +2035,15 @@ const MAP_SOLID_RECTS = Object.freeze({
     [-36.5,-28.5,-35.5,28.5], [35.5,-28.5,36.5,28.5],
     [-35.5,-29,35.5,-28], [-35.5,28,35.5,29],
     [-13,-18,-9,-3], [-13,3,-9,18], [9,-18,13,-3], [9,3,13,18],
-    [-4,-5,4,-2], [-4,2,4,5], [-24,-3,-19,3], [19,-3,24,3]
+    [-4,-5,4,-2], [-4,2,4,5], [-24,-3,-19,3], [19,-3,24,3],
+    [-3.5,-23,3.5,-21], [-3.5,21,3.5,23], [-26,-3,-24,3], [24,-3,26,3]
   ],
   TF_DEPOT: [
     [-36.5,-28.5,-35.5,28.5], [35.5,-28.5,36.5,28.5],
     [-35.5,-29,35.5,-28], [-35.5,28,35.5,29],
     [-20,-18,-16,-5], [-20,5,-16,18], [16,-18,20,-5], [16,5,20,18],
-    [-5,-17,5,-13], [-5,13,5,17], [-3,-4,3,4]
+    [-5,-17,5,-13], [-5,13,5,17], [-3,-4,3,4],
+    [-3.5,-23,3.5,-21], [-3.5,21,3.5,23], [-26,-3,-24,3], [24,-3,26,3]
   ],
   BOMB_RAVINE: [
     [-75,-52,-73.5,52], [73.5,-52,75,52],
@@ -2049,7 +2051,9 @@ const MAP_SOLID_RECTS = Object.freeze({
     [-26,-11,-19,11], [19,-11,26,11],
     [-61,-24,-51,-21], [-61,-24,-58,-8], [-61,8,-51,11], [-54,8,-51,21],
     [51,-24,61,-21], [58,-24,61,-8], [51,8,61,11], [51,8,54,21],
-    [-7,-28,-3,-8], [3,8,7,28], [-7,8,-3,28], [3,-28,7,-8]
+    [-7,-28,-3,-8], [3,8,7,28], [-7,8,-3,28], [3,-28,7,-8],
+    [-51.5,-27.5,-38.5,-22.5], [-51,17.5,-39,22.5], [38.5,-27.5,51.5,-22.5], [39,17.5,51,22.5],
+    [-17,-3,-9,3], [9,-3,17,3], [-6,-20,6,-16], [-6,16,6,20]
   ]
 });
 function segmentIntersectsRect(from, to, rect, padding = 0.42) {
@@ -2069,8 +2073,8 @@ function segmentIntersectsRect(from, to, rect, padding = 0.42) {
   return t0 <= t1;
 }
 function isMapLineBlocked(mapId, from, to, doorOpen = []) {
-  const limit = mapMovementLimit(mapId);
-  if (Math.abs(to.x) > limit || Math.abs(to.z) > limit) return true;
+  const bounds = mapMovementBounds(mapId);
+  if (Math.abs(to.x) > bounds.x || Math.abs(to.z) > bounds.z) return true;
   if (mapId === "HILL_TOWN") return hillTownCrossingBlocked(from, to, doorOpen);
   const rects = MAP_SOLID_RECTS[mapId];
   return Boolean(rects && rects.some(rect => segmentIntersectsRect(from, to, rect)));
@@ -2170,8 +2174,16 @@ class THREE_LIKE_VECTOR {
   }
 }
 
-function mapMovementLimit(mapId) {
-  return ({ HILL_TOWN: 25.2, TF_COURTYARD: 35.1, TF_DEPOT: 35.1, BOMB_RAVINE: 73, NEON_YARD: 196, FIELD_ARENA: 320, M3_Maze: 228 })[mapId] || 228;
+function mapMovementBounds(mapId) {
+  return ({
+    HILL_TOWN: { x: 25.2, z: 25.2 },
+    TF_COURTYARD: { x: 35.1, z: 28.1 },
+    TF_DEPOT: { x: 35.1, z: 28.1 },
+    BOMB_RAVINE: { x: 73, z: 51.2 },
+    NEON_YARD: { x: 196, z: 196 },
+    FIELD_ARENA: { x: 320, z: 320 },
+    M3_Maze: { x: 228, z: 228 }
+  })[mapId] || { x: 228, z: 228 };
 }
 function validateMove(player, data, mapId = "M3_Maze", match = null) {
   const now = Date.now();
@@ -2180,8 +2192,8 @@ function validateMove(player, data, mapId = "M3_Maze", match = null) {
 
   const x = Number(data.x), y = Number(data.y), z = Number(data.z), rotY = Number(data.rotY);
   if (![x, y, z, rotY].every(Number.isFinite)) return false;
-  const bound = mapMovementLimit(mapId);
-  if (Math.abs(x) > bound || Math.abs(z) > bound) return false;
+  const bound = mapMovementBounds(mapId);
+  if (Math.abs(x) > bound.x || Math.abs(z) > bound.z) return false;
 
   const prev = player.pos;
   const elapsed = Math.min(0.25, Math.max(0.033, (now - (player.prevMoveTime || now)) / 1000));
