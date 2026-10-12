@@ -692,9 +692,14 @@ function spawnRemoteTracer(data){
   scene.updateMatrixWorld(true);
   raycaster.set(start,direction);raycaster.far=60;
   const hits=raycaster.intersectObjects(mapObjects.filter(o=>o?.visible),false);
-  const hit=hits.find(h=>h.distance<CLIENT_WEAPON_INFO[data.weapon]?.range||h.distance<60);
-  const end=hit?hit.point.clone():start.clone().addScaledVector(direction,Math.min(60,CLIENT_WEAPON_INFO[data.weapon]?.range||60));
-  if(hit?.face){
+  const maxRange=CLIENT_WEAPON_INFO[data.weapon]?.range||60;
+  const hit=hits.find(h=>h.distance<maxRange);
+  const serverImpact=data.impact&&[data.impact.x,data.impact.y,data.impact.z].every(v=>Number.isFinite(Number(v)))
+    ?new THREE.Vector3(Number(data.impact.x),Number(data.impact.y),Number(data.impact.z)):null;
+  const end=serverImpact|| (hit?hit.point.clone():start.clone().addScaledVector(direction,maxRange));
+  if(serverImpact){
+    addBulletHole(serverImpact,direction.clone().negate());
+  }else if(hit?.face){
     const normal=hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
     addBulletHole(hit.point,normal);
   }
@@ -892,7 +897,7 @@ let isLeavingMatch=false;
 
 const keys={w:false,s:false,a:false,d:false,shift:false};
 const DEFAULT_TRAINING_BINDS={spawnBot:"KeyN",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
-const TRAINING_ACTION_NAMES={spawnBot:"СТВОРИТИ БОТА",push:"PUSH",kick:"KICK",boost:"BOOST",resetBot:"СКИНУТИ БОТА",resetSession:"СКИНУТИ ТРЕНУВАННЯ",menu:"МЕНЮ"};
+const TRAINING_ACTION_NAMES={spawnBot:"СТВОРИТИ БОТА",push:"PUSH",kick:"KICK",boost:"BOOST",resetBot:"СКИНУТИ БОТА",resetSession:"СКИНУТИ ТРЕНУВАННЯ",menu:"ПОВЕРНУТИСЯ В ЛОБІ"};
 function readTrainingBinds(){
   try{
     const stored=JSON.parse(localStorage.getItem("sx_settings")||"{}").keybinds||{};
@@ -1443,8 +1448,9 @@ function shoot(){
     spawnMuzzleFlash(start,dir,selectedWeapon==="p350"?0xc8efff:0xffc56d);
     spawnTracer(start,end,selectedWeapon==="p350"?0xbceaff:0xffdf9a,110);
   }
+  const impactPayload=impact?{x:impact.x,y:impact.y,z:impact.z}:null;
   if(isTrainingMode)socket.emit("training_shoot",{trainingId,weapon:selectedWeapon,dx:dir.x,dy:dir.y,dz:dir.z});
-  else socket.emit("team_shoot",{matchId,weapon:selectedWeapon,dx:dir.x,dy:dir.y,dz:dir.z});
+  else socket.emit("team_shoot",{matchId,weapon:selectedWeapon,dx:dir.x,dy:dir.y,dz:dir.z,impact:impactPayload});
 }
 function fireLoop(){
   if(fireHeld){shoot();requestAnimationFrame(fireLoop)}
@@ -1605,7 +1611,8 @@ socket.on("training_init",data=>{
 });
 function applyTrainingBot(bot){
   if(!bot){removeTrainingBot();return}
-  applyEnemy({userId:"training_bot",id:"training_bot",nickname:bot.nickname||"Training Bot",role:"runner",team:"B",hp:bot.hp,x:bot.x,y:bot.y,z:bot.z,rotY:bot.rotY||0,anim:bot.action==="boost"?"Jump":"Idle",score:0});
+  const botAnim=bot.action==="boost"?"Jump":bot.action==="running"?"Running":bot.action==="hit"?"Hit":"Idle";
+  applyEnemy({userId:"training_bot",id:"training_bot",nickname:bot.nickname||"Training Bot",role:"runner",team:"B",hp:bot.hp,x:bot.x,y:bot.y,z:bot.z,rotY:bot.rotY||0,anim:botAnim,score:0});
   $("botStatus").textContent="BOT · HP "+bot.hp+"/"+(bot.maxHp||100)+" · HITS "+(bot.hits||0);
   const enemy=enemies["training_bot"];
   if(enemy)setSoldierTint(enemy.mesh,bot.hp<=0?0x777777:0xffbd67);
