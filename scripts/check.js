@@ -235,7 +235,9 @@ assert.match(server, /socket\.on\("map_door_state"/, "server validates and broad
 assert.match(server, /socket\.on\("map_door_shot"/, "server validates shots aimed at doors before opening them");
 assert.match(server, /function hillTownPathBlocked\(from,to,mapState=\{\}\)/, "server has a path collision test for solid walls and cover");
 assert.match(server, /if\(mapId&&mapPathBlocked\(mapId,prev,\{x:targetX,z:targetZ\},mapState\)\)return false/, "real-match movement is blocked by server map geometry");
-assert.match(server, /if\(mapPathBlocked\(session\.map,previous,target,session\.mapState\|\|\{\}\)\)return/, "prototype movement is blocked by server map geometry");
+assert.match(server, /if\(mapPathBlocked\(session\.map,previous,target,session\.mapState\|\|\{\}\)\)\{/, "prototype movement is blocked by server map geometry");
+assert.match(server, /socket\.emit\("player_position_correction"/, "server sends authoritative coordinates after rejecting an invalid move");
+assert.match(game, /socket\.on\("player_position_correction"/, "clients reconcile position after server-side collision rejection");
 assert.match(server, /const SERVER_MAP_LIMITS = Object\.freeze/, "every playable map has server-side movement boundaries");
 assert.match(server, /FIELD_ARENA: \[[\s\S]{0,500}minX: -38, maxX: -26/, "Field Arena obstacles are represented in server collision data");
 assert.match(server, /NEON_YARD: \[[\s\S]{0,500}minX: -57, maxX: -39/, "Neon Yard obstacles are represented in server collision data");
@@ -272,10 +274,12 @@ assert.match(game, /let connectedToGameplay=socket\.connected/, "the client must
 assert.match(game, /const HILL_TOWN_SCALE=2\.55/, "Hill Town must be dramatically larger than its original footprint");
 assert.match(game, /NEON_YARD_SCALE=2/, "Neon Yard must have an enlarged play area");
 assert.match(game, /FIELD_ARENA_SCALE=2/, "Field Arena must have an enlarged play area");
-assert.match(game, /map\.scale\.setScalar\(82\.5\)/, "the M3 map must be enlarged too");
+assert.match(game, /function buildM3Maze\(\)/, "M3 Maze must build locally instead of relying on a remote GLB");
+assert.match(game, /addBox\(0,3\.5,-228,456,7,4,shadowMat,true\)/, "M3 Maze must include a solid perimeter wall");
+assert.doesNotMatch(game.slice(game.indexOf("function loadMap()"), game.indexOf("function makeVisual(")), /loader\.load\("m3\.glb"/, "M3 map loading must not depend on a remote model");
 assert.match(game, /function rebuildCollisionIndex\(\)/, "map geometry must be registered for solid collision");
 assert.match(game, /if\(size\.y<\.24\|\|bounds\.max\.y<\.16\|\|size\.y>18\|\|\(size\.x>28&&size\.z>28\)\)continue/, "collision filtering must keep long thin walls instead of deleting arena borders");
-assert.match(game, /return \(\{HILL_TOWN:56/, "the competitive map boundary must keep players inside the playable floor");
+assert.match(game, /return \(\{HILL_TOWN:54\.2,NEON_YARD:167,FIELD_ARENA:291,M3_Maze:225\}\)/, "all client movement bounds must stay inside the matching physical map walls");
 assert.match(game, /function applyMapInteractionState\(state\)/, "door and destructible-cover state must be applied to reconnecting clients");
 assert.match(game, /const hits=raycaster\.intersectObjects\(mapObjects\.filter\(o=>o\?\.visible\),false\)/, "shots raycast against the actual map geometry");
 assert.match(game, /const hit=hits\.find\(h=>h\.distance<CLIENT_WEAPON_INFO\[selectedWeapon\]\.range\)/, "the nearest scenery impact is chosen before wood damage is applied");
@@ -441,4 +445,28 @@ assert.equal(weaponHelpers.detectWeaponHitZone({x:0,y:0,z:0},{x:0,y:0,z:-10},{x:
 assert.equal(weaponHelpers.detectWeaponHitZone({x:0,y:0,z:0},{x:0,y:0,z:-10},{x:0,y:-0.08,z:-1},10), "stomach", "downward aim should classify stomach hits");
 assert.equal(weaponHelpers.detectWeaponHitZone({x:0,y:0,z:0},{x:0,y:0,z:-10},{x:0,y:-0.15,z:-1},10), "legs", "steeper downward aim should classify leg hits");
 
-console.log("OK project invariants, real-player matchmaking, bot Prototype, map collisions, bullet effects, doors, weapon balance, ADS, Atlas endpoint, and unique HTTP routes");
+// Behavioral checks: the server collision proxies match the newly generated maps.
+const mapGeometryStart = server.indexOf("function segmentIntersectsRect2d");
+const mapGeometryEnd = server.indexOf("function isHillTownShotBlocked", mapGeometryStart);
+assert.ok(mapGeometryStart >= 0 && mapGeometryEnd > mapGeometryStart, "server map collision helpers must be extractable for tests");
+const mapGeometryCode = server.slice(mapGeometryStart, mapGeometryEnd);
+const mapGeometry = vm.runInNewContext(
+  "(()=>{" + mapGeometryCode + ";return {SERVER_MAP_LIMITS,SERVER_MAP_BLOCKERS,mapPathBlocked,nonHillMapShotBlocked}})()"
+);
+assert.equal(mapGeometry.mapPathBlocked("M3_Maze", {x:-195,z:-195}, {x:-194,z:-195}), false, "M3 spawn zone must not be blocked");
+assert.equal(mapGeometry.mapPathBlocked("M3_Maze", {x:-80,z:-140}, {x:-70,z:-140}), true, "M3 vertical maze wall must block movement");
+assert.equal(mapGeometry.nonHillMapShotBlocked("M3_Maze", {x:-80,z:-140}, {x:-70,z:-140}), true, "M3 wall must block line of sight");
+assert.equal(mapGeometry.mapPathBlocked("NEON_YARD", {x:12,z:0}, {x:0,z:0}), true, "Neon Yard central divider must block movement");
+assert.equal(mapGeometry.mapPathBlocked("FIELD_ARENA", {x:-45,z:14}, {x:-31,z:14}), true, "Field Arena cover must block movement");
+assert.equal(mapGeometry.mapPathBlocked("FIELD_ARENA", {x:-210,z:0}, {x:-209,z:0}), false, "Field Arena spawn approach must remain clear");
+assert.ok(mapGeometry.SERVER_MAP_BLOCKERS.M3_Maze.length >= 25, "M3 must have server-side proxies for interior walls and cover");
+assert.ok(mapGeometry.SERVER_MAP_BLOCKERS.FIELD_ARENA.length >= 12, "Field Arena must protect its added cover pieces");
+
+assert.match(game, /renderer\.toneMapping=THREE\.ACESFilmicToneMapping/, "the renderer must use improved color tonemapping");
+assert.match(game, /renderer\.shadowMap\.enabled=!isMobileDevice/, "shadows must be enabled on desktop without overloading mobile");
+assert.match(game, /makeSurfaceTexture=\(base,seed,marks=3600\)/, "Hill Town must use generated surface textures");
+assert.match(game, /function buildFieldArena\(\)[\s\S]{0,1200}const obstacles=/, "Field Arena must be built from a defined tactical cover layout");
+assert.match(game, /function buildNeonYard\(\)[\s\S]{0,1200}const structures=/, "Neon Yard must have a defined cover layout");
+assert.match(server, /M3_Maze: \[\s*\{ minX: -78, maxX: -74, minZ: -180, maxZ: -130 \}/, "M3 collision proxy geometry must exist on the server");
+
+console.log("OK project invariants, local maps, authoritative arena collisions, movement correction, graphics, weapons, matchmaking, MongoDB retry, and routes");
