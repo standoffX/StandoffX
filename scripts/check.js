@@ -66,7 +66,12 @@ assert.ok(server.indexOf("const nextPassword =") < server.indexOf("const oldId =
 assert.match(server, /app\.use\(express\.static\(ROOT, \{ index: false, dotfiles: "deny" \}\)\)/);
 assert.match(server, /RateLimit-Limit/, "critical endpoints must have rate limiting");
 assert.match(server, /requiredPlayers: 3/, "hide and seek requires three players");
-assert.match(server, /requiredPlayers: 4/, "team fight must be 2v2");
+assert.match(server, /requiredPlayers: 4/, "four-player 2v2 remains the target team size");
+assert.match(server, /const MATCHMAKING_MIN_PLAYERS = 2/, "a real multiplayer match can start when two people are queued");
+assert.match(server, /function getMinimumPlayers\(mode\)/, "public team modes use a minimum roster size");
+assert.match(server, /function scheduleMatchmaking\(io, mode, mapId\)/, "matchmaking waits briefly for more players, then starts a smaller live match");
+assert.match(server, /MATCHMAKING_FILL_WINDOW_MS = 3500/, "the matchmaking fill window is finite");
+assert.match(server, /function mapMovementLimit\(mapId\)/, "server rejects movement outside supported map boundaries");
 assert.match(server, /count: modePlayers\.length/, "queue count must be the total number waiting");
 assert.match(server, /players: modePlayers\.map/, "queue must send a waiting player roster");
 assert.match(server, /function normalizeClanState\(rawClans\)/, "legacy and Atlas clan records must be normalized");
@@ -213,9 +218,11 @@ assert.match(game, /HILL_TOWN_MANIFEST_URL/, "game must load the public CC0 map 
 assert.match(game, /async function loadHeldWeapon\(\)/, "game must load a first-person weapon model");
 assert.match(game, /function makeFallbackP350\(\)/, "the client must render the P350 pistol when equipped");
 assert.match(game, /function makeFallbackKnife\(\)/, "the client must render a knife when equipped");
-assert.match(game, /if\(Math\.abs\(dy\)>Math\.abs\(dx\)&&dy>0\)selectWeapon\("akr"\)/, "mobile downward swipe equips AKR");
-assert.match(game, /dx<0\)selectWeapon\("p350"\)/, "mobile left swipe equips P350");
-assert.match(game, /dx>0\)selectWeapon\("knife"\)/, "mobile right swipe equips knife");
+assert.match(game, /function selectWeaponBySwipe\(dx,dy\)/, "phone has a dedicated gesture switch so camera-look swipes stay available");
+assert.match(game, /Math\.abs\(dy\)>Math\.abs\(dx\)&&dy>0\)selectWeapon\("akr"\)/, "swiping down on the weapon control equips AKR");
+assert.match(game, /Math\.abs\(dx\)>Math\.abs\(dy\)&&dx<0\)selectWeapon\("p350"\)/, "swiping left on the weapon control equips P350");
+assert.match(game, /Math\.abs\(dx\)>Math\.abs\(dy\)&&dx>0\)selectWeapon\("knife"\)/, "swiping right on the weapon control equips knife");
+assert.match(game, /body\.reconnecting #overlay #loadingDetails/, "reconnect screen hides loading diagnostics and keeps the two exit choices focused");
 assert.match(game, /function addGameplayDoor\(/, "Hill Town has hinged door entities");
 assert.match(game, /function interactWithNearestDoor\(/, "doors can be opened and closed with E or the mobile interaction button");
 assert.match(game, /function addBreakableWood\(/, "Hill Town has breakable wooden cover");
@@ -237,6 +244,8 @@ assert.match(game, /id="weaponBtn"/, "mobile HUD must include weapon switching")
 assert.match(game, /weapon:"weaponBtn"/, "mobile weapon switch must use saved HUD position and size");
 assert.match(menu, /data-layout-control="weapon"/, "mobile HUD editor must preview the weapon switch");
 assert.match(menu, /data-size-control="weapon"/, "mobile HUD editor must allow an independent weapon button size");
+assert.match(menu, /data-layout-control="interact"/, "mobile HUD editor must preview the interact button");
+assert.match(menu, /data-size-control="interact"/, "mobile HUD editor must allow a separately sized interact button");
 assert.match(game, /socket\.emit\("team_shoot",\{matchId,weapon:selectedWeapon/, "the client must identify which weapon is fired");
 assert.match(game, /socket\.emit\("training_shoot",\{trainingId,weapon:selectedWeapon/, "training shots must identify the equipped weapon");
 assert.match(game, /e\.code==="Escape"\)\{e\.preventDefault\(\);leaveGame\(\);return\}/, "Escape must return to the lobby from any match phase");
@@ -253,6 +262,9 @@ assert.match(game, /socket\.on\("player_left"/, "departed players must be remove
 assert.match(game, /e\.pos\.set\(data\.x,data\.y,data\.z\);e\.mesh\.position\.copy\(e\.pos\);e\.anim="Idle"/, "a respawn must update both the displayed and authoritative remote position");
 assert.match(game, /let connectedToGameplay=socket\.connected/, "the client must rejoin the match after a Socket.IO reconnection");
 assert.match(game, /const HILL_TOWN_SCALE=2\.55/, "Hill Town must be dramatically larger than its original footprint");
+assert.match(game, /clone\.scale\.multiplyScalar\(HILL_TOWN_SCALE\)/, "map GLB assets must be uniformly scaled rather than stretched horizontally");
+assert.match(game, /new THREE\.BoxGeometry\(w\*HILL_TOWN_SCALE,h\*HILL_TOWN_SCALE,d\*HILL_TOWN_SCALE\)/, "procedural fallback geometry must use the same scale on all axes");
+assert.match(game, /return \(\{HILL_TOWN:65,NEON_YARD:196,FIELD_ARENA:320,M3_Maze:228\}\)/, "client movement must stay inside the map perimeter");
 assert.match(game, /NEON_YARD_SCALE=2/, "Neon Yard must have an enlarged play area");
 assert.match(game, /FIELD_ARENA_SCALE=2/, "Field Arena must have an enlarged play area");
 assert.match(game, /map\.scale\.setScalar\(82\.5\)/, "the M3 map must be enlarged too");
@@ -294,6 +306,8 @@ assert.match(ui, /html\[data-sx-device="desktop"\] body\.lobby-screen #mobileLay
 assert.match(server, /}, 90000\);/, "reconnect grace must last long enough to get back into the match");
 assert.match(server, /never end\/delete a match[\s\S]{0,220}if \(current\.phase === "game"\)/, "gameplay disconnect timeout must keep the match alive");
 assert.match(server, /const MATCH_SPAWNS =/, "scaled maps must use safe per-map spawn points");
+assert.match(server, /HILL_TOWN: \[\{x:-52,y:0,z:-52\},\{x:52,y:0,z:-52\},\{x:-52,y:0,z:52\},\{x:52,y:0,z:52\}\]/, "Hill Town match spawns must be clear of building footprints and inside the outer walls");
+assert.match(server, /match\.doorOpen\[doorIndex\] = open/, "server retains the authoritative state of each match door");
 assert.match(server, /io\.to\(matchId\)\.emit\("player_connection_state", \{ userId: player\.userId, connected: false/, "disconnect should not broadcast a permanent player-left event");
 assert.match(server, /p\.socketId === socket\.id \|\| p\.socketId === null/, "an authenticated player can explicitly leave their disconnected match slot");
 assert.match(server, /if \(session\.socketId !== null && session\.socketId !== socket\.id\) return/, "an authenticated tester can close a disconnected training session");
