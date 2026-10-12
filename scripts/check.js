@@ -208,14 +208,14 @@ assert.doesNotMatch(server, /bot\.hp = Math\.max\(0, bot\.hp - \(Number\(data\.d
 assert.match(menu, /data-mode="allies"/, "menu must offer Allies");
 assert.match(menu, /data-mode="team_fight"/, "menu must offer Team Fight");
 assert.match(menu, /data-map="HILL_TOWN"/, "menu must offer Hill Town");
-assert.match(game, /async function buildHillTownMap\(\)/, "game must assemble the new map from modular assets");
-assert.match(game, /HILL_TOWN_MANIFEST_URL/, "game must load the public CC0 map asset manifest");
+assert.match(game, /function buildHillTownMap\(\)[\s\S]*?wallAlongZ\(-55\.5,-48,48,wallShadowMat,1,6\)[\s\S]*?addGameplayInteractables\(\);[\s\S]*?mapLoadFinished=true/, "Hill Town must build a deterministic local competitive map with solid walls");
+assert.match(game, /HILL_TOWN_MANIFEST_URL/, "the optional first-person AKR model may still use the CC0 weapon manifest");
 assert.match(game, /async function loadHeldWeapon\(\)/, "game must load a first-person weapon model");
 assert.match(game, /function makeFallbackP350\(\)/, "the client must render the P350 pistol when equipped");
 assert.match(game, /function makeFallbackKnife\(\)/, "the client must render a knife when equipped");
-assert.match(game, /if\(Math\.abs\(dy\)>Math\.abs\(dx\)&&dy>0\)selectWeapon\("akr"\)/, "mobile downward swipe equips AKR");
-assert.match(game, /dx<0\)selectWeapon\("p350"\)/, "mobile left swipe equips P350");
-assert.match(game, /dx>0\)selectWeapon\("knife"\)/, "mobile right swipe equips knife");
+assert.match(game, /if\(Math\.abs\(dy\)>Math\.abs\(dx\)&&dy>0\)\{selectWeapon\("akr"\)/, "mobile downward swipe equips AKR");
+assert.match(game, /dx<0\)\{selectWeapon\("p350"\)/, "mobile left swipe equips P350");
+assert.match(game, /dx>0\)\{selectWeapon\("knife"\)/, "mobile right swipe equips knife");
 assert.match(game, /function addGameplayDoor\(/, "Hill Town has hinged door entities");
 assert.match(game, /function interactWithNearestDoor\(/, "doors can be opened and closed with E or the mobile interaction button");
 assert.match(game, /function addBreakableWood\(/, "Hill Town has breakable wooden cover");
@@ -227,7 +227,7 @@ assert.match(game, /socket\.on\("map_door_state"/, "clients apply other players'
 assert.match(game, /socket\.on\("map_wood_destroyed"/, "clients apply other players' wooden-cover destruction");
 assert.match(server, /socket\.on\("map_door_state"/, "server validates and broadcasts door changes");
 assert.match(server, /socket\.on\("map_wood_destroyed"/, "server validates and broadcasts destroyed wood");
-assert.match(server, /Math\.hypot\(player\.pos\.x-x, player\.pos\.z-z\) > 18/, "door changes require the player to be nearby");
+assert.match(server, /Math\.hypot\(player\.pos\.x-x, player\.pos\.z-z\) > 7\.5/, "door changes require the player to be near the correct doorway");
 assert.match(game, /if\(e\.code==="Digit1"\)[\s\S]{0,100}selectWeapon\("akr"\)/, "1 must equip the AKR");
 assert.match(game, /if\(e\.code==="Digit2"\)[\s\S]{0,100}selectWeapon\("p350"\)/, "2 must equip the P350");
 assert.match(game, /if\(e\.code==="Digit3"\)[\s\S]{0,100}selectWeapon\("knife"\)/, "3 must equip the knife");
@@ -257,6 +257,10 @@ assert.match(game, /NEON_YARD_SCALE=2/, "Neon Yard must have an enlarged play ar
 assert.match(game, /FIELD_ARENA_SCALE=2/, "Field Arena must have an enlarged play area");
 assert.match(game, /map\.scale\.setScalar\(82\.5\)/, "the M3 map must be enlarged too");
 assert.match(game, /function rebuildCollisionIndex\(\)/, "map geometry must be registered for solid collision");
+assert.match(game, /if\(size\.y<\.24\|\|bounds\.max\.y<\.16\|\|size\.y>18\|\|\(size\.x>28&&size\.z>28\)\)continue/, "collision filtering must keep long thin walls instead of deleting arena borders");
+assert.match(game, /return \(\{HILL_TOWN:56/, "the competitive map boundary must keep players inside the playable floor");
+assert.match(game, /function applyMapInteractionState\(state\)/, "door and destructible-cover state must be applied to reconnecting clients");
+assert.match(game, /const blockers=mapObjects\.filter\(o=>o\?\.visible&&!o\.userData\.breakableWood\)/, "shots cannot damage wood through solid walls");
 assert.match(game, /function blockedAt\(x,z\)/, "the player must be blocked by solid map objects");
 assert.match(game, /function moveWithCollision\(direction,distance\)/, "movement must use small collision-tested steps instead of crossing walls at sprint speed");
 assert.match(game, /if\(penaltyX===0\|\|penaltyX<current-\.001\)player\.position\.x=nx/, "collision must permit sliding along the X axis");
@@ -284,7 +288,10 @@ assert.match(game, /id="weaponLoadStatus"/, "the loading overlay must show weapo
 assert.match(game, /id="connectionLoadStatus"/, "the loading overlay must show server connection status");
 assert.ok(game.includes('localStorage.setItem("sx_abandoned_match"'), "leaving during a network outage must queue match cleanup");
 assert.match(game, /socket\.on\("player_connection_state"/, "players should stay on the map when teammates temporarily disconnect");
-assert.match(menu, /id="resumeMatchBtn"/, "the lobby must offer reconnect to a previously interrupted match");
+assert.match(menu, /id="resumeMatchBtn"/, "the lobby must offer a bottom exit button for a resumed match");
+assert.match(menu, /label\.textContent=hasMatch\?"↻  ПІДКЛЮЧИТИСЯ":"▶  ГРАТИ"/, "the primary lobby button must switch from Play to Connect while a match is active");
+assert.match(menu, /function exitSavedMatch\(\)/, "the lobby exit control must cancel the saved old match");
+assert.match(menu, /button\.textContent="ВИЙТИ З МАТЧУ"/, "the lobby reconnect state must show Exit below Connect");
 assert.match(menu, /data-size-control="fire"/, "the mobile layout editor must let players size the fire button separately");
 assert.match(menu, /data-size-control="crouch"/, "the mobile layout editor must let players size crouch separately");
 assert.match(menu, /data-size-control="sprint"/, "the mobile layout editor must let players size sprint separately");
@@ -294,8 +301,11 @@ assert.match(ui, /html\[data-sx-device="desktop"\] body\.lobby-screen #mobileLay
 assert.match(server, /}, 90000\);/, "reconnect grace must last long enough to get back into the match");
 assert.match(server, /never end\/delete a match[\s\S]{0,220}if \(current\.phase === "game"\)/, "gameplay disconnect timeout must keep the match alive");
 assert.match(server, /const MATCH_SPAWNS =/, "scaled maps must use safe per-map spawn points");
+assert.match(server, /HILL_TOWN: \[\{x:-42,y:0,z:-28\},\{x:42,y:0,z:-28\},\{x:-42,y:0,z:28\},\{x:42,y:0,z:28\}\]/, "Hill Town team spawns must stay in mirrored safe start zones");
+assert.match(server, /mapState: safeMapId === "HILL_TOWN" \? createMapInteractionState\(\) : null/, "map interaction states must be retained with a match");
 assert.match(server, /io\.to\(matchId\)\.emit\("player_connection_state", \{ userId: player\.userId, connected: false/, "disconnect should not broadcast a permanent player-left event");
-assert.match(server, /p\.socketId === socket\.id \|\| p\.socketId === null/, "an authenticated player can explicitly leave their disconnected match slot");
+assert.match(server, /const index = match\.players\.findIndex\(p => \(p\.uuid \? p\.uuid === socket\.user\.uuid : p\.userId === socket\.user\.id\)\)/, "an authenticated lobby exit can remove the player slot by account identity");
+assert.match(server, /if \(player\.socketId && player\.socketId !== socket\.id\)/, "leaving from the lobby must also close the old gameplay socket");
 assert.match(server, /if \(session\.socketId !== null && session\.socketId !== socket\.id\) return/, "an authenticated tester can close a disconnected training session");
 assert.match(game, /function addTownFallbackArch\(/, "fallback town doors must preserve walkable archways");
 assert.match(ui, /grid-template-columns:minmax\(260px,1fr\) minmax\(250px,\.95fr\) minmax\(300px,1\.12fr\)/, "lobby layout must stay roomy on desktop");
@@ -336,9 +346,12 @@ assert.match(game, /if\(p\.hp<=0\)\{p\.anim="Dead";setSoldierDown\(p\.mesh,true\
 
 assert.match(game, /const camera=new THREE\.PerspectiveCamera\([^;]+\);\s*\/\/ Camera-attached weapon and view models must belong to the rendered scene graph\.\s*scene\.add\(camera\);/, "camera-mounted weapon models must be in the scene graph to render");
 
-assert.match(game, /function buildLocalHillTownFallback\(\)/, "Hill Town must have a playable fallback made from local geometry");
-assert.match(game, /buildLocalHillTownFallback\(\);finishClientReady\(\)/, "a failed remote Hill Town asset load must still start the match using town geometry");
-assert.doesNotMatch(game, /Remote models unavailable; using local fallback\.\",error\);\s*buildFieldArena\(\)/, "Hill Town must not silently turn into a field arena when the CDN fails");
+assert.match(game, /function buildHillTownMap\(\)[\s\S]{0,1300}const groundMat=mat/, "Hill Town starts from local world-space geometry");
+assert.doesNotMatch(game.slice(game.indexOf("function buildHillTownMap()"),game.indexOf("function makeVisual(color)")), /loadHillTownManifest|loadHillTownStarterFallback|loader\.load/, "the competitive map must not depend on a remote GLB scene or its extra props");
+assert.match(game, /wallAlongZ\(0,cursor,gapStart,wallMat,\.9,5\.1\)/, "the central divider must be built as solid wall sections with door gaps");
+assert.match(game, /addGameplayDoor\(0,-28,Math\.PI\/2\)[\s\S]*addGameplayDoor\(0,0,Math\.PI\/2\)[\s\S]*addGameplayDoor\(0,28,Math\.PI\/2\)/, "all three combat lanes have synchronized doors");
+assert.match(server, /match\.mapState\.doors\[doorIndex\]=open/, "server stores door state for returning players");
+assert.match(server, /match\.mapState\.destroyedWood\.includes\(woodIndex\)/, "server stores destroyed cover indices for returning players");
 
 assert.match(server, /players\.some\(candidate => candidate\.isBot\) \? \(p\.isBot \? "B" : "A"\)/, "all tester bots must be on the opposing team and be shootable targets");
 
