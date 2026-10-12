@@ -273,7 +273,7 @@ assert.match(game, /function rebuildCollisionIndex\(\)/, "map geometry must be r
 assert.match(game, /if\(size\.y<\.24\|\|bounds\.max\.y<\.16\|\|size\.y>18\|\|\(size\.x>28&&size\.z>28\)\)continue/, "collision filtering must keep long thin walls instead of deleting arena borders");
 assert.match(game, /return \(\{HILL_TOWN:56/, "the competitive map boundary must keep players inside the playable floor");
 assert.match(game, /function applyMapInteractionState\(state\)/, "door and destructible-cover state must be applied to reconnecting clients");
-assert.match(game, /const blockers=mapObjects\.filter\(o=>o\?\.visible&&!o\.userData\.breakableWood\)/, "shots cannot damage wood through solid walls");
+assert.match(game, /const hits=raycaster\.intersectObjects\(mapObjects\.filter\(o=>o\?\.visible\),false\);[\s\S]{0,220}if\(obj\.userData\?\.breakableWood\)/, "the first map impact is resolved before destructible wood can take damage");
 assert.match(game, /function blockedAt\(x,z\)/, "the player must be blocked by solid map objects");
 assert.match(game, /function moveWithCollision\(direction,distance\)/, "movement must use small collision-tested steps instead of crossing walls at sprint speed");
 assert.match(game, /if\(penaltyX===0\|\|penaltyX<current-\.001\)player\.position\.x=nx/, "collision must permit sliding along the X axis");
