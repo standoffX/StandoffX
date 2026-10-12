@@ -269,7 +269,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
 
 <section id="profile" class="screen">
   <div class="sectionhead"><h2>ПРОФІЛЬ</h2></div>
-  <div class="panel panelbody"><div class="profiletop"><img id="profileAvatar" class="avatar" src="/avatars/default.jpg" alt=""><div><div class="nick" id="profilePageNick"></div><div class="playerid">PLAYER ID: <b id="profilePageId"></b></div><button id="copyId" class="secondary" style="margin-top:8px">СКОПІЮВАТИ ID</button><div class="playerid" style="margin-top:12px">UUID: <b id="profilePageUuid" style="overflow-wrap:anywhere"></b></div><button id="copyUuid" class="secondary" style="margin-top:8px">СКОПІЮВАТИ UUID</button></div></div>
+  <div class="panel panelbody"><div class="profiletop"><img id="profileAvatar" class="avatar" src="/avatars/default.jpg" alt=""><div><div class="nick" id="profilePageNick"></div><div class="playerid">PLAYER ID: <b id="profilePageId"></b></div><button id="copyId" class="secondary" style="margin-top:8px">СКОПІЮВАТИ ID</button></div></div>
   <div class="cardgrid" style="margin-top:14px"><div class="statcard"><small>XP</small><strong id="profileXP">0</strong></div><div class="statcard"><small>GOLD</small><strong id="profileGold">0</strong></div><div class="statcard"><small>COMPETITIVE</small><strong id="profileComp">1000</strong></div><div class="statcard"><small>ALLIES</small><strong id="profileAllies">1000</strong></div></div></div>
 </section>
 
@@ -598,11 +598,6 @@ $("cancelSearch").addEventListener("click",cancelSearch);
 $("refreshClan").addEventListener("click",loadClan);
 $("refreshMarket").addEventListener("click",loadMarket);
 $("copyId").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(cleanId(me.id));$("copyId").textContent="СКОПІЙОВАНО ✓"}catch{}});
-$("copyUuid").addEventListener("click",async()=>{
-  const uuid=me?.uuid||$("profilePageUuid").textContent;
-  if(!uuid||uuid.includes("UUID ")||uuid.includes("Завантаження"))return notifyToast("UUID ще не завантажено.");
-  try{await navigator.clipboard.writeText(uuid);$("copyUuid").textContent="СКОПІЙОВАНО ✓"}catch{notifyToast("Не вдалося скопіювати UUID.")}
-});
 $("findFriend").addEventListener("click",findFriend);
 
 function createRealtimeSocket(){
