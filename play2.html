@@ -34,6 +34,15 @@
 #reconnectBtn.reconnect-primary:hover{filter:brightness(1.1)}
 #reconnectExitBtn{display:block;width:min(360px,100%);min-height:40px;margin:8px auto 0;padding:10px 18px;border:1px solid #a6b6cc42;border-radius:4px;background:#141c2a;color:#d4deed;font-size:11px;font-weight:900;letter-spacing:1px}
 #reconnectExitBtn:hover{background:#202b3b;color:#fff}
+body.reconnecting #overlay .players,
+body.reconnecting #overlay #loadingDetails,
+body.reconnecting #overlay #progressWrap,
+body.reconnecting #overlay #clickHint{display:none!important}
+body.reconnecting #overlay .panel{width:min(440px,92vw);padding:24px 22px}
+body.reconnecting #overlay #phase{font-size:13px;margin:7px 0 12px}
+body.reconnecting #overlay #overlayText{color:#c0d1e1;font-size:12px;line-height:1.6}
+body.reconnecting #reconnectBtn{margin-top:20px}
+body.reconnecting #reconnectExitBtn{margin-top:9px}
 #results{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;background:#05080def}.resultBox{padding:28px;width:min(420px,90vw);background:#111821;border:1px solid #ffffff14;border-radius:11px;text-align:center}.resultBox h2{margin:0 0 12px}.resultBox .reward{font-size:20px;font-weight:900}.resultBox button{margin-top:18px;width:100%;height:44px;border:0;border-radius:6px;background:#327cff;color:white;font-weight:900}
 #mobile{display:none;position:fixed;inset:0;z-index:20;pointer-events:none}
 #leaveGameDesktop{position:fixed;right:14px;top:14px;z-index:25;pointer-events:auto;border:1px solid #ffffff28;background:#0b111bd9;color:#fff;border-radius:6px;padding:10px 13px;font-size:11px;font-weight:900;cursor:pointer}
@@ -346,8 +355,8 @@ async function getHillTownTemplate(name){
 function addAssetInstance(template,x,y,z,rotationY=0,collidable=true){
   if(!template)return null;
   const clone=template.clone(true);
-  clone.position.set(x*HILL_TOWN_SCALE,y,z*HILL_TOWN_SCALE);
-  clone.scale.x*=HILL_TOWN_SCALE;clone.scale.z*=HILL_TOWN_SCALE;
+  clone.position.set(x*HILL_TOWN_SCALE,y*HILL_TOWN_SCALE,z*HILL_TOWN_SCALE);
+  clone.scale.multiplyScalar(HILL_TOWN_SCALE);
   clone.rotation.y=rotationY;
   clone.traverse(node=>{
     if(node.isMesh){
@@ -360,10 +369,10 @@ function addAssetInstance(template,x,y,z,rotationY=0,collidable=true){
 }
 function addTownFallbackWall(x,z,rotationY=0,materialColor=0xb69a76){
   const s=HILL_TOWN_SCALE;
-  const mesh=new THREE.Mesh(new THREE.BoxGeometry(4*s,3.5,.34*s),new THREE.MeshStandardMaterial({color:materialColor,roughness:.92}));
-  mesh.position.set(x*s,1.75,z*s);mesh.rotation.y=rotationY;scene.add(mesh);mapObjects.push(mesh);
-  const trim=new THREE.Mesh(new THREE.BoxGeometry(4.02*s,.12,.38*s),new THREE.MeshStandardMaterial({color:0x705841,roughness:1}));
-  trim.position.set(x*s,3.35,z*s);trim.rotation.y=rotationY;scene.add(trim);mapObjects.push(trim);
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(4*s,3.5*s,.34*s),new THREE.MeshStandardMaterial({color:materialColor,roughness:.92}));
+  mesh.position.set(x*s,1.75*s,z*s);mesh.rotation.y=rotationY;scene.add(mesh);mapObjects.push(mesh);
+  const trim=new THREE.Mesh(new THREE.BoxGeometry(4.02*s,.12*s,.38*s),new THREE.MeshStandardMaterial({color:0x705841,roughness:1}));
+  trim.position.set(x*s,3.35*s,z*s);trim.rotation.y=rotationY;scene.add(trim);mapObjects.push(trim);
 }
 function addTownFallbackArch(x,z,rotationY=0){
   const s=HILL_TOWN_SCALE,group=new THREE.Group();
@@ -374,16 +383,16 @@ function addTownFallbackArch(x,z,rotationY=0){
     mesh.position.set(px,py,pz);mesh.castShadow=false;mesh.receiveShadow=false;
     group.add(mesh);mapObjects.push(mesh);
   };
-  part(1.05*s,2.65,.4*s,-1.45*s,1.325,0);
-  part(1.05*s,2.65,.4*s,1.45*s,1.325,0);
-  part(4.0*s,.72,.46*s,0,3.0,0);
+  part(1.05*s,2.65*s,.4*s,-1.45*s,1.325*s,0);
+  part(1.05*s,2.65*s,.4*s,1.45*s,1.325*s,0);
+  part(4.0*s,.72*s,.46*s,0,3.0*s,0);
 }
 function addTownFallbackProp(x,z,color=0x897052){
   const s=HILL_TOWN_SCALE;
-  const base=new THREE.Mesh(new THREE.BoxGeometry(1.35*s,1.15,s),new THREE.MeshStandardMaterial({color,roughness:.95}));
-  base.position.set(x*s,.575,z*s);scene.add(base);mapObjects.push(base);
-  const slat=new THREE.Mesh(new THREE.BoxGeometry(1.4*s,.08,1.04*s),new THREE.MeshStandardMaterial({color:0x4e3a2a,roughness:1}));
-  slat.position.set(x*s,1.12,z*s);scene.add(slat);mapObjects.push(slat);
+  const base=new THREE.Mesh(new THREE.BoxGeometry(1.35*s,1.15*s,s),new THREE.MeshStandardMaterial({color,roughness:.95}));
+  base.position.set(x*s,.575*s,z*s);scene.add(base);mapObjects.push(base);
+  const slat=new THREE.Mesh(new THREE.BoxGeometry(1.4*s,.08*s,1.04*s),new THREE.MeshStandardMaterial({color:0x4e3a2a,roughness:1}));
+  slat.position.set(x*s,1.12*s,z*s);scene.add(slat);mapObjects.push(slat);
 }
 function buildLocalHillTownFallback(){
   if(mapLoadFinished)return;
@@ -397,8 +406,8 @@ function buildLocalHillTownFallback(){
   const crossRoad=new THREE.Mesh(new THREE.PlaneGeometry(60*HILL_TOWN_SCALE,9*HILL_TOWN_SCALE),mat(0x555b5c,1));
   crossRoad.rotation.x=-Math.PI/2;crossRoad.position.set(0,-.05,0);scene.add(crossRoad);
   const addBox=(x,y,z,w,h,d,material,rotationY=0,collidable=true)=>{
-    const object=new THREE.Mesh(new THREE.BoxGeometry(w*HILL_TOWN_SCALE,h,d*HILL_TOWN_SCALE),material);
-    object.position.set(x*HILL_TOWN_SCALE,y,z*HILL_TOWN_SCALE);object.rotation.y=rotationY;
+    const object=new THREE.Mesh(new THREE.BoxGeometry(w*HILL_TOWN_SCALE,h*HILL_TOWN_SCALE,d*HILL_TOWN_SCALE),material);
+    object.position.set(x*HILL_TOWN_SCALE,y*HILL_TOWN_SCALE,z*HILL_TOWN_SCALE);object.rotation.y=rotationY;
     object.castShadow=false;object.receiveShadow=false;scene.add(object);
     if(collidable)mapObjects.push(object);
     return object;
@@ -436,7 +445,7 @@ function buildLocalHillTownFallback(){
 async function loadHillTownStarterFallback(){
   try{
     const map=await loadGLBScene(HILL_TOWN_STARTER_URL);
-    map.scale.x*=HILL_TOWN_SCALE;map.scale.z*=HILL_TOWN_SCALE;
+    map.scale.multiplyScalar(HILL_TOWN_SCALE);
     map.traverse(node=>{if(node.isMesh){node.castShadow=false;node.receiveShadow=false;mapObjects.push(node)}});
     scene.add(map);addGameplayInteractables();mapLoaded=true;mapLoadFinished=true;
     $("progress").style.width="100%";
@@ -509,7 +518,6 @@ async function buildHillTownMap(){
     prop("olive",-20,8,0);prop("olive",20,-8,0);
     prop("lamp",-24,0,Math.PI/2);prop("lamp",24,0,-Math.PI/2);
     addGameplayInteractables();
-    addGameplayInteractables();
     mapLoadFinished=true;mapLoaded=true;hillTownBuilding=false;
     scene.background=new THREE.Color(0xc8d3d8);
     scene.fog=new THREE.Fog(0xc8d3d8,95,250);
@@ -532,12 +540,12 @@ function addGameplayDoor(x,z,rotationY=0,label="ДВЕРІ"){
   group.position.set(x*s,0,z*s);group.rotation.y=rotationY;
   const mat=new THREE.MeshStandardMaterial({color:0x765038,roughness:.94});
   const metal=new THREE.MeshStandardMaterial({color:0x343d43,metalness:.6,roughness:.45});
-  const panel=new THREE.Mesh(new THREE.BoxGeometry(2.6*s,2.55,.2*s),mat);
-  panel.position.set(1.3*s,1.275,0);panel.castShadow=false;panel.receiveShadow=false;group.add(panel);mapObjects.push(panel);
-  const brace=new THREE.Mesh(new THREE.BoxGeometry(2.45*s,.1,.23*s),metal);
-  brace.position.set(1.3*s,1.9,0);group.add(brace);mapObjects.push(brace);
+  const panel=new THREE.Mesh(new THREE.BoxGeometry(2.6*s,2.55*s,.2*s),mat);
+  panel.position.set(1.3*s,1.275*s,0);panel.castShadow=false;panel.receiveShadow=false;group.add(panel);mapObjects.push(panel);
+  const brace=new THREE.Mesh(new THREE.BoxGeometry(2.45*s,.1*s,.23*s),metal);
+  brace.position.set(1.3*s,1.9*s,0);group.add(brace);mapObjects.push(brace);
   const handle=new THREE.Mesh(new THREE.BoxGeometry(.06,.18,.1),metal);
-  handle.position.set(.25*s,1.25,.14*s);group.add(handle);mapObjects.push(handle);
+  handle.position.set(.25*s,1.25*s,.14*s);group.add(handle);mapObjects.push(handle);
   scene.add(group);
   const door={group,panel,brace,handle,x:x*s,z:z*s,open:false,label,baseRotation:rotationY};
   interactiveDoors.push(door);
@@ -549,11 +557,11 @@ function addBreakableWood(x,z){
   const wood=new THREE.MeshStandardMaterial({color:0x85572f,roughness:.98});
   const dark=new THREE.MeshStandardMaterial({color:0x49301e,roughness:1});
   for(let i=0;i<4;i++){
-    const plank=new THREE.Mesh(new THREE.BoxGeometry(1.25*s,.22,.11*s),wood);
-    plank.position.set(0,.35+i*.24,0);plank.rotation.y=(i%2)*Math.PI/2;plank.userData.breakableWood=true;plank.userData.hp=3;plank.castShadow=false;plank.receiveShadow=false;
+    const plank=new THREE.Mesh(new THREE.BoxGeometry(1.25*s,.22*s,.11*s),wood);
+    plank.position.set(0,(.35+i*.24)*s,0);plank.rotation.y=(i%2)*Math.PI/2;plank.userData.breakableWood=true;plank.userData.hp=3;plank.castShadow=false;plank.receiveShadow=false;
     group.add(plank);breakableWood.push(plank);mapObjects.push(plank);
   }
-  const cap=new THREE.Mesh(new THREE.BoxGeometry(1.35*s,.12,1.1*s),dark);cap.position.y=1.18;cap.userData.breakableWood=true;cap.userData.hp=3;group.add(cap);breakableWood.push(cap);mapObjects.push(cap);
+  const cap=new THREE.Mesh(new THREE.BoxGeometry(1.35*s,.12*s,1.1*s),dark);cap.position.y=1.18*s;cap.userData.breakableWood=true;cap.userData.hp=3;group.add(cap);breakableWood.push(cap);mapObjects.push(cap);
   scene.add(group);
 }
 function setGameplayDoorState(doorIndex,open){
@@ -1350,28 +1358,47 @@ addEventListener("mousedown",e=>{
   }
 });
 addEventListener("mouseup",e=>{if(e.button===0&&!isMobileDevice)fireHeld=false});
-$("weaponBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();cycleWeapon()});
-$("interactBtn").addEventListener("touchstart",e=>{e.preventDefault();e.stopPropagation();interactWithNearestDoor()},{passive:false});
-$("interactBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();interactWithNearestDoor()});
-let weaponSwipeStart=null;
-document.addEventListener("touchstart",e=>{
-  if(!isMobileDevice||e.target.closest("#mobile")||e.target.closest("button")||e.target.closest("input"))return;
-  const t=e.changedTouches[0];if(t)weaponSwipeStart={id:t.identifier,x:t.clientX,y:t.clientY};
-},{passive:true});
-document.addEventListener("touchend",e=>{
-  if(!isMobileDevice||!weaponSwipeStart)return;
-  const t=Array.from(e.changedTouches).find(v=>v.identifier===weaponSwipeStart.id);if(!t)return;
-  const dx=t.clientX-weaponSwipeStart.x,dy=t.clientY-weaponSwipeStart.y;
-  weaponSwipeStart=null;
-  if(Math.max(Math.abs(dx),Math.abs(dy))<70)return;
+const weaponBtn=$("weaponBtn");
+let weaponGesture=null;
+function selectWeaponBySwipe(dx,dy){
+  if(Math.max(Math.abs(dx),Math.abs(dy))<28)return false;
   if(Math.abs(dy)>Math.abs(dx)&&dy>0)selectWeapon("akr");
   else if(Math.abs(dx)>Math.abs(dy)&&dx<0)selectWeapon("p350");
   else if(Math.abs(dx)>Math.abs(dy)&&dx>0)selectWeapon("knife");
-},{passive:true});
+  else return false;
+  return true;
+}
+weaponBtn.addEventListener("click",e=>{
+  e.preventDefault();e.stopPropagation();
+  if(!isMobileDevice)cycleWeapon();
+});
+weaponBtn.addEventListener("touchstart",e=>{
+  if(!isMobileDevice)return;
+  const t=e.changedTouches[0];if(!t)return;
+  e.preventDefault();e.stopPropagation();
+  weaponGesture={id:t.identifier,x:t.clientX,y:t.clientY,used:false};
+},{passive:false});
+weaponBtn.addEventListener("touchmove",e=>{
+  if(!isMobileDevice||!weaponGesture)return;
+  const t=touchById(e.touches,weaponGesture.id);if(!t)return;
+  const dx=t.clientX-weaponGesture.x,dy=t.clientY-weaponGesture.y;
+  if(Math.max(Math.abs(dx),Math.abs(dy))<28)return;
+  if(selectWeaponBySwipe(dx,dy))weaponGesture.used=true;
+  e.preventDefault();e.stopPropagation();
+},{passive:false});
+const finishWeaponGesture=e=>{
+  if(!weaponGesture||!Array.from(e?.changedTouches||[]).some(t=>t.identifier===weaponGesture.id))return;
+  if(!weaponGesture.used)cycleWeapon();
+  weaponGesture=null;
+};
+weaponBtn.addEventListener("touchend",finishWeaponGesture,{passive:true});
+weaponBtn.addEventListener("touchcancel",()=>{weaponGesture=null},{passive:true});
+$("interactBtn").addEventListener("touchstart",e=>{e.preventDefault();e.stopPropagation();interactWithNearestDoor()},{passive:false});
+$("interactBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();if(!isMobileDevice)interactWithNearestDoor()});
 
 function setOverlayGame(){
   $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":mode==="training"?"ТРЕНУВАННЯ":"HIDE & SEEK";
-  $("clickHint").textContent="Клікни для огляду мишкою. WASD — рух · ESC — у лобі";
+  $("clickHint").textContent=isMobileDevice?"РУХ: ДЖОЙСТИК · ВОГОНЬ: FIRE · ПРОВЕДИ ПО КНОПЦІ ЗБРОЇ: ↓ AKR · ← P350 · → НІЖ":"WASD — рух · ЛКМ — вогонь · RMB — приціл AKR · 1/2/3 — зброя · E — двері · ESC — лобі";
   if(isMobileDevice) $("overlay").style.display="none";
 }
 function leaveGame(){
