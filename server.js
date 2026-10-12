@@ -2186,12 +2186,19 @@ io.on("connection", socket => {
     const match = activeMatches.get(matchId);
     if (!match) return;
 
-    const index = match.players.findIndex(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && (p.socketId === socket.id || p.socketId === null));
+    const index = match.players.findIndex(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id));
     if (index < 0) return;
 
     const player = match.players[index];
     if (player.disconnectTimer) clearTimeout(player.disconnectTimer);
     player.disconnectTimer = null;
+    if (player.socketId && player.socketId !== socket.id) {
+      const gameplaySocket = io.sockets.sockets.get(player.socketId);
+      if (gameplaySocket) {
+        gameplaySocket.emit("go_to_menu");
+        gameplaySocket.leave(matchId);
+      }
+    }
     player.socketId = null;
     socket.leave(matchId);
 
