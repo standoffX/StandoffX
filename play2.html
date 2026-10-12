@@ -466,7 +466,7 @@ function buildHillTownMap(){
   const addGround=(x,z,w,d,material,y=-.045)=>{
     const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,d),material);
     mesh.rotation.x=-Math.PI/2;mesh.position.set(x,y,z);
-    mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);
+    mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
     return mesh;
   };
   const wallAlongZ=(x,start,end,material,thickness=.9,height=5.8)=>{
@@ -719,8 +719,11 @@ function damageBreakableWood(direction){
     const doorIndex=obj.userData.doorIndex,door=interactiveDoors[doorIndex];
     if(door&&!door.open){
       setGameplayDoorState(doorIndex,true);
-      if(isTrainingMode)socket.emit("map_door_shot",{trainingId,doorIndex,weapon:selectedWeapon,dx:direction.x,dy:direction.y,dz:direction.z});
-      else socket.emit("map_door_shot",{matchId,doorIndex,weapon:selectedWeapon,dx:direction.x,dy:direction.y,dz:direction.z});
+      // Let the current bullet be evaluated against the still-closed door first.
+      setTimeout(()=>{
+        if(isTrainingMode)socket.emit("map_door_shot",{trainingId,doorIndex,weapon:selectedWeapon,dx:direction.x,dy:direction.y,dz:direction.z});
+        else socket.emit("map_door_shot",{matchId,doorIndex,weapon:selectedWeapon,dx:direction.x,dy:direction.y,dz:direction.z});
+      },90);
       showDamagePopup("ПОСТРІЛ · ДВЕРІ ВІДЧИНЕНО");
     }
     return hit.point.clone();
