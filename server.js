@@ -102,6 +102,14 @@ writeJson(SKINS_PATH, skins);
 
 let users = readJson(USERS_PATH, []);
 if (!Array.isArray(users)) users = [];
+const LOCAL_VERIFICATION_MIGRATION = path.join(DATA_DIR, ".verified-defaults-off-v1");
+if (!fs.existsSync(LOCAL_VERIFICATION_MIGRATION)) {
+  for (const user of users) {
+    if (user && typeof user === "object" && !Array.isArray(user)) user.isVerified = false;
+  }
+  writeJson(USERS_PATH, users);
+  fs.writeFileSync(LOCAL_VERIFICATION_MIGRATION, new Date().toISOString() + "\n", "utf8");
+}
 let clans = readJson(CLANS_PATH, {});
 if (!clans || Array.isArray(clans) || typeof clans !== "object") clans = {};
 let messages = readJson(MESSAGES_PATH, {});
@@ -366,7 +374,7 @@ function findUser(idOrNickname, options = {}) {
   });
 }
 
-function publicUser(user, options = {}) {
+function publicUser(user) {
   if (!user) return null;
   const { password, passwordHash, uuid, ...safe } = user;
 
@@ -2081,7 +2089,7 @@ function isMapLineBlocked(mapId, from, to, doorOpen = []) {
 }
 
 function handleTeamShot(io, match, shooter, data) {
-  if (!["team_fight", "allies"].includes(match.mode) || match.phase !== "game") return;
+  if (!["team_fight", "allies", "bomb"].includes(match.mode) || match.phase !== "game") return;
 
   const weaponId = normalizeWeaponId(data?.weapon);
   const weapon = WEAPON_BALANCE[weaponId];
@@ -2151,6 +2159,10 @@ function handleTeamShot(io, match, shooter, data) {
   });
 
   if (!killed) return;
+  if (match.mode === "bomb") {
+    checkBombElimination(io, match);
+    return;
+  }
   setTimeout(() => {
     if (!activeMatches.has(match.id) || match.finished) return;
     respawnPlayer(match, best);
