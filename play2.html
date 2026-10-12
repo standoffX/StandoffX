@@ -1532,6 +1532,7 @@ $("trainingControls").addEventListener("touchstart",e=>e.stopPropagation(),{pass
 
 socket.on("training_init",data=>{
   if(!isTrainingMode)return;
+  applyMapInteractionState(data.mapState);
   $("reconnectBtn").style.display="none";$("reconnectExitBtn").style.display="none";document.body.classList.remove("reconnecting");
   updateWeaponHud();
   $("modeName").textContent=data.modeName||mode.toUpperCase();
@@ -1576,6 +1577,7 @@ socket.on("training_state",data=>{
 });
 
 socket.on("init_match",data=>{
+  applyMapInteractionState(data.mapState);
   try{
     if(!isTrainingMode)localStorage.setItem("sx_active_match",JSON.stringify({matchId:data.matchId||matchId,userId:myId,uuid:myUuid,map:data.map||selectedMap,mode:data.mode||mode,updatedAt:Date.now()}));
   }catch{}
