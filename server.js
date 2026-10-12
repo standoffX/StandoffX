@@ -1590,6 +1590,219 @@ function cleanMatch(io, matchId, returnToMenu = true) {
   activeMatches.delete(matchId);
 }
 
+function bombStatePayload(match) {
+  if (!match?.bomb) return null;
+  const bomb = match.bomb;
+  return {
+    round: bomb.round,
+    roundWins: { ...bomb.roundWins },
+    attackTeam: bomb.attackTeam,
+    status: bomb.status,
+    carrierId: bomb.carrierId,
+    site: bomb.site,
+    plantedAt: bomb.plantedAt,
+    fuseSeconds: bomb.status === "planted" ? Math.max(0, Math.ceil((40_000 - (Date.now() - (bomb.plantedAt || Date.now()))) / 1000)) : null,
+    actionPlayerId: bomb.actionPlayerId
+  };
+}
+
+function clearBombAction(match) {
+  const bomb = match?.bomb;
+  if (!bomb) return;
+  if (bomb.actionTimer) clearTimeout(bomb.actionTimer);
+  bomb.actionTimer = null;
+  bomb.actionPlayerId = null;
+}
+
+function finishBombRound(io, match, winnerTeam, reason) {
+  if (!match || match.finished || match.mode !== "bomb" || match.phase !== "game" || !match.bomb) return;
+  const bomb = match.bomb;
+  if (!["A", "B"].includes(winnerTeam)) return;
+  if (match.timer) clearInterval(match.timer);
+  match.timer = null;
+  clearBombAction(match);
+  if (bomb.explosionTimer) clearTimeout(bomb.explosionTimer);
+  bomb.explosionTimer = null;
+  bomb.status = reason === "defused" ? "defused" : (reason === "bomb_exploded" ? "exploded" : bomb.status);
+  bomb.reason = reason;
+  bomb.roundWins[winnerTeam] = (bomb.roundWins[winnerTeam] || 0) + 1;
+  for (const player of match.players) {
+    if (player.team === winnerTeam) player.score += 1;
+  }
+  match.phase = "round_end";
+  match.phaseRemaining = 4;
+  io.to(match.id).emit("bomb_state", bombStatePayload(match));
+  io.to(match.id).emit("bomb_round_end", {
+    winnerTeam, reason, round: bomb.round, roundWins: { ...bomb.roundWins },
+    nextRound: bomb.round < 7 && Math.max(bomb.roundWins.A, bomb.roundWins.B) < 4
+  });
+  const gameOver = Math.max(bomb.roundWins.A, bomb.roundWins.B) >= 4 || bomb.round >= 7;
+  if (gameOver) {
+    bomb.winnerTeam = bomb.roundWins.A === bomb.roundWins.B
+      ? winnerTeam
+      : (bomb.roundWins.A > bomb.roundWins.B ? "A" : "B");
+    bomb.reason = reason;
+    setTimeout(() => finishMatch(io, match.id), 3500);
+    return;
+  }
+  bomb.roundTimer = setTimeout(() => {
+    if (!activeMatches.has(match.id) || match.finished) return;
+    bomb.round += 1;
+    if (bomb.round === 4) bomb.attackTeam = bomb.attackTeam === "A" ? "B" : "A";
+    startBombRound(io, match);
+  }, 3500);
+}
+
+function startBombRound(io, match) {
+  if (!match || match.finished || match.mode !== "bomb" || !match.bomb) return;
+  if (match.timer) clearInterval(match.timer);
+  const bomb = match.bomb;
+  clearBombAction(match);
+  if (bomb.explosionTimer) clearTimeout(bomb.explosionTimer);
+  bomb.explosionTimer = null;
+  match.phase = "game";
+  match.phaseRemaining = null;
+  match.remaining = 110;
+  bomb.status = "carried";
+  bomb.site = null;
+  bomb.plantedAt = null;
+  bomb.reason = "";
+  const attackers = match.players.filter(player => player.team === bomb.attackTeam);
+  bomb.carrierId = attackers.find(player => player.hp > 0)?.userId || attackers[0]?.userId || null;
+  for (const player of match.players) {
+    const attacking = player.team === bomb.attackTeam;
+    player.role = attacking ? "terrorist" : "counter_terrorist";
+    player.hp = 100;
+    player.pos = { ...player.spawn };
+    const sideIndex = match.players.filter(other => other.team === player.team).indexOf(player);
+    player.spawn = {
+      x: [-4, 0, 4][Math.max(0, sideIndex) % 3],
+      y: 0,
+      z: attacking ? 40 + (sideIndex === 1 ? 1 : 0) : -40 - (sideIndex === 1 ? 1 : 0)
+    };
+    player.pos = { ...player.spawn };
+    player.rotY = attacking ? 0 : Math.PI;
+    player.anim = "Idle";
+  }
+  io.to(match.id).emit("bomb_round_start", {
+    round: bomb.round, roundWins: { ...bomb.roundWins }, attackTeam: bomb.attackTeam,
+    players: match.players.map(player => ({
+      userId: player.userId, team: player.team, role: player.role,
+      hp: player.hp, x: player.pos.x, y: player.pos.y, z: player.pos.z,
+      rotY: player.rotY
+    }))
+  });
+  io.to(match.id).emit("bomb_state", bombStatePayload(match));
+  io.to(match.id).emit("match_phase", { phase: "game", time: match.remaining, mode: match.mode, modeName: match.modeName });
+  match.timer = setInterval(() => {
+    if (match.phase !== "game" || match.finished) return;
+    match.remaining -= 1;
+    io.to(match.id).emit("timer_update", { time: match.remaining, phase: "game" });
+    if (match.remaining <= 0 && bomb.status !== "planted") {
+      finishBombRound(io, match, bomb.attackTeam === "A" ? "B" : "A", "time");
+    }
+  }, 1000);
+}
+
+function bombSiteForPosition(position) {
+  for (const site of [
+    { id: "A", x: -45, z: -4 },
+    { id: "B", x: 45, z: -4 }
+  ]) {
+    if (Math.hypot(position.x - site.x, position.z - site.z) <= 7.5) return site.id;
+  }
+  return null;
+}
+
+function handleBombInteraction(io, match, player, action) {
+  const bomb = match?.bomb;
+  if (!bomb || match.mode !== "bomb" || match.phase !== "game" || !player || player.hp <= 0) return;
+  if (action === "cancel") {
+    if (bomb.actionPlayerId !== player.userId) return;
+    clearBombAction(match);
+    if (bomb.status === "planting") bomb.status = "carried";
+    if (bomb.status === "defusing") bomb.status = "planted";
+    io.to(match.id).emit("bomb_state", bombStatePayload(match));
+    return;
+  }
+  if (action !== "begin" || bomb.actionPlayerId) return;
+  if (bomb.status === "carried" && player.team === bomb.attackTeam && player.userId === bomb.carrierId) {
+    const site = bombSiteForPosition(player.pos);
+    if (!site) return;
+    bomb.status = "planting";
+    bomb.site = site;
+    bomb.actionPlayerId = player.userId;
+    io.to(match.id).emit("bomb_state", bombStatePayload(match));
+    bomb.actionTimer = setTimeout(() => {
+      const current = activeMatches.get(match.id);
+      const stillThere = current?.players.find(p => p.userId === player.userId);
+      if (!current || current.finished || current.phase !== "game" || !stillThere || stillThere.hp <= 0 ||
+          stillThere.team !== bomb.attackTeam || bomb.actionPlayerId !== player.userId ||
+          bombSiteForPosition(stillThere.pos) !== site) {
+        if (current) {
+          clearBombAction(current);
+          if (bomb.status === "planting") bomb.status = "carried";
+          io.to(match.id).emit("bomb_state", bombStatePayload(current));
+        }
+        return;
+      }
+      clearBombAction(current);
+      bomb.status = "planted";
+      bomb.site = site;
+      bomb.carrierId = null;
+      bomb.plantedAt = Date.now();
+      bomb.explosionTimer = setTimeout(() => {
+        const active = activeMatches.get(match.id);
+        if (!active || active.finished || active.phase !== "game" || bomb.status !== "planted") return;
+        finishBombRound(io, active, bomb.attackTeam, "bomb_exploded");
+      }, 40_000);
+      io.to(match.id).emit("bomb_state", bombStatePayload(current));
+    }, 2_000);
+    return;
+  }
+  if (bomb.status === "planted" && player.team !== bomb.attackTeam) {
+    const site = bombSiteForPosition(player.pos);
+    if (!site || site !== bomb.site) return;
+    bomb.status = "defusing";
+    bomb.actionPlayerId = player.userId;
+    io.to(match.id).emit("bomb_state", bombStatePayload(match));
+    bomb.actionTimer = setTimeout(() => {
+      const current = activeMatches.get(match.id);
+      const stillThere = current?.players.find(p => p.userId === player.userId);
+      if (!current || current.finished || current.phase !== "game" || !stillThere || stillThere.hp <= 0 ||
+          stillThere.team === bomb.attackTeam || bomb.status !== "defusing" ||
+          bomb.actionPlayerId !== player.userId || bombSiteForPosition(stillThere.pos) !== bomb.site) {
+        if (current) {
+          clearBombAction(current);
+          if (bomb.status === "defusing") bomb.status = "planted";
+          io.to(match.id).emit("bomb_state", bombStatePayload(current));
+        }
+        return;
+      }
+      finishBombRound(io, current, bomb.attackTeam === "A" ? "B" : "A", "defused");
+    }, 5_000);
+  }
+}
+
+function checkBombElimination(io, match) {
+  const bomb = match?.bomb;
+  if (!bomb || match.mode !== "bomb" || match.phase !== "game") return;
+  const aliveAttackers = match.players.filter(player => player.team === bomb.attackTeam && player.hp > 0).length;
+  const aliveDefenders = match.players.filter(player => player.team !== bomb.attackTeam && player.hp > 0).length;
+  if (bomb.status !== "planted" && aliveAttackers === 0) {
+    finishBombRound(io, match, bomb.attackTeam === "A" ? "B" : "A", "team_eliminated");
+    return;
+  }
+  if (aliveDefenders === 0) finishBombRound(io, match, bomb.attackTeam, "team_eliminated");
+  if (bomb.status === "carried") {
+    const carrier = match.players.find(player => player.userId === bomb.carrierId);
+    if (!carrier || carrier.hp <= 0) {
+      bomb.carrierId = match.players.find(player => player.team === bomb.attackTeam && player.hp > 0)?.userId || null;
+      io.to(match.id).emit("bomb_state", bombStatePayload(match));
+    }
+  }
+}
+
 function startMatchWhenReady(io, match) {
   if (match.started || match.phase !== "waiting") return;
   const allConnected = match.players.every(p => p.isBot || Boolean(p.socketId));
