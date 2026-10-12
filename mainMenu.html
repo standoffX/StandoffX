@@ -34,7 +34,7 @@ body:before{background:linear-gradient(110deg,#02040d9c,transparent 48%),radial-
 .map-option{min-height:98px;padding:10px 7px;text-align:left;background:#080d1c;color:#c9d7ec;border:1px solid var(--line);border-radius:4px}
 .map-option b{display:block;font-size:11px;color:#fff;margin-bottom:7px}
 .map-option span{font-size:9px;color:var(--muted);line-height:1.4}
-.map-option.active{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue),0 0 14px color-mix(in srgb,var(--glow) 15%,transparent)}
+.map-option[hidden]{display:none!important}.map-option.active{border-color:var(--blue);box-shadow:inset 0 0 0 1px var(--blue),0 0 14px color-mix(in srgb,var(--glow) 15%,transparent)}
 @media(max-width:850px){.home-layout{grid-template-columns:minmax(220px,1fr) minmax(180px,1fr)}.passpanel{grid-column:1/-1}.playarea{right:18px;bottom:18px}.playbutton{width:180px;height:50px}.homefooter{padding-right:190px}}
 @media(max-width:520px){.mapcards{grid-template-columns:1fr}.map-option{min-height:68px}.theme-picker{grid-template-columns:repeat(3,minmax(0,1fr))}.home-layout{grid-template-columns:1fr}.playarea{right:12px;bottom:12px}.playbutton{width:155px;height:46px}.homefooter{padding-right:165px}.content{padding:12px}}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#18123b;color:#f4f3ff;font-family:Inter,Arial,sans-serif}
@@ -160,7 +160,7 @@ body:after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opaci
 .statcard,.listcard,.row{border-color:var(--line);background:color-mix(in srgb,var(--panel) 84%,transparent);border-radius:4px}
 .modebtn,.map-option{border-color:var(--line);background:color-mix(in srgb,var(--bg) 88%,transparent);transition:transform .16s,border-color .16s,box-shadow .16s}
 .modebtn:hover,.map-option:hover{transform:translateY(-2px);border-color:var(--blue)}
-.modebtn.active,.map-option.active{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,var(--bg));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--blue) 35%,transparent),0 0 22px color-mix(in srgb,var(--glow) 12%,transparent)}
+.modebtn.active,.map-option[hidden]{display:none!important}.map-option.active{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,var(--bg));box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--blue) 35%,transparent),0 0 22px color-mix(in srgb,var(--glow) 12%,transparent)}
 .modecards .modebtn{border-radius:4px}
 .map-option{min-height:112px;padding:13px 11px}
 .map-option b{font-size:12px;letter-spacing:.8px;color:var(--blue)}
@@ -344,15 +344,24 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
 </div>
 
 <div id="modeModal" class="modal"><div class="modalbox modebox"><div class="modalhead"><span>ВИБІР ІГРОВОГО РЕЖИМУ</span><button class="close" data-close="modeModal" aria-label="Закрити">×</button></div><div class="muted">Обери режим та карту.</div><div class="modecards" id="modeBar">
-  <button class="modebtn active" data-mode="allies"><strong>СОЮЗНИКИ</strong><span class="mode-desc">Командна гра разом із союзниками</span></button>
-  <button class="modebtn" data-mode="team_fight"><strong>КОМАНДНИЙ БІЙ</strong><span class="mode-desc">Дві команди · швидкі раунди</span></button>
+  <button class="modebtn active" data-mode="allies"><strong>СОЮЗНИКИ</strong><span class="mode-desc">Велика карта · командна гра</span></button>
+  <button class="modebtn" data-mode="team_fight"><strong>КОМАНДНИЙ БІЙ · 3×3</strong><span class="mode-desc">Малі карти та короткі перестрілки</span></button>
+  <button class="modebtn" data-mode="bomb"><strong>ЗАКЛАДКА БОМБИ · 3×3</strong><span class="mode-desc">Атака/захист · плент A або B</span></button>
 </div><div id="testerGameplaySwitch" class="tester-mode-switch" role="group" aria-label="Тип гри">
   <span class="tester-mode-label">ТИП ГРИ</span>
   <div class="tester-mode-segment">
     <button type="button" class="tester-mode-option active" data-test-gameplay="prototype" aria-pressed="true" title="Матч лише з ботами для перевірки геймплею">ПРОТОТИП · БОТИ</button>
     <button type="button" class="tester-mode-option" data-test-gameplay="real" aria-pressed="false" title="Пошук матчу з реальними гравцями без ботів">ГРА · ГРАВЦІ</button>
   </div>
-</div><h3 style="margin:10px 0 4px">ВИБІР КАРТИ</h3><div class="mapcards" id="mapBar"><button class="map-option active" data-map="HILL_TOWN"><b>HILL TOWN</b><span>Модульна карта з будівлями, арками та укриттями</span></button><button class="map-option" data-map="M3_Maze"><b>M3 MAZE</b><span>Стара основна карта</span></button><button class="map-option" data-map="FIELD_ARENA"><b>FIELD ARENA</b><span>Відкрита тренувальна арена</span></button><button class="map-option" data-map="NEON_YARD"><b>NEON YARD</b><span>Неонова арена</span></button></div><button class="primary" id="confirmModeBtn">ПОЧАТИ ПОШУК МАТЧУ</button></div></div>
+</div><h3 style="margin:10px 0 4px">ВИБІР КАРТИ</h3><div class="mapcards" id="mapBar">
+  <button class="map-option active" data-map="HILL_TOWN"><b>HILL TOWN</b><span>Велика карта · союзники</span></button>
+  <button class="map-option" data-map="TF_COURTYARD"><b>COURTYARD</b><span>Мала карта · командний бій 3×3</span></button>
+  <button class="map-option" data-map="TF_DEPOT"><b>DEPOT</b><span>Мала карта · командний бій 3×3</span></button>
+  <button class="map-option" data-map="BOMB_RAVINE"><b>RAVINE · A/B</b><span>Велика карта з двома плентами</span></button>
+  <button class="map-option" data-map="M3_Maze" hidden><b>M3 MAZE</b><span>Тестова карта</span></button>
+  <button class="map-option" data-map="FIELD_ARENA" hidden><b>FIELD ARENA</b><span>Вільне тестування</span></button>
+  <button class="map-option" data-map="NEON_YARD" hidden><b>NEON YARD</b><span>Тестова арена</span></button>
+</div><button class="primary" id="confirmModeBtn">ПОЧАТИ ПОШУК МАТЧУ</button></div></div>
 <div id="searchModal" class="modal"><div class="modalbox"><div class="modalhead"><span id="searchTitle">ПОШУК МАТЧУ</span><button class="close" data-close="searchModal">×</button></div><div id="searchMode" class="muted">HIDE &amp; SEEK</div><div id="queue" class="queuecount">1 / 3</div><div id="searchText" class="muted">Очікування гравців...</div><div id="searchPlayers" class="waitplayers"></div><button class="danger" id="cancelSearch">СКАСУВАТИ</button></div></div>
 <div id="clanModal" class="modal"><div class="modalbox"><div class="modalhead"><span id="clanModalTitle">КЛАН</span><button class="close" data-close="clanModal">×</button></div><div id="clanModalBody"></div></div></div>
 <div id="appToast" role="status" aria-live="polite"></div>
@@ -572,7 +581,7 @@ $("resumeMatchBtn").addEventListener("click",()=>{
   const saved=readActiveMatch();
   if(!saved){updateReconnectButton();notifyToast("Незавершений матч уже недоступний.");return}
   sessionStorage.setItem("myPlayerId",String(saved.userId||me?.id||""));
-  sessionStorage.setItem("myPlayerUUID",String(saved.uuid||me?.uuid||""));
+  sessionStorage.removeItem("myPlayerUUID");
   sessionStorage.setItem("currentMatchId",String(saved.matchId));
   sessionStorage.setItem("selectedMap",String(saved.map||"HILL_TOWN"));
   sessionStorage.setItem("selectedMode",String(saved.mode||"allies"));
@@ -610,16 +619,18 @@ function createRealtimeSocket(){
 }
 function openPlay(){
   if(searching)return;
-  const prototypeSelected=testGameplayMode==="prototype";
+  const prototypeSelected=canTest()&&testGameplayMode==="prototype"&&["allies","team_fight"].includes(selectedMode);
   $("searchModal").classList.add("show");
   $("searchTitle").textContent=prototypeSelected?"ЗАПУСК ПРОТОТИПУ":"ПОШУК РЕАЛЬНИХ ГРАВЦІВ";
   $("searchMode").textContent=(prototypeSelected?"ПРОТОТИП · БОТИ · ":"ГРА · РЕАЛЬНІ ГРАВЦІ · ")+(MODES[selectedMode]||MODES.allies);
-  $("queue").textContent=prototypeSelected?"1 / 4":"1 / 4";
+  const requiredByMode={allies:4,team_fight:6,bomb:6};
+  const required=requiredByMode[selectedMode]||4;
+  $("queue").textContent="1 / "+required;
   $("searchText").textContent=prototypeSelected
     ?"Створюємо матч із ботами. Інші реальні гравці не підключатимуться."
     :"Очікуємо інших реальних гравців. Боти не додаються.";
   renderWaitPlayers(prototypeSelected
-    ?[{nickname:me.nickname,userId:me.id,connected:true},{nickname:"БОТ 01",userId:"BOT_01",connected:true},{nickname:"БОТ 02",userId:"BOT_02",connected:true},{nickname:"БОТ 03",userId:"BOT_03",connected:true}]
+    ?[{nickname:me.nickname,userId:me.id,connected:true},...Array.from({length:required-1},(_,i)=>({nickname:"БОТ "+String(i+1).padStart(2,"0"),userId:"BOT_"+String(i+1),connected:true}))]
     :[{nickname:me.nickname,userId:me.id,connected:true}]);
   searching=true;
   socket=createRealtimeSocket();
@@ -642,11 +653,11 @@ function openPlay(){
   });
   socket.on("match_found",d=>{
     sessionStorage.setItem("myPlayerId",d.userId);
-    sessionStorage.setItem("myPlayerUUID",d.uuid||me.uuid||"");
+    sessionStorage.removeItem("myPlayerUUID");
     sessionStorage.setItem("currentMatchId",d.matchId);
     sessionStorage.setItem("selectedMap",d.map||selectedMap);
     sessionStorage.setItem("selectedMode",d.mode||selectedMode);
-    try{localStorage.setItem("sx_active_match",JSON.stringify({matchId:d.matchId,userId:d.userId,uuid:d.uuid||me.uuid||"",map:d.map||selectedMap,mode:d.mode||selectedMode,updatedAt:Date.now()}))}catch{}
+    try{localStorage.setItem("sx_active_match",JSON.stringify({matchId:d.matchId,userId:d.userId,map:d.map||selectedMap,mode:d.mode||selectedMode,updatedAt:Date.now()}))}catch{}
     location.href="/play2.html";
   });
   sessionStorage.setItem("selectedMap",selectedMap);
