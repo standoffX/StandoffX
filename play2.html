@@ -472,6 +472,41 @@ function buildHillTownMap(){
   const crateMat=mat(0x72513a,.98),steelMat=mat(0x58636b,.8,.18);
   const spawnAMat=mat(0x174c91,.72,.18),spawnBMat=mat(0x812b38,.72,.18);
 
+  // Tiny generated surface textures avoid external image/CDN failures and break up flat colors.
+  const makeSurfaceTexture=(base,seed,marks=3600)=>{
+    const canvas=document.createElement("canvas");canvas.width=canvas.height=256;
+    const ctx=canvas.getContext("2d");
+    ctx.fillStyle=base;ctx.fillRect(0,0,256,256);
+    let state=seed>>>0;
+    const rnd=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296};
+    for(let i=0;i<marks;i++){
+      const x=rnd()*256,y=rnd()*256,size=.5+rnd()*2.4;
+      ctx.fillStyle=rnd()>.48?"rgba(236,231,214,"+(0.025+rnd()*.09)+")":"rgba(10,17,22,"+(0.025+rnd()*.11)+")";
+      ctx.fillRect(x,y,size,size);
+    }
+    for(let i=0;i<30;i++){
+      ctx.strokeStyle="rgba(5,10,14,"+(0.025+rnd()*.055)+")";ctx.lineWidth=.5+rnd();
+      ctx.beginPath();ctx.moveTo(rnd()*256,rnd()*256);ctx.lineTo(rnd()*256,rnd()*256);ctx.stroke();
+    }
+    const texture=new THREE.CanvasTexture(canvas);
+    texture.colorSpace=THREE.SRGBColorSpace;
+    texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
+    texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+    return texture;
+  };
+  const bindSurface=(material,base,seed,repeatX,repeatY,marks)=>{
+    material.map=makeSurfaceTexture(base,seed,marks);
+    material.color.set(0xffffff);
+    material.map.repeat.set(repeatX,repeatY);
+    material.needsUpdate=true;
+  };
+  bindSurface(groundMat,"#838b86",19,9,8,7200);
+  bindSurface(roadMat,"#414a51",27,12,2,9000);
+  bindSurface(pavementMat,"#a4a397",34,5,2,3000);
+  bindSurface(wallMat,"#b7a58b",45,1.6,1.4,4200);
+  bindSurface(wallShadowMat,"#827561",58,1.8,1.6,4000);
+  bindSurface(roofMat,"#4c5054",71,2.2,1.8,3600);
+
   const addBox=(x,y,z,w,h,d,material,rotationY=0,collidable=true)=>{
     const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
     mesh.position.set(x,y,z);mesh.rotation.y=rotationY;
@@ -556,6 +591,85 @@ function buildHillTownMap(){
   addGround(-42,28,8,8,spawnAMat,-.015);
   addGround(42,-28,8,8,spawnBMat,-.015);
   addGround(42,28,8,8,spawnBMat,-.015);
+
+  // Readable urban facade detail: window frames, dark glass, sills, service doors and roof trim.
+  const frameMat=mat(0x303b40,.84,.12),glassMat=mat(0x263d49,.24,.28);
+  const sillMat=mat(0x68685f,.9),doorMat=mat(0x514034,.94),signEdgeMat=mat(0x1e2a31,.75,.25);
+  const buildings=[[-20,-15],[-20,15],[20,-15],[20,15]];
+  for(const [x,z] of buildings){
+    for(const side of [-1,1]){
+      for(const dx of [-2.65,2.65]){
+        addBox(x+dx,2.82,z+side*4.29,1.82,1.18,.10,frameMat,0,false);
+        addBox(x+dx,2.86,z+side*4.35,1.50,.82,.035,glassMat,0,false);
+        addBox(x+dx,2.20,z+side*4.38,1.95,.10,.15,sillMat,0,false);
+        addBox(x+dx,3.50,z+side*4.38,1.95,.08,.13,sillMat,0,false);
+      }
+      addBox(x,1.10,z+side*4.31,1.28,2.10,.08,doorMat,0,false);
+      addBox(x+.43,1.10,z+side*4.38,.055,.12,.035,signEdgeMat,0,false);
+    }
+    for(const side of [-1,1]){
+      for(const dz of [-2.35,2.35]){
+        addBox(x+side*4.83,2.82,z+dz,.10,1.12,1.60,frameMat,0,false);
+        addBox(x+side*4.89,2.86,z+dz,.035,.78,1.28,glassMat,0,false);
+        addBox(x+side*4.91,2.19,z+dz,.14,.10,1.72,sillMat,0,false);
+      }
+    }
+    for(const side of [-1,1]){
+      addBox(x,4.89,z+side*4.28,9.95,.22,.20,roofMat,0,false);
+      addBox(x+side*4.78,4.89,z, .20,.22,8.45,roofMat,0,false);
+    }
+    // A small rooftop utility unit adds silhouette without blocking gameplay routes.
+    addBox(x+2.5,4.98,z-1.9,1.25,.55,.95,steelMat,0,false);
+    addBox(x+2.5,5.28,z-1.9,1.32,.08,1.02,roofMat,0,false);
+  }
+
+  // Broken asphalt markings, drains and painted site identifiers.
+  const lanePaint=mat(0xd0c6a3,.95),yellowPaint=mat(0xd5a84c,.92),drainMat=mat(0x242c31,.8,.22);
+  for(const laneZ of [-28,0,28]){
+    for(let x=-48;x<=48;x+=12){
+      addGround(x,laneZ,3.5,.105,lanePaint,-.018);
+    }
+    addGround(0,laneZ-5.2,108,.16,yellowPaint,-.019);
+    addGround(0,laneZ+5.2,108,.16,yellowPaint,-.019);
+    for(const x of [-43,-22,0,22,43]){
+      addGround(x,laneZ+7.2,1.5,.48,drainMat,-.017);
+      for(let k=0;k<5;k++)addGround(x-.58+k*.29,laneZ+7.2,.045,.38,sillMat,-.014);
+    }
+  }
+  for(const x of [-46,46]){
+    for(const z of [-38,-10,10,38]){
+      const poleMat=mat(0x3e484a,.6,.4),lampMat=new THREE.MeshStandardMaterial({color:0xe3d6ac,emissive:0xffd58a,emissiveIntensity:.72,roughness:.3});
+      const pole=new THREE.Mesh(new THREE.CylinderGeometry(.055,.085,4.5,8),poleMat);
+      pole.position.set(x,2.25,z);pole.castShadow=!isMobileDevice;pole.receiveShadow=!isMobileDevice;scene.add(pole);
+      const arm=new THREE.Mesh(new THREE.BoxGeometry(.7,.08,.08),poleMat);
+      arm.position.set(x+(x<0?.28:-.28),4.35,z);arm.castShadow=!isMobileDevice;scene.add(arm);
+      const lamp=new THREE.Mesh(new THREE.BoxGeometry(.38,.16,.28),lampMat);
+      lamp.position.set(x+(x<0?.58:-.58),4.25,z);scene.add(lamp);
+    }
+  }
+
+  const makeSiteSign=(letter,bg)=>{
+    const canvas=document.createElement("canvas");canvas.width=256;canvas.height=128;
+    const ctx=canvas.getContext("2d");
+    ctx.fillStyle="#121b21";ctx.fillRect(0,0,256,128);
+    ctx.strokeStyle="#dbe6e8";ctx.lineWidth=7;ctx.strokeRect(6,6,244,116);
+    ctx.fillStyle=bg;ctx.fillRect(16,16,224,96);
+    ctx.fillStyle="#ffffff";ctx.font="900 82px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(letter,128,65);
+    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+    return new THREE.MeshStandardMaterial({map:texture,roughness:.58,metalness:.12,emissive:0x182126,emissiveIntensity:.18});
+  };
+  const signA=makeSiteSign("A","#23579a"),signB=makeSiteSign("B","#9b3743");
+  addBox(-50,3.25,-40,3.2,1.8,.16,signEdgeMat,0,false);
+  addBox(-50,3.25,-40.10,2.85,1.45,.045,signA,0,false);
+  addBox(50,3.25,40,3.2,1.8,.16,signEdgeMat,0,false);
+  addBox(50,3.25,39.90,2.85,1.45,.045,signB,0,false);
+
+  // Scattered small debris makes the lanes less sterile; it is intentionally non-solid.
+  const debrisMat=mat(0x57584f,.98),rustMat=mat(0x654a38,.95);
+  for(const [x,z,rot] of [[-44,-18,.2],[-41,17,-.5],[43,-15,.35],[40,18,-.3],[-8,-41,.8],[9,41,-.4]]){
+    addBox(x,.04,z,.72,.08,.22,debrisMat,rot,false);
+    addBox(x+.4,.05,z+.22,.34,.09,.14,rustMat,-rot,false);
+  }
 
   addGameplayInteractables();
   mapLoadFinished=true;mapLoaded=true;hillTownBuilding=false;
