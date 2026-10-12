@@ -234,8 +234,12 @@ assert.match(game, /socket\.on\("map_wood_destroyed"/, "clients apply other play
 assert.match(server, /socket\.on\("map_door_state"/, "server validates and broadcasts door changes");
 assert.match(server, /socket\.on\("map_door_shot"/, "server validates shots aimed at doors before opening them");
 assert.match(server, /function hillTownPathBlocked\(from,to,mapState=\{\}\)/, "server has a path collision test for solid walls and cover");
-assert.match(server, /if\(mapId==="HILL_TOWN"&&hillTownPathBlocked\(prev,\{x:targetX,z:targetZ\},mapState\)\)return false/, "real-match movement is blocked by map geometry");
-assert.match(server, /if\(session\.map==="HILL_TOWN"&&hillTownPathBlocked\(previous,target,session\.mapState\|\|\{\}\)\)return/, "prototype movement is blocked by map geometry");
+assert.match(server, /if\(mapId&&mapPathBlocked\(mapId,prev,\{x:targetX,z:targetZ\},mapState\)\)return false/, "real-match movement is blocked by server map geometry");
+assert.match(server, /if\(mapPathBlocked\(session\.map,previous,target,session\.mapState\|\|\{\}\)\)return/, "prototype movement is blocked by server map geometry");
+assert.match(server, /const SERVER_MAP_LIMITS = Object\.freeze/, "every playable map has server-side movement boundaries");
+assert.match(server, /FIELD_ARENA: \[[\s\S]{0,500}minX: -38, maxX: -26/, "Field Arena obstacles are represented in server collision data");
+assert.match(server, /NEON_YARD: \[[\s\S]{0,500}minX: -57, maxX: -39/, "Neon Yard obstacles are represented in server collision data");
+assert.match(server, /return !nonHillMapShotBlocked\(mapId,from,to\)/, "non-Hill-Town shots are checked against server map blockers");
 assert.match(server, /validateMapLineOfSight\(match\.map, shooter\.pos, best\.pos, match\.mapState \|\| \{\}\)/, "server damage checks walls before applying a weapon hit");
 assert.match(server, /io\.to\(match\.id\)\.emit\("player_shot"/, "the server broadcasts shot directions and impacts for remote tracers");
 assert.match(server, /if \(!canUseTesterModes\(user\) && mode !== "field_test"\)/, "public Prototype is allowed while privileged training remains tester-only");
