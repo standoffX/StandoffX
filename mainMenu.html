@@ -423,16 +423,26 @@ const $=id=>document.getElementById(id);
 let me=null,socket=null,searching=false;
 let socialSocket=null,currentClanTag=null,clanChatHistory=[],toastTimer=null;
 let selectedMode=localStorage.getItem("sx_mode")||"allies";
-if(!["allies","team_fight"].includes(selectedMode)){selectedMode="allies";localStorage.setItem("sx_mode",selectedMode)}
-if(selectedMode==="hide_seek")selectedMode="allies";
-if(!["allies","team_fight"].includes(selectedMode))selectedMode="allies";
+if(!["allies","team_fight","bomb"].includes(selectedMode)){selectedMode="allies";localStorage.setItem("sx_mode",selectedMode)}
 let selectedMap=localStorage.getItem("sx_map")||"HILL_TOWN";
-if(!Object.prototype.hasOwnProperty.call({HILL_TOWN:1,M3_Maze:1,FIELD_ARENA:1,NEON_YARD:1},selectedMap))selectedMap="HILL_TOWN";
 let selectedTheme=localStorage.getItem("sx_theme")||"cyan";
 const THEMES=["cyan","violet","red"];
-const MAPS={HILL_TOWN:"HILL TOWN",M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD"};
-const MODES={allies:"СОЮЗНИКИ",team_fight:"КОМАНДНИЙ БІЙ"};
-let testGameplayMode=["prototype","real"].includes(localStorage.getItem("sx_test_gameplay"))?localStorage.getItem("sx_test_gameplay"):"prototype";
+const MAPS={
+  HILL_TOWN:"HILL TOWN",
+  TF_COURTYARD:"COURTYARD",
+  TF_DEPOT:"DEPOT",
+  BOMB_RAVINE:"RAVINE · A/B",
+  M3_Maze:"M3 MAZE",
+  FIELD_ARENA:"FIELD ARENA",
+  NEON_YARD:"NEON YARD"
+};
+const MODES={allies:"СОЮЗНИКИ",team_fight:"КОМАНДНИЙ БІЙ",bomb:"ЗАКЛАДКА БОМБИ"};
+const MODE_MAPS={
+  allies:["HILL_TOWN","BOMB_RAVINE"],
+  team_fight:["TF_COURTYARD","TF_DEPOT"],
+  bomb:["BOMB_RAVINE"]
+};
+let testGameplayMode=["prototype","real"].includes(localStorage.getItem("sx_test_gameplay"))?localStorage.getItem("sx_test_gameplay"):"real";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const cleanId=id=>String(id||"").replace(/^ID_/i,"");
 function readActiveMatch(){
