@@ -127,16 +127,6 @@ body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
   <div id="trainingKeyHints" style="display:grid;grid-template-columns:1fr auto;gap:5px;margin-top:10px;padding-top:9px;border-top:1px solid #ffffff18;color:#aebdd0;font-size:10px;line-height:1.4"></div>
   <div style="margin-top:9px;color:#71849b;font-size:9px;line-height:1.45">Клавіші можна змінити в лобі: Налаштування → Клавіші тренування. ESC — одразу в лобі.</div>
 </div>
-<div id="pauseMenu" style="display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;background:#020611c9;backdrop-filter:blur(8px);pointer-events:auto">
-  <div style="width:min(360px,calc(100vw - 36px));padding:24px;background:#091323;border:1px solid #1de9ff88;border-radius:14px;box-shadow:0 0 45px #00cfff22;color:#edf7ff;text-align:center">
-    <div style="font-size:11px;letter-spacing:3px;color:#1de9ff">STANDOFFX</div>
-    <h2 style="margin:10px 0 5px;font-size:24px">МЕНЮ</h2>
-    <p style="margin:0 0 18px;color:#92a7c1;font-size:12px">Натисни M, щоб повернутися до гри</p>
-    <button id="resumeGame" style="width:100%;padding:12px;border:0;border-radius:7px;background:#1de9ff;color:#04101b;font-weight:900">ПРОДОВЖИТИ · M</button>
-    <button id="pauseLeave" style="width:100%;padding:12px;margin-top:8px;border:1px solid #ffffff24;border-radius:7px;background:#172235;color:#edf7ff;font-weight:800">ПОВЕРНУТИСЯ В ЛОБІ</button>
-  </div>
-</div>
-
 <div id="mobile">
   <div id="stick" class="stick"><i></i></div>
   <button id="fireBtn" class="mbtn fire">FIRE</button>
@@ -241,13 +231,13 @@ document.addEventListener("pointerlockchange",()=>{
   const locked=document.pointerLockElement===renderer.domElement;
   if(locked){
     $("clickHint").textContent="Миша: огляд · ESC: у лобі · WASD: рух";
-  }else if(matchPhase==="game"&&$("pauseMenu")?.style.display!=="flex"){
+  }else if(matchPhase==="game"){
     $("clickHint").textContent="Клікни в ігрову область, щоб увімкнути огляд мишкою.";
   }
 });
 controls.addEventListener("lock",()=>{if(matchPhase==="game")$("overlay").style.display="none"});
 controls.addEventListener("unlock",()=>{
-  if(matchPhase==="game"&&$("pauseMenu")?.style.display!=="flex")$("overlay").style.display="flex";
+  if(matchPhase==="game")$("overlay").style.display="flex";
 });
 
 const loader=new GLTFLoader();
@@ -260,6 +250,7 @@ let heldWeaponRoot=null;
 let heldWeaponBaseX=.29,heldWeaponBaseY=-.29,heldWeaponBaseZ=-.42;
 let weaponKick=0;
 let akModelTemplate=null;
+let p350ModelTemplate=null;
 const loadedAssetTemplates=new Map();
 const loadedAssetUrls=new Map();
 const ASSET_MATCHES={
@@ -476,7 +467,7 @@ function buildHillTownMap(){
   const addGround=(x,z,w,d,material,y=-.045)=>{
     const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,d),material);
     mesh.rotation.x=-Math.PI/2;mesh.position.set(x,y,z);
-    mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);
+    mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
     return mesh;
   };
   const wallAlongZ=(x,start,end,material,thickness=.9,height=5.8)=>{
@@ -563,6 +554,7 @@ const breakableWood=[];
 let gameplayInteractablesBuilt=false;
 let pendingMapInteractionState=null;
 function addGameplayDoor(x,z,rotationY=0,label="ДВЕРІ"){
+  const doorIndex=interactiveDoors.length;
   const s=1.15,width=2.6*s,group=new THREE.Group();
   // x/z are the door centre in world units; the group origin is its hinge.
   group.position.set(x-Math.cos(rotationY)*width/2,0,z+Math.sin(rotationY)*width/2);
@@ -570,11 +562,11 @@ function addGameplayDoor(x,z,rotationY=0,label="ДВЕРІ"){
   const mat=new THREE.MeshStandardMaterial({color:0x765038,roughness:.94});
   const metal=new THREE.MeshStandardMaterial({color:0x343d43,metalness:.6,roughness:.45});
   const panel=new THREE.Mesh(new THREE.BoxGeometry(width,2.55,.2*s),mat);
-  panel.position.set(width/2,1.275,0);panel.castShadow=false;panel.receiveShadow=false;group.add(panel);mapObjects.push(panel);
+  panel.position.set(width/2,1.275,0);panel.userData.doorIndex=doorIndex;panel.castShadow=false;panel.receiveShadow=false;group.add(panel);mapObjects.push(panel);
   const brace=new THREE.Mesh(new THREE.BoxGeometry(width-.2,.1,.23*s),metal);
-  brace.position.set(width/2,1.9,0);group.add(brace);mapObjects.push(brace);
+  brace.position.set(width/2,1.9,0);brace.userData.doorIndex=doorIndex;group.add(brace);mapObjects.push(brace);
   const handle=new THREE.Mesh(new THREE.BoxGeometry(.06,.18,.1),metal);
-  handle.position.set(.25*s,1.25,.14*s);group.add(handle);mapObjects.push(handle);
+  handle.position.set(.25*s,1.25,.14*s);handle.userData.doorIndex=doorIndex;group.add(handle);mapObjects.push(handle);
   scene.add(group);
   const door={group,panel,brace,handle,x,z,open:false,label,baseRotation:rotationY};
   interactiveDoors.push(door);
@@ -654,28 +646,105 @@ function interactWithNearestDoor(){
   else socket.emit("map_door_state",{matchId,doorIndex,open});
   showDamagePopup(open?"ДВЕРІ ВІДЧИНЕНО":"ДВЕРІ ЗАЧИНЕНО");
 }
-function damageBreakableWood(){
-  if(!player||selectedWeapon==="knife"||selectedMap!=="HILL_TOWN")return;
+function addBulletHole(point,normal,color=0x14191d){
+  if(!point||!normal)return;
+  const n=normal.clone().normalize();
+  const mark=new THREE.Mesh(
+    new THREE.CircleGeometry(.045,9),
+    new THREE.MeshBasicMaterial({color,transparent:true,opacity:.86,depthWrite:false,side:THREE.DoubleSide})
+  );
+  mark.position.copy(point).addScaledVector(n,.014);
+  mark.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),n);
+  mark.renderOrder=12;scene.add(mark);bulletHoleObjects.push(mark);
+  while(bulletHoleObjects.length>60){
+    const old=bulletHoleObjects.shift();scene.remove(old);old.geometry.dispose();old.material.dispose();
+  }
+  setTimeout(()=>{
+    const i=bulletHoleObjects.indexOf(mark);if(i>=0)bulletHoleObjects.splice(i,1);
+    scene.remove(mark);mark.geometry.dispose();mark.material.dispose();
+  },15000);
+}
+function spawnTracer(start,end,color=0xffdf9a,lifetime=105){
+  if(!start||!end)return;
+  const geometry=new THREE.BufferGeometry().setFromPoints([start,end]);
+  const material=new THREE.LineBasicMaterial({color,transparent:true,opacity:.92,depthWrite:false});
+  const line=new THREE.Line(geometry,material);line.renderOrder=20;line.frustumCulled=false;scene.add(line);
+  bulletTraceObjects.push(line);
+  while(bulletTraceObjects.length>20){
+    const old=bulletTraceObjects.shift();scene.remove(old);old.geometry.dispose();old.material.dispose();
+  }
+  setTimeout(()=>{
+    const i=bulletTraceObjects.indexOf(line);if(i>=0)bulletTraceObjects.splice(i,1);
+    scene.remove(line);geometry.dispose();material.dispose();
+  },lifetime);
+}
+function spawnMuzzleFlash(start,direction,color=0xffcf83){
+  const point=start.clone().addScaledVector(direction,.52);
+  const flash=new THREE.Mesh(new THREE.SphereGeometry(.055,6,5),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.9,depthWrite:false}));
+  flash.position.copy(point);scene.add(flash);
+  setTimeout(()=>{scene.remove(flash);flash.geometry.dispose();flash.material.dispose()},55);
+}
+function spawnRemoteTracer(data){
+  if(String(data?.shooterId)===String(myId)||data?.weapon==="knife")return;
+  const start=new THREE.Vector3(Number(data.x)||0,Number(data.y)||1.4,Number(data.z)||0);
+  const direction=new THREE.Vector3(Number(data.dx)||0,Number(data.dy)||0,Number(data.dz)||0);
+  if(direction.length()<.01)return;
+  direction.normalize();
+  scene.updateMatrixWorld(true);
+  raycaster.set(start,direction);raycaster.far=60;
+  const hits=raycaster.intersectObjects(mapObjects.filter(o=>o?.visible),false);
+  const maxRange=CLIENT_WEAPON_INFO[data.weapon]?.range||60;
+  const hit=hits.find(h=>h.distance<maxRange);
+  const serverImpact=data.impact&&[data.impact.x,data.impact.y,data.impact.z].every(v=>Number.isFinite(Number(v)))
+    ?new THREE.Vector3(Number(data.impact.x),Number(data.impact.y),Number(data.impact.z)):null;
+  const end=serverImpact|| (hit?hit.point.clone():start.clone().addScaledVector(direction,maxRange));
+  if(serverImpact){
+    addBulletHole(serverImpact,direction.clone().negate());
+  }else if(hit?.face){
+    const normal=hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+    addBulletHole(hit.point,normal);
+  }
+  spawnTracer(start,end,data.weapon==="p350"?0xbceaff:0xffdf9a,110);
+}
+function damageBreakableWood(direction){
+  if(!player||!direction||selectedWeapon==="knife")return null;
   scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);
   raycaster.setFromCamera(new THREE.Vector2(0,0),camera);
-  const destructibles=breakableWood.filter(o=>o.visible);
-  const blockers=mapObjects.filter(o=>o?.visible&&!o.userData.breakableWood);
-  const hits=raycaster.intersectObjects([...blockers,...destructibles],false);
+  const hits=raycaster.intersectObjects(mapObjects.filter(o=>o?.visible),false);
   const hit=hits.find(h=>h.distance<CLIENT_WEAPON_INFO[selectedWeapon].range);
-  if(!hit||!hit.object.userData.breakableWood)return;
-  const obj=hit.object;obj.userData.hp=(obj.userData.hp||3)-1;
-  if(obj.userData.hp<=0){
-    const woodIndex=breakableWood.indexOf(obj);
-    applyDestroyedWood(woodIndex);
-    if(woodIndex>=0){
-      if(isTrainingMode)socket.emit("map_wood_destroyed",{trainingId,woodIndex});
-      else socket.emit("map_wood_destroyed",{matchId,woodIndex});
+  if(!hit)return null;
+  const obj=hit.object;
+  const normal=hit.face?hit.face.normal.clone().transformDirection(obj.matrixWorld):direction.clone().negate();
+  addBulletHole(hit.point,normal);
+  if(Number.isInteger(obj.userData?.doorIndex)){
+    const doorIndex=obj.userData.doorIndex,door=selectedMap==="HILL_TOWN"?interactiveDoors[doorIndex]:null;
+    if(door&&!door.open){
+      const firedWeapon=selectedWeapon;
+      // Resolve the impact against the still-closed door before the server opens it.
+      setTimeout(()=>{
+        if(isTrainingMode)socket.emit("map_door_shot",{trainingId,doorIndex,weapon:firedWeapon,dx:direction.x,dy:direction.y,dz:direction.z});
+        else socket.emit("map_door_shot",{matchId,doorIndex,weapon:firedWeapon,dx:direction.x,dy:direction.y,dz:direction.z});
+      },90);
+      showDamagePopup("ВЛУЧАННЯ У ДВЕРІ…");
     }
-    showDamagePopup("ДЕРЕВ’ЯНЕ УКРИТТЯ ЗРУЙНОВАНО");
-  }else{
-    obj.material.color.setHex(0x60402a);
-    showDamagePopup("ДЕРЕВО · "+obj.userData.hp+"/3");
+    return hit.point.clone();
   }
+  if(obj.userData?.breakableWood){
+    obj.userData.hp=(obj.userData.hp||3)-1;
+    if(obj.userData.hp<=0){
+      const woodIndex=breakableWood.indexOf(obj);
+      applyDestroyedWood(woodIndex);
+      if(woodIndex>=0){
+        if(isTrainingMode)socket.emit("map_wood_destroyed",{trainingId,woodIndex});
+        else socket.emit("map_wood_destroyed",{matchId,woodIndex});
+      }
+      showDamagePopup("ДЕРЕВ’ЯНЕ УКРИТТЯ ЗРУЙНОВАНО");
+    }else{
+      obj.material.color.setHex(0x60402a);
+      showDamagePopup("ДЕРЕВО · "+obj.userData.hp+"/3");
+    }
+  }
+  return hit.point.clone();
 }
 function addGameplayInteractables(){
   if(gameplayInteractablesBuilt||selectedMap!=="HILL_TOWN")return;
@@ -756,35 +825,54 @@ function makeFallbackKnife(){
   addPart(.012,.01,.22,0,-.007,-.12,edge);
   heldWeaponRoot.userData.realModel=false;
 }
+const WEAPON_MODEL_URLS={
+  akr:"https://raw.githubusercontent.com/petroulacl/fps-asset-kit/main/weapons/flat_guns_west/GLB/Rifle_Assault_West.glb",
+  p350:"https://raw.githubusercontent.com/petroulacl/fps-asset-kit/main/weapons/flat_guns_west/GLB/Pistol_Compact_West.glb"
+};
+function normalizeWeaponModel(model,targetLength){
+  const originalBounds=new THREE.Box3().setFromObject(model);
+  const originalSize=originalBounds.getSize(new THREE.Vector3());
+  const longest=Math.max(originalSize.x,originalSize.y,originalSize.z);
+  if(longest>0)model.scale.setScalar(targetLength/longest);
+  model.updateMatrixWorld(true);
+  const bounds=new THREE.Box3().setFromObject(model);
+  const center=bounds.getCenter(new THREE.Vector3());
+  model.position.sub(center);
+  model.rotation.y=Math.PI;
+  model.traverse(node=>{
+    if(!node.isMesh)return;
+    node.castShadow=false;node.receiveShadow=false;node.frustumCulled=true;
+    if(node.material&&"roughness" in node.material)node.material.roughness=Math.max(.4,node.material.roughness||.5);
+  });
+  return model;
+}
+async function loadRemoteWeapon(url,targetLength){
+  return normalizeWeaponModel(await loadGLBScene(url),targetLength);
+}
 async function loadHeldWeapon(){
-  setLoadingDetail("weaponLoadStatus","ЗАВАНТАЖЕННЯ МОДЕЛІ…","active");
   if(!heldWeaponRoot){
     heldWeaponRoot=new THREE.Group();
     heldWeaponRoot.position.set(.29,-.29,heldWeaponBaseZ);
     camera.add(heldWeaponRoot);
   }
   makeFallbackAK();
-  try{
-    const manifest=await loadHillTownManifest();
-    const url=findHillTownAssetUrl(manifest,ASSET_MATCHES.rifle);
-    if(!url){setLoadingDetail("weaponLoadStatus","ГОТОВО · ВБУДОВАНА ЗБРОЯ","done");return;}
-    const model=await loadGLBScene(url);
-    const box=new THREE.Box3().setFromObject(model);
-    const size=box.getSize(new THREE.Vector3());
-    const longest=Math.max(size.x,size.z);
-    if(longest>0)model.scale.setScalar(.82/longest);
-    const centeredBox=new THREE.Box3().setFromObject(model);
-    const center=centeredBox.getCenter(new THREE.Vector3());
-    model.position.sub(center);
-    model.rotation.y=Math.PI;
-    model.traverse(node=>{if(node.isMesh){node.castShadow=false;node.receiveShadow=false}});
-    akModelTemplate=model;
-    if(selectedWeapon==="akr")selectWeapon("akr",true);
-    setLoadingDetail("weaponLoadStatus","ГОТОВО","done");
-  }catch(error){
-    console.warn("[WEAPON] Keeping built-in AK-style fallback.",error);
-    setLoadingDetail("weaponLoadStatus","ГОТОВО · ВБУДОВАНА ЗБРОЯ","done");
-  }
+  setLoadingDetail("weaponLoadStatus","ЗАВАНТАЖЕННЯ МОДЕЛЕЙ ЗБРОЇ…","active");
+  const jobs=[
+    loadRemoteWeapon(WEAPON_MODEL_URLS.akr,.9).then(model=>{
+      akModelTemplate=model;
+      if(selectedWeapon==="akr")selectWeapon("akr",true);
+      return "AKR";
+    }),
+    loadRemoteWeapon(WEAPON_MODEL_URLS.p350,.5).then(model=>{
+      p350ModelTemplate=model;
+      if(selectedWeapon==="p350")selectWeapon("p350",true);
+      return "P350";
+    })
+  ];
+  const results=await Promise.allSettled(jobs);
+  const ready=results.filter(result=>result.status==="fulfilled").length;
+  if(ready!==2)console.warn("[WEAPONS] Using local fallbacks for missing models.",results.filter(result=>result.status==="rejected").map(result=>result.reason));
+  setLoadingDetail("weaponLoadStatus",ready===2?"AKR + P350 · ГОТОВО":ready===1?"1 МОДЕЛЬ ГОТОВА · ІНША ЗАПАСНА":"ВБУДОВАНІ МОДЕЛІ ГОТОВІ","done");
 }
 
 let mapLoaded=false;
@@ -793,6 +881,8 @@ let player=null;
 let playerVisual=null;
 const enemies={};
 const raycaster=new THREE.Raycaster();
+const bulletTraceObjects=[];
+const bulletHoleObjects=[];
 const HILL_TOWN_SCALE=2.55,NEON_YARD_SCALE=2.25,FIELD_ARENA_SCALE=2.15,FALLBACK_ARENA_SCALE=3;
 
 let matchPhase="waiting";
@@ -830,7 +920,7 @@ let isLeavingMatch=false;
 
 const keys={w:false,s:false,a:false,d:false,shift:false};
 const DEFAULT_TRAINING_BINDS={spawnBot:"KeyN",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
-const TRAINING_ACTION_NAMES={spawnBot:"СТВОРИТИ БОТА",push:"PUSH",kick:"KICK",boost:"BOOST",resetBot:"СКИНУТИ БОТА",resetSession:"СКИНУТИ ТРЕНУВАННЯ",menu:"МЕНЮ"};
+const TRAINING_ACTION_NAMES={spawnBot:"СТВОРИТИ БОТА",push:"PUSH",kick:"KICK",boost:"BOOST",resetBot:"СКИНУТИ БОТА",resetSession:"СКИНУТИ ТРЕНУВАННЯ",menu:"ПОВЕРНУТИСЯ В ЛОБІ"};
 function readTrainingBinds(){
   try{
     const stored=JSON.parse(localStorage.getItem("sx_settings")||"{}").keybinds||{};
@@ -854,7 +944,7 @@ function buildFieldArena(){
   scene.background=new THREE.Color(0x91a6b9);
   scene.fog=new THREE.Fog(0x91a6b9,220,780);
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(300*FIELD_ARENA_SCALE,300*FIELD_ARENA_SCALE),new THREE.MeshStandardMaterial({color:0x5c6e62,roughness:1}));
-  floor.rotation.x=-Math.PI/2;floor.position.y=-.04;scene.add(floor);
+  floor.rotation.x=-Math.PI/2;floor.position.y=-.04;scene.add(floor);mapObjects.push(floor);
   const grid=new THREE.GridHelper(300*FIELD_ARENA_SCALE,120,0x879987,0x748575);grid.position.y=.01;scene.add(grid);
   const wallMat=new THREE.MeshStandardMaterial({color:0x4e5965,roughness:1});
   const boxMat=new THREE.MeshStandardMaterial({color:0x626a70,roughness:.9});
@@ -1308,12 +1398,12 @@ function setAimingDownSights(value){
   updateWeaponHud();
 }
 function toggleAimingDownSights(){
-  if(selectedWeapon!=="akr"||matchPhase!=="game"||hp<=0||$("pauseMenu")?.style.display==="flex")return;
+  if(selectedWeapon!=="akr"||matchPhase!=="game"||hp<=0)return;
   setAimingDownSights(!aimingDownSights);
 }
 function selectWeapon(weaponId,force=false){
   if(!CLIENT_WEAPON_INFO[weaponId])return;
-  if(!force&&(matchPhase!=="game"||hp<=0||$("pauseMenu")?.style.display==="flex"))return;
+  if(!force&&(matchPhase!=="game"||hp<=0))return;
   if(selectedWeapon===weaponId&&heldWeaponRoot?.children.length&&!force){updateWeaponHud();return}
   weaponAmmo[selectedWeapon]=ammo;
   selectedWeapon=weaponId;
@@ -1332,8 +1422,14 @@ function selectWeapon(weaponId,force=false){
       heldWeaponRoot.add(model);
       heldWeaponRoot.userData.realModel=true;
     }else makeFallbackAK();
-  }else if(selectedWeapon==="p350")makeFallbackP350();
-  else makeFallbackKnife();
+  }else if(selectedWeapon==="p350"){
+    if(p350ModelTemplate){
+      clearHeldWeapon();
+      const model=p350ModelTemplate.clone(true);
+      heldWeaponRoot.add(model);
+      heldWeaponRoot.userData.realModel=true;
+    }else makeFallbackP350();
+  }else makeFallbackKnife();
   positionHeldWeapon();
   updateWeaponHud();
 }
@@ -1361,7 +1457,7 @@ function startReload(){
   },info.reloadMs);
 }
 function shoot(){
-  if($("pauseMenu")?.style.display==="flex"||(!isTeamCombat&&!isTrainingMode)||matchPhase!=="game"||reloading||hp<=0||!mapLoadFinished)return;
+  if((!isTeamCombat&&!isTrainingMode)||matchPhase!=="game"||reloading||hp<=0||!mapLoadFinished)return;
   const info=CLIENT_WEAPON_INFO[selectedWeapon];
   const now=performance.now();
   if(now-lastShot<info.fireDelay||ammo<=0){if(ammo<=0)startReload();return}
@@ -1374,9 +1470,16 @@ function shoot(){
   updateWeaponHud();
   const dir=new THREE.Vector3();
   camera.getWorldDirection(dir);dir.normalize();
-  damageBreakableWood();
+  const impact=damageBreakableWood(dir);
+  if(info.kind!=="melee"){
+    const start=camera.position.clone().addScaledVector(dir,.38);
+    const end=impact||camera.position.clone().addScaledVector(dir,info.range);
+    spawnMuzzleFlash(start,dir,selectedWeapon==="p350"?0xc8efff:0xffc56d);
+    spawnTracer(start,end,selectedWeapon==="p350"?0xbceaff:0xffdf9a,110);
+  }
+  const impactPayload=impact?{x:impact.x,y:impact.y,z:impact.z}:null;
   if(isTrainingMode)socket.emit("training_shoot",{trainingId,weapon:selectedWeapon,dx:dir.x,dy:dir.y,dz:dir.z});
-  else socket.emit("team_shoot",{matchId,weapon:selectedWeapon,dx:dir.x,dy:dir.y,dz:dir.z});
+  else socket.emit("team_shoot",{matchId,weapon:selectedWeapon,dx:dir.x,dy:dir.y,dz:dir.z,impact:impactPayload});
 }
 function fireLoop(){
   if(fireHeld){shoot();requestAnimationFrame(fireLoop)}
@@ -1391,7 +1494,7 @@ addEventListener("keydown",e=>{
   if(e.code==="Digit3"){e.preventDefault();selectWeapon("knife");return}
   if(e.code==="KeyE"){e.preventDefault();interactWithNearestDoor();return}
   const binds=readTrainingBinds();
-  if(e.code===binds.menu){e.preventDefault();if(matchPhase==="game")togglePauseMenu();return}
+  if(e.code===binds.menu){e.preventDefault();leaveGame();return}
   if(isTrainingMode&&matchPhase==="game"){
     const action=Object.keys(binds).find(name=>name!=="menu"&&binds[name]===e.code);
     if(action){e.preventDefault();runTrainingAction(action);return}
@@ -1419,20 +1522,19 @@ addEventListener("contextmenu",e=>{if(!isMobileDevice)e.preventDefault()});
 addEventListener("mousedown",e=>{
   if(isMobileDevice)return;
   if(e.button===2){e.preventDefault();toggleAimingDownSights();return}
-  if(e.button===0&&$("pauseMenu")?.style.display!=="flex"){
+  if(e.button===0){
     fireHeld=true;shoot();fireLoop();
   }
 });
 addEventListener("mouseup",e=>{if(e.button===0&&!isMobileDevice)fireHeld=false});
 $("weaponBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();if(weaponSwipeConsumed){weaponSwipeConsumed=false;return}cycleWeapon()});
-$("interactBtn").addEventListener("touchstart",e=>{e.preventDefault();e.stopPropagation();interactWithNearestDoor()},{passive:false});
 $("interactBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();interactWithNearestDoor()});
 let weaponSwipeStart=null;
 let weaponSwipeConsumed=false;
 document.addEventListener("touchstart",e=>{
   const onWeaponButton=Boolean(e.target.closest("#weaponBtn"));
-  if(!isMobileDevice||(!onWeaponButton&&(e.target.closest("#mobile")||e.target.closest("button")||e.target.closest("input")||e.target.closest("textarea"))))return;
-  const t=e.changedTouches[0];if(t)weaponSwipeStart={id:t.identifier,x:t.clientX,y:t.clientY,onWeaponButton};
+  if(!isMobileDevice||!onWeaponButton)return;
+  const t=e.changedTouches[0];if(t)weaponSwipeStart={id:t.identifier,x:t.clientX,y:t.clientY,onWeaponButton:true};
 },{passive:true});
 document.addEventListener("touchend",e=>{
   if(!isMobileDevice||!weaponSwipeStart)return;
@@ -1505,19 +1607,7 @@ function runTrainingAction(action){
   }
   if(["push","kick","boost"].includes(action))socket.emit("training_bot_action",{trainingId,action});
 }
-function togglePauseMenu(force){
-  const menu=$("pauseMenu");
-  const open=typeof force==="boolean"?force:menu.style.display!=="flex";
-  menu.style.display=open?"flex":"none";
-  if(open){
-    keys.w=keys.a=keys.s=keys.d=keys.shift=false;
-    jumpQueued=false;fireHeld=false;
-    try{controls.unlock()}catch{}
-  }
-  else if(matchPhase==="game"&&!isMobileDevice){try{controls.lock()}catch{}}
-}
-$("resumeGame").addEventListener("click",()=>togglePauseMenu(false));
-$("pauseLeave").addEventListener("click",leaveGame);
+// There is no blocking in-game menu: ESC and M leave directly to the lobby.
 renderTrainingKeyHints();
 $("trainingControls").addEventListener("click",e=>{
   const button=e.target.closest("[data-training-action]");
@@ -1549,7 +1639,8 @@ socket.on("training_init",data=>{
 });
 function applyTrainingBot(bot){
   if(!bot){removeTrainingBot();return}
-  applyEnemy({userId:"training_bot",id:"training_bot",nickname:bot.nickname||"Training Bot",role:"runner",team:"B",hp:bot.hp,x:bot.x,y:bot.y,z:bot.z,rotY:bot.rotY||0,anim:bot.action==="boost"?"Jump":"Idle",score:0});
+  const botAnim=bot.action==="boost"?"Jump":bot.action==="running"?"Running":bot.action==="hit"?"Hit":"Idle";
+  applyEnemy({userId:"training_bot",id:"training_bot",nickname:bot.nickname||"Training Bot",role:"runner",team:"B",hp:bot.hp,x:bot.x,y:bot.y,z:bot.z,rotY:bot.rotY||0,anim:botAnim,score:0});
   $("botStatus").textContent="BOT · HP "+bot.hp+"/"+(bot.maxHp||100)+" · HITS "+(bot.hits||0);
   const enemy=enemies["training_bot"];
   if(enemy)setSoldierTint(enemy.mesh,bot.hp<=0?0x777777:0xffbd67);
@@ -1753,6 +1844,7 @@ socket.on("disconnect",()=>{
   showReconnectPanel("Матч збережено. Натисни синю кнопку «ПІДКЛЮЧИТИСЯ», щоб повернутися, або «ВИЙТИ З МАТЧУ», щоб завершити його.");
 });
 socket.on("map_interaction_state",data=>applyMapInteractionState(data));
+socket.on("player_shot",spawnRemoteTracer);
 socket.on("map_door_state",data=>{
   const idx=Number(data?.doorIndex);
   if(!Number.isInteger(idx)||idx<0||idx>2)return;
@@ -1771,10 +1863,6 @@ socket.on("map_wood_destroyed",data=>{
     pendingMapInteractionState=prior;return;
   }
   applyDestroyedWood(idx);
-});
-socket.on("player_connection_state",data=>{
-  const enemy=Object.values(enemies).find(e=>String(e.userId)===String(data?.userId));
-  if(enemy)enemy.connected=data.connected!==false;
 });
 socket.on("player_connection_state",data=>{
   const enemy=Object.values(enemies).find(e=>String(e.userId)===String(data?.userId));
@@ -1880,7 +1968,7 @@ function animate(){
   const now=performance.now(),dt=Math.min(.05,(now-previous)/1000);previous=now;
   const mv=window.sxMove||{x:0,y:0};
 
-  if(matchPhase==="game"&&player&&hp>0&&mapLoadFinished&&$("pauseMenu")?.style.display!=="flex"){
+  if(matchPhase==="game"&&player&&hp>0&&mapLoadFinished){
     if(mv.x||mv.y){keys.a=mv.x<-.18;keys.d=mv.x>.18;keys.w=mv.y<-.18;keys.s=mv.y>.18}
     const dir=new THREE.Vector3();
     camera.getWorldDirection(dir);dir.y=0;dir.normalize();
@@ -1907,11 +1995,13 @@ function animate(){
     animateSoldier(e.mesh,dt,now,e.anim==="Running"||e.anim==="Walking",e.anim==="Jump",e.anim==="Crouch");
   });
   if(heldWeaponRoot){
-    heldWeaponRoot.position.x=heldWeaponBaseX+Math.sin(now*.0016)*.0018;
-    heldWeaponRoot.position.y=heldWeaponBaseY+Math.abs(Math.sin(now*.006))* .0015;
+    // Small idle sway, recoil and reload motion keep the procedural fallback weapons alive.
+    heldWeaponRoot.position.x=heldWeaponBaseX+Math.sin(now*.0016)*.0028;
+    heldWeaponRoot.position.y=heldWeaponBaseY+Math.abs(Math.sin(now*.006))* .0024;
     heldWeaponRoot.position.z=heldWeaponBaseZ+weaponKick;
+    heldWeaponRoot.rotation.x=(reloading?-.13:0)+weaponKick*.52;
+    heldWeaponRoot.rotation.y=Math.sin(now*.0019)*.008;
     weaponKick=Math.max(0,weaponKick-dt*.58);
-    heldWeaponRoot.rotation.x=reloading?-.07:0;
   }
   drawTacticalMaps();
   renderer.render(scene,camera);

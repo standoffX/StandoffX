@@ -335,7 +335,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
   <div class="keybind-row"><span>Boost бота</span><button type="button" class="secondary keybind-button" data-bind-action="boost">L</button></div>
   <div class="keybind-row"><span>Скинути бота</span><button type="button" class="secondary keybind-button" data-bind-action="resetBot">U</button></div>
   <div class="keybind-row"><span>Скинути тренування</span><button type="button" class="secondary keybind-button" data-bind-action="resetSession">I</button></div>
-  <div class="keybind-row"><span>Повернутися в лобі</span><button type="button" class="secondary keybind-button" data-bind-action="menu">M</button></div>
+  <div class="keybind-row"><span>Вийти з матчу до лобі</span><button type="button" class="secondary keybind-button" data-bind-action="menu">M</button></div>
 </div>
 <button id="resetKeybinds" type="button" class="secondary" style="margin-top:12px">СКИНУТИ ПРИВ’ЯЗКИ</button>
 <div id="keybindStatus" class="muted" role="status" style="margin-top:8px"></div></div></div></section>
@@ -347,12 +347,11 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
 <div id="modeModal" class="modal"><div class="modalbox modebox"><div class="modalhead"><span>ВИБІР ІГРОВОГО РЕЖИМУ</span><button class="close" data-close="modeModal" aria-label="Закрити">×</button></div><div class="muted">Обери режим та карту.</div><div class="modecards" id="modeBar">
   <button class="modebtn active" data-mode="allies"><strong>СОЮЗНИКИ</strong><span class="mode-desc">Командна гра разом із союзниками</span></button>
   <button class="modebtn" data-mode="team_fight"><strong>КОМАНДНИЙ БІЙ</strong><span class="mode-desc">Дві команди · швидкі раунди</span></button>
-</div><div id="testerGameplaySwitch" class="tester-mode-switch" style="display:none" role="group" aria-label="Перемикач режиму тестування">
-  <span class="tester-mode-label">ТЕСТЕР</span>
+</div><div id="testerGameplaySwitch" class="tester-mode-switch" role="group" aria-label="Тип гри">
+  <span class="tester-mode-label">ТИП ГРИ</span>
   <div class="tester-mode-segment">
-    <button type="button" class="tester-mode-option active" data-test-gameplay="prototype" aria-pressed="true" title="Вільна карта, зброя та мішень">ПРОТОТИП</button>
-    <button type="button" class="tester-mode-option" data-test-gameplay="training" aria-pressed="false" title="Повноцінне тренування на вибраній карті">ТРЕНУВАННЯ</button>
-    <button type="button" class="tester-mode-option" data-test-gameplay="real" aria-pressed="false" title="Повноцінна гра з ботами">ГРА</button>
+    <button type="button" class="tester-mode-option active" data-test-gameplay="prototype" aria-pressed="true" title="Окрема тестова карта з ботом; інші гравці не підключаються">ПРОТОТИП · БОТИ</button>
+    <button type="button" class="tester-mode-option" data-test-gameplay="real" aria-pressed="false" title="Пошук матчу лише з реальними гравцями">ГРА · ГРАВЦІ</button>
   </div>
 </div><h3 style="margin:10px 0 4px">ВИБІР КАРТИ</h3><div class="mapcards" id="mapBar"><button class="map-option active" data-map="HILL_TOWN"><b>HILL TOWN</b><span>Модульна карта з будівлями, арками та укриттями</span></button><button class="map-option" data-map="M3_Maze"><b>M3 MAZE</b><span>Стара основна карта</span></button><button class="map-option" data-map="FIELD_ARENA"><b>FIELD ARENA</b><span>Відкрита тренувальна арена</span></button><button class="map-option" data-map="NEON_YARD"><b>NEON YARD</b><span>Неонова арена</span></button></div><button class="primary" id="confirmModeBtn">ПОЧАТИ ПОШУК МАТЧУ</button></div></div>
 <div id="searchModal" class="modal"><div class="modalbox"><div class="modalhead"><span id="searchTitle">ПОШУК МАТЧУ</span><button class="close" data-close="searchModal">×</button></div><div id="searchMode" class="muted">HIDE &amp; SEEK</div><div id="queue" class="queuecount">1 / 3</div><div id="searchText" class="muted">Очікування гравців...</div><div id="searchPlayers" class="waitplayers"></div><button class="danger" id="cancelSearch">СКАСУВАТИ</button></div></div>
@@ -434,7 +433,7 @@ let selectedTheme=localStorage.getItem("sx_theme")||"cyan";
 const THEMES=["cyan","violet","red"];
 const MAPS={HILL_TOWN:"HILL TOWN",M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD"};
 const MODES={allies:"СОЮЗНИКИ",team_fight:"КОМАНДНИЙ БІЙ"};
-let testGameplayMode=["prototype","training","real"].includes(localStorage.getItem("sx_test_gameplay"))?localStorage.getItem("sx_test_gameplay"):"prototype";
+let testGameplayMode=["prototype","real"].includes(localStorage.getItem("sx_test_gameplay"))?localStorage.getItem("sx_test_gameplay"):"prototype";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const cleanId=id=>String(id||"").replace(/^ID_/i,"");
 function readActiveMatch(){
@@ -572,7 +571,7 @@ function render(){
   $("verifiedMark").textContent=me.isVerified?"✓ VERIFIED":"";
   $("adminBtn").style.display=(me.isAdmin||me.id==="Dev_01")?"grid":"none";
   const testerSwitch=$("testerGameplaySwitch");
-  if(testerSwitch)testerSwitch.style.display=canTest()?"flex":"none";
+  if(testerSwitch)testerSwitch.style.display="flex";
   const testerKeybinds=$("testKeybindSettings");
   if(testerKeybinds)testerKeybinds.style.display=canTest()?"block":"none";
   $("passXp").textContent=(me.XP||0)%1000+" / 1000 XP";
@@ -584,9 +583,9 @@ function renderMode(){
   document.querySelectorAll(".modebtn[data-mode]").forEach(b=>b.classList.toggle("active",b.dataset.mode===selectedMode));
   document.querySelectorAll("[data-test-gameplay]").forEach(b=>{const active=b.dataset.testGameplay===testGameplayMode;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active));});
   const publicMode=MODES[selectedMode]||MODES.allies;
-  const testerLabels={prototype:"ПРОТОТИП",training:"ТРЕНУВАННЯ",real:"ГРА"};
-  $("selectedModeText").textContent=canTest()?(testerLabels[testGameplayMode]||"ПРОТОТИП")+" · "+publicMode:publicMode;
-  if($("confirmModeBtn")) $("confirmModeBtn").textContent=canTest()?(testGameplayMode==="real"?"ЗАПУСТИТИ ГРУ":testGameplayMode==="training"?"ЗАПУСТИТИ ТРЕНУВАННЯ":"ЗАПУСТИТИ ПРОТОТИП"):"ПОЧАТИ ПОШУК МАТЧУ";
+  const gameplayLabel=testGameplayMode==="prototype"?"ПРОТОТИП · БОТИ":"ГРА · РЕАЛЬНІ ГРАВЦІ";
+  $("selectedModeText").textContent=gameplayLabel+" · "+publicMode;
+  if($("confirmModeBtn")) $("confirmModeBtn").textContent=testGameplayMode==="real"?"ЗНАЙТИ РЕАЛЬНИХ ГРАВЦІВ":"ЗАПУСТИТИ ПРОТОТИП";
 }
 document.querySelectorAll(".rail button[data-view]").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.view==="admin"){location.href="/admin";return}show(b.dataset.view)}));
 document.querySelectorAll("[data-theme-choice]").forEach(button=>button.addEventListener("click",()=>applyTheme(button.dataset.themeChoice)));
@@ -601,7 +600,7 @@ document.querySelectorAll(".modebtn[data-mode]").forEach(b=>b.addEventListener("
 }));
 document.querySelectorAll("[data-test-gameplay]").forEach(b=>b.addEventListener("click",()=>{
   if(!canTest())return;
-  testGameplayMode=["prototype","training","real"].includes(b.dataset.testGameplay)?b.dataset.testGameplay:"prototype";
+  testGameplayMode=b.dataset.testGameplay==="real"?"real":"prototype";
   localStorage.setItem("sx_test_gameplay",testGameplayMode);
   renderMode();
 }));
@@ -642,7 +641,7 @@ function createRealtimeSocket(){
   });
 }
 function openPlay(){
-  if(canTest()&&(testGameplayMode==="prototype"||testGameplayMode==="training")){
+  if(testGameplayMode==="prototype"){
     if(searching)return;
     socket=createRealtimeSocket();
     socket.on("connect_error",err=>{console.warn("[Socket.IO] Prototype connection failed; retrying.",err?.message||err)});
@@ -656,12 +655,12 @@ function openPlay(){
       sessionStorage.setItem("currentMatchId",d.trainingId);
       location.href="/play2.html";
     });
-    socket.emit("start_training",{mode:testGameplayMode==="training"?"training":"field_test",map:selectedMap});
+    socket.emit("start_training",{mode:"field_test",map:selectedMap});
     return;
   }
   if(searching)return;
-  $("searchModal").classList.add("show");$("searchTitle").textContent="ПОШУК МАТЧУ";$("searchMode").textContent=MODES[selectedMode];$("queue").textContent="1 / "+((selectedMode==="team_fight"||selectedMode==="allies")?4:3);
-  $("searchText").textContent="Очікуємо гравців...";renderWaitPlayers([{nickname:me.nickname,userId:me.id,connected:true}]);searching=true;
+  $("searchModal").classList.add("show");$("searchTitle").textContent="ПОШУК РЕАЛЬНИХ ГРАВЦІВ";$("searchMode").textContent=(MODES[selectedMode]||MODES.allies)+" · ЛИШЕ ЛЮДИ";$("queue").textContent="1 / 4";
+  $("searchText").textContent="Чекаємо ще трьох реальних гравців. Боти не додаються в цьому режимі.";renderWaitPlayers([{nickname:me.nickname,userId:me.id,connected:true}]);searching=true;
   socket=createRealtimeSocket();
   socket.on("connect_error",err=>{$("searchText").textContent="З’єднання із сервером… повторна спроба підключення";console.warn("[Socket.IO] Matchmaking connection failed; retrying.",err?.message||err)});
   socket.on("search_error",d=>{cancelSearch();alert(d?.message||"Пошук завершено.")});
@@ -680,7 +679,7 @@ function openPlay(){
     location.href="/play2.html";
   });
   sessionStorage.setItem("selectedMap",selectedMap);
-  socket.emit("start_search",{mode:selectedMode,map:selectedMap,testerBots:canTest()&&testGameplayMode==="real"});
+  socket.emit("start_search",{mode:selectedMode,map:selectedMap});
 }
 function cancelSearch(){if(socket){socket.emit("cancel_search");socket.disconnect();socket=null}searching=false;$("searchModal").classList.remove("show")}
 function renderWaitPlayers(players){
