@@ -13,6 +13,13 @@
 #hint{position:absolute;left:14px;bottom:14px;padding:8px 10px;background:#080d14b8;border:1px solid #ffffff0d;border-radius:6px;color:#bac5d4;font-size:11px}
 #ammo{position:absolute;right:16px;bottom:18px;text-align:right;text-shadow:0 2px 8px #000}.ammo-name{font-size:11px;font-weight:1000;letter-spacing:1.6px;color:#d9efff}.ammo-num{font-size:34px;font-weight:950}.ammo-sub{color:#9aa7b8;font-size:10px;line-height:1.45}
 #weaponDamage{color:#a9c9e7;font-size:9px;letter-spacing:.3px}
+#bombHud{display:none;position:absolute;top:62px;left:50%;transform:translateX(-50%);min-width:230px;max-width:min(90vw,440px);padding:8px 13px;border:1px solid #e3ba6d77;border-radius:6px;background:#10151de8;text-align:center;box-shadow:0 6px 20px #0005}
+#bombHud strong{display:block;color:#f6d28a;font-size:11px;letter-spacing:1.4px}
+#bombHud span{display:block;margin-top:4px;color:#c4d0db;font-size:10px}
+#bombHud b{color:#f7f5ef}
+#bombActionBtn{display:none;position:absolute;left:50%;bottom:190px;transform:translateX(-50%);pointer-events:auto;min-width:128px;height:46px;padding:0 18px;border:1px solid #e5bd76aa;border-radius:6px;background:linear-gradient(110deg,#70532aee,#3d2b15ee);color:#fff2d5;font-size:11px;font-weight:1000;letter-spacing:1px}
+#bombActionBtn:active{filter:brightness(1.2)}
+body.device-desktop #bombActionBtn{bottom:24px}
 #damagePopup{display:none;position:absolute;left:50%;top:calc(50% - 54px);transform:translateX(-50%);padding:6px 9px;border:1px solid #8bc7ff55;border-radius:4px;background:#06182adb;color:#c4ecff;font-size:11px;font-weight:1000;letter-spacing:.8px;text-shadow:0 1px 5px #000;white-space:nowrap}
 #damagePopup.incoming{border-color:#ff718777;background:#310d19e8;color:#ff9aaa}
 .weaponButton{left:70%;top:19%;right:auto;bottom:auto;width:72px;height:42px;border-radius:9px;background:#203d5adf;border-color:#96d7ff66;font-size:9px;letter-spacing:.6px}
@@ -115,6 +122,8 @@ body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
   <div id="deathNotice" role="status" aria-live="polite">ТЕБЕ ЛІКВІДУВАЛИ</div>
   <div id="ammo" style="display:none"><div class="ammo-name" id="weaponName">AKR</div><div class="ammo-num" id="ammoNum">30</div><div class="ammo-sub" id="ammoSub">/ 30 · R — RELOAD</div><div class="ammo-sub" id="weaponDamage">5 м · ГОЛ 164 ТІЛ 35 ЖИВ 45 НОГ 27</div></div>
   <div id="damagePopup" role="status" aria-live="polite"></div>
+  <div id="bombHud" aria-live="polite"><strong id="bombRoundText">BOMB · ROUND 1</strong><span id="bombStateText">АТАКА: <b>A</b> · БОМБА В ГРАВЦЯ</span></div>
+  <button id="bombActionBtn" type="button">ЗАКЛАСТИ БОМБУ</button>
   <div id="hint">WASD — рух · Space — стрибок · Shift — швидкість · G — камера · LMB — вогонь · R — перезарядка</div>
 </div>
 <div id="radarWrap" aria-label="Радар команди"><canvas id="radarCanvas" width="220" height="220"></canvas><span>TEAM RADAR</span></div>
@@ -155,7 +164,7 @@ body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
   <button id="sprintBtn" class="mbtn sprint" type="button" aria-label="Бігти швидше">SPRINT</button>
   <button id="mapBtn" class="mbtn mapButton" type="button" aria-label="Відкрити карту">MAP</button>
   <button id="weaponBtn" class="mbtn weaponButton" type="button" aria-label="Змінити зброю">АКР</button>
-  <button id="interactBtn" class="mbtn interactButton" type="button" aria-label="Відкрити двері">E · ДВЕРІ</button>
+  <button id="interactBtn" class="mbtn interactButton" type="button" aria-label="Взаємодія">E · ДІЯ</button>
   <button id="leaveGameMobile" class="mbtn leave" type="button">×</button>
 </div>
 
@@ -181,7 +190,7 @@ function setLoadingDetail(id,message,state="active"){
     row.classList.toggle("is-error",state==="error");
   }
 }
-const MAP_LOADING_NAMES={HILL_TOWN:"HILL TOWN",M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD"};
+const MAP_LOADING_NAMES={HILL_TOWN:"HILL TOWN",M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD",TF_COURTYARD:"COURTYARD · TEAM FIGHT",TF_DEPOT:"DEPOT · TEAM FIGHT",BOMB_RAVINE:"RAVINE · SITES A/B"};
 const isMobileDevice=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||
   (navigator.maxTouchPoints>1&&matchMedia("(pointer: coarse)").matches)||
   (innerWidth<=760&&navigator.maxTouchPoints>0);
@@ -203,7 +212,8 @@ const matchId=sessionStorage.getItem("currentMatchId");
 const mode=sessionStorage.getItem("selectedMode")||"allies";
 const selectedMap=sessionStorage.getItem("selectedMap")||"HILL_TOWN";
 const isTrainingMode=mode==="training"||mode==="field_test";
-const isTeamCombat=mode==="allies"||mode==="team_fight";
+const isBombMode=mode==="bomb";
+const isTeamCombat=["allies","team_fight","bomb"].includes(mode);
 const trainingId=sessionStorage.getItem("trainingId")||matchId;
 if(!myId||(!matchId&&!isTrainingMode)){location.href="/game";throw new Error("No active match")}
 
@@ -911,6 +921,90 @@ function renderTrainingKeyHints(){
   el.innerHTML=["spawnBot","push","kick","boost","resetBot","resetSession"].map(action=>"<span>"+TRAINING_ACTION_NAMES[action]+"</span><b style='color:#1de9ff'>"+trainingKeyLabel(binds[action])+"</b>").join("");
 }
 
+const MAP_SOLID_RECTS_CLIENT={
+  TF_COURTYARD:[
+    [-36.5,-28.5,-35.5,28.5],[35.5,-28.5,36.5,28.5],[-35.5,-29,35.5,-28],[-35.5,28,35.5,29],
+    [-13,-18,-9,-3],[-13,3,-9,18],[9,-18,13,-3],[9,3,13,18],
+    [-4,-5,4,-2],[-4,2,4,5],[-24,-3,-19,3],[19,-3,24,3]
+  ],
+  TF_DEPOT:[
+    [-36.5,-28.5,-35.5,28.5],[35.5,-28.5,36.5,28.5],[-35.5,-29,35.5,-28],[-35.5,28,35.5,29],
+    [-20,-18,-16,-5],[-20,5,-16,18],[16,-18,20,-5],[16,5,20,18],
+    [-5,-17,5,-13],[-5,13,5,17],[-3,-4,3,4]
+  ],
+  BOMB_RAVINE:[
+    [-75,-52,-73.5,52],[73.5,-52,75,52],[-73.5,-53,73.5,-51.5],[-73.5,51.5,73.5,53],
+    [-26,-11,-19,11],[19,-11,26,11],[-61,-24,-51,-21],[-61,-24,-58,-8],
+    [-61,8,-51,11],[-54,8,-51,21],[51,-24,61,-21],[58,-24,61,-8],
+    [51,8,61,11],[51,8,54,21],[-7,-28,-3,-8],[3,8,7,28],[-7,8,-3,28],[3,-28,7,-8]
+  ]
+};
+function buildCompetitiveMap(mapId){
+  if(mapLoadFinished)return;
+  mapLoadFinished=true;
+  const bomb=mapId==="BOMB_RAVINE";
+  scene.background=new THREE.Color(bomb?0x8a969b:0x9aa9ae);
+  scene.fog=new THREE.Fog(bomb?0x8a969b:0x9aa9ae,bomb?105:70,bomb?210:140);
+  const size=bomb?152:74;
+  const floor=new THREE.Mesh(
+    new THREE.PlaneGeometry(size,size),
+    new THREE.MeshStandardMaterial({color:bomb?0x6e7771:0x777f7c,roughness:1})
+  );
+  floor.rotation.x=-Math.PI/2;floor.position.y=-.06;scene.add(floor);
+  const concrete=new THREE.MeshStandardMaterial({color:0x687178,roughness:.93});
+  const coverMat=new THREE.MeshStandardMaterial({color:bomb?0x826947:0x8a785e,roughness:.98});
+  const metalMat=new THREE.MeshStandardMaterial({color:0x3e5059,roughness:.65,metalness:.2});
+  const rects=MAP_SOLID_RECTS_CLIENT[mapId]||[];
+  rects.forEach((r,index)=>{
+    const [x1,z1,x2,z2]=r,w=x2-x1,d=z2-z1;
+    const outer=Math.abs(w)>30||Math.abs(d)>45;
+    const cover=(!outer&&index%3===1);
+    const material=outer?concrete:(cover?coverMat:concrete);
+    const h=outer?7:(cover?2.8:4.4);
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
+    mesh.position.set((x1+x2)/2,h/2,(z1+z2)/2);
+    mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
+    if(!outer){
+      const trim=new THREE.Mesh(new THREE.BoxGeometry(w,.08,d),metalMat);
+      trim.position.set((x1+x2)/2,h+.04,(z1+z2)/2);scene.add(trim);mapObjects.push(trim);
+    }
+  });
+  if(!bomb){
+    for(const [x,z,w,d] of [[0,-22,7,2],[0,22,7,2],[-25,0,2,6],[25,0,2,6]]){
+      const box=new THREE.Mesh(new THREE.BoxGeometry(w,1.6,d),coverMat);
+      box.position.set(x,.8,z);scene.add(box);mapObjects.push(box);
+    }
+  }else{
+    for(const site of [{id:"A",x:-45,z:-4,color:0x62c6ff},{id:"B",x:45,z:-4,color:0xffc66d}]){
+      const pad=new THREE.Mesh(new THREE.CylinderGeometry(6.3,6.3,.09,32),new THREE.MeshStandardMaterial({color:site.color,emissive:site.color,emissiveIntensity:.22,roughness:.7,transparent:true,opacity:.55}));
+      pad.position.set(site.x,.02,site.z);scene.add(pad);
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(6.3,.13,5,40),new THREE.MeshBasicMaterial({color:site.color}));
+      ring.rotation.x=Math.PI/2;ring.position.set(site.x,.1,site.z);scene.add(ring);
+      const marker=new THREE.Group();marker.position.set(site.x,3.8,site.z);scene.add(marker);
+      const post=new THREE.Mesh(new THREE.BoxGeometry(.12,1.7,.12),metalMat);post.position.y=-.8;marker.add(post);
+      const sign=new THREE.Mesh(new THREE.BoxGeometry(1.45,.8,.12),new THREE.MeshStandardMaterial({color:site.color,emissive:site.color,emissiveIntensity:.38}));
+      marker.add(sign);
+      const canvas=document.createElement("canvas");canvas.width=128;canvas.height=96;
+      const ctx=canvas.getContext("2d");ctx.fillStyle="#07111c";ctx.fillRect(0,0,128,96);
+      ctx.fillStyle=site.id==="A"?"#62c6ff":"#ffc66d";ctx.font="bold 66px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(site.id,64,48);
+      const tex=new THREE.CanvasTexture(canvas);
+      const letter=new THREE.Mesh(new THREE.PlaneGeometry(1.05,.78),new THREE.MeshBasicMaterial({map:tex,transparent:false}));
+      letter.position.set(0,0,.075);marker.add(letter);
+    }
+    for(const [x,z,w,d,color] of [
+      [-45,-25,13,5,0x76654f],[-45,20,12,5,0x6c796f],
+      [45,-25,13,5,0x7b664b],[45,20,12,5,0x657a83],
+      [-13,0,8,6,0x65727a],[13,0,8,6,0x65727a],
+      [0,-18,12,4,0x80735f],[0,18,12,4,0x80735f]
+    ]){
+      const box=new THREE.Mesh(new THREE.BoxGeometry(w,3.6,d),new THREE.MeshStandardMaterial({color,roughness:.85,metalness:.12}));
+      box.position.set(x,1.8,z);scene.add(box);mapObjects.push(box);
+      const stripe=new THREE.Mesh(new THREE.BoxGeometry(w,.12,d+.04),metalMat);
+      stripe.position.set(x,3.66,z);scene.add(stripe);
+    }
+  }
+  $("progress").style.width="100%";
+}
 function buildFieldArena(){
   if(mapLoadFinished)return;
   mapLoadFinished=true;
@@ -977,6 +1071,11 @@ function loadMap(){
   $("overlayText").textContent="Завантажуються текстури, геометрія та колізії карти "+mapLabel+". Це може зайняти кілька секунд.";
   if(selectedMap==="HILL_TOWN"){
     buildHillTownMap();
+    return;
+  }
+  if(selectedMap==="TF_COURTYARD"||selectedMap==="TF_DEPOT"||selectedMap==="BOMB_RAVINE"){
+    buildCompetitiveMap(selectedMap);
+    finishClientReady();
     return;
   }
   if(selectedMap==="NEON_YARD"){
@@ -1199,7 +1298,7 @@ function rebuildCollisionIndex(){
   collisionIndexReady=true;
 }
 function worldLimit(){
-  return ({HILL_TOWN:27.8,NEON_YARD:196,FIELD_ARENA:320,M3_Maze:228})[selectedMap]||228;
+  return ({HILL_TOWN:25.2,TF_COURTYARD:35.1,TF_DEPOT:35.1,BOMB_RAVINE:73,NEON_YARD:196,FIELD_ARENA:320,M3_Maze:228})[selectedMap]||228;
 }
 function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
@@ -1498,7 +1597,7 @@ addEventListener("keydown",e=>{
   if(e.code==="Digit1"){e.preventDefault();selectWeapon("akr");return}
   if(e.code==="Digit2"){e.preventDefault();selectWeapon("p350");return}
   if(e.code==="Digit3"){e.preventDefault();selectWeapon("knife");return}
-  if(e.code==="KeyE"){e.preventDefault();interactWithNearestDoor();return}
+  if(e.code==="KeyE"){e.preventDefault();beginInteraction();return}
   const binds=readTrainingBinds();
   if(e.code===binds.menu){e.preventDefault();if(matchPhase==="game")togglePauseMenu();return}
   if(isTrainingMode&&matchPhase==="game"){
@@ -1517,6 +1616,7 @@ addEventListener("keydown",e=>{
   if(e.code==="Mouse0")shoot();
 });
 addEventListener("keyup",e=>{
+  if(e.code==="KeyE")cancelInteraction();
   if(e.code==="ControlLeft"||e.code==="ControlRight")isCrouching=false;
   if(e.code==="KeyW"||e.code==="ArrowUp")keys.w=false;
   if(e.code==="KeyS"||e.code==="ArrowDown")keys.s=false;
@@ -1572,9 +1672,10 @@ $("interactBtn").addEventListener("touchstart",e=>{e.preventDefault();e.stopProp
 $("interactBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();if(!isMobileDevice)interactWithNearestDoor()});
 
 function setOverlayGame(){
-  $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":mode==="training"?"ТРЕНУВАННЯ":"HIDE & SEEK";
+  $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":mode==="bomb"?"ЗАКЛАДКА БОМБИ":mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":mode==="training"?"ТРЕНУВАННЯ":"HIDE & SEEK";
   $("clickHint").textContent=isMobileDevice?"РУХ: ДЖОЙСТИК · ВОГОНЬ: FIRE · ПРОВЕДИ ПО КНОПЦІ ЗБРОЇ: ↓ AKR · ← P350 · → НІЖ":"WASD — рух · ЛКМ — вогонь · RMB — приціл AKR · 1/2/3 — зброя · E — двері · ESC — лобі";
   if(isMobileDevice) $("overlay").style.display="none";
+  if(isBombMode){$("bombHud").style.display="block";$("bombActionBtn").style.display="block";}
 }
 function leaveGame(){
   if(isLeavingMatch)return;
