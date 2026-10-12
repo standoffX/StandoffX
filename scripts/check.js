@@ -347,7 +347,10 @@ assert.match(game, /if\(p\.hp<=0\)\{p\.anim="Dead";setSoldierDown\(p\.mesh,true\
 assert.match(game, /const camera=new THREE\.PerspectiveCamera\([^;]+\);\s*\/\/ Camera-attached weapon and view models must belong to the rendered scene graph\.\s*scene\.add\(camera\);/, "camera-mounted weapon models must be in the scene graph to render");
 
 assert.match(game, /function buildHillTownMap\(\)[\s\S]{0,1300}const groundMat=mat/, "Hill Town starts from local world-space geometry");
-assert.doesNotMatch(game.slice(game.indexOf("function buildHillTownMap()"),game.indexOf("function makeVisual(color)")), /loadHillTownManifest|loadHillTownStarterFallback|loader\.load/, "the competitive map must not depend on a remote GLB scene or its extra props");
+const hillBuilderStart=game.indexOf("function buildHillTownMap()");
+const hillBuilderEnd=game.indexOf("// Small, deterministic gameplay interactions",hillBuilderStart);
+assert.ok(hillBuilderStart>=0&&hillBuilderEnd>hillBuilderStart, "local Hill Town builder must be easy to isolate");
+assert.doesNotMatch(game.slice(hillBuilderStart,hillBuilderEnd), /loadHillTownManifest|loadHillTownStarterFallback|loader\.load/, "the competitive map must not depend on a remote GLB scene or its extra props");
 assert.match(game, /wallAlongZ\(0,cursor,gapStart,wallMat,\.9,5\.1\)/, "the central divider must be built as solid wall sections with door gaps");
 assert.match(game, /addGameplayDoor\(0,-28,Math\.PI\/2\)[\s\S]*addGameplayDoor\(0,0,Math\.PI\/2\)[\s\S]*addGameplayDoor\(0,28,Math\.PI\/2\)/, "all three combat lanes have synchronized doors");
 assert.match(server, /match\.mapState\.doors\[doorIndex\]=open/, "server stores door state for returning players");
