@@ -1299,10 +1299,25 @@ function sendMove(force=false){
   if(isTrainingMode)socket.emit("training_move",{trainingId,viewY:camera.rotation.y,...data});
   else socket.emit("player_moved",{matchId,myId,userId:myId,...data});
 }
+function applyPendingMapState(){
+  const state=pendingMapState;
+  if(!state||!mapLoadFinished||!interactiveDoors.length)return;
+  (state.woodDestroyed||[]).forEach(index=>{
+    const obj=breakableWood[Number(index)];
+    if(!obj)return;
+    obj.visible=false;
+    const mapIndex=mapObjects.indexOf(obj);if(mapIndex>=0)mapObjects.splice(mapIndex,1);
+  });
+  (state.doorOpen||[]).forEach((open,index)=>{if(open===true)setGameplayDoorState(index,true)});
+  pendingMapState=null;
+  rebuildCollisionIndex();
+}
 function finishClientReady(){
   if(!mapLoadFinished)return;
   const mapLabel=MAP_LOADING_NAMES[selectedMap]||String(selectedMap||"КАРТА");
   setLoadingDetail("mapLoadStatus",mapLabel+" · ГОТОВО","done");
+  rebuildCollisionIndex();
+  applyPendingMapState();
   rebuildCollisionIndex();
   ensurePlayerVisual();
   if(isTrainingMode){
@@ -1640,6 +1655,10 @@ $("trainingControls").addEventListener("touchstart",e=>e.stopPropagation(),{pass
 
 socket.on("training_init",data=>{
   if(!isTrainingMode)return;
+  pendingMapState={
+    doorOpen:Array.isArray(data.doorOpen)?[...data.doorOpen]:[false,false,false,false],
+    woodDestroyed:Array.isArray(data.woodDestroyed)?[...data.woodDestroyed]:[]
+  };
   $("reconnectBtn").style.display="none";$("reconnectExitBtn").style.display="none";document.body.classList.remove("reconnecting");
   updateWeaponHud();
   $("modeName").textContent=data.modeName||mode.toUpperCase();
@@ -1687,6 +1706,10 @@ socket.on("init_match",data=>{
   try{
     if(!isTrainingMode)localStorage.setItem("sx_active_match",JSON.stringify({matchId:data.matchId||matchId,userId:myId,uuid:myUuid,map:data.map||selectedMap,mode:data.mode||mode,updatedAt:Date.now()}));
   }catch{}
+  pendingMapState={
+    doorOpen:Array.isArray(data.doorOpen)?[...data.doorOpen]:[false,false,false,false],
+    woodDestroyed:Array.isArray(data.woodDestroyed)?[...data.woodDestroyed]:[]
+  };
   $("reconnectBtn").style.display="none";$("reconnectExitBtn").style.display="none";document.body.classList.remove("reconnecting");
   updateWeaponHud();
   if(data.mode)sessionStorage.setItem("selectedMode",data.mode);
@@ -1741,6 +1764,10 @@ socket.on("match_start_now",()=>{
   $("clickHint").textContent="Клікни для мишки";
   if(isTeamCombat||isTrainingMode)$("ammo").style.display="block";
   if(isMobileDevice)$("overlay").style.display="none";
+});
+socket.on("player_shot",data=>{
+  if(String(data?.shooterId)===String(myId))return;
+  spawnRemoteTracer(data||{});
 });
 socket.on("enemy_moved",applyEnemy);
 socket.on("player_left",data=>{
@@ -1859,12 +1886,24 @@ socket.on("disconnect",()=>{
   showReconnectPanel("Матч збережено. Натисни синю кнопку «ПІДКЛЮЧИТИСЯ», щоб повернутися, або «ВИЙТИ З МАТЧУ», щоб завершити його.");
 });
 socket.on("map_door_state",data=>{
-  if(!Number.isInteger(Number(data?.doorIndex)))return;
-  setGameplayDoorState(Number(data.doorIndex),data.open===true);
+  const idx=Number(data?.doorIndex);
+  if(!Number.isInteger(idx)||idx<0||idx>=4)return;
+  if(!mapLoadFinished||!interactiveDoors[idx]){
+    pendingMapState=pendingMapState||{doorOpen:[false,false,false,false],woodDestroyed:[]};
+    pendingMapState.doorOpen[idx]=data.open===true;
+    return;
+  }
+  setGameplayDoorState(idx,data.open===true);
 });
 socket.on("map_wood_destroyed",data=>{
-  const idx=Number(data?.woodIndex),obj=breakableWood[idx];
-  if(!Number.isInteger(idx)||!obj)return;
+  const idx=Number(data?.woodIndex);
+  if(!Number.isInteger(idx)||idx<0||idx>19)return;
+  const obj=breakableWood[idx];
+  if(!mapLoadFinished||!obj){
+    pendingMapState=pendingMapState||{doorOpen:[false,false,false,false],woodDestroyed:[]};
+    if(!pendingMapState.woodDestroyed.includes(idx))pendingMapState.woodDestroyed.push(idx);
+    return;
+  }
   obj.visible=false;
   const mapIndex=mapObjects.indexOf(obj);if(mapIndex>=0)mapObjects.splice(mapIndex,1);
   rebuildCollisionIndex();
@@ -2003,6 +2042,8 @@ function animate(){
     e.mesh.position.lerp(e.pos,.35);
     animateSoldier(e.mesh,dt,now,e.anim==="Running"||e.anim==="Walking",e.anim==="Jump",e.anim==="Crouch");
   });
+  for(const mixer of doorAnimationMixers)mixer.update(dt);
+  if(activeWeaponMixer)activeWeaponMixer.update(dt);
   if(heldWeaponRoot){
     heldWeaponRoot.position.x=heldWeaponBaseX+Math.sin(now*.0016)*.0018;
     heldWeaponRoot.position.y=heldWeaponBaseY+Math.abs(Math.sin(now*.006))* .0015;
