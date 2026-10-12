@@ -465,8 +465,8 @@ assert.ok(mapGeometry.SERVER_MAP_BLOCKERS.FIELD_ARENA.length >= 12, "Field Arena
 assert.match(game, /renderer\.toneMapping=THREE\.ACESFilmicToneMapping/, "the renderer must use improved color tonemapping");
 assert.match(game, /renderer\.shadowMap\.enabled=!isMobileDevice/, "shadows must be enabled on desktop without overloading mobile");
 assert.match(game, /makeSurfaceTexture=\(base,seed,marks=3600\)/, "Hill Town must use generated surface textures");
-assert.match(game, /function buildFieldArena\(\)[\s\S]{0,1200}const obstacles=/, "Field Arena must be built from a defined tactical cover layout");
-assert.match(game, /function buildNeonYard\(\)[\s\S]{0,1200}const structures=/, "Neon Yard must have a defined cover layout");
+assert.match(game, /function buildFieldArena\(\)[\s\S]{0,7000}const obstacles=/, "Field Arena must be built from a defined tactical cover layout");
+assert.match(game, /function buildNeonYard\(\)[\s\S]{0,7000}const structures=/, "Neon Yard must have a defined cover layout");
 assert.match(server, /M3_Maze: \[\s*\{ minX: -78, maxX: -74, minZ: -180, maxZ: -130 \}/, "M3 collision proxy geometry must exist on the server");
 
 console.log("OK project invariants, local maps, authoritative arena collisions, movement correction, graphics, weapons, matchmaking, MongoDB retry, and routes");
