@@ -529,26 +529,59 @@ async function buildHillTownMap(){
   }
 }
 
-// Small, deterministic gameplay interactions: hinged doors and breakable wooden cover.
+// Four centred door bays share state between every client in the match.
 const interactiveDoors=[];
 const breakableWood=[];
 let gameplayInteractablesBuilt=false;
-function addGameplayDoor(x,z,rotationY=0,label="ДВЕРІ"){
+
+function addGameplayDoor(x,z,rotationY=0,label="ДВЕРІ",template=null){
   const s=HILL_TOWN_SCALE,group=new THREE.Group();
   group.position.set(x*s,0,z*s);group.rotation.y=rotationY;
-  const mat=new THREE.MeshStandardMaterial({color:0x765038,roughness:.94});
-  const metal=new THREE.MeshStandardMaterial({color:0x343d43,metalness:.6,roughness:.45});
-  const panel=new THREE.Mesh(new THREE.BoxGeometry(2.6*s,2.55*s,.2*s),mat);
-  panel.position.set(1.3*s,1.275*s,0);panel.castShadow=false;panel.receiveShadow=false;group.add(panel);mapObjects.push(panel);
-  const brace=new THREE.Mesh(new THREE.BoxGeometry(2.45*s,.1*s,.23*s),metal);
-  brace.position.set(1.3*s,1.9*s,0);group.add(brace);mapObjects.push(brace);
-  const handle=new THREE.Mesh(new THREE.BoxGeometry(.06,.18,.1),metal);
-  handle.position.set(.25*s,1.25*s,.14*s);group.add(handle);mapObjects.push(handle);
+  const parts=[],hitMeshes=[];
+  let mixer=null,openAction=null,closeAction=null;
+  if(template){
+    const model=template.clone(true);
+    model.scale.multiplyScalar(s);
+    model.traverse(node=>{
+      if(!node.isMesh)return;
+      node.castShadow=false;node.receiveShadow=false;
+      node.userData.doorBayIndex=interactiveDoors.length;
+      mapObjects.push(node);parts.push(node);
+      const name=String(node.name||"").toLowerCase();
+      if(/door|leaf|panel/.test(name)&&!/(frame|wall|handle|hinge|threshold|jamb)/.test(name))hitMeshes.push(node);
+    });
+    if(!hitMeshes.length)hitMeshes.push(...parts);
+    group.add(model);
+    const clips=loadedAssetAnimations.get("door")||[];
+    if(clips.length){
+      mixer=new THREE.AnimationMixer(model);
+      const openClip=clips.find(clip=>/open/i.test(clip.name));
+      const closeClip=clips.find(clip=>/close/i.test(clip.name));
+      if(openClip)openAction=mixer.clipAction(openClip);
+      if(closeClip)closeAction=mixer.clipAction(closeClip);
+      if(mixer)doorAnimationMixers.push(mixer);
+    }
+  }else{
+    const wood=new THREE.MeshStandardMaterial({color:0x765038,roughness:.94});
+    const metal=new THREE.MeshStandardMaterial({color:0x343d43,metalness:.6,roughness:.45});
+    const panel=new THREE.Mesh(new THREE.BoxGeometry(3.55*s,2.8*s,.16*s),wood);
+    panel.position.set(0,1.4*s,0);
+    const brace=new THREE.Mesh(new THREE.BoxGeometry(3.4*s,.1*s,.19*s),metal);
+    brace.position.set(0,2.05*s,0);
+    const handle=new THREE.Mesh(new THREE.BoxGeometry(.06*s,.18*s,.1*s),metal);
+    handle.position.set(.95*s,1.3*s,.12*s);
+    for(const obj of [panel,brace,handle]){
+      obj.castShadow=false;obj.receiveShadow=false;
+      obj.userData.doorBayIndex=interactiveDoors.length;
+      group.add(obj);parts.push(obj);hitMeshes.push(obj);mapObjects.push(obj);
+    }
+  }
   scene.add(group);
-  const door={group,panel,brace,handle,x:x*s,z:z*s,open:false,label,baseRotation:rotationY};
+  const door={group,x:x*s,z:z*s,open:false,label,baseRotation:rotationY,parts,hitMeshes,mixer,openAction,closeAction,isAsset:Boolean(template)};
   interactiveDoors.push(door);
   return door;
 }
+
 function addBreakableWood(x,z){
   const s=HILL_TOWN_SCALE;
   const group=new THREE.Group();group.position.set(x*s,0,z*s);
@@ -556,69 +589,158 @@ function addBreakableWood(x,z){
   const dark=new THREE.MeshStandardMaterial({color:0x49301e,roughness:1});
   for(let i=0;i<4;i++){
     const plank=new THREE.Mesh(new THREE.BoxGeometry(1.25*s,.22*s,.11*s),wood);
-    plank.position.set(0,(.35+i*.24)*s,0);plank.rotation.y=(i%2)*Math.PI/2;plank.userData.breakableWood=true;plank.userData.hp=3;plank.castShadow=false;plank.receiveShadow=false;
+    plank.position.set(0,(.35+i*.24)*s,0);
+    plank.rotation.y=(i%2)*Math.PI/2;
+    plank.userData.breakableWood=true;plank.userData.hp=3;
+    plank.castShadow=false;plank.receiveShadow=false;
     group.add(plank);breakableWood.push(plank);mapObjects.push(plank);
   }
-  const cap=new THREE.Mesh(new THREE.BoxGeometry(1.35*s,.12*s,1.1*s),dark);cap.position.y=1.18*s;cap.userData.breakableWood=true;cap.userData.hp=3;group.add(cap);breakableWood.push(cap);mapObjects.push(cap);
+  const cap=new THREE.Mesh(new THREE.BoxGeometry(1.35*s,.12*s,1.1*s),dark);
+  cap.position.y=1.18*s;cap.userData.breakableWood=true;cap.userData.hp=3;
+  group.add(cap);breakableWood.push(cap);mapObjects.push(cap);
   scene.add(group);
 }
+
 function setGameplayDoorState(doorIndex,open){
   const door=interactiveDoors[doorIndex];if(!door)return;
-  door.open=Boolean(open);
-  door.group.rotation.y=door.open?door.baseRotation+Math.PI/2:door.baseRotation;
-  for(const obj of [door.panel,door.brace,door.handle]){
-    const idx=mapObjects.indexOf(obj);
-    if(door.open&&idx>=0)mapObjects.splice(idx,1);
-    if(!door.open&&idx<0)mapObjects.push(obj);
+  const next=Boolean(open);
+  if(door.open===next)return;
+  door.open=next;
+  if(door.isAsset){
+    for(const action of [door.openAction,door.closeAction])action?.stop();
+    const action=next?door.openAction:door.closeAction;
+    if(action){
+      action.reset();action.setLoop(THREE.LoopOnce,1);action.clampWhenFinished=true;action.play();
+    }
+    setTimeout(()=>rebuildCollisionIndex(),650);
+  }else{
+    door.group.rotation.y=next?door.baseRotation+Math.PI/2:door.baseRotation;
+    for(const obj of door.parts){
+      const idx=mapObjects.indexOf(obj);
+      if(next&&idx>=0)mapObjects.splice(idx,1);
+      if(!next&&idx<0)mapObjects.push(obj);
+    }
+    rebuildCollisionIndex();
   }
-  rebuildCollisionIndex();
-  $("interactBtn").textContent=door.open?"E · ЗАЧИНИТИ":"E · ДВЕРІ";
+  const interact=$("interactBtn");
+  if(interact)interact.textContent=next?"E · ЗАЧИНИТИ":"E · ДВЕРІ";
+}
+
+function sendDoorState(doorIndex,open){
+  if(isTrainingMode)socket.emit("map_door_state",{trainingId,doorIndex,open});
+  else socket.emit("map_door_state",{matchId,doorIndex,open});
+}
+function openDoor(doorIndex){
+  const door=interactiveDoors[doorIndex];if(!door)return;
+  setGameplayDoorState(doorIndex,!door.open);
+  sendDoorState(doorIndex,door.open);
+  showDamagePopup(door.open?"ДВЕРІ ВІДЧИНЕНО":"ДВЕРІ ЗАЧИНЕНО");
 }
 function interactWithNearestDoor(){
   if(!player||matchPhase!=="game")return;
   let nearest=null,best=4.5*HILL_TOWN_SCALE;
-  for(const door of interactiveDoors){
-    const d=Math.hypot(player.position.x-door.x,player.position.z-door.z);
-    if(d<best){best=d;nearest=door}
+  for(let i=0;i<interactiveDoors.length;i++){
+    const door=interactiveDoors[i],d=Math.hypot(player.position.x-door.x,player.position.z-door.z);
+    if(d<best){best=d;nearest=i}
   }
-  if(!nearest){showDamagePopup("НЕМАЄ ДВЕРЕЙ ПОРУЧ");return}
-  setGameplayDoorState(interactiveDoors.indexOf(nearest),!nearest.open);
-  if(isTrainingMode)socket.emit("map_door_state",{trainingId,doorIndex:interactiveDoors.indexOf(nearest),open:nearest.open});
-  else socket.emit("map_door_state",{matchId,doorIndex:interactiveDoors.indexOf(nearest),open:nearest.open});
-  showDamagePopup(nearest.open?"ДВЕРІ ВІДЧИНЕНО":"ДВЕРІ ЗАЧИНЕНО");
+  if(nearest===null){showDamagePopup("НЕМАЄ ДВЕРЕЙ ПОРУЧ");return}
+  openDoor(nearest);
 }
-function damageBreakableWood(direction){
-  if(!player||selectedWeapon==="knife")return;
+
+function addBulletHole(point,normal,color=0x171a1d){
+  if(!point||!normal)return;
+  const n=normal.clone().normalize();
+  const mark=new THREE.Mesh(
+    new THREE.CircleGeometry(.035,8),
+    new THREE.MeshBasicMaterial({color,transparent:true,opacity:.84,depthWrite:false,side:THREE.DoubleSide})
+  );
+  mark.position.copy(point).addScaledVector(n,.012);
+  mark.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),n);
+  mark.renderOrder=12;scene.add(mark);
+  bulletHoleObjects.push(mark);
+  while(bulletHoleObjects.length>48){
+    const old=bulletHoleObjects.shift();scene.remove(old);old.geometry.dispose();old.material.dispose();
+  }
+  setTimeout(()=>{
+    const i=bulletHoleObjects.indexOf(mark);
+    if(i>=0)bulletHoleObjects.splice(i,1);
+    scene.remove(mark);mark.geometry.dispose();mark.material.dispose();
+  },12000);
+}
+function spawnTracer(start,end,color=0xffe2a0,lifetime=85){
+  if(!start||!end)return;
+  const geometry=new THREE.BufferGeometry().setFromPoints([start,end]);
+  const material=new THREE.LineBasicMaterial({color,transparent:true,opacity:.9,depthWrite:false});
+  const line=new THREE.Line(geometry,material);line.renderOrder=20;line.frustumCulled=false;scene.add(line);
+  bulletTraceObjects.push(line);
+  setTimeout(()=>{
+    const i=bulletTraceObjects.indexOf(line);if(i>=0)bulletTraceObjects.splice(i,1);
+    scene.remove(line);geometry.dispose();material.dispose();
+  },lifetime);
+}
+function spawnRemoteTracer(data){
+  const start=new THREE.Vector3(Number(data.x)||0,Number(data.y)||1.4,Number(data.z)||0);
+  const dir=new THREE.Vector3(Number(data.dx)||0,Number(data.dy)||0,Number(data.dz)||-1).normalize();
+  const max=(CLIENT_WEAPON_INFO[data.weapon]||CLIENT_WEAPON_INFO.akr).range;
+  const endpoint=start.clone().addScaledVector(dir,Math.min(max,24));
+  raycaster.set(start,dir);
+  const hits=raycaster.intersectObjects(mapObjects.filter(o=>o?.isMesh&&o.visible),false);
+  const hit=hits.find(item=>item.distance>0.1&&item.distance<Math.min(max,24));
+  if(hit)endpoint.copy(hit.point);
+  spawnTracer(start.clone().addScaledVector(dir,.35),endpoint,data.weapon==="p350"?0xb9e5ff:0xffdda0,70);
+}
+
+function applyMapShotImpact(info){
+  if(!player||info.kind==="melee")return null;
   raycaster.setFromCamera(new THREE.Vector2(0,0),camera);
-  const hits=raycaster.intersectObjects(breakableWood.filter(o=>o.visible),false);
-  const hit=hits.find(h=>h.distance<CLIENT_WEAPON_INFO[selectedWeapon].range);
-  if(!hit)return;
-  const obj=hit.object;obj.userData.hp=(obj.userData.hp||3)-1;
-  if(obj.userData.hp<=0){
-    obj.visible=false;
-    const idx=mapObjects.indexOf(obj);if(idx>=0)mapObjects.splice(idx,1);
-    const woodIndex=breakableWood.indexOf(obj);
-    if(woodIndex>=0){
-      if(isTrainingMode)socket.emit("map_wood_destroyed",{trainingId,woodIndex});
-      else socket.emit("map_wood_destroyed",{matchId,woodIndex});
+  scene.updateMatrixWorld(true);
+  const hits=raycaster.intersectObjects(mapObjects.filter(o=>o?.isMesh&&o.visible),false);
+  const hit=hits.find(item=>item.distance>.15&&item.distance<=info.range);
+  if(!hit)return null;
+  const obj=hit.object,point=hit.point;
+  const normal=hit.face?hit.face.normal.clone().transformDirection(obj.matrixWorld):new THREE.Vector3(0,1,0);
+  if(Number.isInteger(obj.userData.doorBayIndex)){
+    const doorIndex=obj.userData.doorBayIndex;
+    const door=interactiveDoors[doorIndex];
+    if(door&&door.hitMeshes.includes(obj)){
+      openDoor(doorIndex);
+      addBulletHole(point,normal,0x30251d);
+      return point;
     }
-    rebuildCollisionIndex();
-    showDamagePopup("ДЕРЕВ’ЯНЕ УКРИТТЯ ЗРУЙНОВАНО");
-  }else{
-    obj.material.color.setHex(0x60402a);
-    showDamagePopup("ДЕРЕВО · "+obj.userData.hp+"/3");
   }
+  if(obj.userData.breakableWood){
+    obj.userData.hp=(obj.userData.hp||3)-1;
+    addBulletHole(point,normal,0x35241a);
+    if(obj.userData.hp<=0){
+      obj.visible=false;
+      const index=mapObjects.indexOf(obj);if(index>=0)mapObjects.splice(index,1);
+      const woodIndex=breakableWood.indexOf(obj);
+      if(woodIndex>=0){
+        if(isTrainingMode)socket.emit("map_wood_destroyed",{trainingId,woodIndex});
+        else socket.emit("map_wood_destroyed",{matchId,woodIndex});
+      }
+      rebuildCollisionIndex();
+      showDamagePopup("ДЕРЕВ’ЯНЕ УКРИТТЯ ЗРУЙНОВАНО");
+    }else{
+      obj.material.color.setHex(0x60402a);
+      showDamagePopup("ДЕРЕВО · "+obj.userData.hp+"/3");
+    }
+    return point;
+  }
+  addBulletHole(point,normal,0x171a1d);
+  return point;
 }
-function addGameplayInteractables(){
+
+function addGameplayInteractables(doorTemplate=null){
   if(gameplayInteractablesBuilt||selectedMap!=="HILL_TOWN")return;
   gameplayInteractablesBuilt=true;
-  // These hinged doors sit in the two central lane openings, not across spawn exits.
-  addGameplayDoor(-1.4,-10,0);
-  addGameplayDoor(1.4,10,Math.PI);
-  addGameplayDoor(-10,1.4,Math.PI/2);
-  addGameplayDoor(10,-1.4,-Math.PI/2);
+  addGameplayDoor(0,-10,0,"ДВЕРІ",doorTemplate);
+  addGameplayDoor(0,10,Math.PI,"ДВЕРІ",doorTemplate);
+  addGameplayDoor(-10,0,Math.PI/2,"ДВЕРІ",doorTemplate);
+  addGameplayDoor(10,0,-Math.PI/2,"ДВЕРІ",doorTemplate);
   [[-6,-5],[6,5],[-16,12],[16,-12]].forEach(([x,z])=>addBreakableWood(x,z));
 }
+
 function clearHeldWeapon(){
   if(!heldWeaponRoot)return;
   while(heldWeaponRoot.children.length)heldWeaponRoot.remove(heldWeaponRoot.children[0]);
