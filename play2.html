@@ -1073,48 +1073,201 @@ function renderTrainingKeyHints(){
 function buildFieldArena(){
   if(mapLoadFinished)return;
   mapLoadFinished=true;
-  scene.background=new THREE.Color(0x91a6b9);
-  scene.fog=new THREE.Fog(0x91a6b9,220,780);
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(300*FIELD_ARENA_SCALE,300*FIELD_ARENA_SCALE),new THREE.MeshStandardMaterial({color:0x5c6e62,roughness:1}));
-  floor.rotation.x=-Math.PI/2;floor.position.y=-.04;scene.add(floor);mapObjects.push(floor);
-  const grid=new THREE.GridHelper(300*FIELD_ARENA_SCALE,120,0x879987,0x748575);grid.position.y=.01;scene.add(grid);
-  const wallMat=new THREE.MeshStandardMaterial({color:0x4e5965,roughness:1});
-  const boxMat=new THREE.MeshStandardMaterial({color:0x626a70,roughness:.9});
-  const addBox=(x,y,z,w,h,d,mat)=>{
-    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w*FIELD_ARENA_SCALE,h,d*FIELD_ARENA_SCALE),mat);mesh.position.set(x*FIELD_ARENA_SCALE,y,z*FIELD_ARENA_SCALE);mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
+  scene.background=new THREE.Color(0x93a9b6);
+  scene.fog=new THREE.Fog(0x93a9b6,360,880);
+
+  const makeMat=(color,roughness=.9,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
+  const groundMat=makeMat(0x777c72,1),roadMat=makeMat(0x3b454b,1);
+  const concreteMat=makeMat(0x626b70,.94),darkConcrete=makeMat(0x39454b,.92);
+  const containerMat=makeMat(0x4f6668,.84,.16),containerAlt=makeMat(0x6b5946,.88,.08);
+  const stripeMat=makeMat(0xd3b768,.95),whiteMat=makeMat(0xc1c4b9,.96);
+  const trimMat=makeMat(0x26343b,.75,.25),glassMat=makeMat(0x2c4047,.28,.24);
+
+  const addGround=(x,z,w,d,material,y=-.06)=>{
+    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,d),material);
+    mesh.rotation.x=-Math.PI/2;mesh.position.set(x,y,z);
+    mesh.receiveShadow=!isMobileDevice;scene.add(mesh);mapObjects.push(mesh);return mesh;
   };
-  addBox(0,4,-150,300,8,3,wallMat);addBox(0,4,150,300,8,3,wallMat);
-  addBox(-150,4,0,3,8,300,wallMat);addBox(150,4,0,3,8,300,wallMat);
-  addBox(-16,1,7,6,2,5,boxMat);addBox(12,1,18,7,2,5,boxMat);
-  addBox(22,1,-12,8,2,5,boxMat);addBox(-25,1,-18,8,2,5,boxMat);
-  addBox(0,1,35,12,2,5,boxMat);addBox(38,1,28,5,2,12,boxMat);
+  const addBox=(x,y,z,w,h,d,material,solid=true,rotationY=0)=>{
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
+    mesh.position.set(x,y,z);mesh.rotation.y=rotationY;
+    mesh.castShadow=!isMobileDevice&&solid;mesh.receiveShadow=!isMobileDevice;
+    mesh.userData.mapSolid=Boolean(solid);scene.add(mesh);
+    if(solid)mapObjects.push(mesh);
+    return mesh;
+  };
+
+  // Broad but bounded outdoor training ground with asphalt lanes instead of a debug grid.
+  addGround(0,0,590,590,groundMat,-.08);
+  addGround(0,0,42,586,roadMat,-.052);
+  addGround(0,0,586,42,roadMat,-.051);
+  for(const pos of [-280,-240,-200,-160,-120,-80,-40,40,80,120,160,200,240,280]){
+    addGround(pos,0,.13,570,whiteMat,-.025);
+    addGround(0,pos,570,.13,whiteMat,-.024);
+  }
+  for(const p of [-270,-220,-170,-120,-70,70,120,170,220,270]){
+    addGround(p,-8,8,.22,stripeMat,-.022);
+    addGround(p,8,8,.22,stripeMat,-.022);
+    addGround(-8,p,.22,8,stripeMat,-.021);
+    addGround(8,p,.22,8,stripeMat,-.021);
+  }
+
+  // Perimeter segments leave the spawn zones in clear view but keep every player inside.
+  const wallMat=makeMat(0x4a5356,.98);
+  const wallCap=makeMat(0x737872,.88);
+  addBox(0,3,-294,590,6,4,wallMat,true);
+  addBox(0,3,294,590,6,4,wallMat,true);
+  addBox(-294,3,0,4,6,590,wallMat,true);
+  addBox(294,3,0,4,6,590,wallMat,true);
+  for(let p=-250;p<=250;p+=50){
+    addBox(p,6.1,-294,2.2,.22,4.15,wallCap,false);
+    addBox(p,6.1,294,2.2,.22,4.15,wallCap,false);
+    addBox(-294,6.1,p,4.15,.22,2.2,wallCap,false);
+    addBox(294,6.1,p,4.15,.22,2.2,wallCap,false);
+  }
+
+  // These solid cover blocks use the same rectangles as SERVER_MAP_BLOCKERS.
+  const obstacles=[
+    {x:-32,z:14,w:12,d:10,h:4.5,mat:concreteMat,kind:"bunker"},
+    {x:24,z:36,w:14,d:10,h:4.4,mat:containerMat,kind:"container"},
+    {x:44,z:-24,w:16,d:10,h:5,mat:containerAlt,kind:"container"},
+    {x:-50,z:-36,w:16,d:10,h:5,mat:containerMat,kind:"container"},
+    {x:0,z:70,w:24,d:10,h:3,mat:concreteMat,kind:"bunker"},
+    {x:76,z:56,w:10,d:24,h:3,mat:darkConcrete,kind:"bunker"},
+    {x:-190,z:0,w:30,d:14,h:5.5,mat:containerMat,kind:"container"},
+    {x:190,z:0,w:30,d:14,h:5.5,mat:containerAlt,kind:"container"},
+    {x:0,z:190,w:38,d:16,h:4.8,mat:concreteMat,kind:"bunker"},
+    {x:0,z:-190,w:38,d:16,h:4.8,mat:concreteMat,kind:"bunker"},
+    {x:-180,z:180,w:20,d:20,h:5,mat:containerAlt,kind:"container"},
+    {x:180,z:-180,w:20,d:20,h:5,mat:containerMat,kind:"container"}
+  ];
+  for(const o of obstacles){
+    addBox(o.x,o.h/2,o.z,o.w,o.h,o.d,o.mat,true);
+    addBox(o.x,o.h+.06,o.z,o.w+.24,.12,o.d+.24,trimMat,false);
+    if(o.kind==="container"){
+      for(let x=-o.w/2+1.6;x<o.w/2-1;x+=2.5){
+        addBox(o.x+x,o.h/2,o.z-o.d/2-.04,.09,o.h-.45,.045,trimMat,false);
+        addBox(o.x+x,o.h/2,o.z+o.d/2+.04,.09,o.h-.45,.045,trimMat,false);
+      }
+      addBox(o.x,o.h-.55,o.z-o.d/2-.06,o.w-.6,.12,.08,stripeMat,false);
+    }else{
+      addBox(o.x,o.h-.22,o.z-o.d/2-.04,o.w-.5,.10,.08,whiteMat,false);
+      addBox(o.x-o.w/2+.22,o.h/2,o.z,.10,o.h-.5,.10,darkConcrete,false);
+      addBox(o.x+o.w/2-.22,o.h/2,o.z,.10,o.h-.5,.10,darkConcrete,false);
+    }
+  }
+
+  // A few tall sightline markers and floodlights dress the empty long-range perimeter.
+  const poleMat=makeMat(0x313d42,.66,.3);
+  const lampMat=new THREE.MeshStandardMaterial({color:0xe0e9e5,emissive:0xd2e7e8,emissiveIntensity:.8,roughness:.28});
+  for(const [x,z] of [[-260,-260],[260,-260],[-260,260],[260,260],[-245,0],[245,0]]){
+    const pole=new THREE.Mesh(new THREE.CylinderGeometry(.15,.23,6.8,8),poleMat);
+    pole.position.set(x,3.4,z);pole.castShadow=!isMobileDevice;scene.add(pole);
+    addBox(x,6.85,z,.95,.24,.48,lampMat,false);
+  }
+
+  const makeLetterMaterial=(letter,background)=>{
+    const canvas=document.createElement("canvas");canvas.width=256;canvas.height=128;
+    const ctx=canvas.getContext("2d");ctx.fillStyle="#172126";ctx.fillRect(0,0,256,128);
+    ctx.fillStyle=background;ctx.fillRect(10,10,236,108);
+    ctx.strokeStyle="#d7e1df";ctx.lineWidth=6;ctx.strokeRect(10,10,236,108);
+    ctx.fillStyle="#fff";ctx.font="900 78px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(letter,128,66);
+    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+    return new THREE.MeshStandardMaterial({map:texture,roughness:.65});
+  };
+  addBox(-110,3,-125,4,.12,.12,trimMat,false);
+  addBox(-110,3,-125,2.8,1.45,.12,makeLetterMaterial("A","#245a9c"),false);
+  addBox(110,3,125,4,.12,.12,trimMat,false);
+  addBox(110,3,125,2.8,1.45,.12,makeLetterMaterial("B","#a33d45"),false);
+
   $("progress").style.width="100%";
+  setLoadingDetail("mapLoadStatus","FIELD ARENA · ГОТОВО","done");
 }
 function buildNeonYard(){
   if(mapLoadFinished)return;
   mapLoadFinished=true;
-  scene.background=new THREE.Color(0x050b18);
-  scene.fog=new THREE.Fog(0x050b18,190,620);
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(180*NEON_YARD_SCALE,180*NEON_YARD_SCALE),new THREE.MeshStandardMaterial({color:0x101a2a,roughness:.88,metalness:.25}));
-  floor.rotation.x=-Math.PI/2;floor.position.y=-.05;scene.add(floor);mapObjects.push(floor);
-  const grid=new THREE.GridHelper(180*NEON_YARD_SCALE,90,0x1de9ff,0x123b56);grid.position.y=.015;scene.add(grid);
-  const wallMat=new THREE.MeshStandardMaterial({color:0x101d31,roughness:.55,metalness:.35});
-  const neonMat=new THREE.MeshStandardMaterial({color:0x08283a,emissive:0x00cfff,emissiveIntensity:1.2,roughness:.35,metalness:.3});
-  const violetMat=new THREE.MeshStandardMaterial({color:0x251039,emissive:0x8b35ff,emissiveIntensity:.8,roughness:.4,metalness:.2});
-  const addBox=(x,y,z,w,h,d,mat)=>{
-    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w*NEON_YARD_SCALE,h,d*NEON_YARD_SCALE),mat);
-    mesh.position.set(x*NEON_YARD_SCALE,y,z*NEON_YARD_SCALE);mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);mapObjects.push(mesh);
+  scene.background=new THREE.Color(0x07101b);
+  scene.fog=new THREE.Fog(0x07101b,190,450);
+
+  const makeMat=(color,roughness=.72,metalness=.2,emissive=0x000000,intensity=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness,emissive,emissiveIntensity:intensity});
+  const floorMat=makeMat(0x111d2a,.9,.16),roadMat=makeMat(0x0a121c,.96,.08);
+  const wallMat=makeMat(0x1a2a39,.65,.38),containerMat=makeMat(0x1e3948,.62,.35);
+  const violetMat=makeMat(0x292141,.66,.32),cyanMat=makeMat(0x082d3a,.32,.35,0x00cfff,1.5);
+  const purpleGlow=makeMat(0x26123b,.32,.35,0x8b35ff,1.05);
+  const trimMat=makeMat(0x304553,.4,.45),whiteMat=makeMat(0xa9cad6,.45,.25,0x18333f,.2);
+
+  const addGround=(x,z,w,d,material,y=-.06)=>{
+    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,d),material);
+    mesh.rotation.x=-Math.PI/2;mesh.position.set(x,y,z);mesh.receiveShadow=!isMobileDevice;
+    scene.add(mesh);mapObjects.push(mesh);return mesh;
   };
-  addBox(0,4,-88,180,8,3,wallMat);addBox(0,4,88,180,8,3,wallMat);
-  addBox(-88,4,0,3,8,180,wallMat);addBox(88,4,0,3,8,180,wallMat);
-  for(const [x,z] of [[-24,-20],[24,-20],[-24,20],[24,20],[0,-38],[0,38]]){
-    addBox(x,2,z,9,4,7,wallMat);
-    addBox(x,4.08,z,9,.14,7,neonMat);
-    addBox(x,1,z,9,.12,7,violetMat);
+  const addBox=(x,y,z,w,h,d,material,solid=true)=>{
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);mesh.position.set(x,y,z);
+    mesh.castShadow=!isMobileDevice&&solid;mesh.receiveShadow=!isMobileDevice;
+    mesh.userData.mapSolid=Boolean(solid);scene.add(mesh);if(solid)mapObjects.push(mesh);return mesh;
+  };
+
+  // Compact industrial arena with three traversable lanes and clear landmarks.
+  addGround(0,0,344,344,floorMat,-.08);
+  addGround(0,0,26,338,roadMat,-.05);
+  addGround(0,0,338,26,roadMat,-.049);
+  for(const k of [-145,-120,-95,-70,-45,-20,20,45,70,95,120,145]){
+    addGround(k,0,.12,330,trimMat,-.024);
+    addGround(0,k,330,.12,trimMat,-.023);
   }
-  addBox(0,1,0,5,2,16,wallMat);
-  addBox(0,2.1,0,.18,.12,16,neonMat);
+  for(const k of [-155,-105,-55,55,105,155]){
+    addGround(k,-13,5,.18,cyanMat,-.02);addGround(k,13,5,.18,cyanMat,-.02);
+    addGround(-13,k,.18,5,purpleGlow,-.019);addGround(13,k,.18,5,purpleGlow,-.018);
+  }
+
+  addBox(0,3.5,-170,344,7,4,wallMat,true);
+  addBox(0,3.5,170,344,7,4,wallMat,true);
+  addBox(-170,3.5,0,4,7,344,wallMat,true);
+  addBox(170,3.5,0,4,7,344,wallMat,true);
+
+  const structures=[
+    {x:-48,z:-40,w:18,d:14,h:5,mat:containerMat},
+    {x:48,z:-40,w:18,d:14,h:5,mat:violetMat},
+    {x:-48,z:40,w:18,d:14,h:5,mat:violetMat},
+    {x:48,z:40,w:18,d:14,h:5,mat:containerMat},
+    {x:0,z:-76,w:18,d:14,h:6,mat:wallMat},
+    {x:0,z:76,w:18,d:14,h:6,mat:wallMat},
+    {x:0,z:0,w:10,d:32,h:2.2,mat:wallMat}
+  ];
+  for(const o of structures){
+    addBox(o.x,o.h/2,o.z,o.w,o.h,o.d,o.mat,true);
+    addBox(o.x,o.h+.08,o.z,o.w+.4,.16,o.d+.4,trimMat,false);
+    addBox(o.x,o.h-.45,o.z-o.d/2-.06,o.w-.6,.10,.08,cyanMat,false);
+    addBox(o.x,o.h-.45,o.z+o.d/2+.06,o.w-.6,.10,.08,purpleGlow,false);
+    for(let k=-o.w/2+1.3;k<o.w/2-1;k+=2.4){
+      addBox(o.x+k,o.h/2,o.z-o.d/2-.045,.09,o.h-.55,.05,trimMat,false);
+      addBox(o.x+k,o.h/2,o.z+o.d/2+.045,.09,o.h-.55,.05,trimMat,false);
+    }
+    if(o.h>3){
+      addBox(o.x-o.w/2-.06,o.h/2,o.z,.08,o.h-.5,.1,cyanMat,false);
+      addBox(o.x+o.w/2+.06,o.h/2,o.z,.08,o.h-.5,.1,purpleGlow,false);
+    }
+  }
+
+  // Raised route numbers and service panels provide silhouettes but never create fake collisions.
+  for(const [x,z,mat] of [[-75,0,cyanMat],[75,0,purpleGlow],[0,-115,cyanMat],[0,115,purpleGlow]]){
+    addBox(x,1.6,z,5.4,3.2,.22,wallMat,false);
+    addBox(x,1.65,z-.14,4.8,2.65,.045,mat,false);
+    addBox(x,3.35,z,5.5,.14,.30,trimMat,false);
+  }
+  const postMat=makeMat(0x273b49,.55,.38);
+  for(const [x,z] of [[-150,-150],[150,-150],[-150,150],[150,150],[-150,0],[150,0]]){
+    const pole=new THREE.Mesh(new THREE.CylinderGeometry(.12,.18,5.5,8),postMat);
+    pole.position.set(x,2.75,z);pole.castShadow=!isMobileDevice;scene.add(pole);
+    addBox(x,5.55,z,.8,.2,.42,whiteMat,false);
+  }
+  for(const [x,z] of [[-80,-18],[-80,18],[80,-18],[80,18],[-18,-100],[18,-100],[-18,100],[18,100]]){
+    addBox(x,.05,z,2.1,.1,.55,trimMat,false);
+    addBox(x,.11,z,1.65,.045,.18,cyanMat,false);
+  }
+
   $("progress").style.width="100%";
+  setLoadingDetail("mapLoadStatus","NEON YARD · ГОТОВО","done");
 }
 function addFallbackArena(){
   if(mapLoadFinished)return;
