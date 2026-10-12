@@ -2192,7 +2192,12 @@ io.on("connection", socket => {
     const target=distance>maxStep
       ?{x:previous.x+dx/distance*maxStep,z:previous.z+dz/distance*maxStep}
       :{x,z};
-    if(mapPathBlocked(session.map,previous,target,session.mapState||{}))return;
+    if(mapPathBlocked(session.map,previous,target,session.mapState||{})){
+      socket.emit("player_position_correction",{
+        trainingId:session.id,x:previous.x,y:previous.y,z:previous.z,rotY:session.playerRotY||0
+      });
+      return;
+    }
     previous.x=target.x;
     previous.z=target.z;
     previous.y = Math.max(0, Math.min(2.25, y));
@@ -2607,7 +2612,12 @@ io.on("connection", socket => {
     if (!match) return;
     const player = match.players.find(p => p.userId === socket.user.id);
     if (!player || player.socketId !== socket.id || player.hp <= 0) return;
-    if (!validateMove(player, data, match.map, match.mapState || {})) return;
+    if (!validateMove(player, data, match.map, match.mapState || {})) {
+      socket.emit("player_position_correction", {
+        matchId: match.id, x: player.pos.x, y: player.pos.y, z: player.pos.z, rotY: player.rotY
+      });
+      return;
+    }
 
     if (match.phase === "game") handleCatch(io, match, player);
 
