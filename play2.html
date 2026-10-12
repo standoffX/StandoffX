@@ -1899,7 +1899,7 @@ function animate(){
     if(player.position.y<=0){player.position.y=0;velocityY=0;jumping=false}
     if(!isThird){camera.position.set(player.position.x,player.position.y+(isCrouching?1.05:1.58),player.position.z)}
     else{const offset=new THREE.Vector3(0,isCrouching?1.65:2.5,5).applyQuaternion(camera.quaternion);camera.position.copy(player.position).add(offset)}
-    updateVisual();sendMove();
+    updateVisual();updateInteractButtonLabel();sendMove();
   }
   if(playerVisual)animateSoldier(playerVisual,dt,now,keys.w||keys.s||keys.a||keys.d,jumping,isCrouching);
   Object.values(enemies).forEach(e=>{
