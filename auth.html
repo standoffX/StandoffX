@@ -50,7 +50,7 @@ button.primary:disabled{opacity:.55;cursor:wait}
     <form id="form">
       <div class="field" id="idField">
         <label id="idLabel">PLAYER ID</label>
-        <input id="identity" autocomplete="username" inputmode="text" maxlength="80" placeholder="Player ID або повний UUID">
+        <input id="identity" autocomplete="username" inputmode="text" maxlength="32" placeholder="Player ID, наприклад ID_123456">
       </div>
       <div class="field">
         <label>ПАРОЛЬ</label>
@@ -71,14 +71,11 @@ button.primary:disabled{opacity:.55;cursor:wait}
 
   <div id="successView" class="success">
     <div class="brand"><h1>АКАУНТ ГОТОВИЙ</h1></div>
-    <div class="subtitle">Нік може повторюватися. ID потрібен для пошуку гравця, а UUID — унікальний ідентифікатор акаунта.</div>
+    <div class="subtitle">Нік може повторюватися. Зберігай Player ID і пароль — вони потрібні для входу.</div>
     <div class="success-id">
       <div class="small">PLAYER ID</div>
       <strong id="createdId">ID_000000</strong>
       <button class="copy" id="copyId" type="button">СКОПІЮВАТИ ID</button>
-      <div class="small" style="margin-top:14px">УНІКАЛЬНИЙ UUID</div>
-      <strong id="createdUuid" style="font-size:12px;overflow-wrap:anywhere">00000000-0000-0000-0000-000000000000</strong>
-      <button class="copy" id="copyUuid" type="button">СКОПІЮВАТИ UUID</button>
     </div>
     <button class="primary" id="continueBtn" type="button">ПЕРЕЙТИ В ГРУ</button>
   </div>
@@ -94,14 +91,14 @@ function setMode(next){
   $("regTab").classList.toggle("active",mode==="register");
   $("nicknameField").style.display=mode==="register"?"block":"none";
   $("idField").style.display=mode==="login"?"block":"none";
-  $("idLabel").textContent="PLAYER ID або UUID";
+  $("idLabel").textContent="PLAYER ID";
   $("identity").style.display="block";
   $("identity").required=mode==="login";
-  $("identity").placeholder=mode==="login"?"ID_123456 або UUID":"Реєстрація створить ID та UUID автоматично";
+  $("identity").placeholder=mode==="login"?"ID_123456":"Реєстрація створить Player ID автоматично";
   $("submit").textContent=mode==="login"?"УВІЙТИ":"СТВОРИТИ АКАУНТ";
   $("note").textContent=mode==="login"
-    ?"Вхід за Player ID або унікальним UUID + пароль. Нік може збігатися з ніком іншого гравця."
-    :"Придумай нік і пароль. Player ID та унікальний UUID система створить автоматично.";
+    ?"Вхід за Player ID і паролем. Нік може збігатися з ніком іншого гравця."
+    :"Придумай нік і пароль. Player ID система створить автоматично.";
   $("msg").textContent="";
   $("msg").className="msg";
   if(mode==="register") $("nickname").focus(); else $("identity").focus();
@@ -135,7 +132,6 @@ $("form").onsubmit=async e=>{
       $("authView").style.display="none";
       $("successView").classList.add("show");
       $("createdId").textContent=d.createdId||d.user?.id||"ID_000000";
-      $("createdUuid").textContent=d.user?.uuid||"UUID не отримано";
       setTimeout(()=>location.href=d.redirect||"/game",1800);
     }else{
       location.href=d.redirect||"/game";
@@ -150,10 +146,6 @@ $("form").onsubmit=async e=>{
 $("copyId").onclick=async()=>{
   const id=$("createdId").textContent;
   try{await navigator.clipboard.writeText(id);$("copyId").textContent="СКОПІЙОВАНО ✓"}catch{}
-};
-$("copyUuid").onclick=async()=>{
-  const uuid=$("createdUuid").textContent;
-  try{await navigator.clipboard.writeText(uuid);$("copyUuid").textContent="СКОПІЙОВАНО ✓"}catch{}
 };
 $("continueBtn").onclick=()=>location.href="/game";
 
