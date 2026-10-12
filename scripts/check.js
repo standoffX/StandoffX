@@ -98,9 +98,11 @@ assert.match(server, /const activeMatches = new Map\(\);[^\n]*in-memory only/);
 assert.match(server, /const trainingSessions = new Map\(\);[^\n]*never written to MongoDB/);
 assert.match(server, /app\.post\("\/api\/admin\/atlas\/check"/);
 assert.match(server, /tls: true/, "Atlas TLS must stay enabled without disabling certificate verification");
-assert.match(server, /function publicUser\(user, options = \{\}\)/, "UUID is opt-in on user payloads");
-assert.match(server, /options\.includeUuid === true/, "UUID is only included for the account owner");
-assert.match(server, /data\?\.testerBots === true && canUseTesterModes\(user\)/, "the server authorizes tester bot matches");
+assert.match(server, /function publicUser\(user\)/, "public user payloads must be sanitized");
+assert.match(server, /const \{ password, passwordHash, uuid, \.\.\.safe \} = user/, "public user payloads must strip UUID and password material");
+assert.doesNotMatch(server, /options\.includeUuid|safe\.uuid\s*=/, "UUID must never be exposed with an owner opt-in");
+assert.match(server, /\(data\?\.prototype === true \|\| data\?\.testerBots === true\)\s*&&\s*canUseTesterModes\(user\)/, "the server authorizes tester bot matches");
+assert.match(server, /\["allies", "team_fight"\]\.includes\(mode\)/, "test bots are never injected into public Bomb matchmaking");
 assert.match(server, /isBot: Boolean\(p\.isBot\)/, "match roster includes bot status");
 assert.match(server, /isTester/);
 assert.match(menu, /data-test-gameplay="prototype"/, "testers can launch the prototype");
@@ -129,7 +131,7 @@ assert.match(game, /data-training-action="boost"/, "training must expose a click
 assert.match(game, /data-training-action="resetSession"/, "training must expose a clickable session reset action");
 assert.doesNotMatch(menu, /data-mode="(?:training|field_test)"/, "prototype and real gameplay are not separate public modes");
 assert.match(menu, /localStorage.getItem\("sx_test_gameplay"\)/, "the tester choice persists locally");
-assert.match(menu, /testerBots:canTest\(\)&&testGameplayMode==="real"/, "only testers request bot matches");
+assert.match(menu, /const prototypeSelected=canTest\(\)&&testGameplayMode==="prototype"/, "only tester accounts can start a prototype with bots");
 assert.match(menu, /id="modeModal"/, "Play must show a mode selection modal");
 assert.match(menu, /id="confirmModeBtn"/, "mode selection must have an explicit confirmation button");
 assert.match(menu, /renderWaitPlayers\(d\.players\|\|\[\]\)/, "queue UI must render the waiting roster");
@@ -147,7 +149,8 @@ assert.match(admin, /data-clan-admin='edit'/, "admin UI must expose clan editing
 assert.match(admin, /data-clan-admin='delete'/, "admin UI must expose clan deletion");
 assert.match(server, /crypto\.randomUUID\(\)/, "every account must have a UUID");
 assert.match(server, /user\.uuid = crypto\.randomUUID\(\)/, "legacy accounts must receive a UUID");
-assert.match(server, /users\.find\(candidate => candidate\.uuid === id\)/, "login must accept the unique UUID");
+assert.doesNotMatch(server, /users\.find\(candidate => candidate\.uuid === id\)/, "login must not accept a UUID as an identity credential");
+assert.match(server, /const id = normalizeId\(req\.body\.id \|\| ""\)/, "login only accepts Player ID");
 assert.match(server, /createSession\(user\.uuid \|\| user\.id\)/, "sessions must use UUID where available");
 assert.doesNotMatch(server, /Такий нік вже зайнятий/, "nicknames must be allowed to repeat");
 assert.match(server, /function newPlayerId\(\)/, "new public IDs must be generated uniquely");
@@ -156,7 +159,7 @@ assert.match(server, /playerIdExists\(nextIdRaw\)/, "admin edits must not create
 assert.match(server, /const PLAYABLE_MAPS = Object\.freeze/, "matchmaking must validate map selections");
 assert.match(server, /p\.mode === entry\.mode && p\.map === entry\.map/, "players on different maps must not be mixed into one queue");
 assert.match(server, /createMatch\(io, mode, map\)/, "the selected map must reach the match");
-assert.match(read("auth.html"), /id="createdUuid"/, "registration must display the UUID");
+assert.doesNotMatch(read("auth.html"), /UUID|createdUuid|copyUuid|PLAYER ID або UUID/, "login and registration must never display or request UUID");
 assert.match(menu, /data-theme-choice="cyan"/, "menu must offer the cyan theme");
 assert.match(menu, /data-theme-choice="violet"/, "menu must offer the violet theme");
 assert.match(menu, /data-theme-choice="red"/, "menu must offer the red theme");
@@ -164,7 +167,7 @@ assert.match(menu, /data-map="M3_Maze"/, "menu must offer the main map");
 assert.match(menu, /data-map="FIELD_ARENA"/, "menu must offer the field arena");
 assert.match(menu, /data-map="NEON_YARD"/, "menu must offer the neon yard map");
 assert.doesNotMatch(menu, /DEV BUILD/i, "the main menu must not show development-build labels");
-assert.match(menu, /id="profilePageUuid"/, "the player profile must display UUID");
+assert.doesNotMatch(menu, /profilePageUuid|copyUuid|me\.uuid|saved\.uuid|d\.uuid/, "the player profile and active-match storage must not expose UUID");
 assert.match(game, /function requestMouseLook\(\)/, "mouse look must be activatable from the game view");
 assert.match(game, /new PointerLockControls\(camera,renderer\.domElement\)/, "mouse look must lock to the game canvas");
 assert.match(game, /document\.pointerLockElement===renderer\.domElement/, "camera input must track canvas pointer lock");
@@ -185,8 +188,8 @@ assert.match(menu, /data-bind-action="spawnBot"/, "settings must let players rem
 assert.match(menu, /data-bind-action="resetSession"/, "settings must let players remap training reset");
 assert.match(menu, /data-bind-action="menu"/, "settings must let players remap the in-game menu");
 assert.match(menu, /current\.keybinds=binds/, "custom key bindings must be saved in localStorage");
-assert.match(menu, /refreshProfileIdentity\(\)/, "opening the profile must refresh the UUID from the account API");
-assert.match(menu, /api\("\/api\/user-data\?id="/, "profile UUID refresh must have a user-data fallback");
+assert.doesNotMatch(menu, /profilePageUuid|copyUuid|me\.uuid|saved\.uuid|d\.uuid/, "the menu must not display or store account UUIDs");
+assert.match(menu, /availableMapIds\(\)/, "map options must be filtered by the chosen mode and tester privileges");
 assert.match(game, /function runTrainingAction\(action\)/, "training actions must be keyboard-driven");
 assert.match(game, /function togglePauseMenu\(force\)/, "the game must have a keyboard-toggleable menu");
 assert.match(game, /menu:"KeyM"/, "M must open the in-game menu by default");
@@ -203,15 +206,24 @@ assert.deepEqual([...new Set(duplicates)], [], "HTTP routes must not be duplicat
 
 assert.match(server, /HILL_TOWN: \{ id: "HILL_TOWN"/, "server must allow the Hill Town map");
 assert.match(server, /id: "allies"[\s\S]*?requiredPlayers: 4/, "Allies must have a four-player server queue");
-assert.match(server, /!\["team_fight", "allies"\]\.includes\(match\.mode\)/, "team combat handler must accept Allies");
+assert.match(server, /!\["team_fight", "allies", "bomb"\]\.includes\(match\.mode\)/, "team combat handler must accept Allies, Team Fight and Bomb");
+assert.match(server, /team_fight: \{ id: "team_fight", name: "КОМАНДНИЙ БІЙ", short: "TF", map: "TF_COURTYARD", requiredPlayers: 6 \}/, "Team Fight must require six players (3v3)");
+assert.match(server, /bomb: \{ id: "bomb", name: "ЗАКЛАДКА БОМБИ", short: "BOMB", map: "BOMB_RAVINE", requiredPlayers: 6 \}/, "Bomb mode must require six players (3v3)");
+assert.match(server, /function startBombRound\(/, "Bomb mode has a separate round cycle");
+assert.match(server, /function handleBombInteraction\(/, "Bomb mode validates planting and defusing on the server");
+assert.match(server, /socket\.on\("bomb_interact"/, "Bomb interactions arrive through a server-validated event");
 assert.match(server, /const WEAPON_BALANCE = Object\.freeze\(/, "server must maintain the authoritative weapon balance table");
 assert.match(server, /const damage = calculateWeaponDamage\(weaponId, hitZone, bestDistance\)/, "server calculates damage instead of trusting the client");
 assert.match(server, /best\.hp = Math\.max\(0, best\.hp - damage\)/, "a hit reduces HP by the equipped weapon's damage");
-assert.match(server, /if \(!killed\) return;/, "the victim only respawns when their HP reaches zero");
+assert.match(server, /if \(!killed\) return;\s*if \(match\.mode === "bomb"\) \{\s*checkBombElimination\(io, match\);\s*return;/, "Bomb deaths last for the whole round; Team Fight respawns after a lethal hit");
 assert.match(server, /session\.lastShotAt \|\| 0\) < weapon\.fireDelay/, "training shots are rate-limited per weapon");
 assert.doesNotMatch(server, /bot\.hp = Math\.max\(0, bot\.hp - \(Number\(data\.damage\) \|\| 34\)\)/, "training clients cannot choose arbitrary damage values");
 assert.match(menu, /data-mode="allies"/, "menu must offer Allies");
 assert.match(menu, /data-mode="team_fight"/, "menu must offer Team Fight");
+assert.match(menu, /data-mode="bomb"/, "menu must offer Bomb mode");
+assert.match(menu, /data-map="TF_COURTYARD"/, "menu must offer small Team Fight maps");
+assert.match(menu, /data-map="TF_DEPOT"/, "menu must offer the second small Team Fight map");
+assert.match(menu, /data-map="BOMB_RAVINE"/, "menu must offer the larger A/B bomb map");
 assert.match(menu, /data-map="HILL_TOWN"/, "menu must offer Hill Town");
 assert.match(game, /async function buildHillTownMap\(\)/, "game must assemble the new map from modular assets");
 assert.match(game, /HILL_TOWN_MANIFEST_URL/, "game must load the public CC0 map asset manifest");
@@ -219,7 +231,7 @@ assert.match(game, /async function loadHeldWeapon\(\)/, "game must load a first-
 assert.match(game, /function makeFallbackP350\(\)/, "the client must render the P350 pistol when equipped");
 assert.match(game, /function makeFallbackKnife\(\)/, "the client must render a knife when equipped");
 assert.match(game, /function selectWeaponBySwipe\(dx,dy\)/, "phone has a dedicated gesture switch so camera-look swipes stay available");
-assert.match(game, /Math\.abs\(dy\)>Math\.abs\(dx\)&&dy>0\)selectWeapon\("akr"\)/, "swiping down on the weapon control equips AKR");
+assert.match(game, /Math\.abs\(dy\)>Math\.abs\(dx\)&&dy>0\)selectWeapon\("akr"\)/, "swiping down equips AKR");
 assert.match(game, /Math\.abs\(dx\)>Math\.abs\(dy\)&&dx<0\)selectWeapon\("p350"\)/, "swiping left on the weapon control equips P350");
 assert.match(game, /Math\.abs\(dx\)>Math\.abs\(dy\)&&dx>0\)selectWeapon\("knife"\)/, "swiping right on the weapon control equips knife");
 assert.match(game, /body\.reconnecting #overlay #loadingDetails/, "reconnect screen hides loading diagnostics and keeps the two exit choices focused");
@@ -234,7 +246,7 @@ assert.match(game, /socket\.on\("map_door_state"/, "clients apply other players'
 assert.match(game, /socket\.on\("map_wood_destroyed"/, "clients apply other players' wooden-cover destruction");
 assert.match(server, /socket\.on\("map_door_state"/, "server validates and broadcasts door changes");
 assert.match(server, /socket\.on\("map_wood_destroyed"/, "server validates and broadcasts destroyed wood");
-assert.match(server, /Math\.hypot\(player\.pos\.x-x, player\.pos\.z-z\) > 18/, "door changes require the player to be nearby");
+assert.match(server, /Math\.hypot\(player\.pos\.x-x, player\.pos\.z-z\) > 4\.5/, "door changes require the player to be nearby");
 assert.match(game, /if\(e\.code==="Digit1"\)[\s\S]{0,100}selectWeapon\("akr"\)/, "1 must equip the AKR");
 assert.match(game, /if\(e\.code==="Digit2"\)[\s\S]{0,100}selectWeapon\("p350"\)/, "2 must equip the P350");
 assert.match(game, /if\(e\.code==="Digit3"\)[\s\S]{0,100}selectWeapon\("knife"\)/, "3 must equip the knife");
@@ -261,12 +273,12 @@ assert.match(game, /\$\("fireBtn"\)\.addEventListener\("touchcancel",\(\)=>fireH
 assert.match(game, /socket\.on\("player_left"/, "departed players must be removed from the scene");
 assert.match(game, /e\.pos\.set\(data\.x,data\.y,data\.z\);e\.mesh\.position\.copy\(e\.pos\);e\.anim="Idle"/, "a respawn must update both the displayed and authoritative remote position");
 assert.match(game, /let connectedToGameplay=socket\.connected/, "the client must rejoin the match after a Socket.IO reconnection");
-assert.match(game, /const HILL_TOWN_SCALE=2\.55/, "Hill Town must be dramatically larger than its original footprint");
+assert.match(game, /const HILL_TOWN_SCALE=1/, "Hill Town model positions and server collision now share world scale 1");
 assert.match(game, /clone\.scale\.multiplyScalar\(HILL_TOWN_SCALE\)/, "map GLB assets must be uniformly scaled rather than stretched horizontally");
-assert.match(game, /new THREE\.BoxGeometry\(w\*HILL_TOWN_SCALE,h\*HILL_TOWN_SCALE,d\*HILL_TOWN_SCALE\)/, "procedural fallback geometry must use the same scale on all axes");
-assert.match(game, /return \(\{HILL_TOWN:65,NEON_YARD:196,FIELD_ARENA:320,M3_Maze:228\}\)/, "client movement must stay inside the map perimeter");
-assert.match(game, /NEON_YARD_SCALE=2/, "Neon Yard must have an enlarged play area");
-assert.match(game, /FIELD_ARENA_SCALE=2/, "Field Arena must have an enlarged play area");
+assert.match(game, /new THREE\.BoxGeometry\(w\*HILL_TOWN_SCALE,h,d\*HILL_TOWN_SCALE\)/, "procedural fallback geometry must scale horizontally without stretching its height");
+assert.match(game, /TF_COURTYARD:\{x:35\.1,z:28\.1\}[\s\S]{0,100}BOMB_RAVINE:\{x:73,z:51\.2\}/, "client bounds must preserve separate rectangular maps without stretching the tactical view");
+assert.match(game, /NEON_YARD_SCALE=2\.25/, "Neon Yard must have an enlarged play area");
+assert.match(game, /FIELD_ARENA_SCALE=2\.15/, "Field Arena must have an enlarged play area");
 assert.match(game, /map\.scale\.setScalar\(82\.5\)/, "the M3 map must be enlarged too");
 assert.match(game, /function rebuildCollisionIndex\(\)/, "map geometry must be registered for solid collision");
 assert.match(game, /function blockedAt\(x,z\)/, "the player must be blocked by solid map objects");
@@ -363,9 +375,12 @@ assert.match(server, /bot: \["field_test", "training"\]\.includes\(mode\)/, "ful
 assert.match(server, /const maxStep = 0\.9;/, "training movement must support the faster sprint speed");
 assert.match(server, /player\.anim = \["Idle", "Running", "Jump", "Walking", "Crouch"\]/, "the server must retain the crouch animation state");
 
-const validateMoveFunction = server.match(/function validateMove\(player, data\) \{[\s\S]*?\n\}/);
+const validateMoveFunction = server.match(/function validateMove\(player, data, mapId = "M3_Maze", match = null\) \{[\s\S]*?\n\}/);
 assert.ok(validateMoveFunction, "the server movement validator must be available for behavioral tests");
-const validateMove = vm.runInNewContext("(" + validateMoveFunction[0] + ")");
+const validateMove = vm.runInNewContext("(" + validateMoveFunction[0] + ")", {
+  mapMovementBounds: mapId => ({HILL_TOWN:{x:25.2,z:25.2},TF_COURTYARD:{x:35.1,z:28.1},TF_DEPOT:{x:35.1,z:28.1},BOMB_RAVINE:{x:73,z:51.2},M3_Maze:{x:228,z:228}}[mapId] || {x:228,z:228}),
+  isMapLineBlocked: () => false
+});
 const movingPlayer = {
   lastMoveAt: Date.now() - 120,
   prevMoveTime: Date.now() - 120,
@@ -398,7 +413,8 @@ assert.equal(validateMove(unknownAnimationPlayer, { x: 0.1, y: 0, z: 0, rotY: 0,
 assert.equal(unknownAnimationPlayer.anim, "Idle", "unknown animation states must be rejected");
 
 assert.match(server, /if \(mongoClient !== client\) return/, "a stale MongoDB close event must not clear a newer client");
-assert.match(server, /const failedClient = mongoClient;\s*mongoClient = null;\s*mongoDb = null;\s*mongoStatus\.connected = false;\s*mongoStatus\.state = "error";\s*mongoStatus\.lastError = cleanText\(err\.message, 240\);\s*try \{ await failedClient\?\.close\(\); \} catch \{\}/, "Atlas ping failures must reset the broken client so a later health check can reconnect");
+assert.match(server, /mongoStatus\.lastError = safeMongoError\(err\)/, "MongoDB errors must be sanitized before they are logged or displayed");
+assert.match(server, /LOCAL_VERIFICATION_MIGRATION/, "local JSON fallback must reset legacy verified flags only once");
 
 const weaponStart = server.indexOf("const WEAPON_BALANCE = Object.freeze(");
 const weaponEnd = server.indexOf("function handleTeamShot", weaponStart);
@@ -418,3 +434,12 @@ assert.equal(weaponHelpers.detectWeaponHitZone({x:0,y:0,z:0},{x:0,y:0,z:-10},{x:
 assert.equal(weaponHelpers.detectWeaponHitZone({x:0,y:0,z:0},{x:0,y:0,z:-10},{x:0,y:-0.15,z:-1},10), "legs", "steeper downward aim should classify leg hits");
 
 console.log("OK project invariants, weapon damage balance, ADS, tester-only tools, Atlas endpoint, and unique HTTP routes");
+
+assert.match(server, /function mapMovementBounds\(mapId\)/, "server movement bounds must differ for rectangular maps");
+assert.match(server, /function segmentIntersectsRect\(/, "the server must block movement across map cover rectangles");
+assert.match(server, /DATA_DIR = path\.join\(ROOT, "data"\)/, "local account fallback must be stored under ignored data/");
+assert.match(game, /function buildCompetitiveMap\(mapId\)/, "team-fight and bomb maps must have separate deterministic geometry");
+assert.match(game, /bombActionBtn/, "bomb mode must expose plant/defuse interaction HUD");
+assert.match(game, /BOMB_RAVINE/, "bomb UI and world must include both bomb sites");
+assert.match(menu, /team_fight:\["TF_COURTYARD","TF_DEPOT"\]/, "Team Fight must use its own small maps");
+assert.match(menu, /data-mode="bomb"/, "Bomb mode must be available from the mode selector");
