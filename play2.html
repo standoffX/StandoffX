@@ -208,6 +208,7 @@ const socket=io({
 });
 const myId=sessionStorage.getItem("myPlayerId");
 const myUuid=""; // UUID is private server state and is never requested or stored by this client.
+let bombStateData=null;
 const matchId=sessionStorage.getItem("currentMatchId");
 const mode=sessionStorage.getItem("selectedMode")||"allies";
 const selectedMap=sessionStorage.getItem("selectedMap")||"HILL_TOWN";
@@ -1362,6 +1363,16 @@ function drawTacticalMaps(){
       }
       ctx.fillRect(x,y,bw,bh);
     }
+    if(isBombMode&&selectedMap==="BOMB_RAVINE"){
+      for(const site of [{id:"A",x:-45,z:-4,color:"#62c6ff"},{id:"B",x:45,z:-4,color:"#ffc66d"}]){
+        if(!full&&(Math.abs(site.x-player.position.x)>range||Math.abs(site.z-player.position.z)>range))continue;
+        const sx=mapX(site.x),sy=mapY(site.z);
+        ctx.beginPath();ctx.arc(sx,sy,full?14:8,0,Math.PI*2);
+        ctx.fillStyle=site.color;ctx.globalAlpha=.2;ctx.fill();ctx.globalAlpha=1;
+        ctx.strokeStyle=site.color;ctx.lineWidth=full?3:2;ctx.stroke();
+        ctx.fillStyle=site.color;ctx.font="bold "+(full?15:10)+"px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(site.id,sx,sy);
+      }
+    }
     // Radar reveals own position and teammates only; enemies are intentionally hidden.
     for(const e of Object.values(enemies)){
       if(!e||e.hp<=0||!myTeam||e.team!==myTeam)continue;
@@ -1675,7 +1686,7 @@ function setOverlayGame(){
   $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":mode==="bomb"?"ЗАКЛАДКА БОМБИ":mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":mode==="training"?"ТРЕНУВАННЯ":"HIDE & SEEK";
   $("clickHint").textContent=isMobileDevice?"РУХ: ДЖОЙСТИК · ВОГОНЬ: FIRE · ПРОВЕДИ ПО КНОПЦІ ЗБРОЇ: ↓ AKR · ← P350 · → НІЖ":"WASD — рух · ЛКМ — вогонь · RMB — приціл AKR · 1/2/3 — зброя · E — двері · ESC — лобі";
   if(isMobileDevice) $("overlay").style.display="none";
-  if(isBombMode){$("bombHud").style.display="block";$("bombActionBtn").style.display="block";}
+  if(isBombMode){$("bombHud").style.display="block";$("bombActionBtn").style.display=isMobileDevice?"none":"block";}
 }
 function leaveGame(){
   if(isLeavingMatch)return;
@@ -2026,7 +2037,14 @@ function updateBombHud(){
   }
   $("bombStateText").textContent=detail;
   const action=$("bombActionBtn");
-  action.style.display="block";
+  action.style.display=isMobileDevice?"none":"block";
+  const mobileAction=$("interactBtn");
+  if(mobileAction){
+    if(state.actionPlayerId===String(myId))mobileAction.textContent="СКАСУВАТИ";
+    else if(state.status==="planted"&&myTeam!==state.attackTeam)mobileAction.textContent="ЗНЕШКОДИТИ";
+    else if(state.status==="carried"&&state.carrierId===String(myId))mobileAction.textContent="ЗАКЛАСТИ";
+    else mobileAction.textContent="BOMB · E";
+  }
   if(state.actionPlayerId===String(myId))action.textContent="СКАСУВАТИ ДІЮ";
   else if(state.status==="planted"&&myTeam!==state.attackTeam)action.textContent="ЗНЕШКОДИТИ";
   else if(state.status==="carried"&&state.carrierId===String(myId))action.textContent="ЗАКЛАСТИ БОМБУ";
