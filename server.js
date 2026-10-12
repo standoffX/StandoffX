@@ -1833,10 +1833,17 @@ function handleTeamShot(io, match, shooter, data) {
   shooter.lastShotAt = now;
 
   if(weapon.type!=="melee"){
+    const impact=data?.impact;
+    const impactDistance=impact&&[impact.x,impact.y,impact.z].every(value=>Number.isFinite(Number(value)))
+      ?Math.hypot(Number(impact.x)-shooter.pos.x,Number(impact.y)-(shooter.pos.y+1.42),Number(impact.z)-shooter.pos.z)
+      :Infinity;
+    const safeImpact=impactDistance<=weapon.range+1
+      ?{x:Number(impact.x),y:Number(impact.y),z:Number(impact.z)}
+      :null;
     io.to(match.id).emit("player_shot",{
       shooterId:shooter.userId,
       x:shooter.pos.x,y:shooter.pos.y+1.42,z:shooter.pos.z,
-      dx:aim.x,dy:aim.y,dz:aim.z,weapon:weaponId
+      dx:aim.x,dy:aim.y,dz:aim.z,weapon:weaponId,impact:safeImpact
     });
   }
 
