@@ -2078,6 +2078,18 @@ socket.on("match_start_now",()=>{
   if(isMobileDevice)$("overlay").style.display="none";
 });
 socket.on("enemy_moved",applyEnemy);
+socket.on("player_position_correction",data=>{
+  if(!player||!data||![data.x,data.y,data.z].every(value=>Number.isFinite(Number(value))))return;
+  if(isTrainingMode){
+    if(data.trainingId&&String(data.trainingId)!==String(trainingId))return;
+  }else if(data.matchId&&String(data.matchId)!==String(matchId))return;
+  const x=Number(data.x),y=Number(data.y),z=Number(data.z);
+  const drift=Math.hypot(player.position.x-x,player.position.z-z);
+  if(drift<.28&&Math.abs(player.position.y-y)<.6)return;
+  player.position.set(x,y,z);
+  velocityY=0;jumping=false;
+  updateVisual();
+});
 socket.on("player_left",data=>{
   const uid=String(data?.userId||"");
   Object.entries(enemies).forEach(([key,enemy])=>{
@@ -2360,7 +2372,7 @@ function animate(){
 addEventListener("resize",()=>{
   camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight,false);
-  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.25));
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?1.25:1.7));
 });
 
 let connectedToGameplay=socket.connected;
