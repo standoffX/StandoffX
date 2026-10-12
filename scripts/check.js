@@ -95,18 +95,18 @@ assert.match(server, /app\.post\("\/api\/admin\/atlas\/check"/);
 assert.match(server, /tls: true/, "Atlas TLS must stay enabled without disabling certificate verification");
 assert.match(server, /function publicUser\(user, options = \{\}\)/, "UUID is opt-in on user payloads");
 assert.match(server, /options\.includeUuid === true/, "UUID is only included for the account owner");
-assert.match(server, /data\?\.testerBots === true && canUseTesterModes\(user\)/, "the server authorizes tester bot matches");
+assert.doesNotMatch(server, /data\?\.testerBots === true && canUseTesterModes\(user\)/, "human Game matches must not be filled with fake bot slots");
 assert.match(server, /isBot: Boolean\(p\.isBot\)/, "match roster includes bot status");
 assert.match(server, /isTester/);
 assert.match(menu, /data-test-gameplay="prototype"/, "testers can launch the prototype");
 assert.match(menu, /data-test-gameplay="real"[^>]*>ГРА/, "the tester's full-match option must be labelled Game, not Test");
-assert.match(menu, /real:"ГРА"/, "the selected tester mode must use the Game label");
+assert.match(menu, /ГРА · РЕАЛЬНІ ГРАВЦІ/, "the Game option must promise a match against real players");
 assert.match(menu, /COMING SOON/, "not-yet-built ranks and news must be labelled Coming Soon");
 assert.match(menu, /class="promo-col panel"/, "the main menu must include the news/updates panel");
 assert.match(menu, /sx_abandoned_match/, "the lobby must finish a queued leave request after reconnecting");
-assert.match(menu, /data-test-gameplay="real"/, "testers can play a full team match with bots");
-assert.match(menu, /data-test-gameplay="training"/, "testers can launch a dedicated training session");
-assert.match(menu, /mode:testGameplayMode==="training"\?"training":"field_test"/, "training selector must start the actual training session");
+assert.match(menu, /data-test-gameplay="real"/, "all players can choose a real-player Game");
+assert.doesNotMatch(menu, /data-test-gameplay="training"/, "the public type selector has only Prototype and Game");
+assert.match(menu, /socket\.emit\("start_training",\{mode:"field_test",map:selectedMap\}\)/, "Prototype opens the bot sandbox");
 assert.match(menu, /class="tester-mode-switch"/, "tester mode must use a compact switch instead of large cards");
 assert.match(menu, /class="tester-mode-segment"/, "prototype/test options must share one compact segmented control");
 assert.match(menu, /createRealtimeSocket\(\)[\s\S]{0,260}transports:\["websocket"\]/, "menu sockets must avoid polling session IDs on Render");
@@ -124,7 +124,7 @@ assert.match(game, /data-training-action="boost"/, "training must expose a click
 assert.match(game, /data-training-action="resetSession"/, "training must expose a clickable session reset action");
 assert.doesNotMatch(menu, /data-mode="(?:training|field_test)"/, "prototype and real gameplay are not separate public modes");
 assert.match(menu, /localStorage.getItem\("sx_test_gameplay"\)/, "the tester choice persists locally");
-assert.match(menu, /testerBots:canTest\(\)&&testGameplayMode==="real"/, "only testers request bot matches");
+assert.doesNotMatch(menu, /testerBots:/, "the Game search must not request bot slots");
 assert.match(menu, /id="modeModal"/, "Play must show a mode selection modal");
 assert.match(menu, /id="confirmModeBtn"/, "mode selection must have an explicit confirmation button");
 assert.match(menu, /renderWaitPlayers\(d\.players\|\|\[\]\)/, "queue UI must render the waiting roster");
@@ -183,7 +183,7 @@ assert.match(menu, /current\.keybinds=binds/, "custom key bindings must be saved
 assert.match(menu, /refreshProfileIdentity\(\)/, "opening the profile must refresh the UUID from the account API");
 assert.match(menu, /api\("\/api\/user-data\?id="/, "profile UUID refresh must have a user-data fallback");
 assert.match(game, /function runTrainingAction\(action\)/, "training actions must be keyboard-driven");
-assert.match(game, /function togglePauseMenu\(force\)/, "the game must have a keyboard-toggleable menu");
+assert.doesNotMatch(game, /id="pauseMenu"|function togglePauseMenu\(force\)/, "the blocking pause menu must not cover gameplay controls");
 assert.match(game, /menu:"KeyM"/, "M must open the in-game menu by default");
 assert.match(game, /function renderTrainingKeyHints\(\)/, "training HUD must show the configured action keys");
 assert.doesNotMatch(game, /id="spawnBot"/, "training bot controls must no longer require on-screen buttons");
@@ -219,13 +219,26 @@ assert.match(game, /dx>0\)\{selectWeapon\("knife"\)/, "mobile right swipe equips
 assert.match(game, /function addGameplayDoor\(/, "Hill Town has hinged door entities");
 assert.match(game, /function interactWithNearestDoor\(/, "doors can be opened and closed with E or the mobile interaction button");
 assert.match(game, /function addBreakableWood\(/, "Hill Town has breakable wooden cover");
-assert.match(game, /function damageBreakableWood\(/, "shooting can damage and destroy wooden cover");
+assert.match(game, /function damageBreakableWood\(direction\)/, "shooting resolves map, door and breakable-cover impacts");
+assert.match(game, /function addBulletHole\(/, "shots leave temporary bullet marks on surfaces");
+assert.match(game, /function spawnTracer\(/, "the local player sees a bullet tracer for ranged shots");
+assert.match(game, /function spawnRemoteTracer\(/, "remote player shots also render a tracer");
+assert.match(game, /socket\.on\("player_shot",spawnRemoteTracer\)/, "clients receive server-synchronized shot effects");
+assert.match(game, /socket\.emit\("map_door_shot"/, "shooting a door requests it to open");
+assert.match(game, /const addGround=\([\s\S]{0,230}mapObjects\.push\(mesh\)/, "local Hill Town floor surfaces receive impact marks");
 assert.match(game, /id="interactBtn"/, "mobile HUD has a door interaction button");
 assert.match(game, /socket\.emit\("map_door_state"/, "door state is sent to the server");
 assert.match(game, /socket\.emit\("map_wood_destroyed"/, "destroyed wooden cover is synchronized");
 assert.match(game, /socket\.on\("map_door_state"/, "clients apply other players' door changes");
 assert.match(game, /socket\.on\("map_wood_destroyed"/, "clients apply other players' wooden-cover destruction");
 assert.match(server, /socket\.on\("map_door_state"/, "server validates and broadcasts door changes");
+assert.match(server, /socket\.on\("map_door_shot"/, "server validates shots aimed at doors before opening them");
+assert.match(server, /function hillTownPathBlocked\(from,to,mapState=\{\}\)/, "server has a path collision test for solid walls and cover");
+assert.match(server, /if\(mapId==="HILL_TOWN"&&hillTownPathBlocked\(prev,\{x:targetX,z:targetZ\},mapState\)\)return false/, "real-match movement is blocked by map geometry");
+assert.match(server, /if\(session\.map==="HILL_TOWN"&&hillTownPathBlocked\(previous,target,session\.mapState\|\|\{\}\)\)return/, "prototype movement is blocked by map geometry");
+assert.match(server, /validateMapLineOfSight\(match\.map, shooter\.pos, best\.pos, match\.mapState \|\| \{\}\)/, "server damage checks walls before applying a weapon hit");
+assert.match(server, /io\.to\(match\.id\)\.emit\("player_shot"/, "the server broadcasts shot directions and impacts for remote tracers");
+assert.match(server, /if \(!canUseTesterModes\(user\) && mode !== "field_test"\)/, "public Prototype is allowed while privileged training remains tester-only");
 assert.match(server, /socket\.on\("map_wood_destroyed"/, "server validates and broadcasts destroyed wood");
 assert.match(server, /Math\.hypot\(player\.pos\.x-x, player\.pos\.z-z\) > 7\.5/, "door changes require the player to be near the correct doorway");
 assert.match(game, /if\(e\.code==="Digit1"\)[\s\S]{0,100}selectWeapon\("akr"\)/, "1 must equip the AKR");
@@ -246,7 +259,7 @@ assert.doesNotMatch(game, / · UUID "\+uuid/, "the match lobby must not display 
 assert.match(game, /function makeVisual\(color\)[\s\S]*?new THREE\.CylinderGeometry[\s\S]*?function setSoldierTint/, "soldiers must have a multi-part procedural 3D model");
 assert.match(game, /function animateSoldier\(model,dt,now,moving=false,inAir=false,crouching=false\)/, "player models must animate and crouch without relying on external model downloads");
 assert.match(game, /animateSoldier\(e\.mesh,dt,now,e\.anim==="Running"\|\|e\.anim==="Walking",e\.anim==="Jump",e\.anim==="Crouch"\)/, "remote player movement must also animate crouching");
-assert.match(game, /if\(e\.code===binds\.menu\)\{e\.preventDefault\(\);if\(matchPhase==="game"\)togglePauseMenu\(\);return\}/, "M opens the in-game pause menu instead of accidentally leaving the match");
+assert.match(game, /if\(e\.code===binds\.menu\)\{e\.preventDefault\(\);leaveGame\(\);return\}/, "M goes directly back to the lobby without a blocking menu");
 assert.match(game, /stick\.addEventListener\("touchcancel",releaseStick\)/, "cancelled mobile joystick touches must release movement");
 assert.match(game, /\$\("fireBtn"\)\.addEventListener\("touchcancel",\(\)=>fireHeld=false\)/, "cancelled mobile fire touches must stop shooting");
 assert.match(game, /socket\.on\("player_left"/, "departed players must be removed from the scene");
@@ -365,7 +378,7 @@ assert.match(server, /bot: \["field_test", "training"\]\.includes\(mode\)/, "ful
 assert.match(server, /const maxStep = 0\.9;/, "training movement must support the faster sprint speed");
 assert.match(server, /player\.anim = \["Idle", "Running", "Jump", "Walking", "Crouch"\]/, "the server must retain the crouch animation state");
 
-const validateMoveFunction = server.match(/function validateMove\(player, data\) \{[\s\S]*?\n\}/);
+const validateMoveFunction = server.match(/function validateMove\(player, data, mapId = null, mapState = \{\}\) \{[\s\S]*?\n\}/);
 assert.ok(validateMoveFunction, "the server movement validator must be available for behavioral tests");
 const validateMove = vm.runInNewContext("(" + validateMoveFunction[0] + ")");
 const movingPlayer = {
@@ -419,4 +432,4 @@ assert.equal(weaponHelpers.detectWeaponHitZone({x:0,y:0,z:0},{x:0,y:0,z:-10},{x:
 assert.equal(weaponHelpers.detectWeaponHitZone({x:0,y:0,z:0},{x:0,y:0,z:-10},{x:0,y:-0.08,z:-1},10), "stomach", "downward aim should classify stomach hits");
 assert.equal(weaponHelpers.detectWeaponHitZone({x:0,y:0,z:0},{x:0,y:0,z:-10},{x:0,y:-0.15,z:-1},10), "legs", "steeper downward aim should classify leg hits");
 
-console.log("OK project invariants, weapon damage balance, ADS, tester-only tools, Atlas endpoint, and unique HTTP routes");
+console.log("OK project invariants, real-player matchmaking, bot Prototype, map collisions, bullet effects, doors, weapon balance, ADS, Atlas endpoint, and unique HTTP routes");
