@@ -1442,9 +1442,12 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const matchId = "match_" + Date.now() + "_" + crypto.randomBytes(2).toString("hex");
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
   const MATCH_SPAWNS = {
-    HILL_TOWN: [{x:-20,y:0,z:-12},{x:20,y:0,z:12},{x:-20,y:0,z:12},{x:20,y:0,z:-12}],
+    HILL_TOWN: HILL_TOWN_SPAWNS,
     NEON_YARD: [{x:-82,y:0,z:-82},{x:82,y:0,z:-82},{x:-82,y:0,z:82},{x:82,y:0,z:82}],
-    FIELD_ARENA: [{x:-110,y:0,z:-110},{x:110,y:0,z:-110},{x:-110,y:0,z:110},{x:110,y:0,z:110}]
+    FIELD_ARENA: [{x:-110,y:0,z:-110},{x:110,y:0,z:-110},{x:-110,y:0,z:110},{x:110,y:0,z:110}],
+    TF_COURTYARD: [{x:-28,y:0,z:-13},{x:-28,y:0,z:0},{x:-28,y:0,z:13},{x:28,y:0,z:-13},{x:28,y:0,z:0},{x:28,y:0,z:13}],
+    TF_DEPOT: [{x:-29,y:0,z:-12},{x:-29,y:0,z:0},{x:-29,y:0,z:12},{x:29,y:0,z:-12},{x:29,y:0,z:0},{x:29,y:0,z:12}],
+    BOMB_RAVINE: [{x:-4,y:0,z:40},{x:0,y:0,z:42},{x:4,y:0,z:40},{x:-4,y:0,z:-40},{x:0,y:0,z:-42},{x:4,y:0,z:-40}]
   };
   const matchSpawns = MATCH_SPAWNS[safeMapId] || (safeMapId === "HILL_TOWN" ? HILL_TOWN_SPAWNS : SPAWNS);
 
@@ -1460,9 +1463,14 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
       uuid: p.uuid || "",
       isBot: Boolean(p.isBot),
       nickname: p.nickname,
-      role: mode === "hide_seek" ? (i === hunterIndex ? "hunter" : "runner") : (i % 2 === 0 ? "teamA" : "teamB"),
-      team: (mode === "team_fight" || mode === "allies")
-        ? (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i % 2 === 0 ? "A" : "B"))
+      role: mode === "hide_seek"
+        ? (i === hunterIndex ? "hunter" : "runner")
+        : mode === "bomb" ? (i < Math.ceil(players.length / 2) ? "terrorist" : "counter_terrorist")
+        : (i % 2 === 0 ? "teamA" : "teamB"),
+      team: ["team_fight", "allies", "bomb"].includes(mode)
+        ? (players.some(candidate => candidate.isBot)
+          ? (p.isBot ? "B" : "A")
+          : (i < Math.ceil(players.length / 2) ? "A" : "B"))
         : null,
       hp: 100,
       score: 0,
@@ -1487,7 +1495,21 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     joinTimer: null,
     remaining: GAME_SECONDS,
     doorOpen: [false, false, false, false],
-    woodDestroyed: []
+    woodDestroyed: [],
+    bomb: mode === "bomb" ? {
+      round: 1,
+      roundWins: { A: 0, B: 0 },
+      attackTeam: "A",
+      winnerTeam: null,
+      status: "carried",
+      carrierId: players[0]?.userId || null,
+      site: null,
+      plantedAt: null,
+      actionPlayerId: null,
+      actionTimer: null,
+      explosionTimer: null,
+      reason: ""
+    } : null
   };
 
   activeMatches.set(matchId, match);
@@ -1498,7 +1520,6 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     io.to(p.socketId).emit("match_found", {
       matchId,
       userId: p.userId,
-      uuid: p.uuid,
       mode: cfg.id,
       modeName: cfg.name,
       map: match.map
@@ -1778,10 +1799,50 @@ function hillTownCrossingBlocked(from, to, doorOpen = []) {
   return false;
 }
 
+const MAP_SOLID_RECTS = Object.freeze({
+  TF_COURTYARD: [
+    [-36.5,-28.5,-35.5,28.5], [35.5,-28.5,36.5,28.5],
+    [-35.5,-29,35.5,-28], [-35.5,28,35.5,29],
+    [-13,-18,-9,-3], [-13,3,-9,18], [9,-18,13,-3], [9,3,13,18],
+    [-4,-5,4,-2], [-4,2,4,5], [-24,-3,-19,3], [19,-3,24,3]
+  ],
+  TF_DEPOT: [
+    [-36.5,-28.5,-35.5,28.5], [35.5,-28.5,36.5,28.5],
+    [-35.5,-29,35.5,-28], [-35.5,28,35.5,29],
+    [-20,-18,-16,-5], [-20,5,-16,18], [16,-18,20,-5], [16,5,20,18],
+    [-5,-17,5,-13], [-5,13,5,17], [-3,-4,3,4]
+  ],
+  BOMB_RAVINE: [
+    [-75,-52,-73.5,52], [73.5,-52,75,52],
+    [-73.5,-53,73.5,-51.5], [-73.5,51.5,73.5,53],
+    [-26,-11,-19,11], [19,-11,26,11],
+    [-61,-24,-51,-21], [-61,-24,-58,-8], [-61,8,-51,11], [-54,8,-51,21],
+    [51,-24,61,-21], [58,-24,61,-8], [51,8,61,11], [51,8,54,21],
+    [-7,-28,-3,-8], [3,8,7,28], [-7,8,-3,28], [3,-28,7,-8]
+  ]
+});
+function segmentIntersectsRect(from, to, rect, padding = 0.42) {
+  const [minX, minZ, maxX, maxZ] = rect;
+  const left = minX - padding, right = maxX + padding;
+  const top = minZ - padding, bottom = maxZ + padding;
+  const dx = to.x - from.x, dz = to.z - from.z;
+  let t0 = 0, t1 = 1;
+  const p = [-dx, dx, -dz, dz];
+  const q = [from.x - left, right - from.x, from.z - top, bottom - from.z];
+  for (let i = 0; i < 4; i++) {
+    if (Math.abs(p[i]) < 1e-9) { if (q[i] < 0) return false; continue; }
+    const t = q[i] / p[i];
+    if (p[i] < 0) { if (t > t1) return false; t0 = Math.max(t0, t); }
+    else { if (t < t0) return false; t1 = Math.min(t1, t); }
+  }
+  return t0 <= t1;
+}
 function isMapLineBlocked(mapId, from, to, doorOpen = []) {
-  if (mapId !== "HILL_TOWN") return false;
-  if (Math.abs(to.x) > 25.2 || Math.abs(to.z) > 25.2) return true;
-  return hillTownCrossingBlocked(from, to, doorOpen);
+  const limit = mapMovementLimit(mapId);
+  if (Math.abs(to.x) > limit || Math.abs(to.z) > limit) return true;
+  if (mapId === "HILL_TOWN") return hillTownCrossingBlocked(from, to, doorOpen);
+  const rects = MAP_SOLID_RECTS[mapId];
+  return Boolean(rects && rects.some(rect => segmentIntersectsRect(from, to, rect)));
 }
 
 function handleTeamShot(io, match, shooter, data) {
@@ -1879,7 +1940,7 @@ class THREE_LIKE_VECTOR {
 }
 
 function mapMovementLimit(mapId) {
-  return ({ HILL_TOWN: 25.2, NEON_YARD: 196, FIELD_ARENA: 320, M3_Maze: 228 })[mapId] || 228;
+  return ({ HILL_TOWN: 25.2, TF_COURTYARD: 35.1, TF_DEPOT: 35.1, BOMB_RAVINE: 73, NEON_YARD: 196, FIELD_ARENA: 320, M3_Maze: 228 })[mapId] || 228;
 }
 function validateMove(player, data, mapId = "M3_Maze", match = null) {
   const now = Date.now();
