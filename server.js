@@ -1720,6 +1720,99 @@ function detectWeaponHitZone(shooterPos, targetPos, aim, horizontalDistance) {
   return "body";
 }
 
+const HILL_TOWN_BUILDINGS = [
+  { x: -20, z: -15, halfX: 5.05, halfZ: 4.5 },
+  { x: -20, z: 15, halfX: 5.05, halfZ: 4.5 },
+  { x: 20, z: -15, halfX: 5.05, halfZ: 4.5 },
+  { x: 20, z: 15, halfX: 5.05, halfZ: 4.5 }
+];
+const HILL_TOWN_COVER = [
+  [-36,-28,1.85,1.0],[-13,-28,1.45,1.05],[13,-28,1.45,1.05],[36,-28,1.85,1.0],
+  [-36,0,1.85,1.0],[-13,0,1.45,1.05],[13,0,1.45,1.05],[36,0,1.85,1.0],
+  [-36,28,1.85,1.0],[-13,28,1.45,1.05],[13,28,1.45,1.05],[36,28,1.85,1.0],
+  [-30,-12,1.35,1.35],[30,12,1.35,1.35],[-30,12,1.35,1.35],[30,-12,1.35,1.35],
+  [-11,-37,.95,.95],[11,-37,.95,.95],[-11,37,.95,.95],[11,37,.95,.95],
+  [-32,-8,.95,.95],[32,8,.95,.95],[-32,8,.95,.95],[32,-8,.95,.95]
+];
+
+function hillTownPositionBlocked(x,z,mapState={},radius=.42){
+  if(x < -54.35 || x > 54.35 || z < -46.35 || z > 46.35) return true;
+  const doors=Array.isArray(mapState?.doors)?mapState.doors:[false,false,false];
+  // Central wall at x=0. Only the three physical door gaps can cross it.
+  if(Math.abs(x)<.9){
+    const doorIndex=HILL_TOWN_DOOR_CENTERS.findIndex(([,centerZ])=>Math.abs(z-centerZ)<1.82);
+    if(doorIndex<0 || doors[doorIndex]!==true) return true;
+  }
+  for(const building of HILL_TOWN_BUILDINGS){
+    if(Math.abs(x-building.x)<building.halfX+radius && Math.abs(z-building.z)<building.halfZ+radius) return true;
+  }
+  for(const [cx,cz,halfX,halfZ] of HILL_TOWN_COVER){
+    if(Math.abs(x-cx)<halfX+radius && Math.abs(z-cz)<halfZ+radius) return true;
+  }
+  const destroyed=Array.isArray(mapState?.destroyedWood)?mapState.destroyedWood:[];
+  for(let b=0;b<HILL_TOWN_BARRICADES.length;b++){
+    const barrier=HILL_TOWN_BARRICADES[b];
+    const first=b*HILL_TOWN_PLANKS_PER_BARRICADE;
+    const remainingPlanks=[0,1,2,3].some(part=>!destroyed.includes(first+part));
+    if(remainingPlanks && Math.abs(x-barrier.x)<.55+radius && Math.abs(z-barrier.z)<1.83+radius) return true;
+  }
+  return false;
+}
+
+function hillTownPathBlocked(from,to,mapState={}){
+  const dx=Number(to.x)-Number(from.x),dz=Number(to.z)-Number(from.z);
+  const distance=Math.hypot(dx,dz);
+  const steps=Math.max(1,Math.ceil(distance/.22));
+  for(let i=1;i<=steps;i++){
+    const t=i/steps;
+    if(hillTownPositionBlocked(Number(from.x)+dx*t,Number(from.z)+dz*t,mapState)) return true;
+  }
+  return false;
+}
+
+function segmentIntersectsRect2d(from,to,rect){
+  const dx=to.x-from.x,dz=to.z-from.z;
+  let tMin=0,tMax=1;
+  for(const [origin,delta,min,max] of [[from.x,dx,rect.minX,rect.maxX],[from.z,dz,rect.minZ,rect.maxZ]]){
+    if(Math.abs(delta)<1e-8){if(origin<min||origin>max)return false;continue}
+    let t1=(min-origin)/delta,t2=(max-origin)/delta;
+    if(t1>t2)[t1,t2]=[t2,t1];
+    tMin=Math.max(tMin,t1);tMax=Math.min(tMax,t2);
+    if(tMin>tMax)return false;
+  }
+  return tMax>=0&&tMin<=1;
+}
+
+function isHillTownShotBlocked(from,to,mapState={}){
+  if(Math.abs(to.x)>55||Math.abs(to.z)>47)return true;
+  const doors=Array.isArray(mapState?.doors)?mapState.doors:[false,false,false];
+  const crossesDivider=(from.x<0&&to.x>=0)||(from.x>0&&to.x<=0);
+  if(crossesDivider){
+    const denominator=to.x-from.x;
+    const t=Math.abs(denominator)<1e-8?0:(0-from.x)/denominator;
+    const z=from.z+(to.z-from.z)*t;
+    const doorIndex=HILL_TOWN_DOOR_CENTERS.findIndex(([,centerZ])=>Math.abs(z-centerZ)<1.78);
+    if(doorIndex<0||doors[doorIndex]!==true)return true;
+  }
+  for(const building of HILL_TOWN_BUILDINGS){
+    if(segmentIntersectsRect2d(from,to,{minX:building.x-building.halfX,maxX:building.x+building.halfX,minZ:building.z-building.halfZ,maxZ:building.z+building.halfZ}))return true;
+  }
+  for(const [cx,cz,halfX,halfZ] of HILL_TOWN_COVER){
+    if(segmentIntersectsRect2d(from,to,{minX:cx-halfX,maxX:cx+halfX,minZ:cz-halfZ,maxZ:cz+halfZ}))return true;
+  }
+  const destroyed=Array.isArray(mapState?.destroyedWood)?mapState.destroyedWood:[];
+  for(let b=0;b<HILL_TOWN_BARRICADES.length;b++){
+    const barrier=HILL_TOWN_BARRICADES[b],first=b*HILL_TOWN_PLANKS_PER_BARRICADE;
+    if([0,1,2,3].some(part=>!destroyed.includes(first+part)) &&
+      segmentIntersectsRect2d(from,to,{minX:barrier.x-.35,maxX:barrier.x+.35,minZ:barrier.z-1.7,maxZ:barrier.z+1.7}))return true;
+  }
+  return false;
+}
+
+function validateMapLineOfSight(mapId,from,to,mapState){
+  return mapId==="HILL_TOWN" ? !isHillTownShotBlocked(from,to,mapState) : true;
+}
+
 function handleTeamShot(io, match, shooter, data) {
   if (!["team_fight", "allies"].includes(match.mode) || match.phase !== "game") return;
 
@@ -1738,6 +1831,14 @@ function handleTeamShot(io, match, shooter, data) {
   const now = Date.now();
   if (now - (shooter.lastShotAt || 0) < weapon.fireDelay) return;
   shooter.lastShotAt = now;
+
+  if(weapon.type!=="melee"){
+    io.to(match.id).emit("player_shot",{
+      shooterId:shooter.userId,
+      x:shooter.pos.x,y:shooter.pos.y+1.42,z:shooter.pos.z,
+      dx:aim.x,dy:aim.y,dz:aim.z,weapon:weaponId
+    });
+  }
 
   let best = null;
   let bestDistance = Infinity;
@@ -1760,6 +1861,7 @@ function handleTeamShot(io, match, shooter, data) {
   }
 
   if (!best) return;
+  if(!validateMapLineOfSight(match.map,shooter.pos,best.pos,match.mapState||{}))return;
 
   const hitZone = detectWeaponHitZone(shooter.pos, best.pos, aim, bestDistance);
   const damage = calculateWeaponDamage(weaponId, hitZone, bestDistance);
@@ -1806,7 +1908,7 @@ class THREE_LIKE_VECTOR {
   }
 }
 
-function validateMove(player, data) {
+function validateMove(player, data, mapId = null, mapState = {}) {
   const now = Date.now();
   if (now - player.lastMoveAt < 33) return false;
   player.lastMoveAt = now;
@@ -1822,15 +1924,15 @@ function validateMove(player, data) {
   const dx = x - prev.x;
   const dz = z - prev.z;
   const planarDistance = Math.hypot(dx, dz);
-
-  if (planarDistance > maxStep) {
-    const scale = maxStep / planarDistance;
-    player.pos.x += dx * scale;
-    player.pos.z += dz * scale;
-  } else {
-    player.pos.x = x;
-    player.pos.z = z;
+  let targetX=x,targetZ=z;
+  if(planarDistance>maxStep){
+    const scale=maxStep/planarDistance;
+    targetX=prev.x+dx*scale;
+    targetZ=prev.z+dz*scale;
   }
+  if(mapId==="HILL_TOWN"&&hillTownPathBlocked(prev,{x:targetX,z:targetZ},mapState))return false;
+  player.pos.x=targetX;
+  player.pos.z=targetZ;
   player.pos.y = Math.max(0, Math.min(2.25, y));
   player.rotY = rotY;
   player.anim = ["Idle", "Running", "Jump", "Walking", "Crouch"].includes(data.anim) ? data.anim : "Idle";
@@ -1897,10 +1999,10 @@ io.on("connection", socket => {
     const user = socket.user;
     const mode = cleanText(data?.mode, 32);
     const cfg = TESTER_MODE_CONFIGS[mode];
-    if (!canUseTesterModes(user)) {
+    if (!cfg) return socket.emit("training_error", { message: "Невідомий тестовий режим." });
+    if (!canUseTesterModes(user) && mode !== "field_test") {
       return socket.emit("training_error", { message: "Цей режим доступний лише тестерам." });
     }
-    if (!cfg) return socket.emit("training_error", { message: "Невідомий тестовий режим." });
 
     const previous = trainingSessions.get(user.id);
     const sessionMap = ["field_test", "training"].includes(mode) ? normalizeMapId(data?.map) : cfg.map;
@@ -1943,9 +2045,11 @@ io.on("connection", socket => {
 
   socket.on("join_training", data => {
     const user = socket.user;
-    if (!canUseTesterModes(user)) return socket.emit("kick_to_menu", { reason: "Режим доступний лише тестерам." });
     const session = trainingSessions.get(user.id);
-    if (!session || session.id !== cleanText(data?.trainingId, 100)) {
+    if (!session || (!canUseTesterModes(user) && session.mode !== "field_test")) {
+      return socket.emit("kick_to_menu", { reason: "Режим доступний лише для дозволених тестових сесій." });
+    }
+    if (session.id !== cleanText(data?.trainingId, 100)) {
       return socket.emit("kick_to_menu", { reason: "Тренувальну сесію не знайдено." });
     }
     session.socketId = socket.id;
@@ -1976,13 +2080,12 @@ io.on("connection", socket => {
     const maxStep = 0.9;
     const dx = x - previous.x, dz = z - previous.z;
     const distance = Math.hypot(dx, dz);
-    if (distance > maxStep) {
-      previous.x += dx / distance * maxStep;
-      previous.z += dz / distance * maxStep;
-    } else {
-      previous.x = x;
-      previous.z = z;
-    }
+    const target=distance>maxStep
+      ?{x:previous.x+dx/distance*maxStep,z:previous.z+dz/distance*maxStep}
+      :{x,z};
+    if(session.map==="HILL_TOWN"&&hillTownPathBlocked(previous,target,session.mapState||{}))return;
+    previous.x=target.x;
+    previous.z=target.z;
     previous.y = Math.max(0, Math.min(2.25, y));
     session.playerRotY = Number.isFinite(viewY) ? viewY : rotY;
   });
@@ -2150,18 +2253,6 @@ io.on("connection", socket => {
     const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
     const map = normalizeMapId(data?.map);
     removeFromQueue(user.uuid || user.id);
-
-    if (data?.testerBots === true && canUseTesterModes(user) && ["allies", "team_fight"].includes(mode)) {
-      const realPlayer = { socketId: socket.id, userId: user.id, nickname: user.nickname, uuid: user.uuid, mode, map, isBot: false };
-      const bots = Array.from({ length: Math.max(0, getRequiredPlayers(mode) - 1) }, (_, index) => ({
-        socketId: null,
-        userId: "BOT_" + crypto.randomBytes(4).toString("hex"),
-        nickname: "БОТ " + String(index + 1).padStart(2, "0"),
-        uuid: "", mode, map, isBot: true
-      }));
-      createMatch(io, mode, map, [realPlayer, ...bots]);
-      return;
-    }
 
     matchmakingQueue.push({
       socketId: socket.id,
@@ -2371,7 +2462,7 @@ io.on("connection", socket => {
     if (!match) return;
     const player = match.players.find(p => p.userId === socket.user.id);
     if (!player || player.socketId !== socket.id || player.hp <= 0) return;
-    if (!validateMove(player, data)) return;
+    if (!validateMove(player, data, match.map, match.mapState || {})) return;
 
     if (match.phase === "game") handleCatch(io, match, player);
 
