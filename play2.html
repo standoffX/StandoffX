@@ -707,7 +707,7 @@ function spawnRemoteTracer(data){
   spawnTracer(start,end,data.weapon==="p350"?0xbceaff:0xffdf9a,110);
 }
 function damageBreakableWood(direction){
-  if(!player||!direction||selectedWeapon==="knife"||selectedMap!=="HILL_TOWN")return null;
+  if(!player||!direction||selectedWeapon==="knife")return null;
   scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);
   raycaster.setFromCamera(new THREE.Vector2(0,0),camera);
   const hits=raycaster.intersectObjects(mapObjects.filter(o=>o?.visible),false);
@@ -717,15 +717,15 @@ function damageBreakableWood(direction){
   const normal=hit.face?hit.face.normal.clone().transformDirection(obj.matrixWorld):direction.clone().negate();
   addBulletHole(hit.point,normal);
   if(Number.isInteger(obj.userData?.doorIndex)){
-    const doorIndex=obj.userData.doorIndex,door=interactiveDoors[doorIndex];
+    const doorIndex=obj.userData.doorIndex,door=selectedMap==="HILL_TOWN"?interactiveDoors[doorIndex]:null;
     if(door&&!door.open){
-      setGameplayDoorState(doorIndex,true);
-      // Let the current bullet be evaluated against the still-closed door first.
+      const firedWeapon=selectedWeapon;
+      // Resolve the impact against the still-closed door before the server opens it.
       setTimeout(()=>{
-        if(isTrainingMode)socket.emit("map_door_shot",{trainingId,doorIndex,weapon:selectedWeapon,dx:direction.x,dy:direction.y,dz:direction.z});
-        else socket.emit("map_door_shot",{matchId,doorIndex,weapon:selectedWeapon,dx:direction.x,dy:direction.y,dz:direction.z});
+        if(isTrainingMode)socket.emit("map_door_shot",{trainingId,doorIndex,weapon:firedWeapon,dx:direction.x,dy:direction.y,dz:direction.z});
+        else socket.emit("map_door_shot",{matchId,doorIndex,weapon:firedWeapon,dx:direction.x,dy:direction.y,dz:direction.z});
       },90);
-      showDamagePopup("ПОСТРІЛ · ДВЕРІ ВІДЧИНЕНО");
+      showDamagePopup("ВЛУЧАННЯ У ДВЕРІ…");
     }
     return hit.point.clone();
   }
@@ -944,7 +944,7 @@ function buildFieldArena(){
   scene.background=new THREE.Color(0x91a6b9);
   scene.fog=new THREE.Fog(0x91a6b9,220,780);
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(300*FIELD_ARENA_SCALE,300*FIELD_ARENA_SCALE),new THREE.MeshStandardMaterial({color:0x5c6e62,roughness:1}));
-  floor.rotation.x=-Math.PI/2;floor.position.y=-.04;scene.add(floor);
+  floor.rotation.x=-Math.PI/2;floor.position.y=-.04;scene.add(floor);mapObjects.push(floor);
   const grid=new THREE.GridHelper(300*FIELD_ARENA_SCALE,120,0x879987,0x748575);grid.position.y=.01;scene.add(grid);
   const wallMat=new THREE.MeshStandardMaterial({color:0x4e5965,roughness:1});
   const boxMat=new THREE.MeshStandardMaterial({color:0x626a70,roughness:.9});
