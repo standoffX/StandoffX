@@ -1298,12 +1298,21 @@ function rebuildCollisionIndex(){
   }
   collisionIndexReady=true;
 }
-function worldLimit(){
-  return ({HILL_TOWN:25.2,TF_COURTYARD:35.1,TF_DEPOT:35.1,BOMB_RAVINE:73,NEON_YARD:196,FIELD_ARENA:320,M3_Maze:228})[selectedMap]||228;
+function worldBounds(){
+  return ({
+    HILL_TOWN:{x:25.2,z:25.2},
+    TF_COURTYARD:{x:35.1,z:28.1},
+    TF_DEPOT:{x:35.1,z:28.1},
+    BOMB_RAVINE:{x:73,z:51.2},
+    NEON_YARD:{x:196,z:196},
+    FIELD_ARENA:{x:320,z:320},
+    M3_Maze:{x:228,z:228}
+  })[selectedMap]||{x:228,z:228};
 }
+function worldLimit(){const b=worldBounds();return Math.max(b.x,b.z);}
 function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
-  const limit=worldLimit(),outsideX=Math.max(0,Math.abs(x)-limit),outsideZ=Math.max(0,Math.abs(z)-limit);
+  const bounds=worldBounds(),outsideX=Math.max(0,Math.abs(x)-bounds.x),outsideZ=Math.max(0,Math.abs(z)-bounds.z);
   let penalty=(outsideX+outsideZ)>0?100+outsideX+outsideZ:0;
   const radius=.38,baseY=player?.position?.y||0,bodyHeight=isCrouching?1.22:1.82;
   for(const bounds of collisionBoxes){
@@ -1329,15 +1338,15 @@ function moveWithCollision(direction,distance){
 }
 function drawTacticalMaps(){
   if(!player)return;
-  const limit=worldLimit();
+  const limit=worldLimit(),bounds=worldBounds();
   const draw=(canvas,full)=>{
     if(!canvas)return;
     const ctx=canvas.getContext("2d"),w=canvas.width,h=canvas.height;
     ctx.clearRect(0,0,w,h);
     ctx.fillStyle="#081722";ctx.fillRect(0,0,w,h);
     const cx=w/2,cy=h/2,margin=full?36:0,range=full?limit:44;
-    const mapX=x=>full?margin+(x+limit)/(2*limit)*(w-margin*2):cx+(x-player.position.x)/range*(w*.9);
-    const mapY=z=>full?margin+(z+limit)/(2*limit)*(h-margin*2):cy+(z-player.position.z)/range*(h*.9);
+    const mapX=x=>full?margin+(x+bounds.x)/(2*bounds.x)*(w-margin*2):cx+(x-player.position.x)/range*(w*.9);
+    const mapY=z=>full?margin+(z+bounds.z)/(2*bounds.z)*(h-margin*2):cy+(z-player.position.z)/range*(h*.9);
     ctx.save();
     if(!full){ctx.beginPath();ctx.arc(cx,cy,Math.min(w,h)*.47,0,Math.PI*2);ctx.clip()}
     ctx.strokeStyle="#a4cde018";ctx.lineWidth=1;
@@ -1353,8 +1362,8 @@ function drawTacticalMaps(){
       let x,y,bw,bh;
       if(full){
         x=mapX(bounds.min.x);y=mapY(bounds.min.z);
-        bw=Math.max(1,(bounds.max.x-bounds.min.x)/(2*limit)*(w-margin*2));
-        bh=Math.max(1,(bounds.max.z-bounds.min.z)/(2*limit)*(h-margin*2));
+        bw=Math.max(1,(bounds.max.x-bounds.min.x)/(2*bounds.x)*(w-margin*2));
+        bh=Math.max(1,(bounds.max.z-bounds.min.z)/(2*bounds.z)*(h-margin*2));
       }else{
         if(Math.abs(centerX-player.position.x)>range+12||Math.abs(centerZ-player.position.z)>range+12)continue;
         x=mapX(bounds.min.x);y=mapY(bounds.min.z);
@@ -1405,7 +1414,7 @@ function sendMove(force=false){
   const now=performance.now();
   if(!force&&now-lastMoveSend<50)return;
   lastMoveSend=now;
-  const data={uuid:myUuid,x:player.position.x,y:player.position.y,z:player.position.z,rotY:player.rotationY,anim:jumping?"Jump":(isCrouching?"Crouch":((keys.w||keys.s||keys.a||keys.d)?"Running":"Idle"))};
+  const data={x:player.position.x,y:player.position.y,z:player.position.z,rotY:player.rotationY,anim:jumping?"Jump":(isCrouching?"Crouch":((keys.w||keys.s||keys.a||keys.d)?"Running":"Idle"))};
   if(isTrainingMode)socket.emit("training_move",{trainingId,viewY:camera.rotation.y,...data});
   else socket.emit("player_moved",{matchId,myId,userId:myId,...data});
 }
