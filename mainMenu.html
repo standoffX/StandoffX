@@ -221,10 +221,8 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
     <section class="home-hero panel" aria-label="Головне ігрове меню">
       <img class="home-hero-art" src="game1.png" alt="" aria-hidden="true">
       <div class="home-hero-copy">
-        <div class="home-hero-overline"><span class="hero-live-dot"></span> STANDOFFX <span class="hero-separator">/</span> TACTICAL FPS <span class="hero-version">v0.4</span></div>
-        <h1>ГОТОВИЙ ДО <em>БОЮ?</em></h1>
-        <p>Обери карту, налаштуй керування та заходь у матч. Прототип — для тестування механік і ботів.</p>
-        <div class="home-hero-tags"><span>4 КАРТИ</span><span>3D FPS</span><span>ПРОТОТИП</span></div>
+        <div class="home-hero-overline"><span class="hero-live-dot"></span> СЕЗОН 07 <span class="hero-separator">/</span> OUTCAST</div>
+        <h1>STANDOFF<em>X</em></h1>
       </div>
       <div class="playarea">
         <div class="playwrap">
@@ -232,6 +230,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
           <button class="secondary" id="resumeMatchBtn" type="button" style="display:none;min-width:220px;min-height:38px;border-color:#91d8fb;color:#dff6ff;font-weight:900">ВИЙТИ З МАТЧУ</button>
           <div class="muted" id="selectedModeText">СОЮЗНИКИ</div>
           <div class="muted" id="selectedMapText" style="font-size:9px;letter-spacing:1px">HILL TOWN</div>
+          <div id="activeMatchSquad" class="active-match-squad" style="display:none"></div>
         </div>
       </div>
     </section>
@@ -367,6 +366,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
 </div><h3 style="margin:10px 0 4px">ВИБІР КАРТИ</h3><div class="mapcards" id="mapBar"><button class="map-option active" data-map="HILL_TOWN"><b>HILL TOWN</b><span>Модульна карта з будівлями, арками та укриттями</span></button><button class="map-option" data-map="M3_Maze"><b>M3 MAZE</b><span>Стара основна карта</span></button><button class="map-option" data-map="FIELD_ARENA"><b>FIELD ARENA</b><span>Відкрита тренувальна арена</span></button><button class="map-option" data-map="NEON_YARD"><b>NEON YARD</b><span>Неонова арена</span></button></div><button class="primary" id="confirmModeBtn">ПОЧАТИ ПОШУК МАТЧУ</button></div></div>
 <div id="searchModal" class="modal"><div class="modalbox"><div class="modalhead"><span id="searchTitle">ПОШУК МАТЧУ</span><button class="close" data-close="searchModal">×</button></div><div id="searchMode" class="muted">HIDE &amp; SEEK</div><div id="queue" class="queuecount">1 / 3</div><div id="searchText" class="muted">Очікування гравців...</div><div id="searchPlayers" class="waitplayers"></div><button class="danger" id="cancelSearch">СКАСУВАТИ</button></div></div>
 <div id="clanModal" class="modal"><div class="modalbox"><div class="modalhead"><span id="clanModalTitle">КЛАН</span><button class="close" data-close="clanModal">×</button></div><div id="clanModalBody"></div></div></div>
+<div id="avatarModal" class="modal"><div class="modalbox avatar-modalbox"><div class="modalhead"><span id="avatarModalTitle">ЗМІНА АВАТАРА</span><button class="close" data-close="avatarModal">×</button></div><div class="avatar-picker"><img id="avatarPreview" src="/avatars/default.jpg" alt="Попередній перегляд"><p id="avatarPickerHint" class="muted">Обери зображення зі свого пристрою (до 5 МБ).</p><input id="avatarFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><div class="actions"><button id="saveAvatarBtn" class="primary" type="button">ЗБЕРЕГТИ АВАТАР</button><button class="secondary" type="button" data-close="avatarModal">СКАСУВАТИ</button></div></div></div></div>
 <div id="appToast" role="status" aria-live="polite"></div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -455,6 +455,18 @@ function readActiveMatch(){
     return data;
   }catch{return null}
 }
+function renderActiveMatchSquad(){
+  const box=$("activeMatchSquad");
+  if(!box)return;
+  let roster=[];
+  try{roster=JSON.parse(localStorage.getItem("sx_active_roster")||"[]")}catch{}
+  if(!Array.isArray(roster)||!roster.length){box.style.display="none";box.innerHTML="";return}
+  box.style.display="flex";
+  box.innerHTML="<div class='active-squad-title'>У МАТЧІ</div><div class='active-squad-players'>"+roster.slice(0,6).map(p=>{
+    const dead=Number(p.hp)<=0;
+    return "<div class='active-squad-player' title='"+esc(p.nickname||"PLAYER")+" · ID "+esc(cleanId(p.userId||"—"))+"'><img src='"+esc(p.playerAvatar||"/avatars/default.jpg")+"' alt=''><span>"+esc(p.nickname||"PLAYER")+"</span><small>ID "+esc(cleanId(p.userId||"—"))+"</small>"+(dead?"<i>☠</i>":"")+"</div>";
+  }).join("")+"</div>";
+}
 function updateReconnectButton(){
   const button=$("resumeMatchBtn");
   const playButton=$("playBtn");
@@ -464,17 +476,18 @@ function updateReconnectButton(){
   const hasMatch=Boolean(data);
   if(playButton){
     const label=playButton.querySelector("span");
-    if(label)label.textContent=hasMatch?"↻  ПІДКЛЮЧИТИСЯ":"▶  ГРАТИ";
+    if(label)label.textContent=hasMatch?"↻  ПОВЕРНУТИСЯ В МАТЧ":"▶  ГРАТИ";
     playButton.classList.toggle("reconnect-mode",hasMatch);
-    playButton.setAttribute("aria-label",hasMatch?"Підключитися до незавершеного матчу":"Грати");
+    playButton.setAttribute("aria-label",hasMatch?"Повернутися до активного матчу":"Грати");
   }
   if(button){
     button.style.display=hasMatch?"inline-flex":"none";
-    button.textContent="ВИЙТИ З МАТЧУ";
-    button.title=hasMatch?"Покинути старий матч і повернутися до меню":"";
+    button.textContent="ЗАВЕРШИТИ МАТЧ";
+    button.title=hasMatch?"Вийти з активного матчу назавжди":"";
   }
   if(modeLabel)modeLabel.style.display=hasMatch?"none":"";
   if(mapLabel)mapLabel.style.display=hasMatch?"none":"";
+  renderActiveMatchSquad();
 }
 function resumeSavedMatch(saved){
   if(!saved?.matchId){
@@ -626,6 +639,38 @@ $("confirmModeBtn").addEventListener("click",()=>{
   openPlay();
 });
 $("openProfile").addEventListener("click",()=>show("profile"));
+let selectedAvatarFile=null;
+let avatarUploadTarget="player";
+function openAvatarPicker(target="player"){
+  avatarUploadTarget=target;selectedAvatarFile=null;
+  const isClan=target==="clan";
+  $("avatarModalTitle").textContent=isClan?"АВАТАР КЛАНУ":"ЗМІНА АВАТАРА";
+  $("avatarPickerHint").textContent=isClan?"Зображення стане аватаром твого клану. Доступно власнику та офіцерам.":"Обери зображення зі свого пристрою. JPEG, PNG, WEBP або GIF до 5 МБ.";
+  $("avatarPreview").src=isClan?(currentClanAvatar()):(me?.playerAvatar||"/avatars/default.jpg");
+  $("avatarFileInput").value="";
+  $("avatarModal").classList.add("show");
+}
+function currentClanAvatar(){return document.querySelector(".clan-own-avatar img")?.src||"/avatars/default.jpg"}
+$("avatar").addEventListener("click",()=>openAvatarPicker("player"));
+$("profileAvatar").addEventListener("click",()=>openAvatarPicker("player"));
+$("avatarFileInput").addEventListener("change",event=>{
+  selectedAvatarFile=event.target.files?.[0]||null;
+  if(!selectedAvatarFile)return;
+  if(selectedAvatarFile.size>5*1024*1024){selectedAvatarFile=null;event.target.value="";notifyToast("Файл завеликий. Максимум 5 МБ.");return}
+  $("avatarPreview").src=URL.createObjectURL(selectedAvatarFile);
+});
+$("saveAvatarBtn").addEventListener("click",async()=>{
+  if(!selectedAvatarFile){notifyToast("Спочатку обери файл з аватаром.");return}
+  const form=new FormData();form.append("avatar",selectedAvatarFile);
+  try{
+    await api(avatarUploadTarget==="clan"?"/api/clans/avatar":"/api/upload-avatar",{method:"POST",body:form});
+    $("avatarModal").classList.remove("show");
+    selectedAvatarFile=null;
+    if(avatarUploadTarget==="clan")await loadClan();
+    else{me=(await api("/api/me")).user;render()}
+    notifyToast(avatarUploadTarget==="clan"?"Аватар клану оновлено.":"Аватар профілю оновлено.");
+  }catch(error){notifyToast(error.message)}
+});
 $("logout").addEventListener("click",async()=>{try{await api("/api/logout",{method:"POST"})}catch{}location.href="/"});
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>$(b.dataset.close).classList.remove("show")));
 $("cancelSearch").addEventListener("click",cancelSearch);
@@ -797,6 +842,7 @@ async function loadClan(){
     if(previousTag&&previousTag!==currentClanTag&&socialSocket?.connected)socialSocket.emit("leave_clan_chat",{tag:previousTag});
     const owner=d.myRole==="owner";
     const officer=d.myRole==="officer";
+    const clanAvatarControl=(owner||officer)?"<button class='secondary' data-clan-action='change-avatar'>ЗМІНИТИ АВАТАР</button>":"";
     const members=d.members.map(member=>{
       const memberIsOwner=member.role==="owner";
       const memberIsOfficer=member.role==="officer";
@@ -821,7 +867,7 @@ async function loadClan(){
       actions+="<button class='secondary' data-clan-action='requests'>ЗАЯВКИ</button>";
     }
     actions+="<button class='danger' data-clan-action='leave'>ВИЙТИ</button>";
-    $("clanBody").innerHTML="<div class='listcard'><h2 style='margin:0 0 6px'>"+esc(d.clan.name)+" ["+esc(d.clan.tag)+"]</h2><div class='muted'>"+d.clan.memberCount+"/"+d.clan.memberLimit+" учасників · рівень "+d.clan.level+"</div><p class='muted'>"+esc(d.clan.description||"")+"</p><div class='actions'>"+actions+"</div></div><h3 style='margin-top:17px'>УЧАСНИКИ</h3><div class='clan-members'>"+members+"</div><section class='clanchat'><div class='clanchat-head'>КЛАНОВИЙ ЧАТ · ["+esc(d.clan.tag)+"]</div><div id='clanChatMessages' class='clan-chat-messages'></div><div class='clan-chat-send'><input id='clanChatInput' maxlength='1000' placeholder='Повідомлення клану…' autocomplete='off'><button class='primary' data-clan-action='send-chat'>НАДІСЛАТИ</button></div></section>";
+    $("clanBody").innerHTML="<div class='listcard clan-own-card'><div class='clan-own-avatar'><img src='"+esc(d.clan.avatar||"/avatars/default.jpg")+"' alt=''><div class='clan-own-actions'>"+clanAvatarControl+"</div></div><div class='clan-own-main'><h2 style='margin:0 0 6px'>"+esc(d.clan.name)+" ["+esc(d.clan.tag)+"]</h2><div class='muted'>"+d.clan.memberCount+"/"+d.clan.memberLimit+" учасників · рівень "+d.clan.level+"</div><p class='muted'>"+esc(d.clan.description||"")+"</p><div class='actions'>"+actions+"</div></div></div><h3 style='margin-top:17px'>УЧАСНИКИ</h3><div class='clan-members'>"+members+"</div><section class='clanchat'><div class='clanchat-head'>КЛАНОВИЙ ЧАТ · ["+esc(d.clan.tag)+"]</div><div id='clanChatMessages' class='clan-chat-messages'></div><div class='clan-chat-send'><input id='clanChatInput' maxlength='1000' placeholder='Повідомлення клану…' autocomplete='off'><button class='primary' data-clan-action='send-chat'>НАДІСЛАТИ</button></div></section>";
     renderClanChat();
     if(socialSocket?.connected)socialSocket.emit("join_clan_chat",{tag:currentClanTag});
     const input=$("clanChatInput");
@@ -830,8 +876,22 @@ async function loadClan(){
 }
 function openCreateClan(){openClanModal("СТВОРИТИ КЛАН","<div class='form'><input id='cnName' maxlength='24' placeholder='Назва клану'><input id='cnTag' maxlength='5' placeholder='TAG, 2–5 символів'><textarea id='cnDesc' maxlength='120' placeholder='Опис'></textarea><button class='primary' data-clan-action='submit-create'>СТВОРИТИ</button></div>")}
 async function createClan(){try{await api("/api/clans/create",{method:"POST",body:JSON.stringify({name:$("cnName").value,tag:$("cnTag").value,description:$("cnDesc").value})});$("clanModal").classList.remove("show");me=(await api("/api/me")).user;render();await loadClan();notifyToast("Клан створено.")}catch(e){notifyToast(e.message)}}
-function openClanSearch(){openClanModal("ЗНАЙТИ КЛАН","<div class='inputrow'><input id='clanQuery' placeholder='Назва або TAG'><button class='primary' data-clan-action='submit-search'>ЗНАЙТИ</button></div><div class='list' id='clanResults'></div>")}
-async function searchClans(){try{const d=await api("/api/clans/search",{method:"POST",body:JSON.stringify({query:$("clanQuery").value})});$("clanResults").innerHTML=d.clans.map(c=>"<div class='row'><div><b>"+esc(c.name)+" ["+esc(c.tag)+"]</b><div class='muted'>"+c.memberCount+"/"+c.memberLimit+" · "+esc(c.description||"")+"</div></div><button class='primary' data-clan-action='join' data-tag='"+esc(c.tag)+"' "+(c.isFull?"disabled":"")+">ЗАЯВКА</button></div>").join("")||"<div class='muted'>Не знайдено.</div>"}catch(e){notifyToast(e.message)}}
+function openClanSearch(){openClanModal("ЗНАЙТИ КЛАН","<div class='inputrow'><input id='clanQuery' placeholder='Назва або TAG' autocomplete='off'><button class='primary' data-clan-action='submit-search'>ЗНАЙТИ</button></div><div id='clanResults' class='clan-search-list'><div class='muted'>Завантажуємо список кланів…</div></div>");searchClans()}
+async function searchClans(){
+  try{
+    const d=await api("/api/clans/search",{method:"POST",body:JSON.stringify({query:$("clanQuery")?.value||""})});
+    $("clanResults").innerHTML=d.clans.map(c=>"<div class='clan-search-card'><img src='"+esc(c.avatar||"/avatars/default.jpg")+"' alt=''><div class='clan-search-info'><b>"+esc(c.name)+" ["+esc(c.tag)+"]</b><div class='muted'>"+c.memberCount+"/"+c.memberLimit+" учасників · "+esc(c.description||"")+"</div></div><div class='clan-search-actions'><button class='secondary' data-clan-action='profile' data-tag='"+esc(c.tag)+"'>ПРОФІЛЬ</button><button class='primary' data-clan-action='join' data-tag='"+esc(c.tag)+"' "+(c.isFull||me?.clan?"disabled":"")+">ЗАЯВКА</button></div></div>").join("")||"<div class='muted'>Кланів не знайдено.</div>";
+  }catch(e){notifyToast(e.message)}
+}
+async function openClanProfile(tag){
+  try{
+    const d=await api("/api/clans/"+encodeURIComponent(tag));
+    const clan=d.clan;
+    const members=(d.members||[]).map(m=>"<div class='clan-profile-member'><img src='"+esc(m.playerAvatar||"/avatars/default.jpg")+"' alt=''><div><b>"+esc(m.nickname)+"</b><small>ID "+esc(cleanId(m.userId))+" · "+(m.online?"ОНЛАЙН":"ОФЛАЙН")+"</small></div><span>"+esc(String(m.role||"member").toUpperCase())+"</span></div>").join("");
+    const canJoin=!me?.clan&&!clan.isFull;
+    openClanModal("ПРОФІЛЬ КЛАНУ","<div class='clan-profile-head'><img src='"+esc(clan.avatar||"/avatars/default.jpg")+"' alt=''><div><h2>"+esc(clan.name)+" ["+esc(clan.tag)+"]</h2><p>"+esc(clan.description||"Без опису")+"</p><small>"+Number(clan.memberCount||0)+"/"+Number(clan.memberLimit||30)+" УЧАСНИКІВ · РІВЕНЬ "+Number(clan.level||1)+"</small></div></div><h3>УЧАСНИКИ КЛАНУ</h3><div class='clan-profile-roster'>"+(members||"<div class='muted'>Поки немає учасників.</div>")+"</div><div class='actions' style='margin-top:14px'><button class='primary' data-clan-action='join' data-tag='"+esc(clan.tag)+"' "+(!canJoin?"disabled":"")+">"+(me?.clan?"ТИ ВЖЕ В КЛАНІ":clan.isFull?"КЛАН ЗАПОВНЕНИЙ":"ПОДАТИ ЗАЯВКУ")+"</button><button class='secondary' data-clan-action='back-search'>НАЗАД ДО ПОШУКУ</button></div>");
+  }catch(e){notifyToast(e.message)}
+}
 async function joinClan(tag){try{await api("/api/clans/request",{method:"POST",body:JSON.stringify({tag})});$("clanModal").classList.remove("show");notifyToast("Заявку відправлено. Власник або офіцер отримає сповіщення.")}catch(e){notifyToast(e.message)}}
 async function loadClanRequests(){try{const d=await api("/api/clans/requests",{method:"POST",body:"{}"});openClanModal("ЗАЯВКИ КЛАНУ",d.requests.map(x=>"<div class='row'><div><b>"+esc(x.nickname)+"</b><div class='muted'>ID "+esc(cleanId(x.id))+"</div></div><div class='actions'><button class='primary' data-clan-action='accept' data-id='"+esc(x.id)+"'>✓</button><button class='secondary' data-clan-action='decline' data-id='"+esc(x.id)+"'>×</button></div></div>").join("")||"<div class='muted'>Заявок немає.</div>")}catch(e){notifyToast(e.message)}}
 async function clanDecision(type,id){try{await api(type==="accept"?"/api/clans/accept":"/api/clans/decline",{method:"POST",body:JSON.stringify({userId:id})});await loadClan();await loadClanRequests()}catch(e){notifyToast(e.message)}}
@@ -872,6 +932,8 @@ $("clanBody").addEventListener("click",e=>{
   const a=b.dataset.clanAction;
   if(a==="create")openCreateClan();
   else if(a==="search")openClanSearch();
+  else if(a==="change-avatar")openAvatarPicker("clan");
+  else if(a==="search")openClanSearch();
   else if(a==="requests")loadClanRequests();
   else if(a==="edit")editClan();
   else if(a==="disband")disbandClan();
@@ -884,6 +946,8 @@ $("clanModalBody").addEventListener("click",e=>{
   const a=b.dataset.clanAction;
   if(a==="submit-create")createClan();
   else if(a==="submit-search")searchClans();
+  else if(a==="profile")openClanProfile(b.dataset.tag);
+  else if(a==="back-search")openClanSearch();
   else if(a==="join")joinClan(b.dataset.tag);
   else if(a==="accept")clanDecision("accept",b.dataset.id);
   else if(a==="decline")clanDecision("decline",b.dataset.id);
@@ -898,12 +962,21 @@ const DEFAULT_KEYBINDS={spawnBot:"KeyN",removeBot:"KeyB",push:"KeyJ",kick:"KeyK"
 const KEYBIND_LABELS={spawnBot:"Створити бота",removeBot:"Видалити бота",push:"Push бота",kick:"Kick бота",boost:"Boost бота",resetBot:"Скинути бота",resetSession:"Скинути тренування",menu:"Меню в грі"};
 let keybindCapture=null;
 function readKeybinds(){
+  let localBinds={},serverBinds={};
+  try{localBinds=JSON.parse(localStorage.getItem("sx_settings")||"{}").keybinds||{}}catch{}
+  serverBinds=me?.settings?.keybinds||{};
+  const result={...DEFAULT_KEYBINDS};
+  for(const action of Object.keys(result)){
+    if(typeof localBinds[action]==="string"&&localBinds[action])result[action]=localBinds[action];
+    if(typeof serverBinds[action]==="string"&&serverBinds[action])result[action]=serverBinds[action];
+  }
+  return result;
+}
+async function saveKeybindsToAccount(keybinds){
   try{
-    const stored=JSON.parse(localStorage.getItem("sx_settings")||"{}").keybinds||{};
-    const result={...DEFAULT_KEYBINDS};
-    for(const action of Object.keys(result))if(typeof stored[action]==="string"&&stored[action])result[action]=stored[action];
-    return result;
-  }catch{return {...DEFAULT_KEYBINDS}}
+    const data=await api("/api/settings/keybinds",{method:"POST",body:JSON.stringify({keybinds})});
+    me={...me,settings:{...(me?.settings||{}),keybinds:data.keybinds||keybinds}};
+  }catch(error){notifyToast("Клавіші збережено локально, але синхронізація з акаунтом не вдалася: "+error.message)}
 }
 function keyLabel(code){
   if(!code)return "—";
@@ -941,6 +1014,7 @@ function settings(){
     try{current=JSON.parse(localStorage.getItem("sx_settings")||"{}")}catch{}
     current.keybinds={...DEFAULT_KEYBINDS};
     localStorage.setItem("sx_settings",JSON.stringify(current));
+    saveKeybindsToAccount(current.keybinds);
     keybindCapture=null;$("keybindStatus").textContent="Стандартні клавіші відновлено.";
     updateKeybindButtons();
   });
@@ -959,6 +1033,7 @@ function settings(){
     let current={};
     try{current=JSON.parse(localStorage.getItem("sx_settings")||"{}")}catch{}
     current.keybinds=binds;localStorage.setItem("sx_settings",JSON.stringify(current));
+    saveKeybindsToAccount(binds);
     $("keybindStatus").textContent=KEYBIND_LABELS[keybindCapture]+" → "+keyLabel(event.code);
     keybindCapture=null;updateKeybindButtons();
   },true);
