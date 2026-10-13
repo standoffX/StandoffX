@@ -75,6 +75,46 @@ body.device-mobile #fullMapTitle span{font-size:7px}
 body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
 @media(max-width:800px){#radarWrap{top:6px;right:6px;width:94px}#radarCanvas{width:88px;height:88px}}
 
+
+/* Prototype-only bot controls: compact, clear, and never shown during public matches. */
+#trainingControls.prototype-bot-panel{
+  position:fixed;top:78px;right:18px;left:auto;bottom:auto;
+  width:min(286px,calc(100vw - 28px));max-height:none;overflow:visible;
+  padding:15px;border:1px solid #77cfff48;border-radius:15px;
+  background:linear-gradient(145deg,#102639f5,#07131ff5);
+  box-shadow:0 20px 55px #0007,0 0 28px #63c9ff12,inset 0 1px #ffffff0d;
+  backdrop-filter:blur(18px);color:#edf8ff;overscroll-behavior:contain;
+  pointer-events:auto;touch-action:pan-y
+}
+.prototype-panel-head{display:flex;align-items:center;gap:10px;padding:1px 1px 12px;border-bottom:1px solid #a2dbf61c}
+.prototype-panel-head>div{display:grid;gap:4px}
+.prototype-panel-head b{font-size:11px;font-weight:1000;letter-spacing:1.8px;color:#e7f8ff}
+.prototype-panel-head small{font-size:8px;font-weight:800;letter-spacing:1.5px;color:#84a9bf}
+.prototype-live-dot{width:9px;height:9px;flex:0 0 9px;border-radius:50%;background:#67e9ba;box-shadow:0 0 13px #67e9ba7c}
+.prototype-bot-status{margin:12px 0;padding:10px 11px;border:1px solid #9fdfff18;border-radius:8px;background:#071721a8;color:#a9c8da;font-size:10px;font-weight:850;line-height:1.5;letter-spacing:.35px}
+.prototype-bot-actions{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.prototype-bot-actions button{display:flex;align-items:center;justify-content:flex-start;gap:11px;width:100%;min-height:44px;padding:0 13px;border:1px solid #88d9ff3c;border-radius:9px;background:linear-gradient(100deg,#173d56,#102b40);color:#e7f8ff;font-size:10px;font-weight:1000;letter-spacing:1px;text-align:left;cursor:pointer;touch-action:manipulation;transition:transform .15s,border-color .15s,filter .15s,opacity .15s}
+.prototype-bot-actions button>span:first-child{display:grid;place-items:center;width:24px;height:24px;border-radius:7px;background:#9fe0ff15;color:#9edfff;font-size:21px;line-height:1}
+.prototype-bot-actions .prototype-create-bot{border-color:#a9ecdc80;background:linear-gradient(100deg,#b8f1de,#7fd5ce);color:#09232b;box-shadow:0 8px 22px #73d8c21a}
+.prototype-bot-actions .prototype-create-bot>span:first-child{background:#0c4a4730;color:#0b534d}
+.prototype-bot-actions .prototype-delete-bot{border-color:#ff8e9d35;background:linear-gradient(100deg,#44202d,#281923);color:#ffdce2}
+.prototype-bot-actions .prototype-delete-bot>span:first-child{background:#ff82941a;color:#ff9ead}
+.prototype-bot-actions button:not(:disabled):hover{filter:brightness(1.08);transform:translateY(-1px)}
+.prototype-bot-actions button:focus-visible{outline:2px solid #d5f5ff;outline-offset:2px}
+.prototype-bot-actions button:disabled{cursor:not-allowed;opacity:.34;filter:saturate(.45);box-shadow:none}
+.prototype-settings-note{margin:11px 2px 0;color:#688ca3;font-size:9px;line-height:1.5}
+#trainingControls.prototype-bot-panel button{font-family:inherit}
+@media(max-width:800px){
+  #trainingControls.prototype-bot-panel{top:60px;right:8px;left:auto;bottom:auto;width:min(228px,calc(100vw - 112px));max-height:none;padding:10px;border-radius:12px}
+  .prototype-panel-head{padding-bottom:9px}
+  .prototype-bot-status{margin:9px 0;padding:8px;font-size:9px}
+  .prototype-bot-actions{gap:6px}
+  .prototype-bot-actions button{min-height:39px;padding:0 9px;font-size:9px;letter-spacing:.6px}
+  .prototype-bot-actions button>span:first-child{width:22px;height:22px}
+  .prototype-settings-note{font-size:8px;margin-top:8px}
+}
+@media(prefers-reduced-motion:reduce){.prototype-bot-actions button{transition:none}}
+
 </style>
 </head>
 <body>
