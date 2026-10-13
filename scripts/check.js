@@ -208,7 +208,7 @@ const duplicates = routes.filter((route, index) => routes.indexOf(route) !== ind
 assert.deepEqual([...new Set(duplicates)], [], "HTTP routes must not be duplicated");
 
 assert.match(server, /HILL_TOWN: \{ id: "HILL_TOWN"/, "server must allow the Hill Town map");
-assert.match(server, /id: "allies"[\s\S]*?requiredPlayers: 4/, "Allies must have a four-player server queue");
+assert.match(server, /id: "allies"[\s\S]*?requiredPlayers: 3/, "Allies must be a three-player free-for-all queue");
 assert.match(server, /!\["team_fight", "allies"\]\.includes\(match\.mode\)/, "team combat handler must accept Allies");
 assert.match(server, /const WEAPON_BALANCE = Object\.freeze\(/, "server must maintain the authoritative weapon balance table");
 assert.match(server, /const damage = calculateWeaponDamage\(weaponId, hitZone, bestDistance\)/, "server calculates damage instead of trusting the client");
@@ -269,14 +269,14 @@ assert.match(menu, /data-layout-control="weapon"/, "mobile HUD editor must previ
 assert.match(menu, /data-size-control="weapon"/, "mobile HUD editor must allow an independent weapon button size");
 assert.match(game, /socket\.emit\("team_shoot",\{matchId,weapon:selectedWeapon/, "the client must identify which weapon is fired");
 assert.match(game, /socket\.emit\("training_shoot",\{trainingId,weapon:selectedWeapon/, "training shots must identify the equipped weapon");
-assert.match(game, /e\.code==="Escape"\)\{e\.preventDefault\(\);leaveGame\(\);return\}/, "Escape must return to the lobby from any match phase");
+assert.match(game, /e\.code==="Escape"\)\{e\.preventDefault\(\);pauseToMenu\(\);return\}/, "Escape must return to the lobby without ending the active match");
 assert.match(game, /if\(selectedMap==="FIELD_ARENA"\)\{/, "prototype must honor the selected map rather than forcing the field arena");
 assert.doesNotMatch(game, / · UUID "\+uuid/, "the match lobby must not display UUIDs");
 
 assert.match(game, /function makeVisual\(color\)[\s\S]*?new THREE\.CylinderGeometry[\s\S]*?function setSoldierTint/, "soldiers must have a multi-part procedural 3D model");
 assert.match(game, /function animateSoldier\(model,dt,now,moving=false,inAir=false,crouching=false\)/, "player models must animate and crouch without relying on external model downloads");
 assert.match(game, /animateSoldier\(e\.mesh,dt,now,e\.anim==="Running"\|\|e\.anim==="Walking",e\.anim==="Jump",e\.anim==="Crouch"\)/, "remote player movement must also animate crouching");
-assert.match(game, /if\(e\.code===binds\.menu\)\{e\.preventDefault\(\);leaveGame\(\);return\}/, "M goes directly back to the lobby without a blocking menu");
+assert.match(game, /if\(e\.code===binds\.menu\)\{e\.preventDefault\(\);pauseToMenu\(\);return\}/, "M returns to the lobby while preserving the active match");
 assert.match(game, /stick\.addEventListener\("touchcancel",releaseStick\)/, "cancelled mobile joystick touches must release movement");
 assert.match(game, /\$\("fireBtn"\)\.addEventListener\("touchcancel",\(\)=>fireHeld=false\)/, "cancelled mobile fire touches must stop shooting");
 assert.match(game, /socket\.on\("player_left"/, "departed players must be removed from the scene");
@@ -323,17 +323,17 @@ assert.match(game, /id="connectionLoadStatus"/, "the loading overlay must show s
 assert.ok(game.includes('localStorage.setItem("sx_abandoned_match"'), "leaving during a network outage must queue match cleanup");
 assert.match(game, /socket\.on\("player_connection_state"/, "players should stay on the map when teammates temporarily disconnect");
 assert.match(menu, /id="resumeMatchBtn"/, "the lobby must offer a bottom exit button for a resumed match");
-assert.match(menu, /label\.textContent=hasMatch\?"↻  ПІДКЛЮЧИТИСЯ":"▶  ГРАТИ"/, "the primary lobby button must switch from Play to Connect while a match is active");
+assert.match(menu, /label\)label\.textContent=hasMatch\?"↻  ПОВЕРНУТИСЯ В МАТЧ":"▶  ГРАТИ"/, "the primary lobby button must switch to return-to-match while a match is active");
 assert.match(menu, /function exitSavedMatch\(\)/, "the lobby exit control must cancel the saved old match");
-assert.match(menu, /button\.textContent="ВИЙТИ З МАТЧУ"/, "the lobby reconnect state must show Exit below Connect");
+assert.match(menu, /button\.textContent="ЗАВЕРШИТИ МАТЧ"/, "the lobby reconnect state must show an explicit finish-match action");
 assert.match(menu, /data-size-control="fire"/, "the mobile layout editor must let players size the fire button separately");
 assert.match(menu, /data-size-control="crouch"/, "the mobile layout editor must let players size crouch separately");
 assert.match(menu, /data-size-control="sprint"/, "the mobile layout editor must let players size sprint separately");
 assert.match(menu, /document\.documentElement\.dataset\.sxDevice/, "lobby must detect device type and show matching settings");
 assert.match(ui, /html\[data-sx-device="mobile"\] body\.lobby-screen #desktopControlsSettings/, "mobile must not display keyboard/mouse-only settings");
 assert.match(ui, /html\[data-sx-device="desktop"\] body\.lobby-screen #mobileLayoutEditor/, "desktop must not show touch-only settings");
-assert.match(server, /}, 90000\);/, "reconnect grace must last long enough to get back into the match");
-assert.match(server, /never end\/delete a match[\s\S]{0,220}if \(current\.phase === "game"\)/, "gameplay disconnect timeout must keep the match alive");
+assert.match(server, /}, 5 \* 60 \* 1000\);/, "reconnect grace must last five minutes");
+assert.match(server, /The reconnect window is five minutes[\s\S]{0,400}if \(current\.phase === "game"\)[\s\S]{0,500}current\.players\.splice\(liveIndex, 1\)/, "disconnect expiry must remove only the disconnected player after five minutes");
 assert.match(server, /const MATCH_SPAWNS =/, "scaled maps must use safe per-map spawn points");
 assert.match(server, /HILL_TOWN: \[\{x:-42,y:0,z:-28\},\{x:42,y:0,z:-28\},\{x:-42,y:0,z:28\},\{x:42,y:0,z:28\}\]/, "Hill Town team spawns must stay in mirrored safe start zones");
 assert.match(server, /mapState: safeMapId === "HILL_TOWN" \? createMapInteractionState\(\) : null/, "map interaction states must be retained with a match");
@@ -481,3 +481,19 @@ assert.match(game, /function buildNeonYard\(\)[\s\S]{0,7000}const structures=/, 
 assert.match(server, /M3_Maze: \[\s*\{ minX: -78, maxX: -74, minZ: -180, maxZ: -130 \}/, "M3 collision proxy geometry must exist on the server");
 
 console.log("OK project invariants, local maps, authoritative arena collisions, movement correction, graphics, weapons, matchmaking, MongoDB retry, and routes");
+
+
+assert.match(server, /const localUsersSnapshot = users\.map\(user => \(\{ \.\.\.user \}\)\)/, "MongoDB account loading must merge account.json fields instead of discarding them");
+assert.match(server, /app\.post\("\/api\/settings\/keybinds"/, "key bindings must be persisted through the account store and MongoDB");
+assert.match(server, /app\.post\("\/api\/clans\/avatar"/, "authorized clan leaders can upload clan avatars");
+assert.match(server, /app\.get\("\/api\/clans\/:tag"/, "clan search supports a detailed roster profile");
+assert.match(server, /avatar: cleanText\(raw\.avatar \|\| "\/avatars\/default\.jpg"/, "clan avatars survive normalizing and MongoDB persistence");
+assert.match(server, /if \(targetDistance < 0\.82 && targetDistance < previousDistance - 0\.015\) return false/, "idle players still have authoritative movement collision");
+assert.match(server, /setTimeout\(\(\)=>\{[\s\S]{0,500}current\.players\.splice\(liveIndex, 1\)/, "disconnected player slots expire after the reconnect grace");
+assert.match(game, /function pauseToMenu\(\)/, "the escape-to-lobby action must preserve the active match");
+assert.match(game, /id="squadStrip"/, "the live HUD must show a compact player-avatar strip");
+assert.match(game, /className="squad-avatar"/, "the compact HUD roster has individual player portrait tiles");
+assert.match(menu, /id="avatarFileInput" type="file"/, "the user's avatar picker must accept an image from the device");
+assert.match(menu, /async function openClanProfile\(tag\)/, "clan search can open member profiles");
+assert.match(ui, /\.clan-search-card/, "clan search should render a visual list of all matching clans");
+assert.match(ui, /\.active-squad-player/, "lobby teammate portraits display nicknames, IDs and death status");
