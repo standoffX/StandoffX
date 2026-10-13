@@ -1348,12 +1348,16 @@ app.post("/api/upload-avatar", requireAuth, upload.single("avatar"), (req, res) 
   res.json({ success: true, newPath: req.user.playerAvatar });
 });
 
-app.post("/api/clans/avatar", requireAuth, upload.single("avatar"), (req, res) => {
+app.post("/api/clans/avatar", requireAuth, (req, res, next) => {
   const clan = req.user.clan ? clans[req.user.clan] : null;
   if (!clan) return res.status(403).json({ success: false, message: "Спочатку вступи до клану." });
   if (clan.ownerId !== req.user.id && !(clan.officers || []).includes(req.user.id)) {
     return res.status(403).json({ success: false, message: "Змінювати аватар може лише власник або офіцер." });
   }
+  req.clanForAvatar = clan;
+  next();
+}, upload.single("avatar"), (req, res) => {
+  const clan = req.clanForAvatar;
   if (!req.file) return res.status(400).json({ success: false, message: "Вибери зображення." });
   clan.avatar = "/avatars/" + req.file.filename;
   saveClans();
@@ -1369,7 +1373,7 @@ const DEFAULT_MATCH_SIZE = 3;
 const GAME_SECONDS = 300;
 const WARMUP_SECONDS = 10;
 const COUNTDOWN_SECONDS = 15;
-const JOIN_TIMEOUT_SECONDS = 35;
+const JOIN_TIMEOUT_SECONDS = 90;
 
 const PLAYABLE_MAPS = Object.freeze({
   M3_Maze: { id: "M3_Maze", name: "M3 MAZE", kind: "model" },
@@ -1594,9 +1598,12 @@ function emitMatchWaiting(io, match) {
     players: match.players.map(p => ({
       userId: p.userId,
       nickname: p.nickname,
+      playerAvatar: p.playerAvatar || "/avatars/default.jpg",
       connected: p.isBot || Boolean(p.socketId),
       ready: p.isBot || Boolean(p.ready),
-      isBot: Boolean(p.isBot)
+      isBot: Boolean(p.isBot),
+      hp: p.hp,
+      team: p.team
     }))
   });
 }
