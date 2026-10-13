@@ -1984,7 +1984,7 @@ function startAlliesRound(io, match, initial = false) {
         checkAlliesRoundWin(io, current);
         return;
       }
-      if (action.kind === "plant") {
+        if (action.kind === "plant") {
         if (!playerNearBombSite(actor, action.site, 5.2)) {
           bomb.state = "carried"; bomb.action = null;
           io.to(current.id).emit("bomb_state", bombPublicState(current));
@@ -2198,8 +2198,8 @@ const SERVER_MAP_BLOCKERS = Object.freeze({
     { minX: -5, maxX: 5, minZ: -5, maxZ: 5 },
     { minX: -13, maxX: -6, minZ: 15, maxZ: 17 },
     { minX: 6, maxX: 13, minZ: -17, maxZ: -15 },
-    { minX: -4, maxX: 4, minZ: 23, maxZ: 25 },
-    { minX: -4, maxX: 4, minZ: -25, maxZ: -23 }
+    { minX: 8, maxX: 16, minZ: 23, maxZ: 25 },
+    { minX: -16, maxX: -8, minZ: -25, maxZ: -23 }
   ],
   FIELD_ARENA: [
     { minX: -38, maxX: -26, minZ: 9, maxZ: 19 },
