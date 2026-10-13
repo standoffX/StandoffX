@@ -65,8 +65,8 @@ assert.ok(server.indexOf("const nextPassword =") < server.indexOf("const oldId =
 
 assert.match(server, /app\.use\(express\.static\(ROOT, \{ index: false, dotfiles: "deny" \}\)\)/);
 assert.match(server, /RateLimit-Limit/, "critical endpoints must have rate limiting");
-assert.match(server, /requiredPlayers: 3/, "hide and seek requires three players");
-assert.match(server, /requiredPlayers: 4/, "team fight must be 2v2");
+assert.match(server, /id: "hide_seek"[\s\S]*?requiredPlayers: 3/, "hide and seek requires three players");
+assert.match(server, /id: "allies"[\s\S]*?requiredPlayers: 4/, "Allies must be a four-player 2v2 mode");
 assert.match(server, /count: modePlayers\.length/, "queue count must be the total number waiting");
 assert.match(server, /players: modePlayers\.map/, "queue must send a waiting player roster");
 assert.match(server, /function normalizeClanState\(rawClans\)/, "legacy and Atlas clan records must be normalized");
@@ -208,7 +208,7 @@ const duplicates = routes.filter((route, index) => routes.indexOf(route) !== ind
 assert.deepEqual([...new Set(duplicates)], [], "HTTP routes must not be duplicated");
 
 assert.match(server, /HILL_TOWN: \{ id: "HILL_TOWN"/, "server must allow the Hill Town map");
-assert.match(server, /id: "allies"[\s\S]*?requiredPlayers: 3/, "Allies must be a three-player free-for-all queue");
+assert.match(server, /id: "allies"[\s\S]*?map: "SANDSTONE"[\s\S]*?requiredPlayers: 4/, "Allies must use Sandstone and queue four players for 2v2");
 assert.match(server, /!\["team_fight", "allies"\]\.includes\(match\.mode\)/, "team combat handler must accept Allies");
 assert.match(server, /const WEAPON_BALANCE = Object\.freeze\(/, "server must maintain the authoritative weapon balance table");
 assert.match(server, /const damage = calculateWeaponDamage\(weaponId, hitZone, bestDistance\)/, "server calculates damage instead of trusting the client");
@@ -218,7 +218,23 @@ assert.match(server, /session\.lastShotAt \|\| 0\) < weapon\.fireDelay/, "traini
 assert.doesNotMatch(server, /bot\.hp = Math\.max\(0, bot\.hp - \(Number\(data\.damage\) \|\| 34\)\)/, "training clients cannot choose arbitrary damage values");
 assert.match(menu, /data-mode="allies"/, "menu must offer Allies");
 assert.match(menu, /data-mode="team_fight"/, "menu must offer Team Fight");
-assert.match(menu, /data-map="HILL_TOWN"/, "menu must offer Hill Town");
+assert.match(menu, /data-map="SANDSTONE"/, "public Allies map pool must include Sandstone");
+assert.match(menu, /data-map="SMALL_YARD"/, "public KB map pool must include the small arena");
+assert.match(server, /id: "team_fight"[\s\S]*?map: "SMALL_YARD"[\s\S]*?requiredPlayers: 3/, "KB must be free-for-all with three players on the small yard");
+assert.match(server, /function startAlliesRound\(io, match, initial = false\)/, "Allies must start discrete bomb rounds after every client is ready");
+assert.match(server, /function handleBombAction\(io, match, player, data = \{\}\)/, "the server must validate bomb plant and defuse inputs");
+assert.match(server, /bomb\.explodeAt = bomb\.plantedAt \+ 35000/, "a planted bomb must have a server-controlled explosion timer");
+assert.match(server, /Date\.now\(\) - action\.startedAt >= 3000/, "planting must take three uninterrupted seconds");
+assert.match(server, /Date\.now\(\) - action\.startedAt >= 5000/, "defusing must take five uninterrupted seconds");
+assert.match(server, /match\.roundWins\.A >= 7 \|\| match\.roundWins\.B >= 7/, "Allies matches must be won by reaching seven rounds");
+assert.match(server, /player\.team !== match\.attackingTeam \|\| player\.userId !== bomb\.carrierUserId/, "only the bomb carrier on attack may initiate a plant");
+assert.match(game, /function buildSandstoneMap\(\)/, "the client must build a closed Sandstone-style bomb map locally");
+assert.match(game, /function buildSmallYard\(\)/, "the client must build a compact map for 1v1v1 KB locally");
+assert.match(game, /socket\.emit\("bomb_action",\{matchId,action:"plant",site:site\.site\}\)/, "the client must request bomb planting on a nearby site");
+assert.match(game, /socket\.emit\("bomb_action",\{matchId,action:"defuse",site:site\.site\}\)/, "the client must request defusing on the planted site");
+assert.match(game, /socket\.on\("allies_round_start"/, "clients must reset spawns and weapons at each bomb round");
+assert.match(game, /socket\.on\("allies_round_end"/, "clients must show the winner and reason at round end");
+assert.match(game, /id="bombHud"/, "Allies must have a bomb objective HUD");
 assert.match(game, /function buildHillTownMap\(\)[\s\S]*?wallAlongZ\(-55\.5,-48,48,wallShadowMat,1,6\)[\s\S]*?addGameplayInteractables\(\);[\s\S]*?mapLoadFinished=true/, "Hill Town must build a deterministic local competitive map with solid walls");
 assert.match(game, /HILL_TOWN_MANIFEST_URL/, "the optional first-person AKR model may still use the CC0 weapon manifest");
 assert.match(game, /async function loadHeldWeapon\(\)/, "game must load a first-person weapon model");
@@ -290,7 +306,7 @@ assert.match(game, /addBox\(0,3\.5,-228,456,7,4,shadowMat,true\)/, "M3 Maze must
 assert.doesNotMatch(game.slice(game.indexOf("function loadMap()"), game.indexOf("function makeVisual(")), /loader\.load\("m3\.glb"/, "M3 map loading must not depend on a remote model");
 assert.match(game, /function rebuildCollisionIndex\(\)/, "map geometry must be registered for solid collision");
 assert.match(game, /if\(size\.y<\.24\|\|bounds\.max\.y<\.16\|\|size\.y>18\|\|\(size\.x>28&&size\.z>28\)\)continue/, "collision filtering must keep long thin walls instead of deleting arena borders");
-assert.match(game, /return \(\{HILL_TOWN:54\.2,NEON_YARD:167,FIELD_ARENA:291,M3_Maze:225\}\)/, "all client movement bounds must stay inside the matching physical map walls");
+assert.match(game, /return \(\{SANDSTONE:48,SMALL_YARD:32,HILL_TOWN:54\.2,NEON_YARD:167,FIELD_ARENA:291,M3_Maze:225\}\)/, "all client movement bounds must stay inside the matching physical map walls");
 assert.match(game, /function applyMapInteractionState\(state\)/, "door and destructible-cover state must be applied to reconnecting clients");
 assert.match(game, /const hits=raycaster\.intersectObjects\(mapObjects\.filter\(o=>o\?\.visible\),false\)/, "shots raycast against the actual map geometry");
 assert.match(game, /const hit=hits\.find\(h=>h\.distance<CLIENT_WEAPON_INFO\[selectedWeapon\]\.range\)/, "the nearest scenery impact is chosen before wood damage is applied");
