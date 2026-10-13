@@ -114,6 +114,16 @@ body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
   .prototype-settings-note{font-size:8px;margin-top:8px}
 }
 @media(prefers-reduced-motion:reduce){.prototype-bot-actions button{transition:none}}
+.squad-strip{position:absolute;top:54px;left:50%;transform:translateX(-50%);display:flex;gap:5px;align-items:flex-start;max-width:min(76vw,620px);pointer-events:none;z-index:12}
+.squad-avatar{position:relative;width:34px;height:34px;flex:0 0 34px;border:1px solid #9bb4c75e;border-radius:5px;background:#0b121b;overflow:hidden;box-shadow:0 5px 16px #0004}
+.squad-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.squad-avatar.is-me{border-color:#6df0ca;box-shadow:0 0 0 1px #6df0ca55}
+.squad-avatar.is-dead img{filter:grayscale(1) brightness(.42)}
+.squad-avatar .squad-skull{position:absolute;inset:0;display:grid;place-items:center;color:#ff6b7c;text-shadow:0 1px 3px #000;font-size:21px;background:#070a10a6}
+.squad-avatar .squad-player-dot{position:absolute;right:2px;bottom:2px;width:6px;height:6px;border-radius:50%;background:#69e8b7;border:1px solid #061018}
+.squad-avatar.is-dead .squad-player-dot{background:#ff6678}
+.squad-avatar .squad-avatar-name{position:absolute;left:0;right:0;bottom:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:2px 2px;background:#050a10c9;color:#e8f3ff;font-size:7px;line-height:1.1;text-align:center}
+@media(max-width:800px){.squad-strip{top:42px;gap:3px;max-width:80vw}.squad-avatar{width:27px;height:27px;flex-basis:27px;border-radius:4px}.squad-avatar .squad-skull{font-size:17px}.squad-avatar .squad-avatar-name{display:none}}
 
 </style>
 </head>
@@ -147,6 +157,7 @@ body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
   <div id="ammo" style="display:none"><div class="ammo-name" id="weaponName">AKR</div><div class="ammo-num" id="ammoNum">30</div><div class="ammo-sub" id="ammoSub">/ 30 · R — RELOAD</div><div class="ammo-sub" id="weaponDamage">5 м · ГОЛ 164 ТІЛ 35 ЖИВ 45 НОГ 27</div></div>
   <div id="damagePopup" role="status" aria-live="polite"></div>
   <div id="hint">WASD — рух · Space — стрибок · Shift — швидкість · G — камера · LMB — вогонь · R — перезарядка</div>
+  <div id="squadStrip" class="squad-strip" aria-label="Учасники матчу"></div>
 </div>
 <div id="radarWrap" aria-label="Радар команди"><canvas id="radarCanvas" width="220" height="220"></canvas><span>TEAM RADAR</span></div>
 <div id="fullMapOverlay" aria-label="Повна карта" style="display:none"><div id="fullMapPanel"><div id="fullMapTitle">TACTICAL MAP <span>F — УТРИМУВАТИ</span></div><canvas id="fullMapCanvas" width="1000" height="760"></canvas><div id="fullMapLegend"><span class="legend-me">● ТИ</span><span class="legend-team">● СОЮЗНИКИ</span><span class="legend-wall">■ СТІНИ / УКРИТТЯ</span></div></div></div>
@@ -1087,6 +1098,7 @@ let collisionIndexReady=false;
 let isCrouching=false;
 let isFullMapOpen=false;
 let isLeavingMatch=false;
+let squadRoster=[];
 
 const keys={w:false,s:false,a:false,d:false,shift:false};
 const DEFAULT_TRAINING_BINDS={spawnBot:"KeyN",removeBot:"KeyB",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
@@ -1723,6 +1735,54 @@ function finishClientReady(){
   socket.emit("client_ready",{matchId});
 }
 
+function saveSquadRoster(){
+  try{localStorage.setItem("sx_active_roster",JSON.stringify(squadRoster.map(p=>({userId:p.userId,nickname:p.nickname,playerAvatar:p.playerAvatar||"/avatars/default.jpg",hp:Number(p.hp??100),team:p.team||null,connected:p.connected!==false}))))}catch{}
+}
+function renderSquadStrip(){
+  const strip=$("squadStrip");
+  if(!strip)return;
+  strip.replaceChildren();
+  if(isTrainingMode||!squadRoster.length){strip.style.display="none";return}
+  strip.style.display="flex";
+  squadRoster.slice(0,6).forEach(p=>{
+    const tile=document.createElement("div");
+    const dead=Number(p.hp)<=0;
+    tile.className="squad-avatar"+(String(p.userId)===String(myId)?" is-me":"")+(dead?" is-dead":"");
+    tile.title=(p.nickname||"PLAYER")+" · ID "+String(p.userId||"—")+(dead?" · загинув":"");
+    const avatar=document.createElement("img");
+    avatar.src=p.playerAvatar||"/avatars/default.jpg";avatar.alt="";
+    tile.appendChild(avatar);
+    if(dead){const skull=document.createElement("span");skull.className="squad-skull";skull.textContent="☠";tile.appendChild(skull)}
+    else{const dot=document.createElement("span");dot.className="squad-player-dot";tile.appendChild(dot)}
+    const name=document.createElement("span");name.className="squad-avatar-name";name.textContent=p.nickname||"PLAYER";tile.appendChild(name);
+    strip.appendChild(tile);
+  });
+}
+function updateSquadRoster(players){
+  const source=Array.isArray(players)?players:[];
+  squadRoster=source.map(p=>({
+    userId:String(p.userId||p.id||""),nickname:String(p.nickname||"PLAYER"),
+    playerAvatar:p.playerAvatar||"/avatars/default.jpg",hp:Number(p.hp??100),
+    team:p.team||null,connected:p.connected!==false
+  }));
+  if(!squadRoster.some(p=>p.userId===String(myId))){
+    squadRoster.unshift({userId:String(myId||""),nickname:"ТИ",playerAvatar:"/avatars/default.jpg",hp,team:myTeam,connected:true});
+  }
+  saveSquadRoster();renderSquadStrip();
+}
+function updateSquadPlayer(userId,updates={}){
+  const id=String(userId||"");
+  const player=squadRoster.find(p=>String(p.userId)===id);
+  if(!player)return;
+  if(updates.hp!==undefined)player.hp=Number(updates.hp);
+  if(updates.connected!==undefined)player.connected=Boolean(updates.connected);
+  saveSquadRoster();renderSquadStrip();
+}
+function removeSquadPlayer(userId){
+  const id=String(userId||"");
+  squadRoster=squadRoster.filter(p=>String(p.userId)!==id);
+  saveSquadRoster();renderSquadStrip();
+}
 function updateWaiting(data){
   const list=data.players||[];
   $("players").innerHTML=list.map(p=>{
@@ -1865,13 +1925,13 @@ function queueJump(){if(matchPhase==="game")jumpQueued=true}
 
 addEventListener("keydown",e=>{
   if(e.repeat)return;
-  if(e.code==="Escape"){e.preventDefault();leaveGame();return}
+  if(e.code==="Escape"){e.preventDefault();pauseToMenu();return}
   if(e.code==="Digit1"){e.preventDefault();selectWeapon("akr");return}
   if(e.code==="Digit2"){e.preventDefault();selectWeapon("p350");return}
   if(e.code==="Digit3"){e.preventDefault();selectWeapon("knife");return}
   if(e.code==="KeyE"){e.preventDefault();interactWithNearestDoor();return}
   const binds=readTrainingBinds();
-  if(e.code===binds.menu){e.preventDefault();leaveGame();return}
+  if(e.code===binds.menu){e.preventDefault();pauseToMenu();return}
   if(isTrainingMode&&matchPhase==="game"){
     const action=Object.keys(binds).find(name=>name!=="menu"&&binds[name]===e.code);
     if(action){e.preventDefault();runTrainingAction(action);return}
@@ -1932,6 +1992,21 @@ function setOverlayGame(){
   $("clickHint").textContent="Клікни для огляду мишкою. WASD — рух · ESC — у лобі";
   if(isMobileDevice) $("overlay").style.display="none";
 }
+function pauseToMenu(){
+  if(isLeavingMatch)return;
+  if(isTrainingMode||matchPhase==="finished"||!matchId){leaveGame();return}
+  isLeavingMatch=true;
+  try{
+    localStorage.setItem("sx_active_match",JSON.stringify({matchId,userId:myId,uuid:myUuid,map:selectedMap,mode,updatedAt:Date.now()}));
+    localStorage.removeItem("sx_abandoned_match");
+    saveSquadRoster();
+  }catch{}
+  keys.w=keys.a=keys.s=keys.d=keys.shift=false;
+  fireHeld=false;jumpQueued=false;isCrouching=false;
+  try{controls.unlock()}catch{}
+  try{socket?.disconnect()}catch{}
+  location.href="/game";
+}
 function leaveGame(){
   if(isLeavingMatch)return;
   isLeavingMatch=true;
@@ -1972,8 +2047,8 @@ function leaveGame(){
   navigate();
 }
 $("menuResult").addEventListener("click",leaveGame);
-$("leaveGameDesktop").addEventListener("click",leaveGame);
-$("leaveGameMobile").addEventListener("click",leaveGame);
+$("leaveGameDesktop").addEventListener("click",pauseToMenu);
+$("leaveGameMobile").addEventListener("click",pauseToMenu);
 function runTrainingAction(action){
   if(!isTrainingMode||matchPhase!=="game")return;
   if(action==="spawnBot"){socket.emit("training_spawn_bot",{trainingId});return}
@@ -2074,6 +2149,7 @@ socket.on("init_match",data=>{
   ensurePlayerVisual();
   const authoritativePosition=data.me?.position||data.me?.spawn;
   if(authoritativePosition)player.position.set(authoritativePosition.x||0,authoritativePosition.y||0,authoritativePosition.z||0);
+  updateSquadRoster(data.players||[]);
   (data.players||[]).forEach(p=>{if(String(p.userId)!==String(myId))applyEnemy(p)});
   updateVisual();
 });
@@ -2146,6 +2222,7 @@ socket.on("player_left",data=>{
       delete enemies[key];
     }
   });
+  removeSquadPlayer(uid);
 });
 socket.on("roles_updated",data=>{
   const me=data.players?.find(p=>String(p.userId)===String(myId));
@@ -2165,6 +2242,7 @@ socket.on("roles_updated",data=>{
 });
 socket.on("player_hit",data=>{
   const targetId=String(data.targetId);
+  updateSquadPlayer(targetId,{hp:Number(data.hp)||0});
   const victim=enemies[targetId];
   if(victim){
     victim.hp=Math.max(0,Number(data.hp)||0);
@@ -2190,6 +2268,7 @@ socket.on("player_hit",data=>{
   }
 });
 socket.on("player_respawn",data=>{
+  updateSquadPlayer(data.userId,{hp:Number(data.hp)||100,connected:true});
   const e=enemies[String(data.userId)];
   if(e){
     e.pos.set(data.x,data.y,data.z);e.mesh.position.copy(e.pos);e.anim="Idle";e.hp=data.hp||100;
@@ -2202,7 +2281,8 @@ socket.on("player_respawn",data=>{
   }
 });
 socket.on("show_results",data=>{
-  try{localStorage.removeItem("sx_active_match")}catch{}
+  squadRoster=[];try{localStorage.removeItem("sx_active_roster");localStorage.removeItem("sx_active_match")}catch{}
+  renderSquadStrip();
   matchPhase="finished";
   keys.w=keys.a=keys.s=keys.d=keys.shift=false;
   jumpQueued=false;fireHeld=false;
@@ -2210,8 +2290,8 @@ socket.on("show_results",data=>{
   $("results").style.display="flex";
   $("resultText").textContent=(data.msg||("+"+(data.xp||0)+" XP / +"+(data.gold||0)+" Gold"));
 });
-socket.on("go_to_menu",()=>{try{localStorage.removeItem("sx_active_match")}catch{}location.href="/game"});
-socket.on("kick_to_menu",()=>{try{localStorage.removeItem("sx_active_match")}catch{}location.href="/game"});
+socket.on("go_to_menu",()=>{squadRoster=[];try{localStorage.removeItem("sx_active_roster");localStorage.removeItem("sx_active_match")}catch{}location.href="/game"});
+socket.on("kick_to_menu",()=>{squadRoster=[];try{localStorage.removeItem("sx_active_roster");localStorage.removeItem("sx_active_match")}catch{}location.href="/game"});
 socket.on("auth_required",()=>location.href="/");
 function showReconnectPanel(message="З’єднання перервано. Автоматично перепідключаємося…"){
   document.body.classList.add("reconnecting");
@@ -2270,6 +2350,7 @@ socket.on("map_wood_destroyed",data=>{
   applyDestroyedWood(idx);
 });
 socket.on("player_connection_state",data=>{
+  updateSquadPlayer(data.userId,{connected:data.connected!==false});
   const enemy=Object.values(enemies).find(e=>String(e.userId)===String(data?.userId));
   if(enemy)enemy.connected=data.connected!==false;
 });
