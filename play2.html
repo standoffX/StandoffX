@@ -1508,6 +1508,192 @@ function buildM3Maze(){
   $("progress").style.width="100%";
   setLoadingDetail("mapLoadStatus","M3 MAZE · ГОТОВО","done");
 }
+
+function renderBombWorldVisual(){
+  if(bombWorldVisual){
+    scene.remove(bombWorldVisual);
+    bombWorldVisual.traverse(node=>{
+      if(node.geometry)node.geometry.dispose();
+      if(Array.isArray(node.material))node.material.forEach(material=>material.dispose());
+      else if(node.material)node.material.dispose();
+    });
+    bombWorldVisual=null;
+  }
+  if(mode!=="allies"||selectedMap!=="SANDSTONE"||!bombState||!["planting","planted"].includes(bombState.state)||!bombState.site)return;
+  const center=bombState.site==="A"?{x:30,z:-27}:{x:-15,z:27};
+  const group=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.BoxGeometry(.48,.24,.34),new THREE.MeshStandardMaterial({color:0x232b31,roughness:.55,metalness:.65}));
+  body.position.y=.25;group.add(body);
+  const top=new THREE.Mesh(new THREE.BoxGeometry(.31,.07,.22),new THREE.MeshStandardMaterial({color:0x6d7a7d,roughness:.36,metalness:.7}));
+  top.position.set(0,.405,0);group.add(top);
+  const led=new THREE.Mesh(new THREE.SphereGeometry(.055,8,6),new THREE.MeshBasicMaterial({color:bombState.state==="planted"?0xff3b43:0xffbb46}));
+  led.position.set(.1,.465,.03);group.add(led);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(.44,.035,6,20),new THREE.MeshBasicMaterial({color:bombState.state==="planted"?0xff4e4e:0xffc465,transparent:true,opacity:.82}));
+  ring.rotation.x=Math.PI/2;ring.position.y=.045;group.add(ring);
+  group.position.set(center.x,0,center.z);
+  scene.add(group);bombWorldVisual=group;
+}
+
+function buildSandstoneMap(){
+  if(mapLoadFinished)return;
+  scene.background=new THREE.Color(0xbba987);
+  scene.fog=new THREE.Fog(0xbba987,105,185);
+  const mat=(color,roughness=.92,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
+  const ground=mat(0xb8a17c,1),road=mat(0x847865,1),sandstone=mat(0xc8b590,.97);
+  const sandstoneDark=mat(0x9d8867,.98),roof=mat(0x6e6251,.94),trim=mat(0x554d42,.83,.08);
+  const wood=mat(0x76533a,.96),cloth=mat(0x986447,.97),metal=mat(0x4b5558,.72,.25);
+  const windowMat=mat(0x263a41,.32,.16),blue=mat(0x294e62,.6,.1),red=mat(0x8b3930,.72,.05);
+  const addGround=(x,z,w,d,material,y=-.07)=>{
+    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,d),material);
+    mesh.rotation.x=-Math.PI/2;mesh.position.set(x,y,z);mesh.receiveShadow=!isMobileDevice;
+    scene.add(mesh);mapObjects.push(mesh);return mesh;
+  };
+  const addBox=(x,y,z,w,h,d,material,solid=true)=>{
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
+    mesh.position.set(x,y,z);mesh.castShadow=!isMobileDevice&&solid;mesh.receiveShadow=!isMobileDevice;
+    mesh.userData.mapSolid=Boolean(solid);scene.add(mesh);if(solid)mapObjects.push(mesh);return mesh;
+  };
+  const sign=(letter,x,z,color)=>{
+    const canvas=document.createElement("canvas");canvas.width=128;canvas.height=128;
+    const ctx=canvas.getContext("2d");ctx.fillStyle="#171b1d";ctx.fillRect(0,0,128,128);
+    ctx.fillStyle=color;ctx.fillRect(7,7,114,114);ctx.fillStyle="#f8eedc";
+    ctx.font="bold 78px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(letter,64,67);
+    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+    const panel=new THREE.Mesh(new THREE.PlaneGeometry(1.25,1.25),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide}));
+    panel.position.set(x,2.6,z);panel.lookAt(x,2.6,0);scene.add(panel);
+  };
+
+  addGround(0,0,100,100,ground,-.09);
+  addGround(0,0,15,96,road,-.055);
+  addGround(0,0,96,15,road,-.054);
+  addGround(-20,0,9,95,sandstone,-.05);
+  addGround(20,0,9,95,sandstone,-.049);
+  for(const k of [-44,-36,-28,-20,-12,-4,4,12,20,28,36,44]){
+    addGround(k,0,.045,94,sandstoneDark,-.032);
+    addGround(0,k,94,.045,sandstoneDark,-.031);
+  }
+
+  // Fully enclosed perimeter; the central connector and two side routes stay open.
+  addBox(0,2.1,-49,98,4.2,2,trim,true);
+  addBox(0,2.1,49,98,4.2,2,trim,true);
+  addBox(-49,2.1,0,2,4.2,98,trim,true);
+  addBox(49,2.1,0,2,4.2,98,trim,true);
+  const buildings=[
+    {x:-30.5,z:-10.5,w:13,h:6.8,d:23,wall:sandstone,top:roof},
+    {x:28.5,z:-8.5,w:15,h:7,d:21,wall:sandstoneDark,top:roof},
+    {x:-29,z:27.5,w:16,h:6.1,d:15,wall:sandstone,top:roof},
+    {x:27.5,z:27.5,w:15,h:6.1,d:15,wall:sandstoneDark,top:roof}
+  ];
+  for(const b of buildings){
+    addBox(b.x,b.h/2,b.z,b.w,b.h,b.d,b.wall,true);
+    addBox(b.x,b.h+.12,b.z,b.w+.5,.24,b.d+.5,b.top,false);
+    addBox(b.x,b.h-.42,b.z-b.d/2-.03,b.w*.58,.12,.08,trim,false);
+    addBox(b.x,b.h-.42,b.z+b.d/2+.03,b.w*.58,.12,.08,trim,false);
+    for(const side of [-1,1]){
+      addBox(b.x+side*(b.w/2+.035),b.h*.6,b.z,.08,1.35,b.d*.48,trim,false);
+      addBox(b.x+side*(b.w/2+.085),b.h*.6,b.z,.055,1.02,b.d*.43,windowMat,false);
+    }
+    addBox(b.x,b.h*.42,b.z-b.d/2-.10,b.w*.33,1.55,.14,wood,false);
+    addBox(b.x,b.h+.55,b.z,b.w*.72,.18,b.d*.72,trim,false);
+  }
+
+  // Offset corridor walls make three lanes, short rotations, and several close-angle fights.
+  addBox(-10.5,2.1,-17.5,3,4.2,11,sandstoneDark,true);
+  addBox(10.5,2.1,-2,3,4.2,12,sandstone,true);
+  addBox(-7.5,1.2,6,7,2.4,2,trim,true);
+  addBox(8.5,1.2,13,7,2.4,2,sandstoneDark,true);
+  addBox(-42,1.9,1.5,4,3.8,11,sandstone,true);
+  addBox(40,1.9,13.5,4,3.8,13,sandstoneDark,true);
+
+  // Marked bombsites A/B, with crates as real physical cover.
+  addGround(30,-27,11,11,road,-.018);
+  addGround(-15,27,11,11,road,-.017);
+  addGround(30,-27,8,8,red,-.014);
+  addGround(-15,27,8,8,blue,-.013);
+  addBox(28.5,1.05,-32.5,7,2.1,3,wood,true);
+  addBox(31,1.05,-32.2,1.3,2.1,2.3,cloth,false);
+  addBox(-15.5,1.05,32.5,7,2.1,3,wood,true);
+  addBox(-13,1.05,32.2,1.3,2.1,2.3,cloth,false);
+  sign("A",34.6,-24.6,"#a33d31");
+  sign("B",-11.2,23.7,"#315a77");
+
+  // Market awnings, low pallets, barrels, sandbags and sightline breaks.
+  for(const [x,z,color] of [[-40,-25,cloth],[-40,-21,red],[40,26,blue],[41,30,cloth]]){
+    addBox(x,2,z,5.8,.22,3.2,color,false);
+    addBox(x-.8,1,z,1,2,1,wood,true);
+    addBox(x+.8,1,z,1,2,1,wood,true);
+  }
+  for(const [x,z,w,d] of [[-17,-20,3,2.4],[17,-17,3,2.4],[-20,10,3,2.4],[19,20,3,2.4],[0,25,2.8,2.8],[0,-26,2.8,2.8]]){
+    addBox(x,.75,z,w,1.5,d,wood,true);
+    addBox(x,.15,z,w+.1,.18,d+.1,trim,false);
+  }
+  for(const x of [-43,43]){
+    addBox(x,3.25,0,.25,6.5,.25,metal,true);
+    addBox(x,6.55,0,1.5,.18,.6,metal,false);
+  }
+  for(const [x,z] of [[-7,-39],[7,-39],[-7,39],[7,39]]){
+    addGround(x,z,3,3,trim,-.012);
+  }
+  $("progress").style.width="100%";mapLoaded=true;mapLoadFinished=true;
+  setLoadingDetail("mapLoadStatus","SANDSTONE · ГОТОВО","done");
+}
+
+function buildSmallYard(){
+  if(mapLoadFinished)return;
+  scene.background=new THREE.Color(0x87949a);
+  scene.fog=new THREE.Fog(0x87949a,70,145);
+  const mat=(color,roughness=.9,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
+  const floor=mat(0x747b78,1),road=mat(0x333d42,.97),wall=mat(0x59636a,.88,.15);
+  const wallDark=mat(0x35424a,.8,.2),container=mat(0x465c60,.78,.16);
+  const orange=mat(0x8a6243,.95),blue=mat(0x2d6578,.55,.2),yellow=mat(0xc1a15c,.9);
+  const addGround=(x,z,w,d,material,y=-.07)=>{
+    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,d),material);
+    mesh.rotation.x=-Math.PI/2;mesh.position.set(x,y,z);mesh.receiveShadow=!isMobileDevice;
+    scene.add(mesh);mapObjects.push(mesh);return mesh;
+  };
+  const addBox=(x,y,z,w,h,d,material,solid=true)=>{
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
+    mesh.position.set(x,y,z);mesh.castShadow=!isMobileDevice&&solid;mesh.receiveShadow=!isMobileDevice;
+    mesh.userData.mapSolid=Boolean(solid);scene.add(mesh);if(solid)mapObjects.push(mesh);return mesh;
+  };
+  addGround(0,0,68,68,floor,-.09);
+  addGround(0,0,14,66,road,-.05);
+  addGround(0,0,66,14,road,-.049);
+  for(const k of [-28,-21,-14,-7,7,14,21,28]){
+    addGround(k,0,.06,65,wallDark,-.029);
+    addGround(0,k,65,.06,wallDark,-.028);
+  }
+  addBox(0,2.8,-34,68,5.6,2,wallDark,true);
+  addBox(0,2.8,34,68,5.6,2,wallDark,true);
+  addBox(-34,2.8,0,2,5.6,68,wallDark,true);
+  addBox(34,2.8,0,2,5.6,68,wallDark,true);
+  for(const side of [-1,1]){
+    const x=side*22;
+    addBox(x,2.8,0,12,5.6,22,wall,true);
+    addBox(x,5.72,0,12.6,.24,22.6,wallDark,false);
+    for(const z of [-7,0,7]){
+      addBox(x-side*6.12,2.0,z,.18,3.2,2.8,blue,false);
+    }
+    addBox(x,1.8,-11.25,5.5,3.6,.5,container,true);
+    addBox(x,1.8,11.25,5.5,3.6,.5,container,true);
+  }
+  addBox(0,1.25,0,10,2.5,10,wallDark,true);
+  addBox(-9.5,1.05,16,7,2.1,2,orange,true);
+  addBox(9.5,1.05,-16,7,2.1,2,blue,true);
+  addBox(12,1.0,24,8,2,2,orange,true);
+  addBox(-12,1.0,-24,8,2,2,blue,true);
+  for(const [x,z] of [[-13,-14],[13,14],[-13,14],[13,-14]]){
+    addBox(x,.65,z,2.5,1.3,2.5,yellow,true);
+    addBox(x,1.34,z,2.65,.08,2.65,wallDark,false);
+  }
+  for(const [x,z,color] of [[-27,-23,orange],[27,-23,blue],[0,27,blue]]){
+    addGround(x,z,4,4,color,-.012);
+    addBox(x,1.2,z,4,.12,4,wallDark,false);
+  }
+  $("progress").style.width="100%";mapLoaded=true;mapLoadFinished=true;
+  setLoadingDetail("mapLoadStatus","SMALL YARD · ГОТОВО","done");
+}
+
 function loadMap(){
   const mapLabel=MAP_LOADING_NAMES[selectedMap]||String(selectedMap||"КАРТА");
   setLoadingDetail("mapLoadStatus","БУДУЄМО "+mapLabel+"…","active");
