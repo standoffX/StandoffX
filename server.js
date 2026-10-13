@@ -2083,13 +2083,15 @@ function validateMove(player, data, mapId = null, mapState = {}) {
   }
   if(mapId&&mapPathBlocked(mapId,prev,{x:targetX,z:targetZ},mapState))return false;
   // Player capsules block movement even when another player stands still.
-  const liveMatch = [...activeMatches.values()].find(match => match.players.includes(player));
-  if (liveMatch && liveMatch.phase === "game") {
-    for (const other of liveMatch.players) {
-      if (other === player || other.hp <= 0) continue;
-      const previousDistance = Math.hypot(prev.x - other.pos.x, prev.z - other.pos.z);
-      const targetDistance = Math.hypot(targetX - other.pos.x, targetZ - other.pos.z);
-      if (targetDistance < 0.82 && targetDistance < previousDistance - 0.015) return false;
+  if (typeof activeMatches !== "undefined") {
+    const liveMatch = [...activeMatches.values()].find(match => match.players.includes(player));
+    if (liveMatch && liveMatch.phase === "game") {
+      for (const other of liveMatch.players) {
+        if (other === player || other.hp <= 0) continue;
+        const previousDistance = Math.hypot(prev.x - other.pos.x, prev.z - other.pos.z);
+        const targetDistance = Math.hypot(targetX - other.pos.x, targetZ - other.pos.z);
+        if (targetDistance < 0.82 && targetDistance < previousDistance - 0.015) return false;
+      }
     }
   }
   player.pos.x=targetX;
