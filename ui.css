@@ -411,3 +411,75 @@ html[data-sx-device="mobile"] body.lobby-screen #mobileLayoutEditor{display:bloc
   .lobby-screen .topbar{border-radius:0 0 12px 12px}
 }
 @media(prefers-reduced-motion:reduce){.lobby-screen .panel,.lobby-screen .rail button,.lobby-screen .home-hero .playbutton{transition:none!important}}
+
+
+/* Season 7 / tactical lobby polish */
+.home-hero h1{max-width:100%;font-size:clamp(30px,4vw,54px);letter-spacing:.055em;line-height:.98;margin:0;color:#f5f8fc}
+.home-hero h1 em{color:var(--blue);font-style:normal}
+.home-hero-copy p,.home-hero-tags{display:none!important}
+.home-hero-overline{letter-spacing:.18em;font-size:10px;color:#b8c9d8}
+.home-hero-art{filter:saturate(.72) contrast(1.08);opacity:.52}
+.home-hero:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(6,12,19,.96) 0%,rgba(7,16,24,.77) 42%,rgba(8,18,28,.06) 100%);z-index:0}
+.home-hero-copy,.home-hero .playarea{z-index:2}
+.home-hero .playarea{position:relative;right:auto;bottom:auto;margin:26px 0 0;justify-content:flex-start}
+.home-hero .playwrap{align-items:flex-start}
+.home-hero .playbutton{min-width:220px;min-height:52px;clip-path:none;border-radius:5px}
+.home-hero .home-hero-copy{max-width:72%}
+.home-hero .playwrap #selectedModeText{padding:10px 0 0}
+.home-hero .home-hero-version{display:none}
+#topId{display:none!important}
+.profiletop .avatar,#profileAvatar,.profiletop #avatar{cursor:pointer;transition:transform .18s,box-shadow .18s}
+.profiletop .avatar:hover,#profileAvatar:hover{transform:scale(1.04);box-shadow:0 0 0 3px color-mix(in srgb,var(--blue) 60%,transparent)}
+#avatarModal .avatar-modalbox{max-width:460px}
+.avatar-picker{display:grid;gap:14px;padding:18px}
+.avatar-picker>img{width:112px;height:112px;object-fit:cover;border-radius:12px;border:1px solid var(--line);box-shadow:0 0 24px #0007;margin:0 auto}
+.avatar-picker input[type=file]{width:100%;padding:13px;background:var(--panel);border:1px dashed var(--line);border-radius:8px;color:var(--text)}
+.avatar-picker .actions{display:flex;gap:10px;flex-wrap:wrap}
+.avatar-picker .actions button{flex:1;min-height:42px}
+.clan-search-list{display:grid;gap:9px;max-height:min(60vh,520px);overflow:auto;margin-top:14px}
+.clan-search-card{display:grid;grid-template-columns:58px minmax(0,1fr);gap:12px;align-items:center;padding:12px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel) 86%,#fff 2%);border-radius:8px}
+.clan-search-card>img{width:58px;height:58px;object-fit:cover;border-radius:8px;background:#0b1220;border:1px solid var(--line)}
+.clan-search-info{min-width:0}
+.clan-search-info b{display:block;overflow-wrap:anywhere}
+.clan-search-actions{grid-column:2;display:flex;gap:8px;flex-wrap:wrap}
+.clan-search-actions button{min-height:34px;padding:7px 12px}
+.clan-profile-head{display:flex;gap:16px;align-items:center;padding:14px 0 18px;border-bottom:1px solid var(--line)}
+.clan-profile-head>img{width:86px;height:86px;object-fit:cover;border:1px solid var(--line);border-radius:10px}
+.clan-profile-head h2{margin:0 0 8px;font-size:20px;overflow-wrap:anywhere}
+.clan-profile-head p{margin:0 0 8px;color:var(--muted)}
+.clan-profile-head small,.clan-profile-member small{color:var(--muted);font-size:11px}
+.clan-profile-roster{display:grid;gap:7px;max-height:320px;overflow:auto}
+.clan-profile-member{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:7px;background:#090f19}
+.clan-profile-member img{width:42px;height:42px;object-fit:cover;border-radius:6px}
+.clan-profile-member b,.clan-profile-member small{display:block}
+.clan-profile-member span{font-size:9px;letter-spacing:.07em;color:var(--blue)}
+.clan-own-card{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;align-items:start}
+.clan-own-avatar img{width:88px;height:88px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+.clan-own-actions button{margin-top:8px;font-size:9px;padding:7px}
+.active-match-squad{width:min(100%,540px);margin-top:12px;display:flex;flex-direction:column;gap:7px}
+.active-squad-title{font-size:9px;letter-spacing:.17em;color:var(--muted);font-weight:900}
+.active-squad-players{display:flex;gap:7px;flex-wrap:wrap}
+.active-squad-player{position:relative;display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;column-gap:7px;min-width:125px;max-width:170px;padding:5px 8px 5px 5px;border:1px solid var(--line);border-radius:5px;background:#070d15e8}
+.active-squad-player img{grid-row:span 2;width:28px;height:28px;border-radius:4px;object-fit:cover;filter:none}
+.active-squad-player span{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:800}
+.active-squad-player small{font-size:8px;color:var(--muted)}
+.active-squad-player i{position:absolute;left:2px;top:0;width:28px;height:28px;display:grid;place-items:center;border-radius:4px;background:#090d14b8;color:#ff6675;font-style:normal;font-size:19px}
+.waitplayer-main{display:flex;gap:8px;align-items:center}
+.waitplayer-avatar{width:28px;height:28px;object-fit:cover;border-radius:4px;background:#121b29}
+@media(max-width:760px){
+ .home-hero h1{font-size:32px}
+ .home-hero .home-hero-copy{max-width:100%}
+ .home-hero .playarea{margin-top:20px}
+ .home-hero .playbutton{min-width:180px;min-height:46px}
+ .clan-own-card{grid-template-columns:76px minmax(0,1fr);gap:10px}
+ .clan-own-avatar img{width:70px;height:70px}
+ .clan-search-card{grid-template-columns:48px minmax(0,1fr);gap:9px;padding:9px}
+ .clan-search-card>img{width:48px;height:48px}
+ .clan-search-actions{grid-column:1/-1}
+ .clan-profile-head>img{width:68px;height:68px}
+ .clan-profile-member{grid-template-columns:36px minmax(0,1fr) auto;gap:7px}
+ .clan-profile-member img{width:36px;height:36px}
+ .active-match-squad{max-height:126px;overflow:hidden}
+ .active-squad-player{min-width:112px;padding:4px;grid-template-columns:24px minmax(0,1fr)}
+ .active-squad-player img,.active-squad-player i{width:24px;height:24px}
+}
