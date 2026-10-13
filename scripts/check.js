@@ -489,7 +489,7 @@ assert.match(server, /app\.post\("\/api\/clans\/avatar"/, "authorized clan leade
 assert.match(server, /app\.get\("\/api\/clans\/:tag"/, "clan search supports a detailed roster profile");
 assert.match(server, /avatar: cleanText\(raw\.avatar \|\| "\/avatars\/default\.jpg"/, "clan avatars survive normalizing and MongoDB persistence");
 assert.match(server, /if \(targetDistance < 0\.82 && targetDistance < previousDistance - 0\.015\) return false/, "idle players still have authoritative movement collision");
-assert.match(server, /setTimeout\(\(\)=>\{[\s\S]{0,500}current\.players\.splice\(liveIndex, 1\)/, "disconnected player slots expire after the reconnect grace");
+assert.match(server, /player\.disconnectTimer = setTimeout\(\(\) => \{[\s\S]{0,1500}current\.players\.splice\(liveIndex, 1\)/, "disconnected player slots expire after the reconnect grace");
 assert.match(game, /function pauseToMenu\(\)/, "the escape-to-lobby action must preserve the active match");
 assert.match(game, /id="squadStrip"/, "the live HUD must show a compact player-avatar strip");
 assert.match(game, /className="squad-avatar"/, "the compact HUD roster has individual player portrait tiles");
