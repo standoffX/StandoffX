@@ -2207,6 +2207,10 @@ io.on("connection", socket => {
   socket.on("training_spawn_bot", data => {
     const session = trainingSessions.get(socket.user?.id);
     if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
+    if (session.bot) {
+      socket.emit("training_state", { bot: session.bot, message: "Бот уже створений." });
+      return;
+    }
     const now = Date.now();
     if (now - session.lastActionAt < 250) return;
     session.lastActionAt = now;
@@ -2229,6 +2233,16 @@ io.on("connection", socket => {
       updatedAt: Date.now()
     };
     io.to(session.id).emit("training_state", { bot: session.bot, message: "Бота створено." });
+  });
+
+  socket.on("training_remove_bot", data => {
+    const session = trainingSessions.get(socket.user?.id);
+    if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
+    const now = Date.now();
+    if (now - session.lastActionAt < 180) return;
+    session.lastActionAt = now;
+    session.bot = null;
+    io.to(session.id).emit("training_state", { bot: null, message: "Бота видалено." });
   });
 
   socket.on("training_bot_action", data => {
