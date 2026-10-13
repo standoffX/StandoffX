@@ -121,10 +121,9 @@ assert.match(game, /data-training-action="spawnBot"/, "training must expose a cl
 assert.match(game, /data-training-action="removeBot"/, "training must expose a clickable delete bot action");
 assert.match(game, /id="createBotBtn"/, "create bot action must have a stateful control");
 assert.match(game, /id="deleteBotBtn" class="prototype-delete-bot" disabled/, "delete bot starts disabled when no bot exists");
-assert.match(game, /data-training-action="push"/, "training must expose a clickable push action");
-assert.match(game, /data-training-action="kick"/, "training must expose a clickable kick action");
-assert.match(game, /data-training-action="boost"/, "training must expose a clickable boost action");
-assert.match(game, /data-training-action="resetSession"/, "training must expose a clickable session reset action");
+assert.doesNotMatch(game, /data-training-action="(?:push|kick|boost|resetBot|resetSession)"/, "prototype HUD must not show extra action buttons or keyboard hints");
+assert.match(menu, /data-bind-action="push"/, "optional prototype action keys remain configurable in settings");
+assert.match(menu, /data-bind-action="resetSession"/, "prototype reset shortcut belongs in settings rather than the HUD");
 assert.doesNotMatch(menu, /data-mode="(?:training|field_test)"/, "prototype and real gameplay are not separate public modes");
 assert.match(menu, /localStorage.getItem\("sx_test_gameplay"\)/, "the tester choice persists locally");
 assert.doesNotMatch(menu, /testerBots:/, "the Game search must not request bot slots");
