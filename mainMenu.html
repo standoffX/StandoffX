@@ -355,8 +355,8 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
 </div>
 
 <div id="modeModal" class="modal"><div class="modalbox modebox"><div class="modalhead"><span>ВИБІР ІГРОВОГО РЕЖИМУ</span><button class="close" data-close="modeModal" aria-label="Закрити">×</button></div><div class="muted">Обери режим та карту.</div><div class="modecards" id="modeBar">
-  <button class="modebtn active" data-mode="allies"><strong>СОЮЗНИКИ</strong><span class="mode-desc">Командна гра разом із союзниками</span></button>
-  <button class="modebtn" data-mode="team_fight"><strong>КОМАНДНИЙ БІЙ</strong><span class="mode-desc">Дві команди · швидкі раунди</span></button>
+  <button class="modebtn active" data-mode="allies"><strong>СОЮЗНИКИ</strong><span class="mode-desc">1 на 1 на 1 · три незалежні гравці</span></button>
+  <button class="modebtn" data-mode="team_fight"><strong>КОМАНДНИЙ БІЙ</strong><span class="mode-desc">Дві команди · формат 2 на 2</span></button>
 </div><div id="testerGameplaySwitch" class="tester-mode-switch" role="group" aria-label="Тип гри">
   <span class="tester-mode-label">ТИП ГРИ</span>
   <div class="tester-mode-segment">
@@ -458,6 +458,7 @@ function readActiveMatch(){
 function renderActiveMatchSquad(){
   const box=$("activeMatchSquad");
   if(!box)return;
+  if(!readActiveMatch()){box.style.display="none";box.innerHTML="";return}
   let roster=[];
   try{roster=JSON.parse(localStorage.getItem("sx_active_roster")||"[]")}catch{}
   if(!Array.isArray(roster)||!roster.length){box.style.display="none";box.innerHTML="";return}
@@ -715,8 +716,9 @@ function openPlay(){
     return;
   }
   if(searching)return;
-  $("searchModal").classList.add("show");$("searchTitle").textContent="ПОШУК РЕАЛЬНИХ ГРАВЦІВ";$("searchMode").textContent=(MODES[selectedMode]||MODES.allies)+" · ЛИШЕ ЛЮДИ";$("queue").textContent="1 / 4";
-  $("searchText").textContent="Чекаємо ще трьох реальних гравців. Боти не додаються в цьому режимі.";renderWaitPlayers([{nickname:me.nickname,userId:me.id,connected:true}]);searching=true;
+  const requiredPlayers=selectedMode==="allies"?3:4;
+  $("searchModal").classList.add("show");$("searchTitle").textContent="ПОШУК РЕАЛЬНИХ ГРАВЦІВ";$("searchMode").textContent=(MODES[selectedMode]||MODES.allies)+" · ЛИШЕ ЛЮДИ";$("queue").textContent="1 / "+requiredPlayers;
+  $("searchText").textContent="Очікуємо ще "+(requiredPlayers-1)+" реальних гравців. Боти не додаються.";renderWaitPlayers([{nickname:me.nickname,userId:me.id,playerAvatar:me.playerAvatar,connected:true}]);searching=true;
   socket=createRealtimeSocket();
   socket.on("connect_error",err=>{$("searchText").textContent="З’єднання із сервером… повторна спроба підключення";console.warn("[Socket.IO] Matchmaking connection failed; retrying.",err?.message||err)});
   socket.on("search_error",d=>{cancelSearch();alert(d?.message||"Пошук завершено.")});
@@ -741,7 +743,7 @@ function cancelSearch(){if(socket){socket.emit("cancel_search");socket.disconnec
 function renderWaitPlayers(players){
   $("searchPlayers").innerHTML=(players||[]).map(p=>{
     const playerId=esc(cleanId(p.userId||p.id||"—"));
-    return "<div class='waitplayer "+(p.connected?"online":"")+"'><div class='waitplayer-main'><span class='dot'></span><b>"+esc(p.nickname||"PLAYER")+"</b></div><small>ID "+playerId+"</small></div>";
+    return "<div class='waitplayer "+(p.connected?"online":"")+"'><div class='waitplayer-main'><img class='waitplayer-avatar' src='"+esc(p.playerAvatar||"/avatars/default.jpg")+"' alt=''><b>"+esc(p.nickname||"PLAYER")+"</b></div><small>ID "+playerId+"</small></div>";
   }).join("")||"<div class='muted'>Поки що немає гравців у черзі.</div>";
 }
 async function loadFriends(){
@@ -888,8 +890,9 @@ async function openClanProfile(tag){
     const d=await api("/api/clans/"+encodeURIComponent(tag));
     const clan=d.clan;
     const members=(d.members||[]).map(m=>"<div class='clan-profile-member'><img src='"+esc(m.playerAvatar||"/avatars/default.jpg")+"' alt=''><div><b>"+esc(m.nickname)+"</b><small>ID "+esc(cleanId(m.userId))+" · "+(m.online?"ОНЛАЙН":"ОФЛАЙН")+"</small></div><span>"+esc(String(m.role||"member").toUpperCase())+"</span></div>").join("");
-    const canJoin=!me?.clan&&!clan.isFull;
-    openClanModal("ПРОФІЛЬ КЛАНУ","<div class='clan-profile-head'><img src='"+esc(clan.avatar||"/avatars/default.jpg")+"' alt=''><div><h2>"+esc(clan.name)+" ["+esc(clan.tag)+"]</h2><p>"+esc(clan.description||"Без опису")+"</p><small>"+Number(clan.memberCount||0)+"/"+Number(clan.memberLimit||30)+" УЧАСНИКІВ · РІВЕНЬ "+Number(clan.level||1)+"</small></div></div><h3>УЧАСНИКИ КЛАНУ</h3><div class='clan-profile-roster'>"+(members||"<div class='muted'>Поки немає учасників.</div>")+"</div><div class='actions' style='margin-top:14px'><button class='primary' data-clan-action='join' data-tag='"+esc(clan.tag)+"' "+(!canJoin?"disabled":"")+">"+(me?.clan?"ТИ ВЖЕ В КЛАНІ":clan.isFull?"КЛАН ЗАПОВНЕНИЙ":"ПОДАТИ ЗАЯВКУ")+"</button><button class='secondary' data-clan-action='back-search'>НАЗАД ДО ПОШУКУ</button></div>");
+    const clanIsFull=Number(clan.memberCount||0)>=Number(clan.memberLimit||30);
+    const canJoin=!me?.clan&&!clanIsFull;
+    openClanModal("ПРОФІЛЬ КЛАНУ","<div class='clan-profile-head'><img src='"+esc(clan.avatar||"/avatars/default.jpg")+"' alt=''><div><h2>"+esc(clan.name)+" ["+esc(clan.tag)+"]</h2><p>"+esc(clan.description||"Без опису")+"</p><small>"+Number(clan.memberCount||0)+"/"+Number(clan.memberLimit||30)+" УЧАСНИКІВ · РІВЕНЬ "+Number(clan.level||1)+"</small></div></div><h3>УЧАСНИКИ КЛАНУ</h3><div class='clan-profile-roster'>"+(members||"<div class='muted'>Поки немає учасників.</div>")+"</div><div class='actions' style='margin-top:14px'><button class='primary' data-clan-action='join' data-tag='"+esc(clan.tag)+"' "+(!canJoin?"disabled":"")+">"+(me?.clan?"ТИ ВЖЕ В КЛАНІ":clanIsFull?"КЛАН ЗАПОВНЕНИЙ":"ПОДАТИ ЗАЯВКУ")+"</button><button class='secondary' data-clan-action='back-search'>НАЗАД ДО ПОШУКУ</button></div>");
   }catch(e){notifyToast(e.message)}
 }
 async function joinClan(tag){try{await api("/api/clans/request",{method:"POST",body:JSON.stringify({tag})});$("clanModal").classList.remove("show");notifyToast("Заявку відправлено. Власник або офіцер отримає сповіщення.")}catch(e){notifyToast(e.message)}}
@@ -933,7 +936,6 @@ $("clanBody").addEventListener("click",e=>{
   if(a==="create")openCreateClan();
   else if(a==="search")openClanSearch();
   else if(a==="change-avatar")openAvatarPicker("clan");
-  else if(a==="search")openClanSearch();
   else if(a==="requests")loadClanRequests();
   else if(a==="edit")editClan();
   else if(a==="disband")disbandClan();
@@ -1049,6 +1051,7 @@ async function refreshAtlasIndicator(){}
     if(!canTest()&&selectedMode!=="allies"&&selectedMode!=="team_fight"){
       selectedMode="allies";localStorage.setItem("sx_mode",selectedMode);
     }
+    if(!canTest()){testGameplayMode="real";localStorage.setItem("sx_test_gameplay","real")}
     render();settings();initSocialSocket();loadFriends();loadClan();loadInventory();loadMarket();refreshAtlasIndicator();
   }catch{location.href="/"}
 })();
