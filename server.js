@@ -1520,7 +1520,11 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
       nickname: p.nickname,
       playerAvatar: p.playerAvatar || "/avatars/default.jpg",
       role: mode === "hide_seek" ? (i === hunterIndex ? "hunter" : "runner") : (i % 2 === 0 ? "teamA" : "teamB"),
-      team: mode === "allies" ? ["A", "B", "C"][i % 3] : mode === "team_fight" ? (i % 2 === 0 ? "A" : "B") : null,
+      team: mode === "allies"
+        ? (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : ["A", "B", "C"][i % 3])
+        : mode === "team_fight"
+          ? (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i % 2 === 0 ? "A" : "B"))
+          : null,
       hp: 100,
       score: 0,
       kills: 0,
