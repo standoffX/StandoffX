@@ -211,9 +211,25 @@ async function initMongo() {
       const doc = await mongoDb.collection(name).findOne({ _id: "main" });
       return doc && doc.data !== undefined ? doc.data : fallback;
     };
-    const atlasUsers = await load("state_users", users);
+    const localUsersSnapshot = users.map(user => ({ ...user }));
+    const atlasUsers = await load("state_users", localUsersSnapshot);
     if (Array.isArray(atlasUsers)) {
-      users = atlasUsers.filter(user => user && typeof user === "object" && !Array.isArray(user));
+      const keyOf = user => String(normalizeId(user?.id || "")).toLowerCase();
+      const localById = new Map(localUsersSnapshot.map(user => [keyOf(user), user]).filter(([key]) => key));
+      const localByUuid = new Map(localUsersSnapshot.filter(user => user?.uuid).map(user => [String(user.uuid), user]));
+      const matchedLocalUsers = new Set();
+      const mergedUsers = atlasUsers.filter(user => user && typeof user === "object" && !Array.isArray(user)).map(atlasUser => {
+        const localUser = localById.get(keyOf(atlasUser)) || localByUuid.get(String(atlasUser.uuid || ""));
+        if (localUser) matchedLocalUsers.add(localUser);
+        return { ...(localUser || {}), ...atlasUser };
+      });
+      for (const localUser of localUsersSnapshot) {
+        if (!matchedLocalUsers.has(localUser) && !mergedUsers.some(user => keyOf(user) && keyOf(user) === keyOf(localUser))) mergedUsers.push(localUser);
+      }
+      users = mergedUsers;
+      for (const user of users) ensureUserShape(user);
+      migratePlayerIds();
+      saveUsers();
     }
 
     const atlasClans = await load("state_clans", clans);
@@ -359,7 +375,7 @@ function findUser(idOrNickname, options = {}) {
 
 function publicUser(user, options = {}) {
   if (!user) return null;
-  const { password, passwordHash, uuid, ...safe } = user;
+  const { password, passwordHash, uuid, messages: privateMessages, friendRequests, ...safe } = user;
   if (options.includeUuid === true && typeof uuid === "string") safe.uuid = uuid;
   safe.friendsList = Array.isArray(user.friendsList) ? user.friendsList : [];
   safe.incomingRequests = Array.isArray(user.incomingRequests) ? user.incomingRequests : [];
@@ -409,7 +425,8 @@ function normalizeClanState(rawClans) {
       xp: Math.max(0, Number(raw.xp) || 0),
       memberLimit: Math.max(5, Math.min(50, Number(raw.memberLimit) || 30)),
       officers: Array.isArray(raw.officers) ? [...new Set(raw.officers.map(normalizeId).filter(Boolean))] : [],
-      requests: Array.isArray(raw.requests) ? [...new Set(raw.requests.map(normalizeId).filter(Boolean))] : []
+      requests: Array.isArray(raw.requests) ? [...new Set(raw.requests.map(normalizeId).filter(Boolean))] : [],
+      avatar: cleanText(raw.avatar || "/avatars/default.jpg", 240)
     };
   }
   return normalized;
@@ -767,6 +784,20 @@ app.get("/api/me", requireAuth, (req, res) => {
   res.json({ success: true, user: publicUser(req.user, { includeUuid: true }) });
 });
 
+app.post("/api/settings/keybinds", requireAuth, (req, res) => {
+  const allowedActions = new Set(["spawnBot", "removeBot", "push", "kick", "boost", "resetBot", "resetSession", "menu"]);
+  const incoming = req.body?.keybinds && typeof req.body.keybinds === "object" ? req.body.keybinds : {};
+  const current = req.user.settings && typeof req.user.settings === "object" ? req.user.settings : {};
+  const keybinds = { ...(current.keybinds || {}) };
+  for (const [action, code] of Object.entries(incoming)) {
+    if (!allowedActions.has(action) || typeof code !== "string" || !/^[A-Za-z][A-Za-z0-9]{0,31}$/.test(code)) continue;
+    keybinds[action] = code;
+  }
+  req.user.settings = { ...current, keybinds };
+  saveUsers();
+  res.json({ success: true, keybinds });
+});
+
 app.get("/api/user-data", requireAuth, (req, res) => {
   const target = findUser(req.query.id || req.user.id);
   if (!target) return res.status(404).json({ success: false, message: "Користувача не знайдено." });
@@ -881,12 +912,27 @@ app.post("/api/friends/block", requireAuth, (req, res) => {
 });
 
 app.get("/api/clans", requireAuth, (_req, res) => {
-  const list = Object.values(clans).map(c => ({
-    ...c,
-    members: users.filter(u => u.clan === c.tag).map(u => u.id).filter(Boolean),
-    memberCount: users.filter(u => u.clan === c.tag).length
-  }));
+  const list = Object.values(clans).map(c => {
+    const members = users.filter(u => u.clan === c.tag);
+    return {
+      ...c, avatar: c.avatar || "/avatars/default.jpg",
+      members: members.map(u => ({ userId: u.id, nickname: u.nickname, playerAvatar: u.playerAvatar || "/avatars/default.jpg", isVerified: Boolean(u.isVerified), online: Boolean(u.status) })),
+      memberCount: members.length
+    };
+  });
   res.json({ success: true, clans: list });
+});
+
+app.get("/api/clans/:tag", requireAuth, (req, res) => {
+  const tag = cleanText(req.params.tag, 5).toUpperCase();
+  const clan = clans[tag];
+  if (!clan) return res.status(404).json({ success: false, message: "Клан не знайдено." });
+  const members = users.filter(user => user.clan === clan.tag).map(user => ({
+    userId: user.id, nickname: user.nickname, playerAvatar: user.playerAvatar || "/avatars/default.jpg",
+    isVerified: Boolean(user.isVerified), online: Boolean(user.status),
+    role: user.id === clan.ownerId ? "owner" : (clan.officers || []).includes(user.id) ? "officer" : "member"
+  }));
+  res.json({ success: true, clan: { ...clan, avatar: clan.avatar || "/avatars/default.jpg", memberCount: members.length }, members });
 });
 
 app.post("/api/clans/search", requireAuth, (req, res) => {
@@ -895,11 +941,12 @@ app.post("/api/clans/search", requireAuth, (req, res) => {
     c.name.toLowerCase().includes(q) ||
     c.tag.toLowerCase().includes(q) ||
     String(c.description || "").toLowerCase().includes(q)
-  ).map(c => ({
-    ...c,
-    memberCount: users.filter(u => u.clan === c.tag).length,
-    isFull: users.filter(u => u.clan === c.tag).length >= c.memberLimit
-  }));
+  ).map(c => {
+    const members = users.filter(u => u.clan === c.tag);
+    return { ...c, avatar: c.avatar || "/avatars/default.jpg",
+      members: members.map(u => ({ userId: u.id, nickname: u.nickname, playerAvatar: u.playerAvatar || "/avatars/default.jpg", isVerified: Boolean(u.isVerified), online: Boolean(u.status), role: u.id === c.ownerId ? "owner" : (c.officers || []).includes(u.id) ? "officer" : "member" })),
+      memberCount: members.length, isFull: members.length >= c.memberLimit };
+  });
   res.json({ success: true, clans: result });
 });
 
@@ -927,6 +974,7 @@ app.post("/api/clans/create", transactionRateLimit, requireAuth, (req, res) => {
     ownerId: req.user.id,
     officers: [],
     requests: [],
+    avatar: "/avatars/default.jpg",
     level: 1,
     xp: 0,
     memberLimit: 30,
@@ -1300,6 +1348,18 @@ app.post("/api/upload-avatar", requireAuth, upload.single("avatar"), (req, res) 
   res.json({ success: true, newPath: req.user.playerAvatar });
 });
 
+app.post("/api/clans/avatar", requireAuth, upload.single("avatar"), (req, res) => {
+  const clan = req.user.clan ? clans[req.user.clan] : null;
+  if (!clan) return res.status(403).json({ success: false, message: "Спочатку вступи до клану." });
+  if (clan.ownerId !== req.user.id && !(clan.officers || []).includes(req.user.id)) {
+    return res.status(403).json({ success: false, message: "Змінювати аватар може лише власник або офіцер." });
+  }
+  if (!req.file) return res.status(400).json({ success: false, message: "Вибери зображення." });
+  clan.avatar = "/avatars/" + req.file.filename;
+  saveClans();
+  res.json({ success: true, newPath: clan.avatar });
+});
+
 // ---------- MATCHMAKING / GAME ----------
 
 const matchmakingQueue = [];
@@ -1328,7 +1388,7 @@ const MODE_CONFIGS = {
     name: "СОЮЗНИКИ",
     short: "AL",
     map: "HILL_TOWN",
-    requiredPlayers: 4
+    requiredPlayers: 3
   },
   hide_seek: {
     id: "hide_seek",
@@ -1417,6 +1477,7 @@ function emitQueueCount(io) {
       players: modePlayers.map(p => ({
         userId: p.userId,
         nickname: p.nickname,
+        playerAvatar: p.playerAvatar || "/avatars/default.jpg",
         connected: true,
         ready: false
       }))
@@ -1457,10 +1518,9 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
       uuid: p.uuid || "",
       isBot: Boolean(p.isBot),
       nickname: p.nickname,
+      playerAvatar: p.playerAvatar || "/avatars/default.jpg",
       role: mode === "hide_seek" ? (i === hunterIndex ? "hunter" : "runner") : (i % 2 === 0 ? "teamA" : "teamB"),
-      team: (mode === "team_fight" || mode === "allies")
-        ? (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i % 2 === 0 ? "A" : "B"))
-        : null,
+      team: mode === "allies" ? ["A", "B", "C"][i % 3] : mode === "team_fight" ? (i % 2 === 0 ? "A" : "B") : null,
       hp: 100,
       score: 0,
       kills: 0,
@@ -2018,6 +2078,16 @@ function validateMove(player, data, mapId = null, mapState = {}) {
     targetZ=prev.z+dz*scale;
   }
   if(mapId&&mapPathBlocked(mapId,prev,{x:targetX,z:targetZ},mapState))return false;
+  // Player capsules block movement even when another player stands still.
+  const liveMatch = [...activeMatches.values()].find(match => match.players.includes(player));
+  if (liveMatch && liveMatch.phase === "game") {
+    for (const other of liveMatch.players) {
+      if (other === player || other.hp <= 0) continue;
+      const previousDistance = Math.hypot(prev.x - other.pos.x, prev.z - other.pos.z);
+      const targetDistance = Math.hypot(targetX - other.pos.x, targetZ - other.pos.z);
+      if (targetDistance < 0.82 && targetDistance < previousDistance - 0.015) return false;
+    }
+  }
   player.pos.x=targetX;
   player.pos.z=targetZ;
   player.pos.y = Math.max(0, Math.min(2.25, y));
@@ -2460,6 +2530,7 @@ io.on("connection", socket => {
         userId: player.userId,
         uuid: player.uuid || "",
         nickname: player.nickname,
+        playerAvatar: player.playerAvatar || "/avatars/default.jpg",
         role: player.role,
         team: player.team,
         hp: player.hp,
@@ -2470,6 +2541,7 @@ io.on("connection", socket => {
       players: match.players.map(p => ({
         userId: p.userId,
         nickname: p.nickname,
+        playerAvatar: p.playerAvatar || "/avatars/default.jpg",
         isBot: Boolean(p.isBot),
         role: p.role,
         team: p.team,
