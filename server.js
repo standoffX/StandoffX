@@ -1530,7 +1530,9 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
       isBot: Boolean(p.isBot),
       nickname: p.nickname,
       playerAvatar: p.playerAvatar || "/avatars/default.jpg",
-      role: mode === "hide_seek" ? (i === hunterIndex ? "hunter" : "runner") : (i % 2 === 0 ? "teamA" : "teamB"),
+      role: mode === "hide_seek" ? (i === hunterIndex ? "hunter" : "runner")
+        : mode === "allies" ? (i < 2 ? "teamA" : "teamB")
+        : (i % 2 === 0 ? "teamA" : "teamB"),
       team: mode === "allies"
         ? (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i < 2 ? "A" : "B"))
         : mode === "team_fight"
@@ -2034,7 +2036,7 @@ function handleBombAction(io, match, player, data = {}) {
     return;
   }
   if (action === "plant") {
-    if (player.team !== match.attackingTeam || bomb.state !== "carried" || !site || !playerNearBombSite(player, site)) return;
+    if (player.team !== match.attackingTeam || player.userId !== bomb.carrierUserId || bomb.state !== "carried" || !site || !playerNearBombSite(player, site)) return;
     bomb.state = "planting";
     bomb.site = site;
     bomb.action = { kind: "plant", userId: player.userId, site, startedAt: now };
@@ -2043,7 +2045,12 @@ function handleBombAction(io, match, player, data = {}) {
   }
   if (action === "defuse") {
     if (player.team !== match.defendingTeam || bomb.state !== "planted" || !site || bomb.site !== site || !playerNearBombSite(player, site)) return;
-    if (bomb.action?.kind === "defuse" && bomb.action.userId !== player.userId) return;
+    if (bomb.action?.kind === "defuse") {
+      if (bomb.action.userId !== player.userId) return;
+      bomb.action = null;
+      io.to(match.id).emit("bomb_state", bombPublicState(match));
+      return;
+    }
     bomb.action = { kind: "defuse", userId: player.userId, site, startedAt: now };
     io.to(match.id).emit("bomb_state", bombPublicState(match));
   }
