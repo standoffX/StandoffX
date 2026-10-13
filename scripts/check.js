@@ -115,9 +115,12 @@ assert.match(game, /transports:\["websocket"\]/, "gameplay socket must avoid pol
 assert.match(game, /reconnectionAttempts:Infinity/, "gameplay must automatically reconnect after Render restarts");
 assert.match(ui, /grid-template-columns:minmax\(260px,1fr\) minmax\(250px,\.95fr\) minmax\(300px,1\.12fr\)/, "desktop lobby columns must stay roomy");
 assert.match(ui, /@media\(max-width:980px\)/, "lobby must preserve its full three-column layout on common desktop widths");
-assert.match(game, /class="training-action-grid"/, "training must keep its full visible action panel");
+assert.match(game, /class="prototype-bot-actions"/, "prototype HUD must use a compact bot-only panel");
+assert.equal((game.match(/data-training-action="(?:spawnBot|removeBot)"/g)||[]).length, 2, "prototype HUD must expose exactly Create Bot and Delete Bot");
 assert.match(game, /data-training-action="spawnBot"/, "training must expose a clickable spawn bot action");
-assert.match(game, /data-training-action="resetBot"/, "training must expose a clickable reset bot action");
+assert.match(game, /data-training-action="removeBot"/, "training must expose a clickable delete bot action");
+assert.match(game, /id="createBotBtn"/, "create bot action must have a stateful control");
+assert.match(game, /id="deleteBotBtn" disabled/, "delete bot starts disabled when no bot exists");
 assert.match(game, /data-training-action="push"/, "training must expose a clickable push action");
 assert.match(game, /data-training-action="kick"/, "training must expose a clickable kick action");
 assert.match(game, /data-training-action="boost"/, "training must expose a clickable boost action");
@@ -174,9 +177,14 @@ assert.match(game, /selectedMap==="NEON_YARD"/, "game must load the selected map
 
 assert.match(admin, /id="fTester"/);
 assert.match(game, /training_spawn_bot/);
+assert.match(game, /training_remove_bot/, "client must request authoritative bot removal");
+assert.match(server, /socket\.on\("training_remove_bot"/, "server must authorize and broadcast bot removal");
+assert.match(server, /if \(session\.bot\) \{[\s\S]{0,100}Бот уже створений/, "server must prevent repeated create requests from duplicating or resetting a bot");
 assert.match(game, /training_bot_action/);
 assert.match(menu, /DEFAULT_KEYBINDS/, "settings must define default training key bindings");
 assert.match(menu, /data-bind-action="spawnBot"/, "settings must let players remap bot spawning");
+assert.match(menu, /data-bind-action="removeBot"/, "settings must let players remap bot deletion");
+assert.match(menu, /removeBot:"KeyB"/, "bot deletion must have a remappable default key");
 assert.match(menu, /data-bind-action="resetSession"/, "settings must let players remap training reset");
 assert.match(menu, /data-bind-action="menu"/, "settings must let players remap the in-game menu");
 assert.match(menu, /current\.keybinds=binds/, "custom key bindings must be saved in localStorage");
@@ -185,7 +193,11 @@ assert.match(menu, /api\("\/api\/user-data\?id="/, "profile UUID refresh must ha
 assert.match(game, /function runTrainingAction\(action\)/, "training actions must be keyboard-driven");
 assert.doesNotMatch(game, /id="pauseMenu"|function togglePauseMenu\(force\)/, "the blocking pause menu must not cover gameplay controls");
 assert.match(game, /menu:"KeyM"/, "M must open the in-game menu by default");
-assert.match(game, /function renderTrainingKeyHints\(\)/, "training HUD must show the configured action keys");
+assert.doesNotMatch(game, /function renderTrainingKeyHints\(\)|id="trainingKeyHints"/, "keyboard hints must not overlay the game; they belong in settings");
+assert.match(game, /socket\.on\("init_match",data=>\{\s*\$\("trainingControls"\)\.style\.display="none"/, "public match initialization must hide prototype bot controls");
+assert.match(game, /#trainingControls\.prototype-bot-panel/, "prototype bot controls must have dedicated responsive styling");
+assert.match(menu, /class="home-hero panel"/, "main menu must use the redesigned integrated game hero");
+assert.match(css, /\.home-hero h1/, "main menu hero must have dedicated responsive styling");
 assert.doesNotMatch(game, /id="spawnBot"/, "training bot controls must no longer require on-screen buttons");
 assert.doesNotMatch(game, /id="resetTraining"/, "training reset must be keyboard-driven");
 
