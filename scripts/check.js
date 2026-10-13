@@ -120,7 +120,7 @@ assert.equal((game.match(/data-training-action="(?:spawnBot|removeBot)"/g)||[]).
 assert.match(game, /data-training-action="spawnBot"/, "training must expose a clickable spawn bot action");
 assert.match(game, /data-training-action="removeBot"/, "training must expose a clickable delete bot action");
 assert.match(game, /id="createBotBtn"/, "create bot action must have a stateful control");
-assert.match(game, /id="deleteBotBtn" disabled/, "delete bot starts disabled when no bot exists");
+assert.match(game, /id="deleteBotBtn" class="prototype-delete-bot" disabled/, "delete bot starts disabled when no bot exists");
 assert.match(game, /data-training-action="push"/, "training must expose a clickable push action");
 assert.match(game, /data-training-action="kick"/, "training must expose a clickable kick action");
 assert.match(game, /data-training-action="boost"/, "training must expose a clickable boost action");
