@@ -1108,6 +1108,23 @@ function readTrainingBinds(){
     return Object.fromEntries(Object.entries(DEFAULT_TRAINING_BINDS).map(([action,code])=>[action,typeof stored[action]==="string"&&stored[action]?stored[action]:code]));
   }catch{return {...DEFAULT_TRAINING_BINDS}}
 }
+fetch("/api/me",{credentials:"same-origin"}).then(response=>response.ok?response.json():null).then(payload=>{
+  const keybinds=payload?.user?.settings?.keybinds;
+  if(!keybinds||typeof keybinds!=="object")return;
+  let settings={};try{settings=JSON.parse(localStorage.getItem("sx_settings")||"{}")}catch{}
+  settings.keybinds={...(settings.keybinds||{}),...keybinds};
+  localStorage.setItem("sx_settings",JSON.stringify(settings));
+}).catch(()=>{});
+setInterval(()=>{
+  if(isTrainingMode||!matchId||matchPhase==="finished")return;
+  try{
+    const saved=JSON.parse(localStorage.getItem("sx_active_match")||"null");
+    if(saved?.matchId===matchId){
+      saved.updatedAt=Date.now();
+      localStorage.setItem("sx_active_match",JSON.stringify(saved));
+    }
+  }catch{}
+},10000);
 
 function buildFieldArena(){
   if(mapLoadFinished)return;
