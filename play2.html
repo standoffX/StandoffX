@@ -113,19 +113,17 @@ body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
 
 <div id="results"><div class="resultBox"><h2 id="resultTitle">МАТЧ ЗАВЕРШЕНО</h2><div id="resultText" class="reward"></div><button id="menuResult">У МЕНЮ</button></div></div>
 <button id="leaveGameDesktop" type="button">← МЕНЮ</button>
-<div id="trainingControls" style="display:none;position:fixed;right:14px;top:72px;width:min(270px,calc(100vw - 24px));max-height:72vh;overflow:auto;z-index:25;padding:12px;background:#090f1cf2;border:1px solid #1de9ff66;border-radius:8px;pointer-events:auto;backdrop-filter:blur(8px);color:#eef7ff">
-  <b style="font-size:11px;letter-spacing:1px;color:#1de9ff">ТРЕНУВАННЯ · КЕРУВАННЯ</b>
-  <div id="botStatus" style="margin:8px 0;color:#d7e4f5;font-size:11px">Бота ще немає</div>
-  <div class="training-action-grid" aria-label="Дії тренування">
-    <button type="button" data-training-action="spawnBot" title="N — створити бота">СТВОРИТИ БОТА <kbd>N</kbd></button>
-    <button type="button" data-training-action="resetBot" title="U — скинути бота">СКИНУТИ БОТА <kbd>U</kbd></button>
-    <button type="button" data-training-action="push" title="J — відштовхнути">PUSH <kbd>J</kbd></button>
-    <button type="button" data-training-action="kick" title="K — удар">KICK <kbd>K</kbd></button>
-    <button type="button" data-training-action="boost" title="L — підкинути">BOOST <kbd>L</kbd></button>
-    <button type="button" data-training-action="resetSession" title="I — скинути сесію">СКИНУТИ ВСЕ <kbd>I</kbd></button>
+<div id="trainingControls" class="prototype-bot-panel" style="display:none">
+  <div class="prototype-panel-head">
+    <span class="prototype-live-dot"></span>
+    <div><b>ПРОТОТИП</b><small>КЕРУВАННЯ БОТОМ</small></div>
   </div>
-  <div id="trainingKeyHints" style="display:grid;grid-template-columns:1fr auto;gap:5px;margin-top:10px;padding-top:9px;border-top:1px solid #ffffff18;color:#aebdd0;font-size:10px;line-height:1.4"></div>
-  <div style="margin-top:9px;color:#71849b;font-size:9px;line-height:1.45">Клавіші можна змінити в лобі: Налаштування → Клавіші тренування. ESC — одразу в лобі.</div>
+  <div id="botStatus" class="prototype-bot-status">Бота ще немає</div>
+  <div class="prototype-bot-actions" aria-label="Керування ботом прототипу">
+    <button type="button" data-training-action="spawnBot" id="createBotBtn" class="prototype-create-bot"><span>＋</span><span>СТВОРИТИ БОТА</span></button>
+    <button type="button" data-training-action="removeBot" id="deleteBotBtn" class="prototype-delete-bot" disabled><span>×</span><span>ВИДАЛИТИ БОТА</span></button>
+  </div>
+  <div class="prototype-settings-note">Прив’язки клавіш — у меню «Налаштування».</div>
 </div>
 <div id="mobile">
   <div id="stick" class="stick"><i></i></div>
@@ -1051,23 +1049,12 @@ let isFullMapOpen=false;
 let isLeavingMatch=false;
 
 const keys={w:false,s:false,a:false,d:false,shift:false};
-const DEFAULT_TRAINING_BINDS={spawnBot:"KeyN",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
-const TRAINING_ACTION_NAMES={spawnBot:"СТВОРИТИ БОТА",push:"PUSH",kick:"KICK",boost:"BOOST",resetBot:"СКИНУТИ БОТА",resetSession:"СКИНУТИ ТРЕНУВАННЯ",menu:"ПОВЕРНУТИСЯ В ЛОБІ"};
+const DEFAULT_TRAINING_BINDS={spawnBot:"KeyN",removeBot:"KeyB",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
 function readTrainingBinds(){
   try{
     const stored=JSON.parse(localStorage.getItem("sx_settings")||"{}").keybinds||{};
     return Object.fromEntries(Object.entries(DEFAULT_TRAINING_BINDS).map(([action,code])=>[action,typeof stored[action]==="string"&&stored[action]?stored[action]:code]));
   }catch{return {...DEFAULT_TRAINING_BINDS}}
-}
-function trainingKeyLabel(code){
-  if(code?.startsWith("Key"))return code.slice(3);
-  if(code?.startsWith("Digit"))return code.slice(5);
-  return ({Space:"SPACE",Escape:"ESC",ArrowUp:"↑",ArrowDown:"↓",ArrowLeft:"←",ArrowRight:"→"})[code]||String(code||"—").replace(/^Numpad/,"NUM ");
-}
-function renderTrainingKeyHints(){
-  const el=$("trainingKeyHints");if(!el)return;
-  const binds=readTrainingBinds();
-  el.innerHTML=["spawnBot","push","kick","boost","resetBot","resetSession"].map(action=>"<span>"+TRAINING_ACTION_NAMES[action]+"</span><b style='color:#1de9ff'>"+trainingKeyLabel(binds[action])+"</b>").join("");
 }
 
 function buildFieldArena(){
@@ -1950,6 +1937,7 @@ $("leaveGameMobile").addEventListener("click",leaveGame);
 function runTrainingAction(action){
   if(!isTrainingMode||matchPhase!=="game")return;
   if(action==="spawnBot"){socket.emit("training_spawn_bot",{trainingId});return}
+  if(action==="removeBot"){socket.emit("training_remove_bot",{trainingId});return}
   if(action==="resetBot"){socket.emit("training_bot_action",{trainingId,action:"reset"});return}
   if(action==="resetSession"){
     player.rotationY=0;velocityY=0;jumping=false;isCrouching=false;
@@ -1958,10 +1946,9 @@ function runTrainingAction(action){
   if(["push","kick","boost"].includes(action))socket.emit("training_bot_action",{trainingId,action});
 }
 // There is no blocking in-game menu: ESC and M leave directly to the lobby.
-renderTrainingKeyHints();
 $("trainingControls").addEventListener("click",e=>{
   const button=e.target.closest("[data-training-action]");
-  if(!button||!isTrainingMode)return;
+  if(!button||!isTrainingMode||button.disabled)return;
   e.preventDefault();
   e.stopPropagation();
   runTrainingAction(button.dataset.trainingAction);
@@ -1980,15 +1967,20 @@ socket.on("training_init",data=>{
   ensurePlayerVisual();
   if(data.spawn)player.position.set(data.spawn.x||0,data.spawn.y||0,data.spawn.z||0);
   $("trainingControls").style.display="block";
-  renderTrainingKeyHints();
   $("overlayTitle").textContent=mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":"ТРЕНУВАННЯ";
   $("overlayText").textContent=mapLoadFinished?"Готово.":"Завантажуємо карту…";
   $("overlay").style.display=mapLoadFinished?"none":"flex";
   $("phase").textContent=mapLoadFinished?"ГОТОВО":"ЗАВАНТАЖЕННЯ КАРТИ";
   if(data.bot)applyTrainingBot(data.bot);else removeTrainingBot();
 });
+function updatePrototypeBotButtons(hasBot){
+  const create=$("createBotBtn"),remove=$("deleteBotBtn");
+  if(create){create.disabled=Boolean(hasBot);create.classList.toggle("is-disabled",Boolean(hasBot))}
+  if(remove){remove.disabled=!hasBot;remove.classList.toggle("is-disabled",!hasBot)}
+}
 function applyTrainingBot(bot){
   if(!bot){removeTrainingBot();return}
+  updatePrototypeBotButtons(true);
   const botAnim=bot.action==="boost"?"Jump":bot.action==="running"?"Running":bot.action==="hit"?"Hit":"Idle";
   applyEnemy({userId:"training_bot",id:"training_bot",nickname:bot.nickname||"Training Bot",role:"runner",team:"B",hp:bot.hp,x:bot.x,y:bot.y,z:bot.z,rotY:bot.rotY||0,anim:botAnim,score:0});
   $("botStatus").textContent="BOT · HP "+bot.hp+"/"+(bot.maxHp||100)+" · HITS "+(bot.hits||0);
@@ -1997,8 +1989,17 @@ function applyTrainingBot(bot){
 }
 function removeTrainingBot(){
   const bot=enemies["training_bot"];
-  if(bot){scene.remove(bot.mesh);delete enemies["training_bot"];}
+  if(bot){
+    scene.remove(bot.mesh);
+    bot.mesh.traverse(node=>{
+      if(node.geometry)node.geometry.dispose();
+      if(Array.isArray(node.material))node.material.forEach(material=>material.dispose());
+      else if(node.material)node.material.dispose();
+    });
+    delete enemies["training_bot"];
+  }
   $("botStatus").textContent="Бота ще немає";
+  updatePrototypeBotButtons(false);
 }
 socket.on("training_state",data=>{
   if(!isTrainingMode)return;
@@ -2018,6 +2019,7 @@ socket.on("training_state",data=>{
 });
 
 socket.on("init_match",data=>{
+  $("trainingControls").style.display="none";
   applyMapInteractionState(data.mapState);
   try{
     if(!isTrainingMode)localStorage.setItem("sx_active_match",JSON.stringify({matchId:data.matchId||matchId,userId:myId,uuid:myUuid,map:data.map||selectedMap,mode:data.mode||mode,updatedAt:Date.now()}));
@@ -2069,6 +2071,7 @@ socket.on("timer_update",data=>{
   }
 });
 socket.on("match_start_now",()=>{
+  $("trainingControls").style.display="none";
   matchPhase="game";canControl=true;
   $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":"HIDE & SEEK";
   $("phase").textContent="МАТЧ У ПРОЦЕСІ";
