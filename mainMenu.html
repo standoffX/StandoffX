@@ -446,7 +446,7 @@ const MAPS={SANDSTONE:"SANDSTONE",SMALL_YARD:"SMALL YARD",HILL_TOWN:"HILL TOWN",
 const MODES={allies:"СОЮЗНИКИ · 2×2",team_fight:"КБ · 1×1×1"};
 let testGameplayMode=["prototype","real"].includes(localStorage.getItem("sx_test_gameplay"))?localStorage.getItem("sx_test_gameplay"):"prototype";
 if(testGameplayMode==="real"){
-  const allowed=selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD","NEON_YARD"];
+  const allowed=selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD"];
   if(!allowed.includes(selectedMap))selectedMap=allowed[0];
   localStorage.setItem("sx_map",selectedMap);
 }
@@ -548,12 +548,12 @@ function renderMapSelection(){
   const realGame=testGameplayMode==="real";
   document.querySelectorAll("[data-map]").forEach(button=>{
     const map=button.dataset.map;
-    const allowed=selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD","NEON_YARD"];
+    const allowed=selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD"];
     button.style.display=realGame&&!allowed.includes(map)?"none":"";
     button.classList.toggle("active",map===selectedMap);
   });
   if(realGame){
-    const allowed=selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD","NEON_YARD"];
+    const allowed=selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD"];
     if(!allowed.includes(selectedMap))selectedMap=allowed[0];
     localStorage.setItem("sx_map",selectedMap);
   }
@@ -737,7 +737,7 @@ function openPlay(){
   }
   if(searching)return;
   const requiredPlayers=selectedMode==="allies"?4:3;
-  const searchMap=selectedMode==="allies"?"SANDSTONE":(["SMALL_YARD","NEON_YARD"].includes(selectedMap)?selectedMap:"SMALL_YARD");
+  const searchMap=selectedMode==="allies"?"SANDSTONE":(["SMALL_YARD"].includes(selectedMap)?selectedMap:"SMALL_YARD");
   selectedMap=searchMap;localStorage.setItem("sx_map",selectedMap);
   $("searchModal").classList.add("show");$("searchTitle").textContent="ПОШУК РЕАЛЬНИХ ГРАВЦІВ";$("searchMode").textContent=(MODES[selectedMode]||MODES.allies)+" · ЛИШЕ ЛЮДИ";$("queue").textContent="1 / "+requiredPlayers;
   $("searchText").textContent=selectedMode==="allies"?"2 на 2 · раунди · закладка та знешкодження бомби. Чекаємо 4 гравців.":"1 на 1 на 1 · кожен сам за себе. Чекаємо 3 гравців.";
