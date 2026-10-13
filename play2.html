@@ -2525,7 +2525,8 @@ socket.on("allies_round_start",data=>{
   defendingTeam=data.defendingTeam||defendingTeam;
   bombState=data.bomb||{state:"carried"};
   hp=100;keys.w=keys.a=keys.s=keys.d=keys.shift=false;fireHeld=false;jumpQueued=false;isCrouching=false;
-  setAimingDownSights(false);selectWeapon("akr",true);
+  weaponAmmo.akr=CLIENT_WEAPON_INFO.akr.magazine;weaponAmmo.p350=CLIENT_WEAPON_INFO.p350.magazine;ammo=weaponAmmo.akr;reloading=false;
+  setAimingDownSights(false);selectWeapon("akr",true);updateWeaponHud();
   $("deathNotice").style.display="none";
   for(const p of (data.players||[])){
     if(String(p.userId)===String(myId)){
