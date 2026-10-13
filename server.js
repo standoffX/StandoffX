@@ -1399,7 +1399,7 @@ const MODE_CONFIGS = {
   },
   team_fight: {
     id: "team_fight",
-    name: "TEAM FIGHT",
+    name: "КОМАНДНИЙ БІЙ",
     short: "TF",
     map: "HILL_TOWN",
     requiredPlayers: 4
