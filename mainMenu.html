@@ -218,6 +218,23 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
 <main class="content">
 <section id="home" class="screen active">
   <div class="home-layout">
+    <section class="home-hero panel" aria-label="Головне ігрове меню">
+      <img class="home-hero-art" src="game1.png" alt="" aria-hidden="true">
+      <div class="home-hero-copy">
+        <div class="home-hero-overline"><span class="hero-live-dot"></span> STANDOFFX <span class="hero-separator">/</span> TACTICAL FPS <span class="hero-version">v0.4</span></div>
+        <h1>ГОТОВИЙ ДО <em>БОЮ?</em></h1>
+        <p>Обери карту, налаштуй керування та заходь у матч. Прототип — для тестування механік і ботів.</p>
+        <div class="home-hero-tags"><span>4 КАРТИ</span><span>3D FPS</span><span>ПРОТОТИП</span></div>
+      </div>
+      <div class="playarea">
+        <div class="playwrap">
+          <button class="playbutton" id="playBtn"><span>▶ &nbsp; ГРАТИ</span></button>
+          <button class="secondary" id="resumeMatchBtn" type="button" style="display:none;min-width:220px;min-height:38px;border-color:#91d8fb;color:#dff6ff;font-weight:900">ВИЙТИ З МАТЧУ</button>
+          <div class="muted" id="selectedModeText">СОЮЗНИКИ</div>
+          <div class="muted" id="selectedMapText" style="font-size:9px;letter-spacing:1px">HILL TOWN</div>
+        </div>
+      </div>
+    </section>
     <div class="profile-col panel">
       <div class="panelhead"><span>ПРОФІЛЬ ГРАВЦЯ</span><span id="verifiedMark"></span></div>
       <div class="panelbody">
@@ -260,13 +277,6 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
     </div>
   </div>
 
-  <div class="playarea">
-    <div class="playwrap">
-      <button class="playbutton" id="playBtn"><span>▶ &nbsp; ГРАТИ</span></button>
-      <button class="secondary" id="resumeMatchBtn" type="button" style="display:none;min-width:220px;min-height:38px;border-color:#91d8fb;color:#dff6ff;font-weight:900">ВИЙТИ З МАТЧУ</button>
-      <div class="muted" id="selectedModeText">СОЮЗНИКИ</div><div class="muted" id="selectedMapText" style="font-size:9px;letter-spacing:1px">HILL TOWN</div>
-    </div>
-  </div>
   <div class="homefooter"><span>STANDOFFX</span><span id="onlineStatus">ONLINE</span></div>
 </section>
 
@@ -327,9 +337,10 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
   </div>
 </section>
 <div id="testKeybindSettings" style="display:none"><h3 style="margin-top:24px">КЛАВІШІ ТРЕНУВАННЯ</h3>
-<div class="muted">Натисни кнопку дії, а потім потрібну клавішу. Прив’язки зберігаються на цьому пристрої.</div>
+<div class="muted">Натисни кнопку дії, а потім потрібну клавішу. Прив’язки зберігаються на цьому пристрої й не відображаються поверх матчу.</div>
 <div class="keybind-list">
   <div class="keybind-row"><span>Створити бота</span><button type="button" class="secondary keybind-button" data-bind-action="spawnBot">N</button></div>
+  <div class="keybind-row"><span>Видалити бота</span><button type="button" class="secondary keybind-button" data-bind-action="removeBot">B</button></div>
   <div class="keybind-row"><span>Push бота</span><button type="button" class="secondary keybind-button" data-bind-action="push">J</button></div>
   <div class="keybind-row"><span>Kick бота</span><button type="button" class="secondary keybind-button" data-bind-action="kick">K</button></div>
   <div class="keybind-row"><span>Boost бота</span><button type="button" class="secondary keybind-button" data-bind-action="boost">L</button></div>
@@ -883,8 +894,8 @@ $("inventoryList").addEventListener("click",e=>{const b=e.target.closest("[data-
 async function loadMarket(){try{const d=await api("/api/market/items");$("marketList").innerHTML=d.items.map(x=>"<div class='row'><div><b>"+esc(x.skinName)+"</b><div class='muted'>"+esc(x.sellerNick)+" · "+esc(x.rarity)+"</div></div><div class='actions'><b>"+x.price+" G</b><button class='primary' data-buy='"+esc(x.lotId)+"'>КУПИТИ</button></div></div>").join("")||"<div class='muted'>Ринок порожній.</div>"}catch{}}
 $("marketList").addEventListener("click",e=>{const b=e.target.closest("[data-buy]");if(!b)return;api("/api/market/buy",{method:"POST",body:JSON.stringify({lotId:b.dataset.buy})}).then(async()=>{me=(await api("/api/me")).user;render();loadMarket();loadInventory()}).catch(err=>alert(err.message))});
 
-const DEFAULT_KEYBINDS={spawnBot:"KeyN",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
-const KEYBIND_LABELS={spawnBot:"Створити бота",push:"Push бота",kick:"Kick бота",boost:"Boost бота",resetBot:"Скинути бота",resetSession:"Скинути тренування",menu:"Меню в грі"};
+const DEFAULT_KEYBINDS={spawnBot:"KeyN",removeBot:"KeyB",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
+const KEYBIND_LABELS={spawnBot:"Створити бота",removeBot:"Видалити бота",push:"Push бота",kick:"Kick бота",boost:"Boost бота",resetBot:"Скинути бота",resetSession:"Скинути тренування",menu:"Меню в грі"};
 let keybindCapture=null;
 function readKeybinds(){
   try{
