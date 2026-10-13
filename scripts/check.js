@@ -85,7 +85,7 @@ assert.match(server, /client\.user\?\.id === id\) client\.disconnect\(true\)/, "
 
 assert.match(server, /user\.isAdmin = user\.id === ADMIN_ID \? true : Boolean\(user\.isAdmin\)/, "master account must remain admin");
 assert.match(server, /const changingId = !isMaster && nextIdRaw !== u\.id/, "legacy IDs must be editable without changing ID");
-assert.match(server, /const atlasUsers = await load\("state_users", users\)/, "invalid Atlas documents must not overwrite runtime state");
+assert.match(server, /const localUsersSnapshot = users\.map\(user => \(\{ \.\.\.user \}\)\)[\s\S]{0,200}const atlasUsers = await load\("state_users", localUsersSnapshot\)/, "MongoDB users must merge Atlas records with legacy account.json fields");
 assert.match(server, /socket\.on\("leave_match"/, "gameplay client must be able to leave the match");
 assert.match(server, /disconnectTimer: null/, "live matches must support reconnect grace periods");
 assert.match(server, /ready < current\.players\.length/, "lobbies must time out if map loading never becomes ready");
