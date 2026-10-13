@@ -1971,6 +1971,8 @@ function startAlliesRound(io, match, initial = false) {
     }, 1000);
     current.bombActionTimer = setInterval(() => {
       if (current.phase !== "game" || current.finished || !current.bomb) return;
+      maintainBombCarrier(io, current);
+      if (current.phase !== "game" || current.finished) return;
       const bomb = current.bomb;
       const action = bomb.action;
       if (bomb.state === "planted" && bomb.explodeAt && Date.now() >= bomb.explodeAt) {
@@ -2019,6 +2021,27 @@ function startAlliesRound(io, match, initial = false) {
       }
     }, 100);
   }, 4000);
+}
+
+function maintainBombCarrier(io, match) {
+  const bomb = match?.bomb;
+  if (!match || match.mode !== "allies" || match.phase !== "game" || !bomb || ["planted", "defused"].includes(bomb.state)) return;
+  const carrier = match.players.find(player => player.userId === bomb.carrierUserId);
+  if (carrier && carrier.hp > 0 && carrier.socketId) return;
+  const replacement = match.players.find(player => player.team === match.attackingTeam && player.hp > 0 && player.socketId);
+  if (replacement) {
+    bomb.carrierUserId = replacement.userId;
+    bomb.state = "carried";
+    bomb.site = null;
+    bomb.action = null;
+    io.to(match.id).emit("bomb_state", bombPublicState(match));
+    return;
+  }
+  bomb.state = "carried";
+  bomb.site = null;
+  bomb.action = null;
+  checkAlliesRoundWin(io, match);
+  io.to(match.id).emit("bomb_state", bombPublicState(match));
 }
 
 function handleBombAction(io, match, player, data = {}) {
