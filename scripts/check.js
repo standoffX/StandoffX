@@ -196,7 +196,7 @@ assert.doesNotMatch(game, /function renderTrainingKeyHints\(\)|id="trainingKeyHi
 assert.match(game, /socket\.on\("init_match",data=>\{\s*\$\("trainingControls"\)\.style\.display="none"/, "public match initialization must hide prototype bot controls");
 assert.match(game, /#trainingControls\.prototype-bot-panel/, "prototype bot controls must have dedicated responsive styling");
 assert.match(menu, /class="home-hero panel"/, "main menu must use the redesigned integrated game hero");
-assert.match(css, /\.home-hero h1/, "main menu hero must have dedicated responsive styling");
+assert.match(ui, /\.home-hero h1/, "main menu hero must have dedicated responsive styling");
 assert.doesNotMatch(game, /id="spawnBot"/, "training bot controls must no longer require on-screen buttons");
 assert.doesNotMatch(game, /id="resetTraining"/, "training reset must be keyboard-driven");
 
