@@ -2457,6 +2457,7 @@ io.on("connection", socket => {
       socketId: socket.id,
       userId: user.id,
       nickname: user.nickname,
+      playerAvatar: user.playerAvatar || "/avatars/default.jpg",
       uuid: user.uuid,
       mode,
       map
@@ -2859,7 +2860,7 @@ io.on("connection", socket => {
         emitMatchWaiting(io, current);
         if (current.players.length >= 2 && current.players.some(p => !p.isBot)) startMatchWhenReady(io, current);
         else cleanMatch(io, matchId, true);
-      }, 90000);
+      }, 5 * 60 * 1000);
     }
 
     emitQueueCount(io);
