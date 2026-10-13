@@ -212,7 +212,7 @@ function setLoadingDetail(id,message,state="active"){
     row.classList.toggle("is-error",state==="error");
   }
 }
-const MAP_LOADING_NAMES={HILL_TOWN:"HILL TOWN",M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD"};
+const MAP_LOADING_NAMES={SANDSTONE:"SANDSTONE",SMALL_YARD:"SMALL YARD",HILL_TOWN:"HILL TOWN",M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD"};
 const isMobileDevice=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||
   (navigator.maxTouchPoints>1&&matchMedia("(pointer: coarse)").matches)||
   (innerWidth<=760&&navigator.maxTouchPoints>0);
@@ -773,8 +773,56 @@ function addBreakableWood(x,z,rotationY=Math.PI/2){
   }
   scene.add(group);
 }
+function nearestSandstoneSite(maxDistance=5.5){
+  if(!player)return null;
+  let nearest=null,best=maxDistance;
+  for(const [site,center] of Object.entries({A:{x:30,z:-27},B:{x:-15,z:27}})){
+    const distance=Math.hypot(player.position.x-center.x,player.position.z-center.z);
+    if(distance<best){best=distance;nearest={site,distance,center}}
+  }
+  return nearest;
+}
+function updateBombHud(){
+  const hud=$("bombHud");
+  const info=$("roundInfo");
+  if(mode!=="allies"||isTrainingMode){
+    if(hud)hud.style.display="none";
+    if(info)info.textContent="";
+    return;
+  }
+  if(info)info.textContent="РАУНД "+Math.max(1,roundNumber)+"  ·  "+roundWins.A+" : "+roundWins.B;
+  if(hud)hud.style.display="block";
+  const title=$("bombHudTitle"),detail=$("bombHudDetail"),bar=$("bombHudProgress");
+  const state=bombState?.state||"carried";
+  const site=bombState?.site||null;
+  if(title)title.textContent=state==="planted"?"БОМБА ЗАКЛАДЕНА":state==="planting"?"ЗАКЛАДАННЯ БОМБИ": "ЗАВДАННЯ РАУНДУ";
+  if(detail){
+    const remaining=state==="planted"&&bombState?.explodeAt?Math.max(0,Math.ceil((Number(bombState.explodeAt)-Date.now())/1000)):0;
+    const attacking=myTeam===attackingTeam;
+    if(state==="planted")detail.textContent="САЙТ "+site+" · ВИБУХ ЧЕРЕЗ "+remaining+" С";
+    else if(state==="planting")detail.textContent="САЙТ "+site+" · ТРИМАЙСЯ ПОРУЧ";
+    else if(attacking)detail.textContent="АТАКА · ЗАКЛАДИ БОМБУ НА A АБО B";
+    else detail.textContent="ЗАХИСТ · НЕ ДАЙ ЗАКЛАСТИ БОМБУ";
+  }
+  if(bar){
+    bar.style.width=state==="planting"&&bombState?.actionStartedAt?Math.min(100,Math.max(0,(Date.now()-Number(bombState.actionStartedAt))/30))+"%":state==="planted"?"100%":"0%";
+  }
+}
 function updateInteractButtonLabel(){
   const button=$("interactBtn");if(!button)return;
+  if(mode==="allies"&&!isTrainingMode){
+    const site=nearestSandstoneSite(5.7);
+    const state=bombState?.state||"carried";
+    if(site&&myTeam===attackingTeam&&(state==="carried"||(state==="planting"&&bombState?.actorUserId===String(myId)))){
+      button.textContent=state==="planting"?"E · СКАСУВАТИ":"E · ЗАКЛАСТИ "+site.site;
+      updateBombHud();return;
+    }
+    if(site&&myTeam===defendingTeam&&state==="planted"&&site.site===bombState?.site){
+      button.textContent="E · ЗНЕШКОДИТИ "+site.site;updateBombHud();return;
+    }
+    button.textContent=state==="planted"?"БОМБА НА "+bombState.site:"A / B · БОМБА";
+    updateBombHud();return;
+  }
   if(!player){button.textContent="E · ДВЕРІ";return}
   let nearest=null,best=5.5;
   for(const door of interactiveDoors){
@@ -814,7 +862,27 @@ function applyMapInteractionState(state){
   normalized.destroyedWood.forEach(applyDestroyedWood);
   rebuildCollisionIndex();
 }
+function interactWithBomb(){
+  if(!player||matchPhase!=="game"||hp<=0||mode!=="allies")return;
+  const site=nearestSandstoneSite(5.7);
+  const state=bombState?.state||"carried";
+  if(state==="planted"&&myTeam===defendingTeam){
+    if(!site||site.site!==bombState.site){showDamagePopup("БОМБА НА "+bombState.site);return}
+    socket.emit("bomb_action",{matchId,action:"defuse",site:site.site});
+    showDamagePopup("ЗНЕШКОДЖЕННЯ · НЕ ВИХОДЬ ІЗ ЗОНИ");return;
+  }
+  if(myTeam===attackingTeam&&(state==="carried"||state==="planting")){
+    if(!site){showDamagePopup("ПІДІЙДИ ДО САЙТУ A АБО B");return}
+    if(state==="planting"&&bombState?.actorUserId===String(myId)){
+      socket.emit("bomb_action",{matchId,action:"cancel",site:site.site});showDamagePopup("ЗАКЛАДАННЯ СКАСОВАНО");return;
+    }
+    socket.emit("bomb_action",{matchId,action:"plant",site:site.site});
+    showDamagePopup("ЗАКЛАДАННЯ · ТРИМАЙСЯ ПОРУЧ");return;
+  }
+  showDamagePopup("НЕ МОЖНА ВИКОРИСТАТИ БОМБУ ЗАРАЗ");
+}
 function interactWithNearestDoor(){
+  if(mode==="allies"&&!isTrainingMode){interactWithBomb();return}
   if(!player||matchPhase!=="game")return;
   let nearest=null,best=5.5;
   for(const door of interactiveDoors){
@@ -1100,6 +1168,12 @@ let isCrouching=false;
 let isFullMapOpen=false;
 let isLeavingMatch=false;
 let squadRoster=[];
+let roundNumber=0;
+let roundWins={A:0,B:0};
+let attackingTeam="A";
+let defendingTeam="B";
+let bombState=null;
+let bombWorldVisual=null;
 
 const keys={w:false,s:false,a:false,d:false,shift:false};
 const DEFAULT_TRAINING_BINDS={spawnBot:"KeyN",removeBot:"KeyB",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
@@ -1440,6 +1514,12 @@ function loadMap(){
   $("overlayTitle").textContent="ЗАВАНТАЖЕННЯ МАТЧУ";
   $("phase").textContent="БУДУЄТЬСЯ "+mapLabel;
   $("overlayText").textContent="Готуємо локальну геометрію, укриття та колізії. Карти більше не чекають зовнішню 3D-модель.";
+  if(selectedMap==="SANDSTONE"){
+    buildSandstoneMap();finishClientReady();return;
+  }
+  if(selectedMap==="SMALL_YARD"){
+    buildSmallYard();finishClientReady();return;
+  }
   if(selectedMap==="HILL_TOWN"){
     buildHillTownMap();
     return;
@@ -1633,7 +1713,7 @@ function rebuildCollisionIndex(){
   collisionIndexReady=true;
 }
 function worldLimit(){
-  return ({HILL_TOWN:54.2,NEON_YARD:167,FIELD_ARENA:291,M3_Maze:225})[selectedMap]||225;
+  return ({SANDSTONE:48,SMALL_YARD:32,HILL_TOWN:54.2,NEON_YARD:167,FIELD_ARENA:291,M3_Maze:225})[selectedMap]||225;
 }
 function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
@@ -2178,6 +2258,10 @@ socket.on("match_waiting",data=>{
 });
 socket.on("match_phase",data=>{
   matchPhase=data.phase||"waiting";
+  if(data.roundNumber)roundNumber=Number(data.roundNumber)||roundNumber;
+  if(data.roundWins)roundWins={...roundWins,...data.roundWins};
+  if(data.attackingTeam)attackingTeam=data.attackingTeam;
+  if(data.defendingTeam)defendingTeam=data.defendingTeam;
   $("overlay").style.display="flex";
   if(data.phase==="warmup"){
     $("overlayTitle").textContent="РОЗМИНКА";
@@ -2189,11 +2273,25 @@ socket.on("match_phase",data=>{
     $("phase").textContent="СТАРТ ЧЕРЕЗ";
     $("bigTimer").textContent=data.time+"с";
     $("overlayText").textContent="Приготуйся.";
+  }else if(data.phase==="round_start"){
+    $("overlayTitle").textContent="РАУНД "+(data.roundNumber||roundNumber);
+    $("phase").textContent="СТАРТ ЧЕРЕЗ";
+    $("bigTimer").textContent=(Number(data.time)||4)+"с";
+    $("overlayText").textContent=myTeam===attackingTeam?"Атакуйте. Закладіть бомбу на A або B.":"Захистіть сайти A та B.";
+    $("roundInfo").textContent="РАУНД "+roundNumber+" · "+roundWins.A+" : "+roundWins.B;
+  }else if(data.phase==="round_end"){
+    $("overlayTitle").textContent=data.winningTeam===myTeam?"РАУНД ВИГРАНО":"РАУНД ПРОГРАНО";
+    $("phase").textContent="НАСТУПНИЙ РАУНД";
+    $("bigTimer").textContent=(Number(data.time)||5)+"с";
+    $("overlayText").textContent=data.reason==="bomb_exploded"?"Бомба вибухнула.":data.reason==="bomb_defused"?"Бомбу знешкоджено.":data.reason==="time"?"Час вийшов.": "Команду ліквідовано.";
+    if(data.roundWins)roundWins={...roundWins,...data.roundWins};
   }else if(data.phase==="game"){
-    $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":"HIDE & SEEK";
-    $("phase").textContent="МАТЧ";
+    $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ · БОМБА":mode==="team_fight"?"КБ · КОЖЕН САМ":"HIDE & SEEK";
+    $("phase").textContent=mode==="allies"?"РАУНД У ПРОЦЕСІ":"МАТЧ";
     setOverlayGame();
+    updateBombHud();
   }
+  updateBombHud();
 });
 socket.on("timer_update",data=>{
   const t=Math.max(0,Number(data.time)||0);
@@ -2214,6 +2312,72 @@ socket.on("match_start_now",()=>{
   $("clickHint").textContent="Клікни для мишки";
   if(isTeamCombat||isTrainingMode)$("ammo").style.display="block";
   if(isMobileDevice)$("overlay").style.display="none";
+});
+socket.on("allies_round_start",data=>{
+  if(mode!=="allies")return;
+  matchPhase="round_start";canControl=false;
+  roundNumber=Number(data.roundNumber)||roundNumber;
+  roundWins={...roundWins,...(data.roundWins||{})};
+  attackingTeam=data.attackingTeam||attackingTeam;
+  defendingTeam=data.defendingTeam||defendingTeam;
+  bombState=data.bomb||{state:"carried"};
+  hp=100;keys.w=keys.a=keys.s=keys.d=keys.shift=false;fireHeld=false;jumpQueued=false;isCrouching=false;
+  setAimingDownSights(false);selectWeapon("akr",true);
+  $("deathNotice").style.display="none";
+  for(const p of (data.players||[])){
+    if(String(p.userId)===String(myId)){
+      myTeam=p.team||myTeam;
+      player.position.set(Number(p.x)||0,Number(p.y)||0,Number(p.z)||0);
+      player.rotationY=Number(p.rotY)||0;
+    }else{
+      const enemy=ensureEnemy(p);
+      if(enemy){enemy.pos.set(Number(p.x)||0,Number(p.y)||0,Number(p.z)||0);enemy.mesh.position.copy(enemy.pos);enemy.hp=100;enemy.anim="Idle";setSoldierDown(enemy.mesh,false);setSoldierTint(enemy.mesh,colorFor(enemy.role,p.team))}
+    }
+  }
+  updateSquadRoster(data.players||[]);
+  renderBombWorldVisual();updateBombHud();updateVisual();
+  $("overlay").style.display="flex";
+  $("overlayTitle").textContent="РАУНД "+roundNumber;
+  $("phase").textContent="ПІДГОТОВКА";
+  $("bigTimer").textContent="4с";
+  $("overlayText").textContent=myTeam===attackingTeam?"АТАКА · ЗАКЛАДИ БОМБУ НА A АБО B":"ЗАХИСТ · НЕ ДАЙ ЗАКЛАСТИ БОМБУ";
+  $("clickHint").textContent="Клікни для огляду мишкою · E — взаємодія";
+});
+socket.on("allies_round_live",data=>{
+  if(mode!=="allies")return;
+  matchPhase="game";canControl=true;
+  if(data.roundNumber)roundNumber=Number(data.roundNumber)||roundNumber;
+  if(data.roundWins)roundWins={...roundWins,...data.roundWins};
+  if(data.bomb)bombState=data.bomb;
+  $("overlayTitle").textContent="СОЮЗНИКИ · БОМБА";
+  $("phase").textContent="РАУНД У ПРОЦЕСІ";
+  $("overlayText").textContent="";
+  if(isMobileDevice)$("overlay").style.display="none";
+  updateBombHud();updateInteractButtonLabel();
+});
+socket.on("bomb_state",data=>{
+  const previous=bombState?.state;
+  bombState=data||{state:"carried"};
+  renderBombWorldVisual();updateBombHud();updateInteractButtonLabel();
+  if(bombState.state==="planted"&&previous!=="planted")showDamagePopup("БОМБА ЗАКЛАДЕНА · "+bombState.site);
+  if(bombState.state==="defused"&&previous!=="defused")showDamagePopup("БОМБУ ЗНЕШКОДЖЕНО");
+});
+socket.on("bomb_planted",data=>{
+  bombState={...(bombState||{}),state:"planted",site:data.site,explodeAt:data.explodeAt};
+  renderBombWorldVisual();updateBombHud();
+});
+socket.on("allies_round_end",data=>{
+  matchPhase="round_end";canControl=false;
+  roundNumber=Number(data.roundNumber)||roundNumber;
+  roundWins={...roundWins,...(data.roundWins||{})};
+  bombState=data.bomb||bombState;
+  keys.w=keys.a=keys.s=keys.d=keys.shift=false;fireHeld=false;
+  renderBombWorldVisual();updateBombHud();
+  $("overlay").style.display="flex";
+  $("overlayTitle").textContent=data.winningTeam===myTeam?"РАУНД ВИГРАНО":"РАУНД ПРОГРАНО";
+  $("phase").textContent="РАУНД "+roundNumber+" · "+roundWins.A+" : "+roundWins.B;
+  $("bigTimer").textContent=(Number(data.nextRoundIn)||5)+"с";
+  $("overlayText").textContent=data.reason==="bomb_exploded"?"Бомба вибухнула — атака виграла.":data.reason==="bomb_defused"?"Бомбу знешкоджено — захист виграв.":data.reason==="time"?"Час вийшов — раунд захисту.":"Команду ліквідовано.";
 });
 socket.on("enemy_moved",applyEnemy);
 socket.on("player_position_correction",data=>{
