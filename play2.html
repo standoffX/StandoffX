@@ -804,17 +804,20 @@ function updateBombHud(){
   const title=$("bombHudTitle"),detail=$("bombHudDetail"),bar=$("bombHudProgress");
   const state=bombState?.state||"carried";
   const site=bombState?.site||null;
-  if(title)title.textContent=state==="planted"?"БОМБА ЗАКЛАДЕНА":state==="planting"?"ЗАКЛАДАННЯ БОМБИ": "ЗАВДАННЯ РАУНДУ";
+  if(title)title.textContent=state==="planted"?(bombState?.action==="defuse"?"ЗНЕШКОДЖЕННЯ БОМБИ":"БОМБА ЗАКЛАДЕНА"):state==="planting"?"ЗАКЛАДАННЯ БОМБИ":"ЗАВДАННЯ РАУНДУ";
   if(detail){
     const remaining=state==="planted"&&bombState?.explodeAt?Math.max(0,Math.ceil((Number(bombState.explodeAt)-Date.now())/1000)):0;
     const attacking=myTeam===attackingTeam;
+    const carrier=squadRoster.find(p=>String(p.userId)===String(bombState?.carrierUserId));
     if(state==="planted")detail.textContent="САЙТ "+site+" · ВИБУХ ЧЕРЕЗ "+remaining+" С";
     else if(state==="planting")detail.textContent="САЙТ "+site+" · ТРИМАЙСЯ ПОРУЧ";
-    else if(attacking)detail.textContent="АТАКА · ЗАКЛАДИ БОМБУ НА A АБО B";
+    else if(attacking&&String(bombState?.carrierUserId)===String(myId))detail.textContent="АТАКА · ТИ НЕСЕШ БОМБУ · ЗАКЛАДИ НА A АБО B";
+    else if(attacking)detail.textContent="АТАКА · БОМБА У "+(carrier?.nickname||"НАПАРНИКА");
     else detail.textContent="ЗАХИСТ · НЕ ДАЙ ЗАКЛАСТИ БОМБУ";
   }
   if(bar){
-    bar.style.width=state==="planting"&&bombState?.actionStartedAt?Math.min(100,Math.max(0,(Date.now()-Number(bombState.actionStartedAt))/30))+"%":state==="planted"?"100%":"0%";
+    const elapsed=Number(bombState?.actionStartedAt)?Math.max(0,Date.now()-Number(bombState.actionStartedAt)):0;
+    bar.style.width=(state==="planting"?Math.min(100,elapsed/30):state==="planted"&&bombState?.action==="defuse"?Math.min(100,elapsed/50):state==="planted"?100:0)+"%";
   }
 }
 function updateInteractButtonLabel(){
@@ -822,7 +825,7 @@ function updateInteractButtonLabel(){
   if(mode==="allies"&&!isTrainingMode){
     const site=nearestSandstoneSite(5.7);
     const state=bombState?.state||"carried";
-    if(site&&myTeam===attackingTeam&&(state==="carried"||(state==="planting"&&bombState?.actorUserId===String(myId)))){
+    if(site&&myTeam===attackingTeam&&String(bombState?.carrierUserId)===String(myId)&&(state==="carried"||(state==="planting"&&bombState?.actorUserId===String(myId)))){
       button.textContent=state==="planting"?"E · СКАСУВАТИ":"E · ЗАКЛАСТИ "+site.site;
       updateBombHud();return;
     }
@@ -877,6 +880,10 @@ function interactWithBomb(){
   const state=bombState?.state||"carried";
   if(state==="planted"&&myTeam===defendingTeam){
     if(!site||site.site!==bombState.site){showDamagePopup("БОМБА НА "+bombState.site);return}
+    if(bombState?.action==="defuse"&&String(bombState?.actorUserId)===String(myId)){
+      socket.emit("bomb_action",{matchId,action:"cancel",site:site.site});
+      showDamagePopup("ЗНЕШКОДЖЕННЯ СКАСОВАНО");return;
+    }
     socket.emit("bomb_action",{matchId,action:"defuse",site:site.site});
     showDamagePopup("ЗНЕШКОДЖЕННЯ · НЕ ВИХОДЬ ІЗ ЗОНИ");return;
   }
