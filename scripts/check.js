@@ -378,7 +378,7 @@ assert.match(server, /const existingQueueIndex = matchmakingQueue\.findIndex\(p 
 assert.match(server, /Пошук перенесено в інше вікно/, "an older tab must be notified when search moves to a new connection");
 
 assert.match(server, /if \(!player \|\| player\.hp <= 0\) return;\s*handleTeamShot/, "dead players must not be able to shoot on the server");
-assert.match(server, /if \(!player \|\| player\.socketId !== socket\.id \|\| player\.hp <= 0\) return;\s*if \(!validateMove/, "dead players must not be able to move on the server");
+assert.match(server, /if \(!player \|\| player\.socketId !== socket\.id \|\| player\.hp <= 0\) return;\s*if \(match\.mode === "allies" && match\.phase !== "game"\) return;\s*if \(!validateMove/, "dead players and players outside a live round must not move on the server");
 assert.match(game, /id="deathNotice"/, "players must receive clear feedback when eliminated");
 assert.match(game, /matchPhase!=="game"\|\|reloading\|\|hp<=0/, "dead clients cannot fire or reload");
 assert.match(game, /matchPhase==="game"&&player&&hp>0/, "local movement must freeze until respawn");
