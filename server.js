@@ -2817,7 +2817,7 @@ io.on("connection", socket => {
 
       player.socketId = null;
       player.ready = false;
-      io.to(matchId).emit("player_connection_state", { userId: player.userId, connected: false, reconnectSeconds: 90 });
+      io.to(matchId).emit("player_connection_state", { userId: player.userId, connected: false, reconnectSeconds: 300 });
 
       if (match.phase === "waiting") {
         // A navigation or dropped connection can take a moment; pause the initial
@@ -2844,10 +2844,16 @@ io.on("connection", socket => {
         const stillDisconnected = current.players.find(p => p.userId === player.userId && !p.socketId);
         if (!stillDisconnected) return;
         stillDisconnected.disconnectTimer = null;
-        // During live gameplay, never end/delete a match just because one player
-        // vanished. Keep the identity slot so a late reconnect can rejoin it.
+        // The reconnect window is five minutes. After it expires, remove only that
+        // disconnected player and let the remaining live match continue.
         if (current.phase === "game") {
-          io.to(matchId).emit("player_connection_state", { userId: player.userId, connected: false, reconnectExpired: true });
+          const liveIndex = current.players.findIndex(p => p.userId === player.userId && !p.socketId);
+          if (liveIndex < 0) return;
+          const [expiredPlayer] = current.players.splice(liveIndex, 1);
+          io.to(matchId).emit("player_connection_state", { userId: expiredPlayer.userId, connected: false, reconnectExpired: true });
+          io.to(matchId).emit("player_left", { userId: expiredPlayer.userId });
+          if (current.players.filter(p => !p.isBot).length < 2) cleanMatch(io, matchId, true);
+          else emitMatchWaiting(io, current);
           return;
         }
         // Before the round starts, remove only the missing roster slot after grace;
