@@ -1492,7 +1492,10 @@ function emitQueueCount(io) {
 }
 
 function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
-  const safeMapId = normalizeMapId(mapId);
+  const requestedMap = normalizeMapId(mapId);
+  const safeMapId = mode === "allies" ? "SANDSTONE"
+    : mode === "team_fight" ? (requestedMap === "NEON_YARD" ? "NEON_YARD" : "SMALL_YARD")
+    : requestedMap;
   const candidates = Array.isArray(forcedCandidates) ? forcedCandidates : matchmakingQueue.filter(p => p.mode === mode && p.map === safeMapId);
   const requiredPlayers = getRequiredPlayers(mode);
   if (candidates.length < requiredPlayers) return;
@@ -1554,6 +1557,14 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     timer: null,
     phaseTimer: null,
     joinTimer: null,
+    roundTimer: null,
+    bombActionTimer: null,
+    bomb: null,
+    roundNumber: 0,
+    roundWins: { A: 0, B: 0 },
+    attackingTeam: "A",
+    defendingTeam: "B",
+    roundRemaining: 0,
     remaining: GAME_SECONDS
   };
 
@@ -1618,6 +1629,9 @@ function cleanMatch(io, matchId, returnToMenu = true) {
   if (match.timer) clearInterval(match.timer);
   if (match.phaseTimer) clearInterval(match.phaseTimer);
   if (match.joinTimer) clearTimeout(match.joinTimer);
+  if (match.roundTimer) clearInterval(match.roundTimer);
+  if (match.bombActionTimer) clearInterval(match.bombActionTimer);
+  if (match.bomb?.explodeTimer) clearTimeout(match.bomb.explodeTimer);
   if (returnToMenu) io.to(match.id).emit("go_to_menu");
   for (const p of match.players) {
     if (p.disconnectTimer) clearTimeout(p.disconnectTimer);
@@ -1638,6 +1652,11 @@ function startMatchWhenReady(io, match) {
 
   match.started = true;
   if (match.joinTimer) clearTimeout(match.joinTimer);
+
+  if (match.mode === "allies") {
+    startAlliesRound(io, match, true);
+    return;
+  }
 
   if (match.players.some(p => p.isBot)) {
     match.phase = "game";
@@ -1714,14 +1733,21 @@ function finishMatch(io, matchId) {
   if (match.phaseTimer) clearInterval(match.phaseTimer);
   if (match.joinTimer) clearTimeout(match.joinTimer);
 
-  const ranked = [...match.players].sort((a, b) => b.score - a.score);
+  const ranked = [...match.players].sort((a, b) => match.mode === "allies"
+    ? (match.roundWins?.[b.team] || 0) - (match.roundWins?.[a.team] || 0) || b.score - a.score
+    : b.score - a.score);
   const highestScore = ranked[0]?.score || 0;
+  const winningTeam = match.mode === "allies"
+    ? (match.roundWins.A === match.roundWins.B ? null : (match.roundWins.A > match.roundWins.B ? "A" : "B"))
+    : null;
 
   for (const player of match.players) {
     const user = users.find(u => u.id === player.userId);
     if (!user) continue;
 
-    const won = highestScore > 0 && player.score === highestScore;
+    const won = match.mode === "allies"
+      ? Boolean(winningTeam && player.team === winningTeam)
+      : highestScore > 0 && player.score === highestScore;
     const gold = won ? 10 : 2;
     const xp = 50 + player.score * 20;
     user.gold = (Number(user.gold) || 0) + gold;
@@ -1740,7 +1766,9 @@ function finishMatch(io, matchId) {
   saveUsers();
   io.to(match.id).emit("match_finished", {
     mode: match.mode,
-    scores: ranked.map(p => ({ userId: p.userId, nickname: p.nickname, score: p.score }))
+    roundWins: match.mode === "allies" ? match.roundWins : null,
+    winnerTeam: winningTeam,
+    scores: ranked.map(p => ({ userId: p.userId, nickname: p.nickname, score: p.score, team: p.team }))
   });
 
   setTimeout(() => cleanMatch(io, matchId, true), 8000);
@@ -1751,6 +1779,273 @@ function respawnPlayer(match, player) {
   player.hp = 100;
   player.rotY = 0;
   player.anim = "Idle";
+}
+
+const SANDSTONE_BOMB_SITES = Object.freeze({
+  A: Object.freeze({ x: 30, z: -27 }),
+  B: Object.freeze({ x: -30, z: 27 })
+});
+
+function alliesSide(match, team) {
+  return team === match.attackingTeam ? "attack" : "defense";
+}
+
+function playerNearBombSite(player, site, radius = 5.2) {
+  const center = SANDSTONE_BOMB_SITES[site];
+  return Boolean(center && player && Math.hypot(player.pos.x - center.x, player.pos.z - center.z) <= radius);
+}
+
+function bombPublicState(match) {
+  const bomb = match.bomb || {};
+  return {
+    state: bomb.state || "carried",
+    site: bomb.site || null,
+    carrierUserId: bomb.carrierUserId || null,
+    actorUserId: bomb.action?.userId || null,
+    action: bomb.action?.kind || null,
+    actionStartedAt: bomb.action?.startedAt || null,
+    plantedAt: bomb.plantedAt || null,
+    explodeAt: bomb.explodeAt || null,
+    roundNumber: match.roundNumber,
+    roundWins: { ...(match.roundWins || { A: 0, B: 0 }) },
+    attackingTeam: match.attackingTeam,
+    defendingTeam: match.defendingTeam,
+    roundRemaining: match.roundRemaining || 0
+  };
+}
+
+function alliesRoundPayload(match) {
+  return {
+    matchId: match.id,
+    mode: match.mode,
+    modeName: match.modeName,
+    map: match.map,
+    roundNumber: match.roundNumber,
+    roundWins: { ...match.roundWins },
+    attackingTeam: match.attackingTeam,
+    defendingTeam: match.defendingTeam,
+    phase: match.phase,
+    roundRemaining: match.roundRemaining,
+    bomb: bombPublicState(match),
+    players: match.players.map(player => ({
+      userId: player.userId, nickname: player.nickname,
+      playerAvatar: player.playerAvatar || "/avatars/default.jpg",
+      team: player.team, hp: player.hp,
+      x: player.pos.x, y: player.pos.y, z: player.pos.z,
+      rotY: player.rotY, spawn: { ...player.spawn },
+      alive: player.hp > 0, connected: Boolean(player.socketId)
+    }))
+  };
+}
+
+function stopAlliesRoundTimers(match) {
+  if (match.roundTimer) clearInterval(match.roundTimer);
+  if (match.bombActionTimer) clearInterval(match.bombActionTimer);
+  if (match.bomb?.explodeTimer) clearTimeout(match.bomb.explodeTimer);
+  match.roundTimer = null;
+  match.bombActionTimer = null;
+  if (match.bomb) match.bomb.explodeTimer = null;
+}
+
+function finishAlliesRound(io, match, winningTeam, reason) {
+  if (!match || match.finished || match.mode !== "allies" || match.phase === "round_end") return;
+  stopAlliesRoundTimers(match);
+  match.phase = "round_end";
+  match.phaseRemaining = 5;
+  match.roundWins[winningTeam] = (match.roundWins[winningTeam] || 0) + 1;
+  const payload = {
+    ...alliesRoundPayload(match),
+    phase: "round_end",
+    winningTeam,
+    reason,
+    roundWins: { ...match.roundWins },
+    nextRoundIn: 5
+  };
+  io.to(match.id).emit("allies_round_end", payload);
+  io.to(match.id).emit("match_phase", {
+    phase: "round_end", time: 5, mode: match.mode, modeName: match.modeName,
+    roundNumber: match.roundNumber, roundWins: { ...match.roundWins },
+    winningTeam, reason
+  });
+  const reachedTarget = match.roundWins.A >= 7 || match.roundWins.B >= 7;
+  const reachedMaxRounds = match.roundNumber >= 13;
+  match.phaseTimer = setTimeout(() => {
+    const current = activeMatches.get(match.id);
+    if (!current || current.finished) return;
+    if (reachedTarget || reachedMaxRounds) finishMatch(io, current.id);
+    else startAlliesRound(io, current, false);
+  }, 5000);
+}
+
+function checkAlliesRoundWin(io, match) {
+  if (!match || match.mode !== "allies" || match.phase !== "game" || match.finished) return;
+  const attackAlive = match.players.some(p => p.team === match.attackingTeam && p.hp > 0);
+  const defenseAlive = match.players.some(p => p.team === match.defendingTeam && p.hp > 0);
+  if (!defenseAlive) {
+    finishAlliesRound(io, match, match.attackingTeam, "elimination");
+    return;
+  }
+  if (!attackAlive && match.bomb?.state !== "planted" && match.bomb?.state !== "planting") {
+    finishAlliesRound(io, match, match.defendingTeam, "elimination");
+  }
+}
+
+function startAlliesRound(io, match, initial = false) {
+  if (!match || match.finished) return;
+  if (match.phaseTimer) clearTimeout(match.phaseTimer);
+  stopAlliesRoundTimers(match);
+  if (match.roundNumber > 0 && match.roundNumber % 6 === 0) {
+    const previousAttacker = match.attackingTeam;
+    match.attackingTeam = match.defendingTeam;
+    match.defendingTeam = previousAttacker;
+  }
+  match.roundNumber += 1;
+  match.phase = "round_start";
+  match.phaseRemaining = 4;
+  match.roundRemaining = 100;
+  match.bomb = {
+    state: "carried",
+    carrierUserId: match.players.find(p => p.team === match.attackingTeam && !p.isBot)?.userId
+      || match.players.find(p => p.team === match.attackingTeam)?.userId || null,
+    site: null,
+    plantedAt: null,
+    explodeAt: null,
+    action: null,
+    explodeTimer: null
+  };
+  const sideSpawns = {
+    attack: [{ x: -7, y: 0, z: -40 }, { x: 7, y: 0, z: -40 }],
+    defense: [{ x: -7, y: 0, z: 40 }, { x: 7, y: 0, z: 40 }]
+  };
+  const teamIndices = { A: 0, B: 0 };
+  for (const player of match.players) {
+    player.hp = 100;
+    player.lastShotAt = 0;
+    player.roundAlive = true;
+    const side = alliesSide(match, player.team);
+    const spawnList = sideSpawns[side];
+    const spawnIndex = Math.min(teamIndices[player.team] || 0, spawnList.length - 1);
+    teamIndices[player.team] = spawnIndex + 1;
+    player.spawn = { ...spawnList[spawnIndex] };
+    player.pos = { ...player.spawn };
+    player.rotY = side === "attack" ? Math.PI : 0;
+    player.anim = "Idle";
+  }
+  if (initial) {
+    io.to(match.id).emit("match_start_now", {
+      mode: match.mode, modeName: match.modeName, bombMode: true
+    });
+  }
+  io.to(match.id).emit("allies_round_start", alliesRoundPayload(match));
+  io.to(match.id).emit("bomb_state", bombPublicState(match));
+  io.to(match.id).emit("match_phase", {
+    phase: "round_start", time: 4, mode: match.mode, modeName: match.modeName,
+    roundNumber: match.roundNumber, roundWins: { ...match.roundWins },
+    attackingTeam: match.attackingTeam, defendingTeam: match.defendingTeam
+  });
+  match.phaseTimer = setTimeout(() => {
+    const current = activeMatches.get(match.id);
+    if (!current || current.finished || current.phase !== "round_start") return;
+    current.phase = "game";
+    current.phaseRemaining = null;
+    io.to(current.id).emit("allies_round_live", alliesRoundPayload(current));
+    io.to(current.id).emit("match_phase", {
+      phase: "game", time: current.roundRemaining, mode: current.mode,
+      modeName: current.modeName, roundNumber: current.roundNumber,
+      roundWins: { ...current.roundWins }, attackingTeam: current.attackingTeam,
+      defendingTeam: current.defendingTeam
+    });
+    current.roundTimer = setInterval(() => {
+      if (current.phase !== "game" || current.finished) return;
+      current.roundRemaining = Math.max(0, current.roundRemaining - 1);
+      io.to(current.id).emit("timer_update", {
+        phase: "game", time: current.roundRemaining,
+        roundNumber: current.roundNumber, roundWins: { ...current.roundWins },
+        attackingTeam: current.attackingTeam, defendingTeam: current.defendingTeam
+      });
+      if (current.roundRemaining <= 0 && current.bomb?.state !== "planted") {
+        finishAlliesRound(io, current, current.defendingTeam, "time");
+      }
+    }, 1000);
+    current.bombActionTimer = setInterval(() => {
+      if (current.phase !== "game" || current.finished || !current.bomb) return;
+      const bomb = current.bomb;
+      const action = bomb.action;
+      if (bomb.state === "planted" && bomb.explodeAt && Date.now() >= bomb.explodeAt) {
+        finishAlliesRound(io, current, current.attackingTeam, "bomb_exploded");
+        return;
+      }
+      if (!action) return;
+      const actor = current.players.find(p => p.userId === action.userId);
+      if (!actor || actor.hp <= 0 || actor.team !== (action.kind === "plant" ? current.attackingTeam : current.defendingTeam)) {
+        bomb.action = null;
+        if (bomb.state === "planting") bomb.state = "carried";
+        io.to(current.id).emit("bomb_state", bombPublicState(current));
+        return;
+      }
+      if (action.kind === "plant") {
+        if (!playerNearBombSite(actor, action.site, 5.2)) {
+          bomb.state = "carried"; bomb.action = null;
+          io.to(current.id).emit("bomb_state", bombPublicState(current));
+          return;
+        }
+        if (Date.now() - action.startedAt >= 3000) {
+          bomb.state = "planted";
+          bomb.site = action.site;
+          bomb.plantedAt = Date.now();
+          bomb.explodeAt = bomb.plantedAt + 35000;
+          bomb.action = null;
+          current.roundRemaining = null;
+          io.to(current.id).emit("bomb_state", bombPublicState(current));
+          io.to(current.id).emit("bomb_planted", {
+            site: bomb.site, explodeAt: bomb.explodeAt, attackingTeam: current.attackingTeam
+          });
+        }
+      } else if (action.kind === "defuse") {
+        if (bomb.state !== "planted" || bomb.site !== action.site || !playerNearBombSite(actor, action.site, 5.2)) {
+          bomb.action = null;
+          io.to(current.id).emit("bomb_state", bombPublicState(current));
+          return;
+        }
+        if (Date.now() - action.startedAt >= 5000) {
+          bomb.state = "defused";
+          bomb.action = null;
+          io.to(current.id).emit("bomb_state", bombPublicState(current));
+          finishAlliesRound(io, current, current.defendingTeam, "bomb_defused");
+        }
+      }
+    }, 100);
+  }, 4000);
+}
+
+function handleBombAction(io, match, player, data = {}) {
+  if (!match || match.mode !== "allies" || match.phase !== "game" || player.hp <= 0 || !match.bomb) return;
+  const action = cleanText(data.action, 16).toLowerCase();
+  const site = data.site === "A" || data.site === "B" ? data.site : null;
+  const bomb = match.bomb;
+  const now = Date.now();
+  if (action === "cancel") {
+    if (bomb.action?.userId === player.userId) {
+      bomb.action = null;
+      if (bomb.state === "planting") bomb.state = "carried";
+      io.to(match.id).emit("bomb_state", bombPublicState(match));
+    }
+    return;
+  }
+  if (action === "plant") {
+    if (player.team !== match.attackingTeam || bomb.state !== "carried" || !site || !playerNearBombSite(player, site)) return;
+    bomb.state = "planting";
+    bomb.site = site;
+    bomb.action = { kind: "plant", userId: player.userId, site, startedAt: now };
+    io.to(match.id).emit("bomb_state", bombPublicState(match));
+    return;
+  }
+  if (action === "defuse") {
+    if (player.team !== match.defendingTeam || bomb.state !== "planted" || !site || bomb.site !== site || !playerNearBombSite(player, site)) return;
+    if (bomb.action?.kind === "defuse" && bomb.action.userId !== player.userId) return;
+    bomb.action = { kind: "defuse", userId: player.userId, site, startedAt: now };
+    io.to(match.id).emit("bomb_state", bombPublicState(match));
+  }
 }
 
 const WEAPON_BALANCE = Object.freeze({
@@ -2075,6 +2370,10 @@ function handleTeamShot(io, match, shooter, data) {
     weapon: weaponId, hitZone, damage, killed, hp: best.hp, score: shooter.score
   });
   if (!killed) return;
+  if (match.mode === "allies") {
+    checkAlliesRoundWin(io, match);
+    return;
+  }
 
   setTimeout(() => {
     if (!activeMatches.has(match.id) || match.finished) return;
@@ -2492,7 +2791,9 @@ io.on("connection", socket => {
     }
 
     const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
-    const map = normalizeMapId(data?.map);
+    const requestedMap = normalizeMapId(data?.map);
+    const map = mode === "allies" ? "SANDSTONE"
+      : (requestedMap === "NEON_YARD" ? "NEON_YARD" : "SMALL_YARD");
     removeFromQueue(user.uuid || user.id);
 
     matchmakingQueue.push({
@@ -2652,6 +2953,14 @@ io.on("connection", socket => {
     const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
     if (!player || player.hp <= 0) return;
     handleTeamShot(io, match, player, data);
+  });
+
+  socket.on("bomb_action", data => {
+    const match = activeMatches.get(cleanText(data?.matchId, 100));
+    if (!match) return;
+    const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
+    if (!player || player.hp <= 0) return;
+    handleBombAction(io, match, player, data);
   });
 
   socket.on("map_door_shot", data => {
@@ -2868,7 +3177,7 @@ io.on("connection", socket => {
         match.joinTimer = null;
       }
 
-      if (match.phase !== "game") {
+      if (match.phase !== "game" && !(match.mode === "allies" && ["round_start", "round_end"].includes(match.phase))) {
         // Keep the match recoverable during warmup/countdown too; a fresh socket
         // will reclaim the same slot through join_room and restart readiness.
         if (match.phaseTimer) clearInterval(match.phaseTimer);
