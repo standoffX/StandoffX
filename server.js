@@ -1376,6 +1376,8 @@ const COUNTDOWN_SECONDS = 15;
 const JOIN_TIMEOUT_SECONDS = 90;
 
 const PLAYABLE_MAPS = Object.freeze({
+  SANDSTONE: { id: "SANDSTONE", name: "SANDSTONE", kind: "tight-defuse" },
+  SMALL_YARD: { id: "SMALL_YARD", name: "SMALL YARD", kind: "small-arena" },
   M3_Maze: { id: "M3_Maze", name: "M3 MAZE", kind: "model" },
   FIELD_ARENA: { id: "FIELD_ARENA", name: "FIELD ARENA", kind: "arena" },
   NEON_YARD: { id: "NEON_YARD", name: "NEON YARD", kind: "neon" },
@@ -1389,10 +1391,10 @@ function normalizeMapId(value) {
 const MODE_CONFIGS = {
   allies: {
     id: "allies",
-    name: "СОЮЗНИКИ",
-    short: "AL",
-    map: "HILL_TOWN",
-    requiredPlayers: 3
+    name: "СОЮЗНИКИ · 2×2",
+    short: "2V2",
+    map: "SANDSTONE",
+    requiredPlayers: 4
   },
   hide_seek: {
     id: "hide_seek",
@@ -1403,10 +1405,10 @@ const MODE_CONFIGS = {
   },
   team_fight: {
     id: "team_fight",
-    name: "КОМАНДНИЙ БІЙ",
-    short: "TF",
-    map: "HILL_TOWN",
-    requiredPlayers: 4
+    name: "КБ · 1×1×1",
+    short: "FFA",
+    map: "SMALL_YARD",
+    requiredPlayers: 3
   }
 };
 
@@ -1503,6 +1505,8 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
   const MATCH_SPAWNS = {
     HILL_TOWN: [{x:-42,y:0,z:-28},{x:42,y:0,z:-28},{x:-42,y:0,z:28},{x:42,y:0,z:28}],
+    SANDSTONE: [{x:-7,y:0,z:-40},{x:7,y:0,z:-40},{x:-7,y:0,z:40},{x:7,y:0,z:40}],
+    SMALL_YARD: [{x:-23,y:0,z:-23},{x:23,y:0,z:-23},{x:0,y:0,z:24}],
     M3_Maze: [{x:-195,y:0,z:-195},{x:195,y:0,z:-195},{x:-195,y:0,z:195},{x:195,y:0,z:195}],
     NEON_YARD: [{x:-82,y:0,z:-82},{x:82,y:0,z:-82},{x:-82,y:0,z:82},{x:82,y:0,z:82}],
     FIELD_ARENA: [{x:-110,y:0,z:-110},{x:110,y:0,z:-110},{x:-110,y:0,z:110},{x:110,y:0,z:110}]
@@ -1525,9 +1529,9 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
       playerAvatar: p.playerAvatar || "/avatars/default.jpg",
       role: mode === "hide_seek" ? (i === hunterIndex ? "hunter" : "runner") : (i % 2 === 0 ? "teamA" : "teamB"),
       team: mode === "allies"
-        ? (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : ["A", "B", "C"][i % 3])
+        ? (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i < 2 ? "A" : "B"))
         : mode === "team_fight"
-          ? (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i % 2 === 0 ? "A" : "B"))
+          ? (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : ["A", "B", "C"][i % 3]) : ["A", "B", "C"][i % 3])
           : null,
       hp: 100,
       score: 0,
@@ -1871,11 +1875,36 @@ function segmentIntersectsRect2d(from,to,rect){
 
 const SERVER_MAP_LIMITS = Object.freeze({
   // Keep server limits just inside the physical perimeter walls built by the client.
+  SANDSTONE: { x: 48, z: 48 },
+  SMALL_YARD: { x: 32, z: 32 },
   M3_Maze: { x: 225.5, z: 225.5 },
   FIELD_ARENA: { x: 291.5, z: 291.5 },
   NEON_YARD: { x: 167.5, z: 167.5 }
 });
 const SERVER_MAP_BLOCKERS = Object.freeze({
+  SANDSTONE: [
+    { minX: -37, maxX: -24, minZ: -22, maxZ: 1 },
+    { minX: 21, maxX: 36, minZ: -19, maxZ: 2 },
+    { minX: -37, maxX: -21, minZ: 20, maxZ: 35 },
+    { minX: 20, maxX: 35, minZ: 20, maxZ: 35 },
+    { minX: -12, maxX: -9, minZ: -23, maxZ: -12 },
+    { minX: 9, maxX: 12, minZ: -8, maxZ: 4 },
+    { minX: -11, maxX: -4, minZ: 5, maxZ: 7 },
+    { minX: 5, maxX: 12, minZ: 12, maxZ: 14 },
+    { minX: -44, maxX: -40, minZ: -4, maxZ: 7 },
+    { minX: 38, maxX: 42, minZ: 7, maxZ: 20 },
+    { minX: 25, maxX: 32, minZ: -34, maxZ: -31 },
+    { minX: -33, maxX: -26, minZ: 31, maxZ: 34 }
+  ],
+  SMALL_YARD: [
+    { minX: -28, maxX: -16, minZ: -11, maxZ: 11 },
+    { minX: 16, maxX: 28, minZ: -11, maxZ: 11 },
+    { minX: -5, maxX: 5, minZ: -5, maxZ: 5 },
+    { minX: -13, maxX: -6, minZ: 15, maxZ: 17 },
+    { minX: 6, maxX: 13, minZ: -17, maxZ: -15 },
+    { minX: -4, maxX: 4, minZ: 23, maxZ: 25 },
+    { minX: -4, maxX: 4, minZ: -25, maxZ: -23 }
+  ],
   FIELD_ARENA: [
     { minX: -38, maxX: -26, minZ: 9, maxZ: 19 },
     { minX: 17, maxX: 31, minZ: 31, maxZ: 41 },
