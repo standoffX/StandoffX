@@ -1783,7 +1783,7 @@ function respawnPlayer(match, player) {
 
 const SANDSTONE_BOMB_SITES = Object.freeze({
   A: Object.freeze({ x: 30, z: -27 }),
-  B: Object.freeze({ x: -30, z: 27 })
+  B: Object.freeze({ x: -15, z: 27 })
 });
 
 function alliesSide(match, team) {
@@ -1981,6 +1981,7 @@ function startAlliesRound(io, match, initial = false) {
         bomb.action = null;
         if (bomb.state === "planting") bomb.state = "carried";
         io.to(current.id).emit("bomb_state", bombPublicState(current));
+        checkAlliesRoundWin(io, current);
         return;
       }
       if (action.kind === "plant") {
@@ -2189,7 +2190,7 @@ const SERVER_MAP_BLOCKERS = Object.freeze({
     { minX: -44, maxX: -40, minZ: -4, maxZ: 7 },
     { minX: 38, maxX: 42, minZ: 7, maxZ: 20 },
     { minX: 25, maxX: 32, minZ: -34, maxZ: -31 },
-    { minX: -33, maxX: -26, minZ: 31, maxZ: 34 }
+    { minX: -19, maxX: -12, minZ: 31, maxZ: 34 }
   ],
   SMALL_YARD: [
     { minX: -28, maxX: -16, minZ: -11, maxZ: 11 },
@@ -2870,6 +2871,7 @@ io.on("connection", socket => {
       mode: match.mode,
       modeName: match.modeName,
       mapState: match.mapState || null,
+      round: match.mode === "allies" ? alliesRoundPayload(match) : null,
       me: {
         userId: player.userId,
         uuid: player.uuid || "",
@@ -2920,15 +2922,29 @@ io.on("connection", socket => {
     }
 
     emitMatchWaiting(io, match);
+    if (match.mode === "allies") {
+      socket.emit("allies_round_start", alliesRoundPayload(match));
+      socket.emit("bomb_state", bombPublicState(match));
+      if (match.phase === "game") socket.emit("allies_round_live", alliesRoundPayload(match));
+      socket.emit("match_phase", {
+        phase: match.phase,
+        time: match.phase === "round_start" ? match.phaseRemaining : match.roundRemaining,
+        mode: match.mode, modeName: match.modeName,
+        roundNumber: match.roundNumber, roundWins: { ...match.roundWins },
+        attackingTeam: match.attackingTeam, defendingTeam: match.defendingTeam
+      });
+    }
     if (match.phase === "game") {
       socket.emit("match_phase", {
         phase: "game",
-        time: match.remaining,
+        time: match.mode === "allies" ? match.roundRemaining : match.remaining,
         mode: match.mode,
         modeName: match.modeName
       });
       socket.emit("match_start_now", { mode: match.mode, modeName: match.modeName, reconnect: true });
-      socket.emit("timer_update", { phase: "game", time: match.remaining });
+      socket.emit("timer_update", { phase: "game", time: match.mode === "allies" ? match.roundRemaining : match.remaining });
+    } else if (match.phase === "round_start" || match.phase === "round_end") {
+      // The reconnecting player receives the current round/intermission state above.
     } else {
       startMatchWhenReady(io, match);
     }
@@ -3050,6 +3066,7 @@ io.on("connection", socket => {
     if (!match) return;
     const player = match.players.find(p => p.userId === socket.user.id);
     if (!player || player.socketId !== socket.id || player.hp <= 0) return;
+    if (match.mode === "allies" && match.phase !== "game") return;
     if (!validateMove(player, data, match.map, match.mapState || {})) {
       socket.emit("player_position_correction", {
         matchId: match.id, x: player.pos.x, y: player.pos.y, z: player.pos.z, rotY: player.rotY
