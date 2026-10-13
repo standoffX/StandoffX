@@ -451,7 +451,7 @@ function readActiveMatch(){
   try{
     const data=JSON.parse(localStorage.getItem("sx_active_match")||"null");
     if(!data?.matchId)return null;
-    if(Date.now()-(Number(data.updatedAt)||0)>15*60*1000){localStorage.removeItem("sx_active_match");return null}
+    if(Date.now()-(Number(data.updatedAt)||0)>5*60*1000){localStorage.removeItem("sx_active_match");return null}
     return data;
   }catch{return null}
 }
