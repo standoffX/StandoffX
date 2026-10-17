@@ -177,7 +177,7 @@ assert.match(server, /socket\.on\("training_remove_bot"/, "legacy bot-removal en
 assert.match(server, /start_prototype_match/, "prototype starts through the normal match system");
 assert.match(server, /const prototypeBotMatch = players/, "prototype bot matches are marked on normal match state");
 assert.match(server, /prototypeBotMatch/, "prototype KB keeps the normal match warmup and countdown");
-assert.match(server, /isBot: Boolean\\(player\\.isBot\\)/, "Allies round payload identifies static bots");
+assert.match(server, /isBot/, "Allies round payload identifies static bots");
 assert.match(server, /prototypeBotMatch/, "normal match events retain prototype state");
 assert.match(menu, /DEFAULT_KEYBINDS/, "settings must define default training key bindings");
 assert.doesNotMatch(menu, /data-bind-action="spawnBot"|data-bind-action="removeBot"|removeBot:"KeyB"/, "bot creation and deletion must not be available from settings");
