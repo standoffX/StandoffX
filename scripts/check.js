@@ -106,7 +106,8 @@ assert.match(menu, /class="promo-col panel"/, "the main menu must include the ne
 assert.match(menu, /sx_abandoned_match/, "the lobby must finish a queued leave request after reconnecting");
 assert.match(menu, /data-test-gameplay="real"/, "all players can choose a real-player Game");
 assert.doesNotMatch(menu, /data-test-gameplay="training"/, "the public type selector has only Prototype and Game");
-assert.match(menu, /socket\.emit\("start_training",\{mode:"field_test",map:selectedMap\}\)/, "Prototype opens the bot sandbox");
+assert.match(menu, /socket\.emit\("start_training",\{mode:"field_test",map:selectedMap,gameMode:selectedMode,prototype:true\}\)/, "Prototype opens the mode-matched sandbox with static bots");
+assert.match(menu, /return selectedMode==="allies"?\["SANDSTONE"\]:\["SMALL_YARD","NEON_YARD"\]/, "map cards must be filtered to the selected mode in prototype and live play");
 assert.match(menu, /class="tester-mode-switch"/, "tester mode must use a compact switch instead of large cards");
 assert.match(menu, /class="tester-mode-segment"/, "prototype/test options must share one compact segmented control");
 assert.match(menu, /createRealtimeSocket\(\)[\s\S]{0,260}transports:\["websocket"\]/, "menu sockets must avoid polling session IDs on Render");
@@ -115,14 +116,10 @@ assert.match(game, /transports:\["websocket"\]/, "gameplay socket must avoid pol
 assert.match(game, /reconnectionAttempts:Infinity/, "gameplay must automatically reconnect after Render restarts");
 assert.match(ui, /grid-template-columns:minmax\(260px,1fr\) minmax\(250px,\.95fr\) minmax\(300px,1\.12fr\)/, "desktop lobby columns must stay roomy");
 assert.match(ui, /@media\(max-width:980px\)/, "lobby must preserve its full three-column layout on common desktop widths");
-assert.match(game, /class="prototype-bot-actions"/, "prototype HUD must use a compact bot-only panel");
-assert.equal((game.match(/data-training-action="(?:spawnBot|removeBot)"/g)||[]).length, 2, "prototype HUD must expose exactly Create Bot and Delete Bot");
-assert.match(game, /data-training-action="spawnBot"/, "training must expose a clickable spawn bot action");
-assert.match(game, /data-training-action="removeBot"/, "training must expose a clickable delete bot action");
-assert.match(game, /id="createBotBtn"/, "create bot action must have a stateful control");
-assert.match(game, /id="deleteBotBtn" class="prototype-delete-bot" disabled/, "delete bot starts disabled when no bot exists");
-assert.doesNotMatch(game, /data-training-action="(?:push|kick|boost|resetBot|resetSession)"/, "prototype HUD must not show extra action buttons or keyboard hints");
-assert.match(menu, /data-bind-action="push"/, "optional prototype action keys remain configurable in settings");
+assert.match(game, /class="prototype-bot-panel"/, "prototype HUD must show a compact static-bot status panel");
+assert.doesNotMatch(game, /id="(?:createBotBtn|deleteBotBtn)"|data-training-action="(?:spawnBot|removeBot)"/, "prototype must not expose create/delete bot buttons");
+assert.doesNotMatch(game, /data-training-action=/, "prototype HUD must not expose bot action buttons");
+assert.doesNotMatch(menu, /data-bind-action="(?:spawnBot|removeBot|push|kick|boost|resetBot)"/, "settings must not expose bot manipulation hotkeys");
 assert.match(menu, /data-bind-action="resetSession"/, "prototype reset shortcut belongs in settings rather than the HUD");
 assert.doesNotMatch(menu, /data-mode="(?:training|field_test)"/, "prototype and real gameplay are not separate public modes");
 assert.match(menu, /localStorage.getItem\("sx_test_gameplay"\)/, "the tester choice persists locally");
@@ -175,15 +172,14 @@ assert.match(game, /selectedMap==="NEON_YARD"/, "game must load the selected map
 
 
 assert.match(admin, /id="fTester"/);
-assert.match(game, /training_spawn_bot/);
-assert.match(game, /training_remove_bot/, "client must request authoritative bot removal");
-assert.match(server, /socket\.on\("training_remove_bot"/, "server must authorize and broadcast bot removal");
-assert.match(server, /if \(session\.bot\) \{[\s\S]{0,100}Бот уже створений/, "server must prevent repeated create requests from duplicating or resetting a bot");
-assert.match(game, /training_bot_action/);
+assert.doesNotMatch(game, /training_spawn_bot|training_remove_bot|training_bot_action/, "prototype client must not send bot manipulation requests");
+assert.match(server, /socket\.on\("training_remove_bot"/, "legacy bot-removal endpoint must remain registered");
+assert.match(server, /if \(!session \|\| session\.prototype \|\| session\.socketId !== socket\.id/, "prototype sessions must reject manual bot manipulation");
+assert.match(server, /if\(session\.mode==="field_test"&&session\.bot&&!session\.prototype\)/, "prototype bots must not run the chasing AI loop");
+assert.match(server, /gameMode: prototype \? gameMode : null/, "prototype server state must preserve selected mode");
+assert.match(server, /const map = mode === "allies" \? "SANDSTONE" : \(requestedMap === "NEON_YARD" \? "NEON_YARD" : "SMALL_YARD"\)/, "live KB matchmaking must honor the selected KB map");
 assert.match(menu, /DEFAULT_KEYBINDS/, "settings must define default training key bindings");
-assert.match(menu, /data-bind-action="spawnBot"/, "settings must let players remap bot spawning");
-assert.match(menu, /data-bind-action="removeBot"/, "settings must let players remap bot deletion");
-assert.match(menu, /removeBot:"KeyB"/, "bot deletion must have a remappable default key");
+assert.doesNotMatch(menu, /data-bind-action="spawnBot"|data-bind-action="removeBot"|removeBot:"KeyB"/, "bot creation and deletion must not be available from settings");
 assert.match(menu, /data-bind-action="resetSession"/, "settings must let players remap training reset");
 assert.match(menu, /data-bind-action="menu"/, "settings must let players remap the in-game menu");
 assert.match(menu, /current\.keybinds=binds/, "custom key bindings must be saved in localStorage");
@@ -194,7 +190,9 @@ assert.doesNotMatch(game, /id="pauseMenu"|function togglePauseMenu\(force\)/, "t
 assert.match(game, /menu:"KeyM"/, "M must open the in-game menu by default");
 assert.doesNotMatch(game, /function renderTrainingKeyHints\(\)|id="trainingKeyHints"/, "keyboard hints must not overlay the game; they belong in settings");
 assert.match(game, /socket\.on\("init_match",data=>\{\s*\$\("trainingControls"\)\.style\.display="none"/, "public match initialization must hide prototype bot controls");
-assert.match(game, /#trainingControls\.prototype-bot-panel/, "prototype bot controls must have dedicated responsive styling");
+assert.match(game, /#trainingControls\.prototype-bot-panel/, "prototype static-bot status must have dedicated responsive styling");
+assert.match(game, /data.prototype\?\(data.gameMode==="allies"\?"СОЮЗНИКИ · ПРОТОТИП":"КБ · ПРОТОТИП"\)/, "prototype HUD must reflect the selected gameplay mode");
+assert.match(game, /const isPrototypeMode=sessionStorage.getItem\("prototypeMode"\)==="true"/, "prototype UI must distinguish the bot sandbox from a real lobby match");
 assert.match(menu, /class="home-hero panel"/, "main menu must use the redesigned integrated game hero");
 assert.match(ui, /\.home-hero h1/, "main menu hero must have dedicated responsive styling");
 assert.doesNotMatch(game, /id="spawnBot"/, "training bot controls must no longer require on-screen buttons");
