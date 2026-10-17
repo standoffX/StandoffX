@@ -31,7 +31,10 @@
 .allies-buy-tabs button[aria-selected="true"]{background:#d4d9dd;color:#171d23;border-color:#d4d9dd}
 .allies-buy-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .allies-buy-card{position:relative;min-width:0;min-height:136px;display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:10px;border:1px solid #3e4a56;border-radius:3px;background:linear-gradient(155deg,#202832,#11171e);color:#f2f4f6;text-align:left;cursor:pointer;transition:border-color .15s,background .15s;overflow:hidden}
-.allies-buy-card:before{content:"";position:absolute;right:-24px;top:21px;width:100px;height:3px;background:#6a7884;transform:rotate(-24deg);opacity:.45}
+.allies-buy-card:before{content:none}
+.allies-buy-card .buy-art svg{display:block;width:min(100%,220px);height:42px;overflow:visible;color:#aeb8c0}
+.allies-buy-card:hover .buy-art svg,.allies-buy-card.is-equipped .buy-art svg{color:#d7c99f}
+.buy-info-card .buy-art svg{display:block;width:min(100%,220px);height:42px;overflow:visible}
 .allies-buy-card:hover,.allies-buy-card.is-equipped{border-color:#d7c087;background:linear-gradient(155deg,#2b2b26,#131921)}
 .allies-buy-card .buy-art{display:grid;place-items:center;width:100%;height:45px;background:linear-gradient(180deg,#0c1117,#18212a);border:1px solid #ffffff0d;color:#c5d0d8;font-size:22px;font-weight:950;letter-spacing:.1em}
 .allies-buy-card .buy-name{font-size:12px;font-weight:950;letter-spacing:.06em}
@@ -187,16 +190,16 @@ body.device-mobile .interactButton{top:39%;left:70%;width:76px;height:40px}
       </div>
       <div class="allies-buy-grid">
         <button class="allies-buy-card" type="button" data-allies-weapon="akr" data-buy-category="rifles">
-          <span class="buy-art" aria-hidden="true">AKR</span><span class="buy-name">AKR</span><small>Штурмова гвинтівка · 30 набоїв</small><b>$2 700</b><em data-status>КУПИТИ</em>
+          <span class="buy-art" aria-hidden="true"><svg viewBox="0 0 220 48" role="presentation"><path d="M9 19h22l9 5h20l6-6h18l7 4h35l8 7h16l8 3h15v-7h-14l-8-8h-36l-6-6H94l-5 3H67l-8 5H40l-9-4H9zM63 22h9v-8h14v8H75v7H63zM106 26h20v16h-10l-5-5h-5zM141 20h23v4h-23zM168 20h39v5h-39zM20 16h14v3H20z" fill="currentColor"/><path d="M13 18h18M172 17h34M46 17h10" stroke="#0a0f14" stroke-width="1.5" opacity=".7"/></svg></span><span class="buy-name">AKR</span><small>Штурмова гвинтівка · 30 набоїв</small><b>$2 700</b><em data-status>КУПИТИ</em>
         </button>
         <button class="allies-buy-card" type="button" data-allies-weapon="p350" data-buy-category="pistols">
-          <span class="buy-art" aria-hidden="true">P350</span><span class="buy-name">P350</span><small>Стартовий пістолет · 13 набоїв</small><b>СТАРТОВИЙ</b><em data-status>ВИБРАТИ</em>
+          <span class="buy-art" aria-hidden="true"><svg viewBox="0 0 220 48" role="presentation"><path d="M54 12h85l9 5h29l8 4h13v8h-18l-7-3h-33l-8-4H97v6h-9v-5H70v9H58l-4-8z" fill="currentColor"/><path d="M83 27h28l-2 15H97l-6-5h-8zM118 13h17v3h-17zM175 19h17v2h-17z" fill="currentColor"/><path d="M58 15h67M150 19h39" stroke="#0a0f14" stroke-width="1.5" opacity=".7"/><path d="M110 26a7 7 0 0 1 0 7" fill="none" stroke="#0a0f14" stroke-width="2"/></svg></span><span class="buy-name">P350</span><small>Стартовий пістолет · 13 набоїв</small><b>СТАРТОВИЙ</b><em data-status>ВИБРАТИ</em>
         </button>
         <button class="allies-buy-card" type="button" data-allies-weapon="knife" data-buy-category="gear">
-          <span class="buy-art" aria-hidden="true">KNIFE</span><span class="buy-name">НІЖ</span><small>Ближній бій</small><b>БЕЗКОШТОВНО</b><em data-status>ВИБРАТИ</em>
+          <span class="buy-art" aria-hidden="true"><svg viewBox="0 0 220 48" role="presentation"><path d="M33 34 73 17l74-8-40 23-43 9-10-5-14 4z" fill="currentColor"/><path d="m32 35 22-1 10 5-8 3-12-3z" fill="#66717a"/><path d="m73 17 34 15M79 16l-3-7 71 0-12 4z" fill="currentColor"/><path d="m40 34 12 2M47 32l11 2" stroke="#0a0f14" stroke-width="2"/></svg></span><span class="buy-name">НІЖ</span><small>Ближній бій</small><b>БЕЗКОШТОВНО</b><em data-status>ВИБРАТИ</em>
         </button>
         <div class="buy-info-card" data-buy-category="gear" role="note">
-          <span class="buy-art" aria-hidden="true">C4</span><b>БОМБА ВИДАЄТЬСЯ АВТОМАТИЧНО</b><small>Її не потрібно купувати. На стороні атаки носій показується в HUD; натисни 5, щоб дістати пристрій.</small>
+          <span class="buy-art" aria-hidden="true"><svg viewBox="0 0 220 48" role="presentation"><path d="M74 9h65v32H74z" fill="#3d484f" stroke="#89949c" stroke-width="2"/><path d="M82 14h49v22H82z" fill="#151c22"/><g fill="#84919a"><rect x="88" y="19" width="7" height="4"/><rect x="98" y="19" width="7" height="4"/><rect x="108" y="19" width="7" height="4"/><rect x="88" y="26" width="7" height="4"/><rect x="98" y="26" width="7" height="4"/><rect x="108" y="26" width="7" height="4"/></g><path d="M145 14q17 2 15 15" fill="none" stroke="#9a7561" stroke-width="3"/></svg></span><b>БОМБА ВИДАЄТЬСЯ АВТОМАТИЧНО</b><small>Її не потрібно купувати. На стороні атаки носій показується в HUD; натисни 5, щоб дістати пристрій.</small>
         </div>
       </div>
       <p class="allies-buy-note">Підготовка триває <strong>10 секунд</strong>. Бомба не є товаром у магазині. На атакувальнику натисни <strong>5</strong>, дістань C4 та натисни <strong>E</strong> на сайті A або B.</p>
