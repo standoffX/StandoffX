@@ -221,7 +221,7 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
     <section class="home-hero panel" aria-label="Головне ігрове меню">
       <img class="home-hero-art" src="game1.png" alt="" aria-hidden="true">
       <div class="home-hero-copy">
-        <div class="home-hero-overline"><span class="hero-live-dot"></span> СЕЗОН 07 <span class="hero-separator">/</span> OUTCAST</div>
+        <div class="home-hero-overline"><span class="hero-live-dot"></span> СЕЗОН 08 <span class="hero-separator">/</span> REFORGED</div>
         <h1>STANDOFF<em>X</em></h1>
       </div>
       <div class="playarea">
@@ -264,8 +264,8 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
     </div>
 
     <div class="passpanel panel">
-      <div class="panelhead"><span>SEASON PASS</span><span>SEASON 01</span></div>
-      <div class="passhero"><img src="banner.png" alt=""><div class="passheroText"><span>SUMMER EVENT</span><strong>BEHOLDER</strong><span>FREE PASS</span></div></div>
+      <div class="panelhead"><span>SEASON PASS</span><span>SEASON 08</span></div>
+      <div class="passhero"><img src="banner.png" alt=""><div class="passheroText"><span>SEASON 08</span><strong>REFORGED</strong><span>FREE PASS</span></div></div>
       <div class="passprogress"><div class="progresslabels"><span>НАСТУПНА НАГОРОДА</span><b id="passXp">0 / 1000 XP</b></div><div class="progress"><span id="passProgress"></span></div></div>
       <div class="rewards">
         <div class="reward"><small>1</small><b>▧</b><span>CASE</span></div>
@@ -348,14 +348,14 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
 </div>
 </div>
 
-<div id="modeModal" class="modal"><div class="modalbox modebox"><div class="modalhead"><span>ВИБІР ІГРОВОГО РЕЖИМУ</span><button class="close" data-close="modeModal" aria-label="Закрити">×</button></div><div class="muted">Обери режим та карту.</div><div class="modecards" id="modeBar">
+<div id="modeModal" class="modal"><div class="modalbox modebox"><div class="modalhead"><span>ВИБІР ІГРОВОГО РЕЖИМУ</span><button class="close" data-close="modeModal" aria-label="Закрити">×</button></div><div class="muted">Обери режим, карту та формат матчу.</div><div class="modecards" id="modeBar">
   <button class="modebtn active" data-mode="allies"><strong>СОЮЗНИКИ · 2 НА 2</strong><span class="mode-desc">Раунди · закладка та знешкодження бомби</span></button>
   <button class="modebtn" data-mode="team_fight"><strong>КБ · 1 НА 1 НА 1</strong><span class="mode-desc">Кожен сам за себе · різні точки респавну</span></button>
 </div><div id="testerGameplaySwitch" class="tester-mode-switch" role="group" aria-label="Тип гри">
   <span class="tester-mode-label">ТИП ГРИ</span>
   <div class="tester-mode-segment">
-    <button type="button" class="tester-mode-option active" data-test-gameplay="prototype" aria-pressed="true" title="Окрема тестова карта з ботом; інші гравці не підключаються">ПРОТОТИП · БОТИ</button>
-    <button type="button" class="tester-mode-option" data-test-gameplay="real" aria-pressed="false" title="Пошук матчу лише з реальними гравцями">ГРА · ГРАВЦІ</button>
+    <button type="button" class="tester-mode-option active" data-test-gameplay="prototype" aria-pressed="true" title="Той самий режим і ті самі правила; місця інших гравців займають нерухомі боти">ПРОТОТИП · БОТИ</button>
+    <button type="button" class="tester-mode-option" data-test-gameplay="real" aria-pressed="false" title="Звичайний пошук матчу з реальними гравцями">ГРА · ГРАВЦІ</button>
   </div>
 </div><h3 style="margin:10px 0 4px">ВИБІР КАРТИ</h3><div class="mapcards" id="mapBar"><button class="map-option active" data-map="SANDSTONE"><b>SANDSTONE</b><span>Закриті провулки · центральний Mid · бомбсайти A/B</span></button><button class="map-option" data-map="SMALL_YARD"><b>SMALL YARD</b><span>Мала закрита арена для КБ 1 на 1 на 1</span></button><button class="map-option" data-map="NEON_YARD"><b>NEON YARD</b><span>Компактна промислова арена з трьома проходами</span></button><button class="map-option" data-map="HILL_TOWN"><b>HILL TOWN</b><span>Тестова модульна карта з будівлями й арками</span></button><button class="map-option" data-map="M3_Maze"><b>M3 MAZE</b><span>Лабіринт для тестування</span></button><button class="map-option" data-map="FIELD_ARENA"><b>FIELD ARENA</b><span>Відкрита тренувальна арена</span></button></div><button class="primary" id="confirmModeBtn">ПОЧАТИ ПОШУК МАТЧУ</button></div></div>
 <div id="searchModal" class="modal"><div class="modalbox"><div class="modalhead"><span id="searchTitle">ПОШУК МАТЧУ</span><button class="close" data-close="searchModal">×</button></div><div id="searchMode" class="muted">HIDE &amp; SEEK</div><div id="queue" class="queuecount">1 / 3</div><div id="searchText" class="muted">Очікування гравців...</div><div id="searchPlayers" class="waitplayers"></div><button class="danger" id="cancelSearch">СКАСУВАТИ</button></div></div>
@@ -496,8 +496,11 @@ function resumeSavedMatch(saved){
   sessionStorage.setItem("myPlayerId",String(saved.userId||me?.id||""));
   sessionStorage.setItem("myPlayerUUID",String(saved.uuid||me?.uuid||""));
   sessionStorage.setItem("currentMatchId",String(saved.matchId));
-  sessionStorage.setItem("selectedMap",String(saved.map||"HILL_TOWN"));
+  sessionStorage.setItem("selectedMap",String(saved.map||"SANDSTONE"));
   sessionStorage.setItem("selectedMode",String(saved.mode||"allies"));
+  sessionStorage.setItem("prototypeMode",saved.prototype?"true":"false");
+  if(saved.prototype)sessionStorage.setItem("prototypeGameMode",String(saved.mode||"allies"));
+  else sessionStorage.removeItem("prototypeGameMode");
   location.href="/play2.html";
 }
 function exitSavedMatch(){
@@ -511,6 +514,8 @@ function exitSavedMatch(){
     localStorage.removeItem("sx_active_match");
     sessionStorage.removeItem("currentMatchId");
     sessionStorage.removeItem("trainingId");
+    sessionStorage.removeItem("prototypeMode");
+    sessionStorage.removeItem("prototypeGameMode");
     initSocialSocket();
     if(socialSocket?.connected){
       socialSocket.emit("leave_match",{matchId:String(saved.matchId)});
@@ -713,21 +718,43 @@ function createRealtimeSocket(){
 function openPlay(){
   if(testGameplayMode==="prototype"){
     if(searching)return;
+    searching=true;
+    $("searchModal").classList.add("show");
+    $("searchTitle").textContent="ЗАПУСК ПРОТОТИПУ";
+    $("searchMode").textContent=(MODES[selectedMode]||MODES.allies)+" · СТАТИЧНІ БОТИ";
+    const requiredPlayers=selectedMode==="allies"?4:3;
+    $("queue").textContent=requiredPlayers+" / "+requiredPlayers;
+    $("searchText").textContent=selectedMode==="allies"
+      ?"Завантажуємо повноцінний матч із бомбою, закупівлею та раундами. Замість трьох гравців будуть нерухомі боти."
+      :"Завантажуємо звичайний КБ-матч. Два місця суперників займуть нерухомі боти.";
+    const botNames=selectedMode==="allies"
+      ?["BOT · СОЮЗНИК","BOT · ПРОТИВНИК 1","BOT · ПРОТИВНИК 2"]
+      :["BOT · ПРОТИВНИК 1","BOT · ПРОТИВНИК 2"];
+    renderWaitPlayers([
+      {nickname:me.nickname,userId:me.id,playerAvatar:me.playerAvatar,connected:true},
+      ...botNames.map((nickname,index)=>({nickname,userId:"BOT"+(index+1),playerAvatar:"/avatars/default.jpg",connected:true}))
+    ]);
     socket=createRealtimeSocket();
-    socket.on("connect_error",err=>{console.warn("[Socket.IO] Prototype connection failed; retrying.",err?.message||err)});
-    socket.on("training_error",d=>{socket?.disconnect();socket=null;alert(d.message||"Помилка прототипу")});
-    socket.on("training_started",d=>{
+    socket.on("connect_error",err=>{$("searchText").textContent="Підключаємося до сервера…";console.warn("[Socket.IO] Prototype match connection failed; retrying.",err?.message||err)});
+    socket.on("search_error",d=>{cancelSearch();notifyToast(d?.message||"Не вдалося запустити прототип.")});
+    socket.on("match_found",d=>{
+      searching=false;
+      $("searchModal").classList.remove("show");
       sessionStorage.setItem("myPlayerId",d.userId);
       sessionStorage.setItem("myPlayerUUID",d.uuid||me.uuid||"");
-      sessionStorage.setItem("selectedMode",d.mode);
+      sessionStorage.setItem("currentMatchId",d.matchId);
       sessionStorage.setItem("selectedMap",d.map||selectedMap);
+      sessionStorage.setItem("selectedMode",d.mode||selectedMode);
       sessionStorage.setItem("prototypeMode",d.prototype?"true":"false");
-      sessionStorage.setItem("prototypeGameMode",d.gameMode||selectedMode);
-      sessionStorage.setItem("trainingId",d.trainingId);
-      sessionStorage.setItem("currentMatchId",d.trainingId);
+      if(d.prototype)sessionStorage.setItem("prototypeGameMode",d.mode||selectedMode);
+      else sessionStorage.removeItem("prototypeGameMode");
+      sessionStorage.removeItem("trainingId");
+      try{localStorage.setItem("sx_active_match",JSON.stringify({matchId:d.matchId,userId:d.userId,uuid:d.uuid||me.uuid||"",map:d.map||selectedMap,mode:d.mode||selectedMode,prototype:Boolean(d.prototype),updatedAt:Date.now()}))}catch{}
       location.href="/play2.html";
     });
-    socket.emit("start_training",{mode:"field_test",map:selectedMap,gameMode:selectedMode,prototype:true});
+    sessionStorage.setItem("selectedMap",selectedMap);
+    sessionStorage.setItem("selectedMode",selectedMode);
+    socket.emit("start_prototype_match",{mode:selectedMode,map:selectedMap});
     return;
   }
   if(searching)return;
