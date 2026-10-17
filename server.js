@@ -473,17 +473,50 @@ function parseCookies(header = "") {
   return out;
 }
 
+function sessionTokenHash(token) {
+  return crypto.createHash("sha256").update(String(token)).digest("hex");
+}
+
 function createSession(userId) {
   const token = crypto.randomBytes(32).toString("hex");
   const now = Date.now();
-  sessions.set(token, { userId, createdAt: now, expiresAt: now + SESSION_TTL_MS });
+  const expiresAt = now + SESSION_TTL_MS;
+  sessions.set(token, { userId, createdAt: now, expiresAt });
+
+  // Keep only token hashes in the durable account record. This lets the HttpOnly
+  // cookie remain valid when Render restarts the Node process and clears memory.
+  const user = users.find(candidate => candidate.uuid === userId || candidate.id === userId);
+  if (user) {
+    const tokenHash = sessionTokenHash(token);
+    const existing = Array.isArray(user.authSessions) ? user.authSessions : [];
+    user.authSessions = [
+      ...existing.filter(session => session && Number.isFinite(session.expiresAt) && session.expiresAt > now),
+      { tokenHash, createdAt: now, expiresAt }
+    ].slice(-10);
+    saveUsers();
+  }
   return token;
 }
 
 function sessionUserFromToken(token) {
-  const data = token ? sessions.get(token) : null;
-  if (!data || !Number.isFinite(data.expiresAt) || data.expiresAt <= Date.now()) {
-    if (token) sessions.delete(token);
+  if (!token) return null;
+  let data = sessions.get(token);
+  if (!data) {
+    // Socket.IO and HTTP share this path; restore a session from the saved user
+    // snapshot/MongoDB Atlas after a cold start instead of forcing another login.
+    const tokenHash = sessionTokenHash(token);
+    const now = Date.now();
+    const user = users.find(candidate => Array.isArray(candidate.authSessions) &&
+      candidate.authSessions.some(session => session?.tokenHash === tokenHash &&
+        Number.isFinite(session.expiresAt) && session.expiresAt > now));
+    if (!user) return null;
+    const stored = user.authSessions.find(session => session?.tokenHash === tokenHash);
+    data = { userId: user.uuid || user.id, createdAt: stored.createdAt, expiresAt: stored.expiresAt };
+    sessions.set(token, data);
+    return user;
+  }
+  if (!Number.isFinite(data.expiresAt) || data.expiresAt <= Date.now()) {
+    sessions.delete(token);
     return null;
   }
   const user = users.find(u => u.uuid === data.userId) || users.find(u => u.id === data.userId);
@@ -773,7 +806,12 @@ app.post("/api/login", loginRateLimit, (req, res) => {
 
 app.post("/api/logout", requireAuth, (req, res) => {
   const cookies = parseCookies(req.headers.cookie || "");
-  if (cookies.standoffx_session) sessions.delete(cookies.standoffx_session);
+  if (cookies.standoffx_session) {
+    sessions.delete(cookies.standoffx_session);
+    const tokenHash = sessionTokenHash(cookies.standoffx_session);
+    req.user.authSessions = (Array.isArray(req.user.authSessions) ? req.user.authSessions : [])
+      .filter(session => session?.tokenHash !== tokenHash);
+  }
   req.user.status = false;
   saveUsers();
   clearSessionCookie(res);
@@ -1511,7 +1549,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
   const MATCH_SPAWNS = {
     HILL_TOWN: [{x:-42,y:0,z:-28},{x:42,y:0,z:-28},{x:-42,y:0,z:28},{x:42,y:0,z:28}],
-    SANDSTONE: [{x:-7,y:0,z:-40},{x:7,y:0,z:-40},{x:-7,y:0,z:40},{x:7,y:0,z:40}],
+    SANDSTONE: [{x:-8.75,y:0,z:-50},{x:8.75,y:0,z:-50},{x:-8.75,y:0,z:50},{x:8.75,y:0,z:50}],
     SMALL_YARD: [{x:-23,y:0,z:-23},{x:23,y:0,z:-23},{x:0,y:0,z:24}],
     M3_Maze: [{x:-195,y:0,z:-195},{x:195,y:0,z:-195},{x:-195,y:0,z:195},{x:195,y:0,z:195}],
     NEON_YARD: [{x:-82,y:0,z:-82},{x:82,y:0,z:-82},{x:-82,y:0,z:82},{x:82,y:0,z:82}],
@@ -1792,8 +1830,8 @@ function respawnPlayer(match, player) {
 }
 
 const SANDSTONE_BOMB_SITES = Object.freeze({
-  A: Object.freeze({ x: 30, z: -27 }),
-  B: Object.freeze({ x: -15, z: 27 })
+  A: Object.freeze({ x: 37.5, z: -33.75 }),
+  B: Object.freeze({ x: 22.5, z: 37.5 })
 });
 
 function alliesSide(match, team) {
@@ -2283,7 +2321,7 @@ function segmentIntersectsRect2d(from,to,rect){
 
 const SERVER_MAP_LIMITS = Object.freeze({
   // Keep server limits just inside the physical perimeter walls built by the client.
-  SANDSTONE: { x: 48, z: 48 },
+  SANDSTONE: { x: 60, z: 60 },
   SMALL_YARD: { x: 32, z: 32 },
   M3_Maze: { x: 225.5, z: 225.5 },
   FIELD_ARENA: { x: 291.5, z: 291.5 },
@@ -2294,7 +2332,7 @@ const SERVER_MAP_BLOCKERS = Object.freeze({
     { minX: -37, maxX: -24, minZ: -22, maxZ: 1 },
     { minX: 21, maxX: 36, minZ: -19, maxZ: 2 },
     { minX: -37, maxX: -21, minZ: 20, maxZ: 35 },
-    { minX: 20, maxX: 35, minZ: 20, maxZ: 35 },
+    { minX: 30.5, maxX: 43.5, minZ: 2.5, maxZ: 19.5 },
     { minX: -12, maxX: -9, minZ: -23, maxZ: -12 },
     { minX: 9, maxX: 12, minZ: -8, maxZ: 4 },
     { minX: -11, maxX: -4, minZ: 5, maxZ: 7 },
@@ -2302,8 +2340,21 @@ const SERVER_MAP_BLOCKERS = Object.freeze({
     { minX: -44, maxX: -40, minZ: -4, maxZ: 7 },
     { minX: 38, maxX: 42, minZ: 7, maxZ: 20 },
     { minX: 25, maxX: 32, minZ: -34, maxZ: -31 },
-    { minX: -19, maxX: -12, minZ: 31, maxZ: 34 }
-  ],
+    { minX: 13, maxX: 20, minZ: 34, maxZ: 37 },
+    // Extra corridor walls on the expanded Sandstone layout.
+    { minX: -21, maxX: -11, minZ: -29.55, maxZ: -28.45 },
+    { minX: -0.6, maxX: 0.6, minZ: -39, maxZ: -31 },
+    { minX: 12.5, maxX: 21.5, minZ: -20.6, maxZ: -19.4 },
+    { minX: -29.5, maxX: -18.5, minZ: 7.45, maxZ: 8.55 },
+    { minX: 3.45, maxX: 4.55, minZ: 16.5, maxZ: 25.5 },
+    { minX: 2.5, maxX: 11.5, minZ: -7.45, maxZ: -6.55 },
+    { minX: -9, maxX: -1, minZ: 16.55, maxZ: 17.45 }
+  ].map(blocker => ({
+    minX: blocker.minX * 1.25,
+    maxX: blocker.maxX * 1.25,
+    minZ: blocker.minZ * 1.25,
+    maxZ: blocker.maxZ * 1.25
+  })),
   SMALL_YARD: [
     { minX: -28, maxX: -16, minZ: -11, maxZ: 11 },
     { minX: 16, maxX: 28, minZ: -11, maxZ: 11 },
