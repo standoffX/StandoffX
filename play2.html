@@ -20,6 +20,17 @@
 #overlay{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:linear-gradient(180deg,#070b10ee,#070b10f5);padding:24px;cursor:pointer}
 #overlay .panel{width:min(580px,92vw);padding:26px;border:1px solid #ffffff12;background:#0f151ed9;border-radius:12px;box-shadow:0 30px 100px #000a}
 #overlay h1{margin:0 0 8px;font-size:34px;letter-spacing:-1px}#overlay p{margin:8px 0;color:#8391a5;font-size:13px}
+.allies-buy-panel{display:none;gap:9px;margin:14px 0 4px;padding:12px;border:1px solid #3e91ad55;border-radius:9px;background:linear-gradient(140deg,#102033ed,#0a111be8);text-align:left}
+.allies-buy-head{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#b8cce0;font-size:10px;letter-spacing:.12em;font-weight:900}
+.allies-buy-head strong{color:#7effd0;font-size:14px;letter-spacing:.03em}
+.allies-buy-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.allies-buy-card{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:10px 9px;border:1px solid #9bb5d12b;border-radius:7px;background:#121c2be8;color:#f2f7ff;text-align:left;cursor:pointer;transition:border-color .15s,background .15s}
+.allies-buy-card:hover,.allies-buy-card.is-equipped{border-color:#6deec5;background:#16352fe8}
+.allies-buy-card .buy-name{font-size:13px;font-weight:950;letter-spacing:.04em}
+.allies-buy-card small{font-size:9px;line-height:1.35;color:#9bacbf}
+.allies-buy-card b{font-size:12px;color:#ffdf87}
+.allies-buy-card em{font-style:normal;font-size:9px;font-weight:950;letter-spacing:.08em;color:#72f3c5}
+.allies-buy-card:disabled{opacity:.48;cursor:not-allowed}
 #phase{font-size:24px;font-weight:950;color:#5b9dff;margin:15px 0 6px}#bigTimer{font-size:58px;font-weight:950;line-height:1}
 .players{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:18px}.player{padding:11px;background:#0a1017;border:1px solid #ffffff0d;border-radius:7px;text-align:left;min-width:0}.player .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#465366;margin-right:7px}.player.online .dot{background:#4ad985}.player.ready .dot{background:#4d8fff}.player-id{margin-top:4px;color:#8d9db8;font-size:9px;overflow-wrap:anywhere}
 #progressWrap{margin:15px auto 0;max-width:360px;height:5px;background:#202a38;border-radius:99px;overflow:hidden}#progress{height:100%;width:0;background:#4d8fff;transition:width .15s}
@@ -145,6 +156,15 @@ body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
     <div id="phase">Синхронізація...</div>
     <div id="bigTimer">—</div>
     <p id="overlayText">Завантажуються карта, зброя та дані матчу. Це може зайняти кілька секунд.</p>
+    <div id="alliesBuyPanel" class="allies-buy-panel">
+      <div class="allies-buy-head"><span>ЗАКУПІВЛЯ НА РАУНД</span><span>ГРОШІ <strong id="alliesCash">$800</strong></span></div>
+      <div class="allies-buy-grid">
+        <button class="allies-buy-card" type="button" data-allies-weapon="akr"><span class="buy-name">AKR</span><small>Штурмова гвинтівка</small><b>$2 700</b><em data-status>КУПИТИ</em></button>
+        <button class="allies-buy-card" type="button" data-allies-weapon="p350"><span class="buy-name">P350</span><small>Стартовий пістолет</small><b>СТАРТОВА</b><em data-status>ВИБРАТИ</em></button>
+        <button class="allies-buy-card" type="button" data-allies-weapon="knife"><span class="buy-name">НІЖ</span><small>Ближній бій</small><b>БЕЗКОШТОВНО</b><em data-status>ВИБРАТИ</em></button>
+      </div>
+      <p>Обери зброю до старту. Збережи AKR, якщо пережив раунд; після загибелі основна зброя втрачається.</p>
+    </div>
     <div id="progressWrap"><div id="progress"></div></div>
     <div id="loadingDetails" aria-live="polite">
       <div class="loading-detail is-active"><span>КАРТА</span><b id="mapLoadStatus">ОЧІКУЄМО…</b></div>
@@ -791,6 +811,23 @@ function nearestSandstoneSite(maxDistance=5.5){
   }
   return nearest;
 }
+function updateAlliesBuyPanel(){
+  const panel=$("alliesBuyPanel");
+  if(!panel)return;
+  const visible=mode==="allies"&&!isTrainingMode&&matchPhase==="round_start";
+  panel.style.display=visible?"grid":"none";
+  const cash=$("alliesCash");
+  if(cash)cash.textContent="$"+Math.max(0,Number(alliesCash)||0).toLocaleString("en-US");
+  for(const button of document.querySelectorAll("[data-allies-weapon]")){
+    const weapon=button.dataset.alliesWeapon;
+    const owned=alliesWeapons.includes(weapon);
+    const equipped=alliesEquippedWeapon===weapon;
+    const status=button.querySelector("[data-status]");
+    button.classList.toggle("is-equipped",equipped);
+    if(status)status.textContent=owned?(equipped?"ОБРАНО":"ВИБРАТИ"):(weapon==="akr"?(alliesCash>=2700?"КУПИТИ":"НЕ ВИСТАЧАЄ"):"НЕДОСТУПНО");
+    button.disabled=!owned&&!(weapon==="akr"&&alliesCash>=2700);
+  }
+}
 function updateBombHud(){
   const hud=$("bombHud");
   const info=$("roundInfo");
@@ -1190,6 +1227,9 @@ let attackingTeam="A";
 let defendingTeam="B";
 let bombState=null;
 let bombWorldVisual=null;
+let alliesCash=800;
+let alliesWeapons=["p350","knife"];
+let alliesEquippedWeapon="p350";
 
 const keys={w:false,s:false,a:false,d:false,shift:false};
 const DEFAULT_TRAINING_BINDS={spawnBot:"KeyN",removeBot:"KeyB",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
@@ -2141,7 +2181,8 @@ function toggleAimingDownSights(){
 }
 function selectWeapon(weaponId,force=false){
   if(!CLIENT_WEAPON_INFO[weaponId])return;
-  if(!force&&(matchPhase!=="game"||hp<=0))return;
+  if(!force&&((matchPhase!=="game"&&!(mode==="allies"&&!isTrainingMode&&matchPhase==="round_start"))||hp<=0))return;
+  if(mode==="allies"&&!isTrainingMode&&!alliesWeapons.includes(weaponId)){showDamagePopup("ЗБРОЮ НЕ ПРИДБАНО");return;}
   if(selectedWeapon===weaponId&&heldWeaponRoot?.children.length&&!force){updateWeaponHud();return}
   weaponAmmo[selectedWeapon]=ammo;
   selectedWeapon=weaponId;
@@ -2170,9 +2211,10 @@ function selectWeapon(weaponId,force=false){
   }else makeFallbackKnife();
   positionHeldWeapon();
   updateWeaponHud();
+  if(!force&&mode==="allies"&&!isTrainingMode&&socket?.connected)socket.emit("allies_select_weapon",{matchId,weapon:weaponId});
 }
 function cycleWeapon(){
-  const order=["akr","p350","knife"];
+  const order=["akr","p350","knife"].filter(id=>mode!=="allies"||isTrainingMode||alliesWeapons.includes(id));
   selectWeapon(order[(order.indexOf(selectedWeapon)+1)%order.length]);
 }
 function showDamagePopup(message,incoming=false){
@@ -2266,6 +2308,13 @@ addEventListener("mousedown",e=>{
 });
 addEventListener("mouseup",e=>{if(e.button===0&&!isMobileDevice)fireHeld=false});
 $("weaponBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();if(weaponSwipeConsumed){weaponSwipeConsumed=false;return}cycleWeapon()});
+document.querySelectorAll("[data-allies-weapon]").forEach(button=>button.addEventListener("click",e=>{
+  e.preventDefault();e.stopPropagation();
+  if(mode!=="allies"||isTrainingMode||matchPhase!=="round_start")return;
+  const weapon=button.dataset.alliesWeapon;
+  if(alliesWeapons.includes(weapon))socket.emit("allies_select_weapon",{matchId,weapon});
+  else socket.emit("allies_buy",{matchId,weapon});
+}));
 $("interactBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();interactWithNearestDoor()});
 let weaponSwipeStart=null;
 let weaponSwipeConsumed=false;
@@ -2291,6 +2340,8 @@ document.addEventListener("touchend",e=>{
 function setOverlayGame(){
   $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":mode==="training"?"ТРЕНУВАННЯ":"HIDE & SEEK";
   $("clickHint").textContent="Клікни для огляду мишкою. WASD — рух · ESC — у лобі";
+  $("progressWrap").style.display="none";$("loadingDetails").style.display="none";$("players").style.display="none";
+  updateAlliesBuyPanel();
   if(isMobileDevice) $("overlay").style.display="none";
 }
 function pauseToMenu(){
@@ -2477,9 +2528,9 @@ socket.on("match_phase",data=>{
     $("overlayText").textContent="Приготуйся.";
   }else if(data.phase==="round_start"){
     $("overlayTitle").textContent="РАУНД "+(data.roundNumber||roundNumber);
-    $("phase").textContent="СТАРТ ЧЕРЕЗ";
-    $("bigTimer").textContent=(Number(data.time)||4)+"с";
-    $("overlayText").textContent=myTeam===attackingTeam?"Атакуйте. Закладіть бомбу на A або B.":"Захистіть сайти A та B.";
+    $("phase").textContent="ФАЗА ЗАКУПІВЛІ";
+    $("bigTimer").textContent=(Number(data.time)||10)+"с";
+    $("overlayText").textContent=myTeam===attackingTeam?"Підготуй зброю та план атаки.":"Підготуй зброю та захищай сайти A і B."; 
     $("roundInfo").textContent="РАУНД "+roundNumber+" · "+roundWins.A+" : "+roundWins.B;
   }else if(data.phase==="round_end"){
     $("overlayTitle").textContent=data.winningTeam===myTeam?"РАУНД ВИГРАНО":"РАУНД ПРОГРАНО";
@@ -2494,10 +2545,11 @@ socket.on("match_phase",data=>{
     updateBombHud();
   }
   updateBombHud();
+  updateAlliesBuyPanel();
 });
 socket.on("timer_update",data=>{
   const t=Math.max(0,Number(data.time)||0);
-  if(data.phase==="warmup"||data.phase==="countdown"){
+  if(data.phase==="warmup"||data.phase==="countdown"||data.phase==="round_start"||data.phase==="round_end"){
     $("bigTimer").textContent=t+"с";
   }else{
     matchTime=t;
@@ -2525,8 +2577,8 @@ socket.on("allies_round_start",data=>{
   defendingTeam=data.defendingTeam||defendingTeam;
   bombState=data.bomb||{state:"carried"};
   hp=100;keys.w=keys.a=keys.s=keys.d=keys.shift=false;fireHeld=false;jumpQueued=false;isCrouching=false;
-  weaponAmmo.akr=CLIENT_WEAPON_INFO.akr.magazine;weaponAmmo.p350=CLIENT_WEAPON_INFO.p350.magazine;ammo=weaponAmmo.akr;reloading=false;
-  setAimingDownSights(false);selectWeapon("akr",true);updateWeaponHud();
+  weaponAmmo.akr=CLIENT_WEAPON_INFO.akr.magazine;weaponAmmo.p350=CLIENT_WEAPON_INFO.p350.magazine;ammo=weaponAmmo[alliesEquippedWeapon]??weaponAmmo.p350;reloading=false;
+  setAimingDownSights(false);selectWeapon(alliesWeapons.includes(alliesEquippedWeapon)?alliesEquippedWeapon:(alliesWeapons.includes("p350")?"p350":"knife"),true);updateWeaponHud();
   $("deathNotice").style.display="none";
   for(const p of (data.players||[])){
     if(String(p.userId)===String(myId)){
@@ -2542,10 +2594,13 @@ socket.on("allies_round_start",data=>{
   renderBombWorldVisual();updateBombHud();updateVisual();
   $("overlay").style.display="flex";
   $("overlayTitle").textContent="РАУНД "+roundNumber;
-  $("phase").textContent="ПІДГОТОВКА";
-  $("bigTimer").textContent="4с";
-  $("overlayText").textContent=myTeam===attackingTeam?"АТАКА · ЗАКЛАДИ БОМБУ НА A АБО B":"ЗАХИСТ · НЕ ДАЙ ЗАКЛАСТИ БОМБУ";
-  $("clickHint").textContent="Клікни для огляду мишкою · E — взаємодія";
+  try{if(!isMobileDevice)controls.unlock()}catch{}
+  $("phase").textContent="ЗАКУПІВЛЯ / ПІДГОТОВКА";
+  $("bigTimer").textContent="10с";
+  $("overlayText").textContent=myTeam===attackingTeam?"АТАКА · ПІСЛЯ СТАРТУ ЗАКЛАДИ БОМБУ НА A АБО B":"ЗАХИСТ · ПІДГОТУЙСЯ ЗАХИЩАТИ САЙТИ A ТА B";
+  $("progressWrap").style.display="none";$("loadingDetails").style.display="none";$("players").style.display="none";
+  $("clickHint").textContent="Після підготовки: клікни для огляду мишкою · E — взаємодія";
+  updateAlliesBuyPanel();
 });
 socket.on("allies_round_live",data=>{
   if(mode!=="allies")return;
@@ -2556,9 +2611,21 @@ socket.on("allies_round_live",data=>{
   $("overlayTitle").textContent="СОЮЗНИКИ · БОМБА";
   $("phase").textContent="РАУНД У ПРОЦЕСІ";
   $("overlayText").textContent="";
+  updateAlliesBuyPanel();
   if(isMobileDevice)$("overlay").style.display="none";
   updateBombHud();updateInteractButtonLabel();
 });
+socket.on("allies_loadout",data=>{
+  if(mode!=="allies"||isTrainingMode||!data)return;
+  alliesCash=Math.max(0,Number(data.cash)||0);
+  alliesWeapons=Array.isArray(data.weapons)?[...new Set(data.weapons.filter(id=>CLIENT_WEAPON_INFO[id]))]:["p350","knife"];
+  alliesEquippedWeapon=CLIENT_WEAPON_INFO[data.equippedWeapon]?data.equippedWeapon:(alliesWeapons.includes("p350")?"p350":alliesWeapons[0]||"knife");
+  if((matchPhase==="round_start"||matchPhase==="game")&&selectedWeapon!==alliesEquippedWeapon){
+    selectWeapon(alliesWeapons.includes(alliesEquippedWeapon)?alliesEquippedWeapon:"p350",true);
+  }
+  updateWeaponHud();updateAlliesBuyPanel();
+});
+socket.on("allies_buy_result",data=>{if(data?.message)showDamagePopup(data.message)});
 socket.on("bomb_state",data=>{
   const previous=bombState?.state;
   bombState=data||{state:"carried"};
@@ -2578,6 +2645,8 @@ socket.on("allies_round_end",data=>{
   keys.w=keys.a=keys.s=keys.d=keys.shift=false;fireHeld=false;
   renderBombWorldVisual();updateBombHud();
   $("overlay").style.display="flex";
+  try{if(!isMobileDevice)controls.unlock()}catch{}
+  updateAlliesBuyPanel();
   $("overlayTitle").textContent=data.winningTeam===myTeam?"РАУНД ВИГРАНО":"РАУНД ПРОГРАНО";
   $("phase").textContent="РАУНД "+roundNumber+" · "+roundWins.A+" : "+roundWins.B;
   $("bigTimer").textContent=(Number(data.nextRoundIn)||5)+"с";
