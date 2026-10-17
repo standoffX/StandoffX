@@ -1607,7 +1607,7 @@ function buildSandstoneMap(){
   const addBox=(x,y,z,w,h,d,material,solid=true)=>{
     const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
     mesh.position.set(x,y,z);mesh.castShadow=!isMobileDevice&&solid;mesh.receiveShadow=!isMobileDevice;
-    mesh.userData.mapSolid=Boolean(solid);scene.add(mesh);if(solid)mapObjects.push(mesh);return mesh;
+    mesh.userData.mapSolid=Boolean(solid);sandstoneRoot.add(mesh);if(solid)mapObjects.push(mesh);return mesh;
   };
   const sign=(letter,x,z,color)=>{
     const canvas=document.createElement("canvas");canvas.width=128;canvas.height=128;
@@ -2084,6 +2084,12 @@ function sendMove(force=false){
   if(isTrainingMode)socket.emit("training_move",{trainingId,viewY:camera.rotation.y,...data});
   else socket.emit("player_moved",{matchId,myId,userId:myId,...data});
 }
+let matchJoined=false,clientMapReady=false,clientReadySent=false;
+function emitClientReadyWhenJoined(){
+  if(isTrainingMode||!matchId||!matchJoined||!clientMapReady||clientReadySent)return;
+  clientReadySent=true;
+  socket.emit("client_ready",{matchId});
+}
 function finishClientReady(){
   if(!mapLoadFinished)return;
   const mapLabel=MAP_LOADING_NAMES[selectedMap]||String(selectedMap||"КАРТА");
@@ -2100,8 +2106,9 @@ function finishClientReady(){
     $("overlay").style.display="none";
     return;
   }
-  $("overlayText").textContent="Карта та колізії готові. Очікуємо підтвердження готовності гравців із сервера…";
-  socket.emit("client_ready",{matchId});
+  clientMapReady=true;
+  $("overlayText").textContent="Карту завантажено. Завершуємо синхронізацію матчу…";
+  emitClientReadyWhenJoined();
 }
 
 function saveSquadRoster(){
@@ -2494,6 +2501,7 @@ socket.on("training_state",data=>{
 });
 
 socket.on("init_match",data=>{
+  matchJoined=true;
   $("trainingControls").style.display="none";
   applyMapInteractionState(data.mapState);
   try{
@@ -2515,6 +2523,7 @@ socket.on("init_match",data=>{
   updateSquadRoster(data.players||[]);
   (data.players||[]).forEach(p=>{if(String(p.userId)!==String(myId))applyEnemy(p)});
   updateVisual();
+  emitClientReadyWhenJoined();
 });
 socket.on("match_waiting",data=>{
   updateWaiting(data);
@@ -2790,6 +2799,8 @@ socket.on("connect_error",err=>{
   console.warn("[Socket.IO] Gameplay connection failed; retrying.",err?.message||err);
 });
 socket.on("disconnect",()=>{
+  matchJoined=false;
+  clientReadySent=false;
   keys.w=keys.a=keys.s=keys.d=keys.shift=false;isCrouching=false;
   jumpQueued=false;fireHeld=false;
   setLoadingDetail("connectionLoadStatus","З’ЄДНАННЯ ВТРАЧЕНО","error");
