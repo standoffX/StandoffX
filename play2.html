@@ -803,7 +803,7 @@ function addBreakableWood(x,z,rotationY=Math.PI/2){
 function nearestSandstoneSite(maxDistance=5.5){
   if(!player)return null;
   let nearest=null,best=maxDistance;
-  for(const [site,center] of Object.entries({A:{x:30,z:-27},B:{x:-15,z:27}})){
+  for(const [site,center] of Object.entries({A:{x:37.5,z:-33.75},B:{x:22.5,z:37.5}})){
     const distance=Math.hypot(player.position.x-center.x,player.position.z-center.z);
     if(distance<best){best=distance;nearest={site,distance,center}}
   }
@@ -1574,7 +1574,7 @@ function renderBombWorldVisual(){
     bombWorldVisual=null;
   }
   if(mode!=="allies"||selectedMap!=="SANDSTONE"||!bombState||!["planting","planted"].includes(bombState.state)||!bombState.site)return;
-  const center=bombState.site==="A"?{x:30,z:-27}:{x:-15,z:27};
+  const center=bombState.site==="A"?{x:37.5,z:-33.75}:{x:22.5,z:37.5};
   const group=new THREE.Group();
   const body=new THREE.Mesh(new THREE.BoxGeometry(.48,.24,.34),new THREE.MeshStandardMaterial({color:0x232b31,roughness:.55,metalness:.65}));
   body.position.y=.25;group.add(body);
@@ -1592,6 +1592,8 @@ function buildSandstoneMap(){
   if(mapLoadFinished)return;
   scene.background=new THREE.Color(0xbba987);
   scene.fog=new THREE.Fog(0xbba987,105,185);
+  const sandstoneRoot=new THREE.Group();
+  const sandstoneScale=1.25;
   const mat=(color,roughness=.92,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
   const ground=mat(0xb8a17c,1),road=mat(0x847865,1),sandstone=mat(0xc8b590,.97);
   const sandstoneDark=mat(0x9d8867,.98),roof=mat(0x6e6251,.94),trim=mat(0x554d42,.83,.08);
@@ -1600,7 +1602,7 @@ function buildSandstoneMap(){
   const addGround=(x,z,w,d,material,y=-.07)=>{
     const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,d),material);
     mesh.rotation.x=-Math.PI/2;mesh.position.set(x,y,z);mesh.receiveShadow=!isMobileDevice;
-    scene.add(mesh);mapObjects.push(mesh);return mesh;
+    sandstoneRoot.add(mesh);mapObjects.push(mesh);return mesh;
   };
   const addBox=(x,y,z,w,h,d,material,solid=true)=>{
     const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
@@ -1614,7 +1616,7 @@ function buildSandstoneMap(){
     ctx.font="bold 78px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(letter,64,67);
     const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
     const panel=new THREE.Mesh(new THREE.PlaneGeometry(1.25,1.25),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide}));
-    panel.position.set(x,2.6,z);panel.lookAt(x,2.6,0);scene.add(panel);
+    panel.position.set(x,2.6,z);panel.lookAt(x,2.6,0);sandstoneRoot.add(panel);
   };
 
   addGround(0,0,100,100,ground,-.09);
@@ -1636,7 +1638,7 @@ function buildSandstoneMap(){
     {x:-30.5,z:-10.5,w:13,h:6.8,d:23,wall:sandstone,top:roof},
     {x:28.5,z:-8.5,w:15,h:7,d:21,wall:sandstoneDark,top:roof},
     {x:-29,z:27.5,w:16,h:6.1,d:15,wall:sandstone,top:roof},
-    {x:27.5,z:27.5,w:15,h:6.1,d:15,wall:sandstoneDark,top:roof}
+    {x:37,z:11,w:13,h:6.1,d:17,wall:sandstoneDark,top:roof}
   ];
   for(const b of buildings){
     addBox(b.x,b.h/2,b.z,b.w,b.h,b.d,b.wall,true);
@@ -1651,25 +1653,33 @@ function buildSandstoneMap(){
     addBox(b.x,b.h+.55,b.z,b.w*.72,.18,b.d*.72,trim,false);
   }
 
-  // Offset corridor walls make three lanes, short rotations, and several close-angle fights.
+  // Offset corridor walls make connected lanes and short-angle fights.
   addBox(-10.5,2.1,-17.5,3,4.2,11,sandstoneDark,true);
   addBox(10.5,2.1,-2,3,4.2,12,sandstone,true);
   addBox(-7.5,1.2,6,7,2.4,2,trim,true);
   addBox(8.5,1.2,13,7,2.4,2,sandstoneDark,true);
   addBox(-42,1.9,1.5,4,3.8,11,sandstone,true);
   addBox(40,1.9,13.5,4,3.8,13,sandstoneDark,true);
+  // Added side passages and offset walls make the mid/market route less boxy.
+  addBox(-16,1.6,-29,10,3.2,1.1,sandstoneDark,true);
+  addBox(0,1.4,-35,1.2,2.8,8,trim,true);
+  addBox(17,1.8,-20,9,3.6,1.2,sandstone,true);
+  addBox(-24,1.4,8,11,2.8,1.1,trim,true);
+  addBox(4,1.2,21,1.1,2.4,9,sandstoneDark,true);
+  addBox(7,1.2,-7,9,2.4,.9,trim,true);
+  addBox(-5,1.2,17,8,2.4,.9,sandstoneDark,true);
 
-  // Marked bombsites A/B, with crates as real physical cover.
+  // Bombsites sit on the east side of the expanded layout, like the top-down reference.
   addGround(30,-27,11,11,road,-.018);
-  addGround(-15,27,11,11,road,-.017);
+  addGround(18,30,11,11,road,-.017);
   addGround(30,-27,8,8,red,-.014);
-  addGround(-15,27,8,8,blue,-.013);
+  addGround(18,30,8,8,blue,-.013);
   addBox(28.5,1.05,-32.5,7,2.1,3,wood,true);
   addBox(31,1.05,-32.2,1.3,2.1,2.3,cloth,false);
-  addBox(-15.5,1.05,32.5,7,2.1,3,wood,true);
-  addBox(-13,1.05,32.2,1.3,2.1,2.3,cloth,false);
+  addBox(16.5,1.05,35.5,7,2.1,3,wood,true);
+  addBox(19,1.05,35.2,1.3,2.1,2.3,cloth,false);
   sign("A",34.6,-24.6,"#a33d31");
-  sign("B",-11.2,23.7,"#315a77");
+  sign("B",21.6,26.7,"#315a77");
 
   // Market awnings, low pallets, barrels, sandbags and sightline breaks.
   for(const [x,z,color] of [[-40,-25,cloth],[-40,-21,red],[40,26,blue],[41,30,cloth]]){
@@ -1688,6 +1698,27 @@ function buildSandstoneMap(){
   for(const [x,z] of [[-7,-39],[7,-39],[-7,39],[7,39]]){
     addGround(x,z,3,3,trim,-.012);
   }
+  const zoneMarker=(label,x,z,color)=>{
+    const canvas=document.createElement("canvas");canvas.width=256;canvas.height=80;
+    const ctx=canvas.getContext("2d");
+    ctx.fillStyle="#171b1d";ctx.fillRect(0,0,256,80);
+    ctx.fillStyle=color;ctx.fillRect(5,5,246,70);
+    ctx.strokeStyle="#e4d4b1";ctx.lineWidth=3;ctx.strokeRect(7,7,242,66);
+    ctx.fillStyle="#fff5df";ctx.font="bold 31px Arial";ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText(label,128,41,228);
+    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+    const panel=new THREE.Mesh(new THREE.PlaneGeometry(4.5,1.35),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide}));
+    panel.position.set(x,2.6,z);panel.lookAt(x,2.6,0);sandstoneRoot.add(panel);
+  };
+  zoneMarker("MID",0,2,"#615a4c");
+  zoneMarker("MARKET",-34,16,"#80553b");
+  zoneMarker("TITANIC",-34,4,"#a34931");
+  zoneMarker("ZIGA",17,2,"#62548c");
+  zoneMarker("KITCHEN",9,-15,"#35657f");
+  zoneMarker("A SITE",29,-20,"#a33d31");
+  zoneMarker("B SITE",18,23,"#315a77");
+  sandstoneRoot.scale.setScalar(sandstoneScale);
+  scene.add(sandstoneRoot);
   $("progress").style.width="100%";mapLoaded=true;mapLoadFinished=true;
   setLoadingDetail("mapLoadStatus","SANDSTONE · ГОТОВО","done");
 }
@@ -1953,7 +1984,7 @@ function rebuildCollisionIndex(){
   collisionIndexReady=true;
 }
 function worldLimit(){
-  return ({SANDSTONE:48,SMALL_YARD:32,HILL_TOWN:54.2,NEON_YARD:167,FIELD_ARENA:291,M3_Maze:225})[selectedMap]||225;
+  return ({SANDSTONE:60,SMALL_YARD:32,HILL_TOWN:54.2,NEON_YARD:167,FIELD_ARENA:291,M3_Maze:225})[selectedMap]||225;
 }
 function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
