@@ -1412,6 +1412,8 @@ const MODE_CONFIGS = {
   }
 };
 
+const ALLIES_BUY_PRICES = Object.freeze({ akr: 2700, p350: 300, knife: 0 });
+
 const TESTER_MODE_CONFIGS = {
   training: { id: "training", name: "TRAINING", map: "HILL_TOWN", kind: "bot-training" },
   field_test: { id: "field_test", name: "FIELD TEST", map: "HILL_TOWN", kind: "free-range" }
@@ -1549,6 +1551,9 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
       lastMoveAt: 0,
       prevMoveTime: 0,
       ready: Boolean(p.isBot),
+      cash: mode === "allies" ? 800 : 0,
+      weapons: mode === "allies" ? ["p350", "knife"] : ["akr", "p350", "knife"],
+      equippedWeapon: mode === "allies" ? "p350" : "akr",
       joinedAt: null,
       disconnectTimer: null
     })),
@@ -1840,6 +1845,35 @@ function alliesRoundPayload(match) {
   };
 }
 
+function alliesLoadoutPayload(player) {
+  return { cash: Math.max(0, Number(player.cash) || 0), weapons: Array.isArray(player.weapons) ? [...new Set(player.weapons)] : ["p350", "knife"], equippedWeapon: player.equippedWeapon || "p350", prices: { ...ALLIES_BUY_PRICES } };
+}
+function emitAlliesLoadout(io, match, player) {
+  if (player?.socketId) io.to(player.socketId).emit("allies_loadout", alliesLoadoutPayload(player));
+}
+function handleAlliesBuy(io, match, player, data = {}) {
+  if (!match || match.mode !== "allies" || match.phase !== "round_start" || player.hp <= 0) return;
+  const weaponId = cleanText(data?.weapon, 20).toLowerCase();
+  if (!Object.prototype.hasOwnProperty.call(ALLIES_BUY_PRICES, weaponId)) return;
+  const price = ALLIES_BUY_PRICES[weaponId];
+  if (!Array.isArray(player.weapons)) player.weapons = ["p350", "knife"];
+  if (player.weapons.includes(weaponId)) { player.equippedWeapon = weaponId; emitAlliesLoadout(io, match, player); return; }
+  if ((Number(player.cash) || 0) < price) {
+    io.to(player.socketId).emit("allies_buy_result", { success: false, message: "Не вистачає грошей на цю зброю." });
+    emitAlliesLoadout(io, match, player); return;
+  }
+  player.cash = Math.max(0, Number(player.cash) || 0) - price;
+  player.weapons.push(weaponId); player.equippedWeapon = weaponId;
+  io.to(player.socketId).emit("allies_buy_result", { success: true, message: weaponId === "akr" ? "AKR придбано." : "Зброю вибрано." });
+  emitAlliesLoadout(io, match, player);
+}
+function handleAlliesSelectWeapon(io, match, player, data = {}) {
+  if (!match || match.mode !== "allies" || !["round_start", "game"].includes(match.phase) || player.hp <= 0) return;
+  const weaponId = cleanText(data?.weapon, 20).toLowerCase();
+  if (!Object.prototype.hasOwnProperty.call(ALLIES_BUY_PRICES, weaponId) || !Array.isArray(player.weapons) || !player.weapons.includes(weaponId)) return;
+  player.equippedWeapon = weaponId;
+  emitAlliesLoadout(io, match, player);
+}
 function stopAlliesRoundTimers(match) {
   if (match.roundTimer) clearInterval(match.roundTimer);
   if (match.bombActionTimer) clearInterval(match.bombActionTimer);
@@ -1855,6 +1889,7 @@ function finishAlliesRound(io, match, winningTeam, reason) {
   match.phase = "round_end";
   match.phaseRemaining = 5;
   match.roundWins[winningTeam] = (match.roundWins[winningTeam] || 0) + 1;
+  for (const player of match.players) player.cash = Math.min(16000, Math.max(0, Number(player.cash) || 0) + (player.team === winningTeam ? 3250 : 1900));
   const payload = {
     ...alliesRoundPayload(match),
     phase: "round_end",
@@ -1869,8 +1904,8 @@ function finishAlliesRound(io, match, winningTeam, reason) {
     roundNumber: match.roundNumber, roundWins: { ...match.roundWins },
     winningTeam, reason
   });
-  const reachedTarget = match.roundWins.A >= 7 || match.roundWins.B >= 7;
-  const reachedMaxRounds = match.roundNumber >= 13;
+  const reachedTarget = match.roundWins.A >= 8 || match.roundWins.B >= 8;
+  const reachedMaxRounds = match.roundNumber >= 15;
   match.phaseTimer = setTimeout(() => {
     const current = activeMatches.get(match.id);
     if (!current || current.finished) return;
@@ -1894,17 +1929,17 @@ function checkAlliesRoundWin(io, match) {
 
 function startAlliesRound(io, match, initial = false) {
   if (!match || match.finished) return;
-  if (match.phaseTimer) clearTimeout(match.phaseTimer);
+  if (match.phaseTimer) { clearTimeout(match.phaseTimer); clearInterval(match.phaseTimer); }
   stopAlliesRoundTimers(match);
-  if (match.roundNumber > 0 && match.roundNumber % 6 === 0) {
+  if (match.roundNumber > 0 && match.roundNumber % 7 === 0) {
     const previousAttacker = match.attackingTeam;
     match.attackingTeam = match.defendingTeam;
     match.defendingTeam = previousAttacker;
   }
   match.roundNumber += 1;
   match.phase = "round_start";
-  match.phaseRemaining = 4;
-  match.roundRemaining = 100;
+  match.phaseRemaining = 10;
+  match.roundRemaining = 110;
   match.bomb = {
     state: "carried",
     carrierUserId: match.players.find(p => p.team === match.attackingTeam && !p.isBot)?.userId
@@ -1921,6 +1956,10 @@ function startAlliesRound(io, match, initial = false) {
   };
   const teamIndices = { A: 0, B: 0 };
   for (const player of match.players) {
+    if (match.roundNumber > 1 && player.hp <= 0) { player.weapons = ["p350", "knife"]; player.equippedWeapon = "p350"; }
+    if (!Array.isArray(player.weapons) || !player.weapons.length) player.weapons = ["p350", "knife"];
+    if (!player.weapons.includes(player.equippedWeapon)) player.equippedWeapon = player.weapons.includes("p350") ? "p350" : player.weapons[0];
+    player.cash = Math.max(0, Number(player.cash) || 800);
     player.hp = 100;
     player.lastShotAt = 0;
     player.roundAlive = true;
@@ -1932,6 +1971,7 @@ function startAlliesRound(io, match, initial = false) {
     player.pos = { ...player.spawn };
     player.rotY = side === "attack" ? Math.PI : 0;
     player.anim = "Idle";
+    emitAlliesLoadout(io, match, player);
   }
   if (initial) {
     io.to(match.id).emit("match_start_now", {
@@ -1941,13 +1981,18 @@ function startAlliesRound(io, match, initial = false) {
   io.to(match.id).emit("allies_round_start", alliesRoundPayload(match));
   io.to(match.id).emit("bomb_state", bombPublicState(match));
   io.to(match.id).emit("match_phase", {
-    phase: "round_start", time: 4, mode: match.mode, modeName: match.modeName,
+    phase: "round_start", time: 10, mode: match.mode, modeName: match.modeName,
     roundNumber: match.roundNumber, roundWins: { ...match.roundWins },
     attackingTeam: match.attackingTeam, defendingTeam: match.defendingTeam
   });
-  match.phaseTimer = setTimeout(() => {
+  match.phaseTimer = setInterval(() => {
     const current = activeMatches.get(match.id);
-    if (!current || current.finished || current.phase !== "round_start") return;
+    if (!current || current.finished || current.phase !== "round_start") { clearInterval(match.phaseTimer); return; }
+    current.phaseRemaining = Math.max(0, (Number(current.phaseRemaining) || 0) - 1);
+    io.to(current.id).emit("timer_update", { phase: "round_start", time: current.phaseRemaining, roundNumber: current.roundNumber, roundWins: { ...current.roundWins }, attackingTeam: current.attackingTeam, defendingTeam: current.defendingTeam });
+    if (current.phaseRemaining > 0) return;
+    clearInterval(current.phaseTimer);
+    current.phaseTimer = null;
     current.phase = "game";
     current.phaseRemaining = null;
     io.to(current.id).emit("allies_round_live", alliesRoundPayload(current));
@@ -1959,6 +2004,11 @@ function startAlliesRound(io, match, initial = false) {
     });
     current.roundTimer = setInterval(() => {
       if (current.phase !== "game" || current.finished) return;
+      if (current.bomb?.state === "planted") {
+        const bombRemaining = Math.max(0, Math.ceil((Number(current.bomb.explodeAt) - Date.now()) / 1000));
+        io.to(current.id).emit("timer_update", { phase: "bomb", time: bombRemaining, roundNumber: current.roundNumber, roundWins: { ...current.roundWins }, attackingTeam: current.attackingTeam, defendingTeam: current.defendingTeam });
+        return;
+      }
       current.roundRemaining = Math.max(0, current.roundRemaining - 1);
       io.to(current.id).emit("timer_update", {
         phase: "game", time: current.roundRemaining,
@@ -1998,7 +2048,9 @@ function startAlliesRound(io, match, initial = false) {
           bomb.state = "planted";
           bomb.site = action.site;
           bomb.plantedAt = Date.now();
-          bomb.explodeAt = bomb.plantedAt + 35000;
+          bomb.explodeAt = bomb.plantedAt + 40000;
+          actor.cash = Math.min(16000, (Number(actor.cash) || 0) + 300);
+          emitAlliesLoadout(io, current, actor);
           bomb.action = null;
           current.roundRemaining = null;
           io.to(current.id).emit("bomb_state", bombPublicState(current));
@@ -2014,13 +2066,15 @@ function startAlliesRound(io, match, initial = false) {
         }
         if (Date.now() - action.startedAt >= 5000) {
           bomb.state = "defused";
+          actor.cash = Math.min(16000, (Number(actor.cash) || 0) + 300);
+          emitAlliesLoadout(io, current, actor);
           bomb.action = null;
           io.to(current.id).emit("bomb_state", bombPublicState(current));
           finishAlliesRound(io, current, current.defendingTeam, "bomb_defused");
         }
       }
     }, 100);
-  }, 4000);
+  }, 1000);
 }
 
 function maintainBombCarrier(io, match) {
@@ -2348,6 +2402,7 @@ function handleTeamShot(io, match, shooter, data) {
   if (!["team_fight", "allies"].includes(match.mode) || match.phase !== "game") return;
 
   const weaponId = normalizeWeaponId(data?.weapon);
+  if (match.mode === "allies" && (!Array.isArray(shooter.weapons) || !shooter.weapons.includes(weaponId) || shooter.equippedWeapon !== weaponId)) return;
   const weapon = WEAPON_BALANCE[weaponId];
   const dx = Number(data?.dx), dy = Number(data?.dy), dz = Number(data?.dz);
   if (![dx, dy, dz].every(Number.isFinite)) return;
@@ -2394,7 +2449,10 @@ function handleTeamShot(io, match, shooter, data) {
   const damage = calculateWeaponDamage(weaponId, hitZone, bestDistance);
   best.hp = Math.max(0, best.hp - damage);
   const killed = best.hp <= 0;
-  if (killed) { best.deaths += 1; shooter.kills += 1; shooter.score += 1; }
+  if (killed) {
+    best.deaths += 1; shooter.kills += 1; shooter.score += 1;
+    if (match.mode === "allies") shooter.cash = Math.min(16000, (Number(shooter.cash) || 0) + 300);
+  }
 
   io.to(match.id).emit("player_hit", {
     shooterId: shooter.userId, targetId: best.userId,
@@ -2930,6 +2988,7 @@ io.on("connection", socket => {
         connected: p.isBot || Boolean(p.socketId)
       }))
     });
+    if (match.mode === "allies") emitAlliesLoadout(io, match, player);
 
     for (const other of match.players) {
       if ((other.uuid ? other.uuid !== player.uuid : other.userId !== player.userId) && other.socketId) {
@@ -2992,6 +3051,20 @@ io.on("connection", socket => {
     startMatchWhenReady(io, match);
   });
 
+  socket.on("allies_buy", data => {
+    const match = activeMatches.get(cleanText(data?.matchId, 100));
+    if (!match) return;
+    const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
+    if (!player) return;
+    handleAlliesBuy(io, match, player, data);
+  });
+  socket.on("allies_select_weapon", data => {
+    const match = activeMatches.get(cleanText(data?.matchId, 100));
+    if (!match) return;
+    const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
+    if (!player) return;
+    handleAlliesSelectWeapon(io, match, player, data);
+  });
   socket.on("team_shoot", data => {
     const match = activeMatches.get(cleanText(data?.matchId, 100));
     if (!match) return;
