@@ -1959,7 +1959,7 @@ function startAlliesRound(io, match, initial = false) {
     if (match.roundNumber > 1 && player.hp <= 0) { player.weapons = ["p350", "knife"]; player.equippedWeapon = "p350"; }
     if (!Array.isArray(player.weapons) || !player.weapons.length) player.weapons = ["p350", "knife"];
     if (!player.weapons.includes(player.equippedWeapon)) player.equippedWeapon = player.weapons.includes("p350") ? "p350" : player.weapons[0];
-    player.cash = Math.max(0, Number(player.cash) || 800);
+    player.cash = Math.max(0, Number.isFinite(Number(player.cash)) ? Number(player.cash) : 800);
     player.hp = 100;
     player.lastShotAt = 0;
     player.roundAlive = true;
