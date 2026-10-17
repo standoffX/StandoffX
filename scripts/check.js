@@ -47,7 +47,11 @@ assert.match(server, /const ADMIN_PASSWORD = String\(process\.env\.ADMIN_PASSWOR
 assert.doesNotMatch(server, /process\.env\.ADMIN_PASSWORD\s*\|\|\s*["']sonia["']/, "source must not contain a fallback admin password");
 assert.match(server, /ADMIN_PASSWORD is not set; master account login is disabled/, "missing admin secret must fail closed");
 assert.match(server, /const SESSION_TTL_MS = 30 \* 24 \* 60 \* 60 \* 1000/);
-assert.match(server, /expiresAt: now \+ SESSION_TTL_MS/, "sessions must expire");
+assert.match(server, /const expiresAt = now \+ SESSION_TTL_MS/, "sessions must expire");
+assert.match(server, /function sessionTokenHash\(token\)/, "durable sessions must store only a SHA-256 token hash");
+assert.match(server, /user\.authSessions = \[[\s\S]*?tokenHash, createdAt: now, expiresAt/, "session hashes must be persisted with account data");
+assert.match(server, /candidate\.authSessions\.some\(session => session\?\.tokenHash === tokenHash/, "session cookies must be restored after process restarts");
+assert.match(server, /req\.user\.authSessions = \(Array\.isArray\(req\.user\.authSessions\)/, "logout must revoke the durable session");
 assert.match(server, /SameSite=Lax/);
 assert.match(server, /BLOCKED_STATIC_DIRS/, "private directories must not be served statically");
 assert.match(server, /const privateRootFile = segments\.length === 1/, "root data/code files must be private");
@@ -148,6 +152,9 @@ assert.match(server, /function newPlayerId\(\)/, "new public IDs must be generat
 assert.match(server, /function migratePlayerIds\(\)/, "legacy duplicate player IDs must be repaired");
 assert.match(server, /playerIdExists\(nextIdRaw\)/, "admin edits must not create duplicate player IDs");
 assert.match(server, /const PLAYABLE_MAPS = Object\.freeze/, "matchmaking must validate map selections");
+assert.match(server, /SANDSTONE: \{ x: 60, z: 60 \}/, "server movement limits must match the expanded Sandstone perimeter");
+assert.match(server, /SANDSTONE: \[\{x:-8\.75,y:0,z:-50\}/, "Sandstone spawns must scale with the larger map");
+assert.match(server, /minX: blocker\.minX \* 1\.25/, "server blockers must use the same Sandstone scale as client collisions");
 assert.match(server, /p\.mode === entry\.mode && p\.map === entry\.map/, "players on different maps must not be mixed into one queue");
 assert.match(server, /createMatch\(io, mode, map\)/, "the selected map must reach the match");
 assert.match(read("auth.html"), /id="createdUuid"/, "registration must display the UUID");
@@ -167,6 +174,11 @@ assert.match(menu, /StandoffX menu remake/, "the menu must use the refreshed neo
 assert.match(menu, /position:fixed!important;right:28px!important;bottom:28px!important/, "Play must be anchored to the lower-right corner");
 assert.match(game, /controls\.pointerSpeed=mouseSensitivity/, "mouse look must use the saved sensitivity");
 assert.match(game, /function buildNeonYard\(\)/, "the selected neon map must be implemented");
+assert.match(game, /const sandstoneScale=1\.25/, "Sandstone must use the expanded 1.25x world scale");
+assert.match(game, /sandstoneRoot\.scale\.setScalar\(sandstoneScale\)/, "Sandstone geometry must be scaled as a single collision-safe root");
+assert.match(game, /zoneMarker\("MARKET"/, "expanded Sandstone must include recognizable callout landmarks");
+assert.match(game, /A:\{x:37\.5,z:-33\.75\},B:\{x:22\.5,z:37\.5\}/, "client bomb interactions must use scaled site positions");
+assert.match(game, /addGround\(18,30,11,11,road/, "B site must sit in the lower-right portion of Sandstone");
 assert.match(game, /selectedMap==="NEON_YARD"/, "game must load the selected map");
 
 
