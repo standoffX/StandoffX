@@ -1999,6 +1999,10 @@ function startAlliesRound(io, match, initial = false) {
     current.phaseTimer = null;
     current.phase = "game";
     current.phaseRemaining = null;
+    if (current.prototypeBotMatch && current.mode === "allies" && current.bomb?.state === "carried") {
+      const carrier = current.players.find(p => p.userId === current.bomb.carrierUserId);
+      current.bomb.botPlantAt = carrier?.isBot ? Date.now() + 15000 : null;
+    }
     io.to(current.id).emit("allies_round_live", alliesRoundPayload(current));
     io.to(current.id).emit("match_phase", {
       phase: "game", time: current.roundRemaining, mode: current.mode,
@@ -2029,6 +2033,26 @@ function startAlliesRound(io, match, initial = false) {
       if (current.phase !== "game" || current.finished) return;
       const bomb = current.bomb;
       const action = bomb.action;
+      if (current.prototypeBotMatch && bomb.state === "carried" && bomb.botPlantAt && Date.now() >= bomb.botPlantAt) {
+        const carrier = current.players.find(p => p.userId === bomb.carrierUserId);
+        if (carrier?.isBot && carrier.team === current.attackingTeam) {
+          const site = Object.entries(SANDSTONE_BOMB_SITES).sort((a, b) =>
+            Math.hypot(carrier.pos.x - a[1].x, carrier.pos.z - a[1].z) -
+            Math.hypot(carrier.pos.x - b[1].x, carrier.pos.z - b[1].z)
+          )[0]?.[0] || "A";
+          bomb.state = "planted";
+          bomb.site = site;
+          bomb.plantedAt = Date.now();
+          bomb.explodeAt = bomb.plantedAt + 40000;
+          bomb.botPlantAt = null;
+          bomb.action = null;
+          current.roundRemaining = null;
+          io.to(current.id).emit("bomb_state", bombPublicState(current));
+          io.to(current.id).emit("bomb_planted", { site, explodeAt: bomb.explodeAt, attackingTeam: current.attackingTeam, prototypeAuto: true });
+        } else {
+          bomb.botPlantAt = null;
+        }
+      }
       if (bomb.state === "planted" && bomb.explodeAt && Date.now() >= bomb.explodeAt) {
         finishAlliesRound(io, current, current.attackingTeam, "bomb_exploded");
         return;
