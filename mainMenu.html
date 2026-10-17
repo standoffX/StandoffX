@@ -185,6 +185,234 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
 @media(max-width:850px){.content{padding:12px}.playarea{right:16px!important;bottom:16px!important}.playbutton{width:210px!important;height:54px!important}}
 @media(max-width:600px){.rail{width:48px;flex-basis:48px}.content{padding:8px 8px 72px}.playarea{right:10px!important;bottom:10px!important}.playbutton{width:170px!important;height:48px!important;font-size:12px!important}.homefooter{padding-right:180px}.topbar{height:48px;flex-basis:48px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
+
+/* Reforged 0.30.0-inspired lobby: steel, smoke, blue selection states, compact tactical panels. */
+:root{
+  --bg:#11171d!important;
+  --panel:#1a232cd9!important;
+  --line:#9aafc22e!important;
+  --muted:#a9b4bf!important;
+  --blue:#a9cbea!important;
+  --accent:#5c84a6!important;
+  --glow:#8db6d8!important;
+}
+html,body{background:#11171d!important;color:#edf2f6!important}
+body{
+  background:
+    radial-gradient(ellipse at 70% 25%,#5c71812c 0,transparent 38%),
+    radial-gradient(ellipse at 15% 92%,#354d6230 0,transparent 44%),
+    linear-gradient(125deg,#11171d,#202831 52%,#121a21)!important;
+}
+body:before{
+  opacity:.16!important;
+  background-image:
+    linear-gradient(#a9c9e20b 1px,transparent 1px),
+    linear-gradient(90deg,#a9c9e20b 1px,transparent 1px),
+    linear-gradient(112deg,transparent 26%,#dbe6ed0a 26.1%,transparent 51%)!important;
+  background-size:44px 44px,44px 44px,100% 100%!important;
+}
+.rail{background:#0b1117eF!important;border-right:1px solid #9eb1c01f!important}
+.logo{background:#10171e!important;border-bottom-color:#b9c8d515!important;color:#e4edf4!important}
+.logo span,.topbrand b{color:#a9cbea!important}
+.rail button{color:#abb5bd!important;border-left-color:transparent!important}
+.rail button.active,.rail button:hover{
+  background:#b6d6ef14!important;color:#e8f5ff!important;border-left-color:#b5d6f0!important;
+}
+.topbar{background:#111820eF!important;border-bottom:1px solid #91a5b51f!important}
+.pill{background:#202a33!important;border:1px solid #b8c7d31c!important;color:#e5edf4!important;border-radius:2px!important}
+.secondary,.danger,.primary,.modebtn,.map-option,.theme-option{border-radius:2px!important;box-shadow:none!important}
+.secondary{background:#242e37!important;color:#d7e1e9!important;border:1px solid #b5c4d11f!important}
+.secondary:hover{background:#303d48!important;border-color:#97bddb70!important}
+.primary{
+  background:#a9cbea!important;color:#111a22!important;border:1px solid #d5e8f6!important;
+  font-weight:950!important;box-shadow:none!important;
+}
+.primary:hover{background:#c3def3!important;filter:none!important}
+.panel,.statcard,.listcard{
+  border:1px solid #afc0ce20!important;border-radius:2px!important;
+  background:linear-gradient(145deg,#1b252edc,#121a21ec)!important;
+  box-shadow:0 10px 28px #0003!important;
+}
+.panelhead{background:#101820b8!important;border-bottom:1px solid #b3c3d016!important;color:#dbe5ed!important}
+.content{padding:16px!important}
+.home-layout{
+  grid-template-columns:minmax(240px,1.1fr) minmax(255px,.95fr) minmax(235px,.9fr)!important;
+  gap:12px!important;align-items:stretch!important;
+}
+.home-hero{
+  min-height:390px!important;position:relative!important;overflow:hidden!important;
+  border:1px solid #b9ccd91c!important;
+  background:linear-gradient(135deg,#19232c,#0e151b 82%)!important;
+}
+.home-hero:after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:
+    linear-gradient(90deg,#0d141beF 0%,#101820aa 52%,#10182030 100%),
+    linear-gradient(0deg,#0b1118b8,transparent 66%);
+  border:1px solid #e4edf008;
+}
+.home-hero-art{
+  opacity:.47!important;filter:saturate(.42) contrast(1.08) brightness(.8)!important;
+  mix-blend-mode:screen!important;object-fit:cover!important;object-position:center!important;
+}
+.home-hero-copy{z-index:2!important;top:30px!important;left:27px!important}
+.home-hero-overline{color:#b3c3cf!important;letter-spacing:2px!important}
+.hero-live-dot{background:#a9cbea!important;box-shadow:0 0 0 4px #a9cbea20!important}
+.home-hero-copy h1{color:#f2f5f7!important;font-size:clamp(28px,3vw,45px)!important;letter-spacing:1px!important;text-shadow:0 5px 24px #0009!important}
+.home-hero-copy h1 em{color:#a9cbea!important}
+.home-hero .playarea{z-index:4!important}
+.playbutton{
+  background:linear-gradient(100deg,#c0d9ec,#8eb6d8)!important;color:#0d1720!important;
+  border:1px solid #d9ebf8!important;border-radius:2px!important;clip-path:none!important;
+  box-shadow:0 8px 24px #0005!important;letter-spacing:1.5px!important;font-size:14px!important;
+}
+.playbutton:hover{background:#d6e7f4!important;box-shadow:0 8px 26px #0007!important}
+#selectedModeText{color:#c2d8e9!important;letter-spacing:1.4px!important}
+#selectedMapText{color:#9daebb!important}
+.profiletop .nick{color:#f0f4f7!important}
+.playerid,.rankrow,.muted,.rankdesc{color:#a9b4bf!important}
+.rankcard{background:#121a21!important;border:1px solid #b1c0cd1d!important;border-radius:2px!important}
+.rankicon{color:#b6d5ee!important}
+.promo{height:190px!important;background:#101820!important}
+.promo img,.passhero img{filter:saturate(.52) contrast(1.06) brightness(.78)!important}
+.promo:after{background:linear-gradient(0deg,#0d151beF,transparent 70%)!important}
+.promo-title strong{color:#eef3f7!important}
+.promo-tag,.coming-soon-tag{color:#b2cde2!important}
+.news-soon{background:#131c23!important;color:#9eabb7!important}
+.passpanel{grid-column:1/-1!important}
+.passhero{
+  height:105px!important;border:1px solid #b5c7d11a!important;border-radius:2px!important;
+  background:linear-gradient(100deg,#1e2d39,#111a21)!important;
+}
+.passheroText{color:#edf3f8!important;text-shadow:0 2px 8px #0009!important}
+.passheroText strong{color:#bfdcf1!important;letter-spacing:2px!important}
+.passprogress,.rewards{background:#11191f!important}
+.progress{background:#2b3741!important}.progress span{background:#a9cbea!important}
+.reward{background:#202b34!important;border:1px solid #b9cbd719!important;border-radius:2px!important}
+.reward b{color:#c0d9ec!important}
+.homefooter{border-top:1px solid #b9c8d111!important;color:#8998a4!important}
+#modeModal.modal{background:#080d12d9!important;backdrop-filter:blur(5px)!important}
+#modeModal .modalbox.modebox{
+  width:min(1120px,96vw)!important;max-height:92vh!important;overflow-y:auto!important;
+  padding:22px 26px 20px!important;border:1px solid #91abc022!important;border-radius:2px!important;
+  background:linear-gradient(145deg,#202b35f5,#11191ff7)!important;
+  box-shadow:0 28px 100px #000b!important;
+}
+#modeModal .modalhead{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;
+  border-bottom:1px solid #9eb2c01e!important;padding-bottom:14px!important;margin-bottom:12px!important;
+  color:#f1f5f8!important;font-size:20px!important;letter-spacing:1.3px!important;
+}
+#modeModal .close{color:#c9d6e0!important;font-size:27px!important}
+#modeModal .muted{color:#a2b0bc!important;font-size:12px!important}
+#modeModal .modecards{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;
+  margin:14px 0!important;
+}
+#modeModal .modecards .modebtn{
+  position:relative!important;isolation:isolate!important;overflow:hidden!important;
+  display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:flex-end!important;
+  min-height:174px!important;padding:20px!important;text-align:left!important;
+  border:1px solid #aab9c52b!important;border-radius:2px!important;
+  background:linear-gradient(115deg,#18232c,#334450)!important;color:#edf3f8!important;
+  box-shadow:none!important;
+}
+#modeModal .modecards .modebtn:before{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(ellipse at 77% 28%,#c0d1d92e 0,transparent 25%),
+    linear-gradient(120deg,#0b141dc9 0%,#1d2b36a1 48%,#667c8a4a 100%),
+    repeating-linear-gradient(135deg,#ffffff05 0 1px,transparent 1px 14px);
+  transition:filter .16s ease;
+}
+#modeModal .modecards .modebtn[data-mode="allies"]:before{
+  background:
+    radial-gradient(ellipse at 75% 30%,#c8ab7b40 0,transparent 28%),
+    linear-gradient(115deg,#11181eeF 0%,#27343de0 56%,#6f695c70 100%),
+    repeating-linear-gradient(135deg,#ffffff05 0 1px,transparent 1px 15px);
+}
+#modeModal .modecards .modebtn[data-mode="team_fight"]:before{
+  background:
+    radial-gradient(ellipse at 75% 30%,#8eb7d545 0,transparent 27%),
+    linear-gradient(115deg,#0e1921f0 0%,#233645e3 54%,#526d7e88 100%),
+    repeating-linear-gradient(135deg,#ffffff05 0 1px,transparent 1px 15px);
+}
+#modeModal .modecards .modebtn:after{
+  position:absolute;top:15px;left:20px;z-index:1;
+  font-size:10px;font-weight:900;letter-spacing:2.1px;color:#d1dee8b3;
+}
+#modeModal .modecards .modebtn[data-mode="allies"]:after{content:"BOMB DEFUSE  /  2 × 2"}
+#modeModal .modecards .modebtn[data-mode="team_fight"]:after{content:"FREE FOR ALL  /  3 PLAYERS"}
+#modeModal .modecards .modebtn strong{
+  position:relative;z-index:2;color:#f4f7f9!important;font-size:22px!important;letter-spacing:1.1px!important;
+}
+#modeModal .modecards .mode-desc{
+  position:relative;z-index:2;max-width:34em;color:#bac9d4!important;font-size:11px!important;line-height:1.55!important;
+}
+#modeModal .modecards .modebtn.active{
+  border-color:#c0d9ec!important;box-shadow:inset 0 -4px 0 #a9cbea!important;
+  background:linear-gradient(115deg,#233643,#40596a)!important;
+}
+#modeModal .modecards .modebtn.active:before{filter:brightness(1.2)}
+#modeModal .tester-mode-switch{
+  display:flex!important;align-items:center!important;justify-content:space-between!important;gap:14px!important;
+  padding:10px 0!important;margin:4px 0 12px!important;border-top:1px solid #9fb2c01f!important;
+  border-bottom:1px solid #9fb2c01f!important;background:transparent!important;
+}
+#modeModal .tester-mode-label{color:#aab8c3!important;font-size:10px!important;letter-spacing:1.5px!important}
+#modeModal .tester-mode-segment{display:flex!important;gap:4px!important;padding:3px!important;background:#0e151b!important;border:1px solid #9babb81b!important}
+#modeModal .tester-mode-option{
+  border:1px solid transparent!important;border-radius:1px!important;background:transparent!important;
+  color:#a6b2bc!important;padding:9px 14px!important;font-weight:900!important;font-size:10px!important;letter-spacing:.5px!important;
+}
+#modeModal .tester-mode-option.active{background:#8fb9d9!important;color:#111a22!important;border-color:#d2e4f1!important}
+#modeModal h3{margin:13px 0 7px!important;color:#edf3f7!important;font-size:12px!important;letter-spacing:1.4px!important}
+#modeModal .mapcards{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;margin:8px 0 14px!important}
+#modeModal .map-option{
+  position:relative!important;min-height:84px!important;padding:13px 12px!important;text-align:left!important;
+  background:linear-gradient(130deg,#151f27,#202d37)!important;color:#dbe5ed!important;
+  border:1px solid #93a7b51c!important;border-radius:2px!important;box-shadow:none!important;
+}
+#modeModal .map-option:after{
+  content:"";position:absolute;top:0;left:0;right:0;height:2px;background:#a9cbea;opacity:0;
+}
+#modeModal .map-option b{font-size:12px!important;color:#f1f5f8!important;letter-spacing:.8px!important;margin-bottom:8px!important}
+#modeModal .map-option span{font-size:10px!important;color:#aab8c4!important;line-height:1.45!important}
+#modeModal .map-option.active{border-color:#9abbd5!important;box-shadow:inset 0 0 0 1px #89b4d5!important}
+#modeModal .map-option.active:after{opacity:1}
+#modeModal .modebox .primary{
+  align-self:flex-end!important;width:auto!important;min-width:250px!important;min-height:46px!important;padding:12px 25px!important;
+  background:#a9cbea!important;color:#101820!important;border:1px solid #d4e7f4!important;font-size:12px!important;letter-spacing:1.1px!important;
+}
+#modeModal .modebox .primary:hover{background:#d1e5f4!important}
+#searchModal .modalbox{background:#19232c!important;border:1px solid #98afc121!important;border-radius:2px!important}
+.waitplayer{background:#121b22!important;border:1px solid #a9bdcc1a!important;border-radius:2px!important}
+.waitplayer.online .dot{background:#b0d5ef!important}
+#appToast{background:#202c36!important;border:1px solid #aac4d62b!important;border-radius:2px!important;color:#eef4f8!important}
+@media(max-width:980px){
+  .home-layout{grid-template-columns:minmax(220px,1fr) minmax(250px,1fr)!important}
+  .promo-col{display:none!important}
+  .passpanel{grid-column:1/-1!important}
+}
+@media(max-width:650px){
+  .content{padding:8px!important}
+  .home-layout{grid-template-columns:1fr!important;gap:8px!important}
+  .profile-col{display:none!important}
+  .home-hero{min-height:330px!important}
+  .home-hero-copy{left:18px!important;top:22px!important}
+  .passpanel{grid-column:1!important}
+  .passhero{height:90px!important}
+  #modeModal .modalbox.modebox{width:96vw!important;max-height:94vh!important;padding:14px!important}
+  #modeModal .modalhead{font-size:15px!important;padding-bottom:10px!important}
+  #modeModal .modecards{grid-template-columns:1fr!important;gap:7px!important}
+  #modeModal .modecards .modebtn{min-height:112px!important;padding:15px!important}
+  #modeModal .modecards .modebtn strong{font-size:18px!important}
+  #modeModal .tester-mode-switch{align-items:flex-start!important;flex-direction:column!important;gap:7px!important}
+  #modeModal .tester-mode-segment{width:100%!important}
+  #modeModal .tester-mode-option{flex:1!important;padding:8px 5px!important;font-size:9px!important}
+  #modeModal .mapcards{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  #modeModal .modebox .primary{width:100%!important;min-width:0!important}
+}
 </style>
 <link rel="stylesheet" href="/ui.css">
 </head>
