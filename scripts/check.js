@@ -204,7 +204,7 @@ assert.match(game, /function runTrainingAction\(action\)/, "training actions mus
 assert.doesNotMatch(game, /id="pauseMenu"|function togglePauseMenu\(force\)/, "the blocking pause menu must not cover gameplay controls");
 assert.match(game, /menu:"KeyM"/, "M must open the in-game menu by default");
 assert.doesNotMatch(game, /function renderTrainingKeyHints\(\)|id="trainingKeyHints"/, "keyboard hints must not overlay the game; they belong in settings");
-assert.match(game, /socket\.on\("init_match",data=>\{\s*\$\("trainingControls"\)\.style\.display="none"/, "public match initialization must hide prototype bot controls");
+assert.match(game, /socket\.on\("init_match",data=>\{\s*matchJoined=true;\s*\$\("trainingControls"\)\.style\.display="none"/, "public match initialization must hide prototype bot controls");
 assert.match(game, /#trainingControls\.prototype-bot-panel/, "prototype static-bot status must have dedicated responsive styling");
 assert.match(game, /textContent=mode/, "prototype uses the normal mode title and HUD");
 assert.match(game, /const isPrototypeMode=sessionStorage.getItem\("prototypeMode"\)==="true"/, "prototype UI must distinguish the bot sandbox from a real lobby match");
