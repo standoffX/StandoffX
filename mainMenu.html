@@ -335,16 +335,10 @@ button.primary,.primary{background:var(--blue)!important;color:var(--bg)!importa
     </div>
   </div>
 </section>
-<div id="testKeybindSettings" style="display:none"><h3 style="margin-top:24px">КЛАВІШІ ТРЕНУВАННЯ</h3>
-<div class="muted">Натисни кнопку дії, а потім потрібну клавішу. Прив’язки зберігаються на цьому пристрої й не відображаються поверх матчу.</div>
+<div id="testKeybindSettings" style="display:none"><h3 style="margin-top:24px">КЛАВІШІ ПРОТОТИПУ</h3>
+<div class="muted">Налаштуй скидання позиції та повернення до лобі. Боти у прототипі автоматично з’являються і стоять на місці.</div>
 <div class="keybind-list">
-  <div class="keybind-row"><span>Створити бота</span><button type="button" class="secondary keybind-button" data-bind-action="spawnBot">N</button></div>
-  <div class="keybind-row"><span>Видалити бота</span><button type="button" class="secondary keybind-button" data-bind-action="removeBot">B</button></div>
-  <div class="keybind-row"><span>Push бота</span><button type="button" class="secondary keybind-button" data-bind-action="push">J</button></div>
-  <div class="keybind-row"><span>Kick бота</span><button type="button" class="secondary keybind-button" data-bind-action="kick">K</button></div>
-  <div class="keybind-row"><span>Boost бота</span><button type="button" class="secondary keybind-button" data-bind-action="boost">L</button></div>
-  <div class="keybind-row"><span>Скинути бота</span><button type="button" class="secondary keybind-button" data-bind-action="resetBot">U</button></div>
-  <div class="keybind-row"><span>Скинути тренування</span><button type="button" class="secondary keybind-button" data-bind-action="resetSession">I</button></div>
+  <div class="keybind-row"><span>Скинути прототип</span><button type="button" class="secondary keybind-button" data-bind-action="resetSession">I</button></div>
   <div class="keybind-row"><span>Вийти з матчу до лобі</span><button type="button" class="secondary keybind-button" data-bind-action="menu">M</button></div>
 </div>
 <button id="resetKeybinds" type="button" class="secondary" style="margin-top:12px">СКИНУТИ ПРИВ’ЯЗКИ</button>
@@ -445,8 +439,8 @@ const THEMES=["cyan","violet","red"];
 const MAPS={SANDSTONE:"SANDSTONE",SMALL_YARD:"SMALL YARD",HILL_TOWN:"HILL TOWN",M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD"};
 const MODES={allies:"СОЮЗНИКИ · 2×2",team_fight:"КБ · 1×1×1"};
 let testGameplayMode=["prototype","real"].includes(localStorage.getItem("sx_test_gameplay"))?localStorage.getItem("sx_test_gameplay"):"prototype";
-if(testGameplayMode==="real"){
-  const allowed=selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD"];
+{
+  const allowed=selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD","NEON_YARD"];
   if(!allowed.includes(selectedMap))selectedMap=allowed[0];
   localStorage.setItem("sx_map",selectedMap);
 }
@@ -544,21 +538,20 @@ function applyTheme(theme){
   localStorage.setItem("sx_theme",selectedTheme);
   document.querySelectorAll("[data-theme-choice]").forEach(button=>button.classList.toggle("active",button.dataset.themeChoice===selectedTheme));
 }
+function allowedMapsForMode(){
+  return selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD","NEON_YARD"];
+}
 function renderMapSelection(){
-  const realGame=testGameplayMode==="real";
+  const allowed=allowedMapsForMode();
+  if(!allowed.includes(selectedMap))selectedMap=allowed[0];
+  localStorage.setItem("sx_map",selectedMap);
   document.querySelectorAll("[data-map]").forEach(button=>{
     const map=button.dataset.map;
-    const allowed=selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD"];
-    button.style.display=realGame&&!allowed.includes(map)?"none":"";
+    button.style.display=allowed.includes(map)?"":"none";
     button.classList.toggle("active",map===selectedMap);
   });
-  if(realGame){
-    const allowed=selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD"];
-    if(!allowed.includes(selectedMap))selectedMap=allowed[0];
-    localStorage.setItem("sx_map",selectedMap);
-  }
   const label=$("selectedMapText");
-  if(label)label.textContent=MAPS[selectedMap]||MAPS.SANDSTONE;
+  if(label)label.textContent=MAPS[selectedMap]||MAPS[allowed[0]];
 }
 function show(view){
   document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("active",s.id===view));
@@ -632,7 +625,7 @@ function renderMode(){
 document.querySelectorAll(".rail button[data-view]").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.view==="admin"){location.href="/admin";return}show(b.dataset.view)}));
 document.querySelectorAll("[data-theme-choice]").forEach(button=>button.addEventListener("click",()=>applyTheme(button.dataset.themeChoice)));
 document.querySelectorAll("[data-map]").forEach(button=>button.addEventListener("click",()=>{
-  if(!MAPS[button.dataset.map])return;
+  if(!MAPS[button.dataset.map]||!allowedMapsForMode().includes(button.dataset.map))return;
   selectedMap=button.dataset.map;
   localStorage.setItem("sx_map",selectedMap);
   renderMapSelection();
@@ -728,16 +721,20 @@ function openPlay(){
       sessionStorage.setItem("myPlayerUUID",d.uuid||me.uuid||"");
       sessionStorage.setItem("selectedMode",d.mode);
       sessionStorage.setItem("selectedMap",d.map||selectedMap);
+      sessionStorage.setItem("prototypeMode",d.prototype?"true":"false");
+      sessionStorage.setItem("prototypeGameMode",d.gameMode||selectedMode);
       sessionStorage.setItem("trainingId",d.trainingId);
       sessionStorage.setItem("currentMatchId",d.trainingId);
       location.href="/play2.html";
     });
-    socket.emit("start_training",{mode:"field_test",map:selectedMap});
+    socket.emit("start_training",{mode:"field_test",map:selectedMap,gameMode:selectedMode,prototype:true});
     return;
   }
   if(searching)return;
+  sessionStorage.removeItem("prototypeMode");
+  sessionStorage.removeItem("prototypeGameMode");
   const requiredPlayers=selectedMode==="allies"?4:3;
-  const searchMap=selectedMode==="allies"?"SANDSTONE":(["SMALL_YARD"].includes(selectedMap)?selectedMap:"SMALL_YARD");
+  const searchMap=selectedMode==="allies"?"SANDSTONE":(["SMALL_YARD","NEON_YARD"].includes(selectedMap)?selectedMap:"SMALL_YARD");
   selectedMap=searchMap;localStorage.setItem("sx_map",selectedMap);
   $("searchModal").classList.add("show");$("searchTitle").textContent="ПОШУК РЕАЛЬНИХ ГРАВЦІВ";$("searchMode").textContent=(MODES[selectedMode]||MODES.allies)+" · ЛИШЕ ЛЮДИ";$("queue").textContent="1 / "+requiredPlayers;
   $("searchText").textContent=selectedMode==="allies"?"2 на 2 · раунди · закладка та знешкодження бомби. Чекаємо 4 гравців.":"1 на 1 на 1 · кожен сам за себе. Чекаємо 3 гравців.";
@@ -983,8 +980,8 @@ $("inventoryList").addEventListener("click",e=>{const b=e.target.closest("[data-
 async function loadMarket(){try{const d=await api("/api/market/items");$("marketList").innerHTML=d.items.map(x=>"<div class='row'><div><b>"+esc(x.skinName)+"</b><div class='muted'>"+esc(x.sellerNick)+" · "+esc(x.rarity)+"</div></div><div class='actions'><b>"+x.price+" G</b><button class='primary' data-buy='"+esc(x.lotId)+"'>КУПИТИ</button></div></div>").join("")||"<div class='muted'>Ринок порожній.</div>"}catch{}}
 $("marketList").addEventListener("click",e=>{const b=e.target.closest("[data-buy]");if(!b)return;api("/api/market/buy",{method:"POST",body:JSON.stringify({lotId:b.dataset.buy})}).then(async()=>{me=(await api("/api/me")).user;render();loadMarket();loadInventory()}).catch(err=>alert(err.message))});
 
-const DEFAULT_KEYBINDS={spawnBot:"KeyN",removeBot:"KeyB",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
-const KEYBIND_LABELS={spawnBot:"Створити бота",removeBot:"Видалити бота",push:"Push бота",kick:"Kick бота",boost:"Boost бота",resetBot:"Скинути бота",resetSession:"Скинути тренування",menu:"Меню в грі"};
+const DEFAULT_KEYBINDS={resetSession:"KeyI",menu:"KeyM"};
+const KEYBIND_LABELS={resetSession:"Скинути прототип",menu:"Меню в грі"};
 let keybindCapture=null;
 function readKeybinds(){
   let localBinds={},serverBinds={};
