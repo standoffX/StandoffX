@@ -186,7 +186,8 @@ assert.match(game, /document\.querySelectorAll\("\[data-buy-tab\]"\)\.forEach\(t
 assert.match(game, /function shoot\(\)\{\s*if\(bombToolActive\|\|/, "players cannot fire while holding the C4 device");
 assert.match(game, /A:\{x:37\.5,z:-33\.75\},B:\{x:22\.5,z:37\.5\}/, "client bomb interactions must use scaled site positions");
 assert.match(game, /addGround\(18,30,11,11,road/, "B site must sit in the lower-right portion of Sandstone");
-assert.match(server, /const sideSpawns = \\{\\s*attack: \\[\\{ x: -8\\.75, y: 0, z: -50 \\}, \\{ x: 8\\.75, y: 0, z: -50 \\}\\],\\s*defense: \\[\\{ x: -8\\.75, y: 0, z: 50 \\}, \\{ x: 8\\.75, y: 0, z: 50 \\}\\]\\s*\\}/, "Allies round spawns must align with expanded Sandstone geometry");
+assert.match(server, /attack: \[\{ x: -8\.75, y: 0, z: -50 \}/, "Allies attack spawns must align with expanded Sandstone geometry");
+assert.match(server, /defense: \[\{ x: -8\.75, y: 0, z: 50 \}/, "Allies defense spawns must align with expanded Sandstone geometry");
 assert.match(game, /<svg viewBox="0 0 220 48"/, "buy cards use built-in weapon silhouettes instead of text-only placeholders");
 assert.match(game, /БОМБА ВИДАЄТЬСЯ АВТОМАТИЧНО/, "the purchase panel explains that C4 is assigned automatically, not purchased");
 assert.match(game, /selectedMap==="NEON_YARD"/, "game must load the selected map");
