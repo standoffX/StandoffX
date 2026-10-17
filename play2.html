@@ -20,17 +20,30 @@
 #overlay{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:linear-gradient(180deg,#070b10ee,#070b10f5);padding:24px;cursor:pointer}
 #overlay .panel{width:min(580px,92vw);padding:26px;border:1px solid #ffffff12;background:#0f151ed9;border-radius:12px;box-shadow:0 30px 100px #000a}
 #overlay h1{margin:0 0 8px;font-size:34px;letter-spacing:-1px}#overlay p{margin:8px 0;color:#8391a5;font-size:13px}
-.allies-buy-panel{display:none;gap:9px;margin:14px 0 4px;padding:12px;border:1px solid #3e91ad55;border-radius:9px;background:linear-gradient(140deg,#102033ed,#0a111be8);text-align:left}
-.allies-buy-head{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#b8cce0;font-size:10px;letter-spacing:.12em;font-weight:900}
-.allies-buy-head strong{color:#7effd0;font-size:14px;letter-spacing:.03em}
-.allies-buy-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
-.allies-buy-card{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:10px 9px;border:1px solid #9bb5d12b;border-radius:7px;background:#121c2be8;color:#f2f7ff;text-align:left;cursor:pointer;transition:border-color .15s,background .15s}
-.allies-buy-card:hover,.allies-buy-card.is-equipped{border-color:#6deec5;background:#16352fe8}
-.allies-buy-card .buy-name{font-size:13px;font-weight:950;letter-spacing:.04em}
-.allies-buy-card small{font-size:9px;line-height:1.35;color:#9bacbf}
-.allies-buy-card b{font-size:12px;color:#ffdf87}
-.allies-buy-card em{font-style:normal;font-size:9px;font-weight:950;letter-spacing:.08em;color:#72f3c5}
-.allies-buy-card:disabled{opacity:.48;cursor:not-allowed}
+.allies-buy-panel{display:none;gap:11px;margin:14px 0 4px;padding:13px;border:1px solid #667382;border-radius:4px;background:linear-gradient(160deg,#171d24f5,#090d12f5);text-align:left;box-shadow:inset 0 1px #ffffff0c}
+.allies-buy-head{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#d8dde2;font-size:11px;letter-spacing:.12em;font-weight:950}
+.allies-buy-head>div{display:grid;gap:4px}.allies-buy-head small{font-size:8px;letter-spacing:.09em;color:#8c9aa8;font-weight:800}
+.allies-buy-head strong{color:#f2d28b;font-size:16px;letter-spacing:.03em;font-variant-numeric:tabular-nums}
+.allies-buy-tabs{display:flex;flex-wrap:wrap;gap:5px;border-bottom:1px solid #ffffff17;padding-bottom:8px}
+.allies-buy-tabs button{border:1px solid #3b4652;background:#10161d;color:#9daab5;border-radius:3px;padding:7px 9px;font:900 9px inherit;letter-spacing:.06em;cursor:pointer}
+.allies-buy-tabs button[aria-selected="true"]{background:#d4d9dd;color:#171d23;border-color:#d4d9dd}
+.allies-buy-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.allies-buy-card{position:relative;min-width:0;min-height:136px;display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:10px;border:1px solid #3e4a56;border-radius:3px;background:linear-gradient(155deg,#202832,#11171e);color:#f2f4f6;text-align:left;cursor:pointer;transition:border-color .15s,background .15s;overflow:hidden}
+.allies-buy-card:before{content:"";position:absolute;right:-24px;top:21px;width:100px;height:3px;background:#6a7884;transform:rotate(-24deg);opacity:.45}
+.allies-buy-card:hover,.allies-buy-card.is-equipped{border-color:#d7c087;background:linear-gradient(155deg,#2b2b26,#131921)}
+.allies-buy-card .buy-art{display:grid;place-items:center;width:100%;height:45px;background:linear-gradient(180deg,#0c1117,#18212a);border:1px solid #ffffff0d;color:#c5d0d8;font-size:22px;font-weight:950;letter-spacing:.1em}
+.allies-buy-card .buy-name{font-size:12px;font-weight:950;letter-spacing:.06em}
+.allies-buy-card small{font-size:9px;line-height:1.35;color:#9facb8}
+.allies-buy-card b{font-size:12px;color:#f1d28a}
+.allies-buy-card em{margin-top:auto;font-style:normal;font-size:8px;font-weight:950;letter-spacing:.1em;color:#c6d3df}
+.allies-buy-card.is-equipped em{color:#e8d59f}
+.allies-buy-card:disabled{opacity:.43;cursor:not-allowed}
+.buy-info-card{display:flex;flex-direction:column;gap:7px;min-height:136px;padding:10px;border:1px dashed #505b66;border-radius:3px;background:#11171e;color:#b6c1cb}
+.buy-info-card .buy-art{display:grid;place-items:center;height:45px;background:#0c1117;border:1px solid #ffffff0b;font-size:19px;font-weight:950;letter-spacing:.14em;color:#c2cbd3}
+.buy-info-card b{font-size:12px;color:#e6eaed}.buy-info-card small{font-size:9px;line-height:1.45;color:#96a3af}
+.allies-buy-note{margin:0!important;padding-top:8px;border-top:1px solid #ffffff12;font-size:10px!important;line-height:1.5;color:#a6b1bb!important}
+.allies-buy-note strong{color:#f1d28a}
+@media(max-width:520px){.allies-buy-panel{padding:9px;gap:8px}.allies-buy-head{font-size:9px}.allies-buy-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.allies-buy-card,.buy-info-card{min-height:118px;padding:8px}.allies-buy-card .buy-art,.buy-info-card .buy-art{height:35px}.allies-buy-card .buy-name,.buy-info-card b{font-size:11px}.allies-buy-card small,.buy-info-card small{font-size:8px}.allies-buy-tabs button{padding:6px 7px;font-size:8px}}
 #phase{font-size:24px;font-weight:950;color:#5b9dff;margin:15px 0 6px}#bigTimer{font-size:58px;font-weight:950;line-height:1}
 .players{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:18px}.player{padding:11px;background:#0a1017;border:1px solid #ffffff0d;border-radius:7px;text-align:left;min-width:0}.player .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#465366;margin-right:7px}.player.online .dot{background:#4ad985}.player.ready .dot{background:#4d8fff}.player-id{margin-top:4px;color:#8d9db8;font-size:9px;overflow-wrap:anywhere}
 #progressWrap{margin:15px auto 0;max-width:360px;height:5px;background:#202a38;border-radius:99px;overflow:hidden}#progress{height:100%;width:0;background:#4d8fff;transition:width .15s}
@@ -157,13 +170,31 @@ body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
     <div id="bigTimer">—</div>
     <p id="overlayText">Завантажуються карта, зброя та дані матчу. Це може зайняти кілька секунд.</p>
     <div id="alliesBuyPanel" class="allies-buy-panel">
-      <div class="allies-buy-head"><span>ЗАКУПІВЛЯ НА РАУНД</span><span>ГРОШІ <strong id="alliesCash">$800</strong></span></div>
-      <div class="allies-buy-grid">
-        <button class="allies-buy-card" type="button" data-allies-weapon="akr"><span class="buy-name">AKR</span><small>Штурмова гвинтівка</small><b>$2 700</b><em data-status>КУПИТИ</em></button>
-        <button class="allies-buy-card" type="button" data-allies-weapon="p350"><span class="buy-name">P350</span><small>Стартовий пістолет</small><b>СТАРТОВА</b><em data-status>ВИБРАТИ</em></button>
-        <button class="allies-buy-card" type="button" data-allies-weapon="knife"><span class="buy-name">НІЖ</span><small>Ближній бій</small><b>БЕЗКОШТОВНО</b><em data-status>ВИБРАТИ</em></button>
+      <div class="allies-buy-head">
+        <div><span>BUY MENU / ЗАКУПІВЛЯ</span><small>ВИБІР СПОРЯДЖЕННЯ · ТІЛЬКИ ПІД ЧАС ПІДГОТОВКИ</small></div>
+        <span>ГРОШІ <strong id="alliesCash">$800</strong></span>
       </div>
-      <p>Обери зброю до старту. Збережи AKR, якщо пережив раунд; після загибелі основна зброя втрачається.</p>
+      <div class="allies-buy-tabs" role="tablist" aria-label="Категорії закупівлі">
+        <button type="button" data-buy-tab="all" aria-selected="true">УСЕ</button>
+        <button type="button" data-buy-tab="rifles" aria-selected="false">ГВИНТІВКИ</button>
+        <button type="button" data-buy-tab="pistols" aria-selected="false">ПІСТОЛЕТИ</button>
+        <button type="button" data-buy-tab="gear" aria-selected="false">СПОРЯДЖЕННЯ</button>
+      </div>
+      <div class="allies-buy-grid">
+        <button class="allies-buy-card" type="button" data-allies-weapon="akr" data-buy-category="rifles">
+          <span class="buy-art" aria-hidden="true">AKR</span><span class="buy-name">AKR</span><small>Штурмова гвинтівка · 30 набоїв</small><b>$2 700</b><em data-status>КУПИТИ</em>
+        </button>
+        <button class="allies-buy-card" type="button" data-allies-weapon="p350" data-buy-category="pistols">
+          <span class="buy-art" aria-hidden="true">P350</span><span class="buy-name">P350</span><small>Стартовий пістолет · 13 набоїв</small><b>СТАРТОВИЙ</b><em data-status>ВИБРАТИ</em>
+        </button>
+        <button class="allies-buy-card" type="button" data-allies-weapon="knife" data-buy-category="gear">
+          <span class="buy-art" aria-hidden="true">KNIFE</span><span class="buy-name">НІЖ</span><small>Ближній бій</small><b>БЕЗКОШТОВНО</b><em data-status>ВИБРАТИ</em>
+        </button>
+        <div class="buy-info-card" data-buy-category="gear" role="note">
+          <span class="buy-art" aria-hidden="true">C4</span><b>БОМБА ВИДАЄТЬСЯ АВТОМАТИЧНО</b><small>Її не потрібно купувати. На стороні атаки носій показується в HUD; натисни 5, щоб дістати пристрій.</small>
+        </div>
+      </div>
+      <p class="allies-buy-note">Підготовка триває <strong>10 секунд</strong>. Бомба не є товаром у магазині. На атакувальнику натисни <strong>5</strong>, дістань C4 та натисни <strong>E</strong> на сайті A або B.</p>
     </div>
     <div id="progressWrap"><div id="progress"></div></div>
     <div id="loadingDetails" aria-live="polite">
@@ -211,7 +242,8 @@ body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
   <button id="sprintBtn" class="mbtn sprint" type="button" aria-label="Бігти швидше">SPRINT</button>
   <button id="mapBtn" class="mbtn mapButton" type="button" aria-label="Відкрити карту">MAP</button>
   <button id="weaponBtn" class="mbtn weaponButton" type="button" aria-label="Змінити зброю">АКР</button>
-  <button id="interactBtn" class="mbtn interactButton" type="button" aria-label="Відкрити двері">E · ДВЕРІ</button>
+  <button id="bombBtn" class="mbtn bombButton" type="button" aria-label="Дістати бомбу" style="display:none">C4</button>
+  <button id="interactBtn" class="mbtn interactButton" type="button" aria-label="Взаємодія">E · ДВЕРІ</button>
   <button id="leaveGameMobile" class="mbtn leave" type="button">×</button>
 </div>
 
@@ -829,9 +861,12 @@ function updateAlliesBuyPanel(){
 function updateBombHud(){
   const hud=$("bombHud");
   const info=$("roundInfo");
+  const bombButton=$("bombBtn");
   if(mode!=="allies"||isTrainingMode){
     if(hud)hud.style.display="none";
     if(info)info.textContent="";
+    if(bombButton)bombButton.style.display="none";
+    refreshBombToolVisual();
     return;
   }
   if(info)info.textContent="РАУНД "+Math.max(1,roundNumber)+"  ·  "+roundWins.A+" : "+roundWins.B;
@@ -839,21 +874,29 @@ function updateBombHud(){
   const title=$("bombHudTitle"),detail=$("bombHudDetail"),bar=$("bombHudProgress");
   const state=bombState?.state||"carried";
   const site=bombState?.site||null;
+  const isCarrier=String(bombState?.carrierUserId)===String(myId)&&myTeam===attackingTeam;
+  if(bombButton){
+    const canCarry=isCarrier&&state==="carried"&&matchPhase==="game"&&hp>0;
+    bombButton.style.display=isMobileDevice&&canCarry?"block":"none";
+    bombButton.classList.toggle("active",bombToolActive&&canCarry);
+    bombButton.textContent=bombToolActive&&canCarry?"C4 · В РУКАХ":"C4 · 5";
+  }
   if(title)title.textContent=state==="planted"?(bombState?.action==="defuse"?"ЗНЕШКОДЖЕННЯ БОМБИ":"БОМБА ЗАКЛАДЕНА"):state==="planting"?"ЗАКЛАДАННЯ БОМБИ":"ЗАВДАННЯ РАУНДУ";
   if(detail){
     const remaining=state==="planted"&&bombState?.explodeAt?Math.max(0,Math.ceil((Number(bombState.explodeAt)-Date.now())/1000)):0;
     const attacking=myTeam===attackingTeam;
     const carrier=squadRoster.find(p=>String(p.userId)===String(bombState?.carrierUserId));
     if(state==="planted")detail.textContent="САЙТ "+site+" · ВИБУХ ЧЕРЕЗ "+remaining+" С";
-    else if(state==="planting")detail.textContent="САЙТ "+site+" · ТРИМАЙСЯ ПОРУЧ";
-    else if(attacking&&String(bombState?.carrierUserId)===String(myId))detail.textContent="АТАКА · ТИ НЕСЕШ БОМБУ · ЗАКЛАДИ НА A АБО B";
-    else if(attacking)detail.textContent="АТАКА · БОМБА У "+(carrier?.nickname||"НАПАРНИКА");
-    else detail.textContent="ЗАХИСТ · НЕ ДАЙ ЗАКЛАСТИ БОМБУ";
+    else if(state==="planting")detail.textContent="САЙТ "+site+" · ТРИМАЙСЯ ПОРУЧ · НЕ РУХАЙСЯ";
+    else if(isCarrier)detail.textContent=bombToolActive?"ТИ ДІСТАВ C4 · ПІДІЙДИ ДО A/B ТА НАТИСНИ E":"ТИ НЕСЕШ C4 · НАТИСНИ 5 · ДАЛІ E НА САЙТІ A/B";
+    else if(attacking)detail.textContent="C4 У "+(carrier?.nickname||"НАПАРНИКА")+" · СУПРОВОДЖУЙ ЙОГО ДО A/B";
+    else detail.textContent="ЗАХИСТ · НЕ ДАЙ ЗАКЛАСТИ C4";
   }
   if(bar){
     const elapsed=Number(bombState?.actionStartedAt)?Math.max(0,Date.now()-Number(bombState.actionStartedAt)):0;
     bar.style.width=(state==="planting"?Math.min(100,elapsed/30):state==="planted"&&bombState?.action==="defuse"?Math.min(100,elapsed/50):state==="planted"?100:0)+"%";
   }
+  refreshBombToolVisual();
 }
 function updateInteractButtonLabel(){
   const button=$("interactBtn");if(!button)return;
@@ -1225,6 +1268,8 @@ let attackingTeam="A";
 let defendingTeam="B";
 let bombState=null;
 let bombWorldVisual=null;
+let bombToolRoot=null;
+let bombToolActive=false;
 let alliesCash=800;
 let alliesWeapons=["p350","knife"];
 let alliesEquippedWeapon="p350";
