@@ -1631,20 +1631,25 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     });
   }
 
+  armMatchJoinTimeout(io, match);
+}
+
+function armMatchJoinTimeout(io, match) {
+  if (!match || match.started || match.finished) return;
+  if (match.joinTimer) clearTimeout(match.joinTimer);
   match.joinTimer = setTimeout(() => {
-    const current = activeMatches.get(matchId);
+    const current = activeMatches.get(match.id);
     if (!current || current.started || current.finished) return;
     const connected = current.players.filter(p => p.isBot || Boolean(p.socketId)).length;
     const ready = current.players.filter(p => p.isBot || p.ready).length;
     if (connected < current.players.length || ready < current.players.length) {
+      const message = connected < current.players.length
+        ? "Не всі гравці підключилися до матчу."
+        : "Не всі гравці встигли завантажити карту.";
       for (const p of current.players) {
-        if (p.socketId) io.to(p.socketId).emit("search_error", {
-          message: connected < current.players.length
-            ? "Не всі гравці підключилися до матчу."
-            : "Не всі гравці встигли завантажити карту."
-        });
+        if (p.socketId) io.to(p.socketId).emit("search_error", { message });
       }
-      cleanMatch(io, matchId, true);
+      cleanMatch(io, current.id, true);
     }
   }, JOIN_TIMEOUT_SECONDS * 1000);
 }
@@ -1695,6 +1700,10 @@ function startMatchWhenReady(io, match) {
   const allReady = match.players.every(p => p.isBot || p.ready);
   if (!allConnected || !allReady) {
     emitMatchWaiting(io, match);
+    // A previous socket disconnect clears this timer while the page navigates
+    // from lobby to gameplay. Re-arm it after the new socket joins so the
+    // waiting screen cannot remain stuck forever.
+    if (!match.joinTimer) armMatchJoinTimeout(io, match);
     return;
   }
 
