@@ -176,7 +176,14 @@ assert.match(game, /controls\.pointerSpeed=mouseSensitivity/, "mouse look must u
 assert.match(game, /function buildNeonYard\(\)/, "the selected neon map must be implemented");
 assert.match(game, /const sandstoneScale=1\.25/, "Sandstone must use the expanded 1.25x world scale");
 assert.match(game, /sandstoneRoot\.scale\.setScalar\(sandstoneScale\)/, "Sandstone geometry must be scaled as a single collision-safe root");
-assert.match(game, /zoneMarker\("MARKET"/, "expanded Sandstone must include recognizable callout landmarks");
+assert.doesNotMatch(game, /zoneMarker\("(?:MID|MARKET|TITANIC|ZIGA|KITCHEN|A SITE|B SITE)"/, "Sandstone must not draw floating text callouts over playable routes");
+assert.doesNotMatch(game, /new THREE\.TorusGeometry\(\.44,\.035,6,20/, "the planted C4 must not have an attention-grabbing glow ring");
+assert.match(game, /function createHeldBombVisual\(\)/, "the bomb carrier can equip a visible first-person C4 model");
+assert.match(game, /if\(e\.code==="Digit5"\)\{e\.preventDefault\(\);toggleBombTool\(\);return\}/, "key 5 equips or holsters C4");
+assert.match(game, /\$\("bombBtn"\)\.addEventListener\("click",e=>\{e\.preventDefault\(\);e\.stopPropagation\(\);toggleBombTool\(\)\}\)/, "mobile users can equip C4 with a dedicated button");
+assert.match(game, /data-buy-tab="rifles"/, "the Allies buy menu groups equipment into categories");
+assert.match(game, /document\.querySelectorAll\("\[data-buy-tab\]"\)\.forEach\(tab=>tab\.addEventListener\("click"/, "buy categories must filter the weapon cards");
+assert.match(game, /function shoot\(\)\{\s*if\(bombToolActive\|\|/, "players cannot fire while holding the C4 device");
 assert.match(game, /A:\{x:37\.5,z:-33\.75\},B:\{x:22\.5,z:37\.5\}/, "client bomb interactions must use scaled site positions");
 assert.match(game, /addGround\(18,30,11,11,road/, "B site must sit in the lower-right portion of Sandstone");
 assert.match(game, /selectedMap==="NEON_YARD"/, "game must load the selected map");
