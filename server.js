@@ -2001,9 +2001,10 @@ function startAlliesRound(io, match, initial = false) {
     action: null,
     explodeTimer: null
   };
+  // Match the 1.25x Sandstone geometry scale used by the client and bomb sites.
   const sideSpawns = {
-    attack: [{ x: -7, y: 0, z: -40 }, { x: 7, y: 0, z: -40 }],
-    defense: [{ x: -7, y: 0, z: 40 }, { x: 7, y: 0, z: 40 }]
+    attack: [{ x: -8.75, y: 0, z: -50 }, { x: 8.75, y: 0, z: -50 }],
+    defense: [{ x: -8.75, y: 0, z: 50 }, { x: 8.75, y: 0, z: 50 }]
   };
   const teamIndices = { A: 0, B: 0 };
   for (const player of match.players) {
