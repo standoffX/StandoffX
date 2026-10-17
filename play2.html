@@ -27,7 +27,7 @@
 .allies-buy-head>div{display:grid;gap:4px}.allies-buy-head small{font-size:8px;letter-spacing:.09em;color:#8c9aa8;font-weight:800}
 .allies-buy-head strong{color:#f2d28b;font-size:16px;letter-spacing:.03em;font-variant-numeric:tabular-nums}
 .allies-buy-tabs{display:flex;flex-wrap:wrap;gap:5px;border-bottom:1px solid #ffffff17;padding-bottom:8px}
-.allies-buy-tabs button{border:1px solid #3b4652;background:#10161d;color:#9daab5;border-radius:3px;padding:7px 9px;font:900 9px inherit;letter-spacing:.06em;cursor:pointer}
+.allies-buy-tabs button{border:1px solid #3b4652;background:#10161d;color:#9daab5;border-radius:3px;padding:7px 9px;font:900 9px system-ui,sans-serif;letter-spacing:.06em;cursor:pointer}
 .allies-buy-tabs button[aria-selected="true"]{background:#d4d9dd;color:#171d23;border-color:#d4d9dd}
 .allies-buy-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .allies-buy-card{position:relative;min-width:0;min-height:136px;display:flex;flex-direction:column;align-items:flex-start;gap:7px;padding:10px;border:1px solid #3e4a56;border-radius:3px;background:linear-gradient(155deg,#202832,#11171e);color:#f2f4f6;text-align:left;cursor:pointer;transition:border-color .15s,background .15s;overflow:hidden}
@@ -2378,7 +2378,7 @@ function startReload(){
   },info.reloadMs);
 }
 function shoot(){
-  if((!isTeamCombat&&!isTrainingMode)||matchPhase!=="game"||reloading||hp<=0||!mapLoadFinished)return;
+  if(bombToolActive||(!isTeamCombat&&!isTrainingMode)||matchPhase!=="game"||reloading||hp<=0||!mapLoadFinished)return;
   const info=CLIENT_WEAPON_INFO[selectedWeapon];
   const now=performance.now();
   if(now-lastShot<info.fireDelay||ammo<=0){if(ammo<=0)startReload();return}
