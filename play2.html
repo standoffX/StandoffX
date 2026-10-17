@@ -2336,7 +2336,7 @@ document.addEventListener("touchend",e=>{
 },{passive:true});
 
 function setOverlayGame(){
-  $("overlayTitle").textContent=isPrototypeMode?(prototypeGameMode==="allies"?"СОЮЗНИКИ · ПРОТОТИП":"КБ · ПРОТОТИП"):mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":mode==="training"?"ТРЕНУВАННЯ":"HIDE & SEEK";
+  $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":mode==="training"?"ТРЕНУВАННЯ":"HIDE & SEEK";
   $("clickHint").textContent="Клікни для огляду мишкою. WASD — рух · ESC — у лобі";
   $("progressWrap").style.display="none";$("loadingDetails").style.display="none";$("players").style.display="none";
   updateAlliesBuyPanel();
@@ -2466,12 +2466,15 @@ socket.on("init_match",data=>{
   $("trainingControls").style.display="none";
   applyMapInteractionState(data.mapState);
   try{
-    if(!isTrainingMode)localStorage.setItem("sx_active_match",JSON.stringify({matchId:data.matchId||matchId,userId:myId,uuid:myUuid,map:data.map||selectedMap,mode:data.mode||mode,updatedAt:Date.now()}));
+    if(!isTrainingMode)localStorage.setItem("sx_active_match",JSON.stringify({matchId:data.matchId||matchId,userId:myId,uuid:myUuid,map:data.map||selectedMap,mode:data.mode||mode,prototype:Boolean(data.prototype||isPrototypeMode),updatedAt:Date.now()}));
   }catch{}
   $("reconnectBtn").style.display="none";$("reconnectExitBtn").style.display="none";document.body.classList.remove("reconnecting");
   updateWeaponHud();
   if(data.mode)sessionStorage.setItem("selectedMode",data.mode);
   if(data.map)sessionStorage.setItem("selectedMap",data.map);
+  sessionStorage.setItem("prototypeMode",data.prototype?"true":"false");
+  if(data.prototype)sessionStorage.setItem("prototypeGameMode",data.mode||mode);
+  else sessionStorage.removeItem("prototypeGameMode");
   myRole=data.me?.role||"runner";myTeam=data.me?.team||null;score=data.me?.score||0;hp=data.me?.hp||100;
   if(playerVisual)setSoldierTint(playerVisual,colorFor(myRole,myTeam));
   $("modeName").textContent=data.modeName||"MATCH";
