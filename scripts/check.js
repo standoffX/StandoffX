@@ -107,7 +107,7 @@ assert.match(menu, /sx_abandoned_match/, "the lobby must finish a queued leave r
 assert.match(menu, /data-test-gameplay="real"/, "all players can choose a real-player Game");
 assert.doesNotMatch(menu, /data-test-gameplay="training"/, "the public type selector has only Prototype and Game");
 assert.match(menu, /socket\.emit\("start_training",\{mode:"field_test",map:selectedMap,gameMode:selectedMode,prototype:true\}\)/, "Prototype opens the mode-matched sandbox with static bots");
-assert.match(menu, /return selectedMode==="allies"?\["SANDSTONE"\]:\["SMALL_YARD","NEON_YARD"\]/, "map cards must be filtered to the selected mode in prototype and live play");
+assert.match(menu, /return selectedMode==="allies"\?\["SANDSTONE"\]:\["SMALL_YARD","NEON_YARD"\]/, "map cards must be filtered to the selected mode in prototype and live play");
 assert.match(menu, /class="tester-mode-switch"/, "tester mode must use a compact switch instead of large cards");
 assert.match(menu, /class="tester-mode-segment"/, "prototype/test options must share one compact segmented control");
 assert.match(menu, /createRealtimeSocket\(\)[\s\S]{0,260}transports:\["websocket"\]/, "menu sockets must avoid polling session IDs on Render");
