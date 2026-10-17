@@ -16,7 +16,9 @@
 #damagePopup{display:none;position:absolute;left:50%;top:calc(50% - 54px);transform:translateX(-50%);padding:6px 9px;border:1px solid #8bc7ff55;border-radius:4px;background:#06182adb;color:#c4ecff;font-size:11px;font-weight:1000;letter-spacing:.8px;text-shadow:0 1px 5px #000;white-space:nowrap}
 #damagePopup.incoming{border-color:#ff718777;background:#310d19e8;color:#ff9aaa}
 .weaponButton{left:70%;top:19%;right:auto;bottom:auto;width:72px;height:42px;border-radius:9px;background:#203d5adf;border-color:#96d7ff66;font-size:9px;letter-spacing:.6px}
-.interactButton{left:70%;top:29%;right:auto;bottom:auto;width:76px;height:40px;border-radius:9px;background:#153b30e8;border-color:#70efb177;font-size:9px;letter-spacing:.4px}
+.bombButton{left:70%;top:29%;right:auto;bottom:auto;width:76px;height:40px;border-radius:9px;background:#3c3324e8;border-color:#bb9c5b77;font-size:9px;letter-spacing:.3px}
+.bombButton.active{background:#6c5830;border-color:#e0c581;color:#fff0c2}
+.interactButton{left:70%;top:39%;right:auto;bottom:auto;width:76px;height:40px;border-radius:9px;background:#153b30e8;border-color:#70efb177;font-size:9px;letter-spacing:.4px}
 #overlay{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:linear-gradient(180deg,#070b10ee,#070b10f5);padding:24px;cursor:pointer}
 #overlay .panel{width:min(580px,92vw);padding:26px;border:1px solid #ffffff12;background:#0f151ed9;border-radius:12px;box-shadow:0 30px 100px #000a}
 #overlay h1{margin:0 0 8px;font-size:34px;letter-spacing:-1px}#overlay p{margin:8px 0;color:#8391a5;font-size:13px}
@@ -97,6 +99,9 @@ body.device-mobile #fullMapCanvas{max-height:78dvh}
 body.device-mobile #fullMapTitle{font-size:10px}
 body.device-mobile #fullMapTitle span{font-size:7px}
 body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
+body.device-mobile .weaponButton{top:19%}
+body.device-mobile .bombButton{top:29%;left:70%;width:76px;height:40px}
+body.device-mobile .interactButton{top:39%;left:70%;width:76px;height:40px}
 @media(max-width:800px){#radarWrap{top:6px;right:6px;width:94px}#radarCanvas{width:88px;height:88px}}
 
 
@@ -217,7 +222,7 @@ body.device-mobile .mapButton{left:158px;bottom:30px;width:46px;height:40px}
   <div id="deathNotice" role="status" aria-live="polite">ТЕБЕ ЛІКВІДУВАЛИ</div>
   <div id="ammo" style="display:none"><div class="ammo-name" id="weaponName">AKR</div><div class="ammo-num" id="ammoNum">30</div><div class="ammo-sub" id="ammoSub">/ 30 · R — RELOAD</div><div class="ammo-sub" id="weaponDamage">5 м · ГОЛ 164 ТІЛ 35 ЖИВ 45 НОГ 27</div></div>
   <div id="damagePopup" role="status" aria-live="polite"></div>
-  <div id="hint">WASD — рух · Space — стрибок · Shift — швидкість · G — камера · LMB — вогонь · R — перезарядка</div>
+  <div id="hint">WASD — рух · Space — стрибок · Shift — біг · 1–3 — зброя · 5 — C4 · E — плент / деф’юз · LMB — вогонь</div>
   <div id="squadStrip" class="squad-strip" aria-label="Учасники матчу"></div>
 </div>
 <div id="radarWrap" aria-label="Радар команди"><canvas id="radarCanvas" width="220" height="220"></canvas><span>TEAM RADAR</span></div>
@@ -858,6 +863,14 @@ function updateAlliesBuyPanel(){
     button.disabled=!owned&&!(weapon==="akr"&&alliesCash>=2700);
   }
 }
+let activeBuyCategory="all";
+document.querySelectorAll("[data-buy-tab]").forEach(tab=>tab.addEventListener("click",()=>{
+  activeBuyCategory=tab.dataset.buyTab||"all";
+  document.querySelectorAll("[data-buy-tab]").forEach(item=>item.setAttribute("aria-selected",String(item===tab)));
+  document.querySelectorAll("[data-buy-category]").forEach(item=>{
+    item.style.display=activeBuyCategory==="all"||item.dataset.buyCategory===activeBuyCategory?"":"none";
+  });
+}));
 function updateBombHud(){
   const hud=$("bombHud");
   const info=$("roundInfo");
@@ -2397,9 +2410,10 @@ function queueJump(){if(matchPhase==="game")jumpQueued=true}
 addEventListener("keydown",e=>{
   if(e.repeat)return;
   if(e.code==="Escape"){e.preventDefault();pauseToMenu();return}
-  if(e.code==="Digit1"){e.preventDefault();selectWeapon("akr");return}
-  if(e.code==="Digit2"){e.preventDefault();selectWeapon("p350");return}
-  if(e.code==="Digit3"){e.preventDefault();selectWeapon("knife");return}
+  if(e.code==="Digit1"){e.preventDefault();holsterBombTool();selectWeapon("akr");return}
+  if(e.code==="Digit2"){e.preventDefault();holsterBombTool();selectWeapon("p350");return}
+  if(e.code==="Digit3"){e.preventDefault();holsterBombTool();selectWeapon("knife");return}
+  if(e.code==="Digit5"){e.preventDefault();toggleBombTool();return}
   if(e.code==="KeyE"){e.preventDefault();interactWithNearestDoor();return}
   const binds=readTrainingBinds();
   if(e.code===binds.menu){e.preventDefault();pauseToMenu();return}
@@ -2435,7 +2449,8 @@ addEventListener("mousedown",e=>{
   }
 });
 addEventListener("mouseup",e=>{if(e.button===0&&!isMobileDevice)fireHeld=false});
-$("weaponBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();if(weaponSwipeConsumed){weaponSwipeConsumed=false;return}cycleWeapon()});
+$("weaponBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();if(weaponSwipeConsumed){weaponSwipeConsumed=false;return}holsterBombTool();cycleWeapon()});
+$("bombBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();toggleBombTool()});
 document.querySelectorAll("[data-allies-weapon]").forEach(button=>button.addEventListener("click",e=>{
   e.preventDefault();e.stopPropagation();
   if(mode!=="allies"||isTrainingMode||matchPhase!=="round_start")return;
@@ -2688,6 +2703,7 @@ socket.on("allies_round_start",data=>{
   attackingTeam=data.attackingTeam||attackingTeam;
   defendingTeam=data.defendingTeam||defendingTeam;
   bombState=data.bomb||{state:"carried"};
+  bombToolActive=false;refreshBombToolVisual();
   hp=100;keys.w=keys.a=keys.s=keys.d=keys.shift=false;fireHeld=false;jumpQueued=false;isCrouching=false;
   weaponAmmo.akr=CLIENT_WEAPON_INFO.akr.magazine;weaponAmmo.p350=CLIENT_WEAPON_INFO.p350.magazine;ammo=weaponAmmo[alliesEquippedWeapon]??weaponAmmo.p350;reloading=false;
   setAimingDownSights(false);selectWeapon(alliesWeapons.includes(alliesEquippedWeapon)?alliesEquippedWeapon:(alliesWeapons.includes("p350")?"p350":"knife"),true);updateWeaponHud();
@@ -2741,6 +2757,7 @@ socket.on("allies_buy_result",data=>{if(data?.message)showDamagePopup(data.messa
 socket.on("bomb_state",data=>{
   const previous=bombState?.state;
   bombState=data||{state:"carried"};
+  if(bombState.state!=="carried"||String(bombState.carrierUserId)!==String(myId))bombToolActive=false;
   renderBombWorldVisual();updateBombHud();updateInteractButtonLabel();
   if(bombState.state==="planted"&&previous!=="planted")showDamagePopup("БОМБА ЗАКЛАДЕНА · "+bombState.site);
   if(bombState.state==="defused"&&previous!=="defused")showDamagePopup("БОМБУ ЗНЕШКОДЖЕНО");
