@@ -2591,11 +2591,15 @@ io.on("connection", socket => {
       return socket.emit("training_error", { message: "Цей режим доступний лише тестерам." });
     }
 
+    const prototype = mode === "field_test" && data?.prototype === true;
+    const gameMode = ["allies", "team_fight"].includes(data?.gameMode) ? data.gameMode : "team_fight";
     const previous = trainingSessions.get(user.id);
     const sessionMap = ["field_test", "training"].includes(mode) ? normalizeMapId(data?.map) : cfg.map;
     const TRAINING_SPAWNS = {
       HILL_TOWN: {x:-42,y:0,z:0},
       NEON_YARD: {x:0,y:0,z:115},
+      SANDSTONE: {x:0,y:0,z:0},
+      SMALL_YARD: {x:0,y:0,z:0},
       FIELD_ARENA: {x:0,y:0,z:0},
       M3_Maze: {x:5,y:0,z:5}
     };
@@ -2605,7 +2609,9 @@ io.on("connection", socket => {
       userId: user.id,
       nickname: user.nickname,
       mode: cfg.id,
-      modeName: cfg.name,
+      gameMode: prototype ? gameMode : null,
+      prototype,
+      modeName: prototype ? (gameMode === "allies" ? "ПРОТОТИП · СОЮЗНИКИ" : "ПРОТОТИП · КБ") : cfg.name,
       map: sessionMap,
       mapState: sessionMap === "HILL_TOWN" ? createMapInteractionState() : null,
       socketId: socket.id,
@@ -2621,7 +2627,7 @@ io.on("connection", socket => {
     if (previous?.bot?.despawnTimer) clearTimeout(previous.bot.despawnTimer);
     if (previous?.botTimer) clearInterval(previous.botTimer);
     trainingSessions.set(user.id, session);
-    if(session.mode==="field_test"&&session.bot){
+    if(session.mode==="field_test"&&session.bot&&!session.prototype){
       session.botTimer=setInterval(()=>{
         const current=trainingSessions.get(user.id);
         if(current!==session||!current.bot||current.bot.hp<=0||!current.socketId)return;
@@ -2646,7 +2652,9 @@ io.on("connection", socket => {
       trainingId: session.id,
       userId: user.id,
       mode: cfg.id,
-      modeName: cfg.name,
+      gameMode: session.gameMode,
+      prototype: session.prototype,
+      modeName: session.modeName,
       map: session.map,
       uuid: user.uuid
     });
@@ -2666,6 +2674,8 @@ io.on("connection", socket => {
     socket.emit("training_init", {
       trainingId: session.id,
       mode: session.mode,
+      gameMode: session.gameMode,
+      prototype: session.prototype,
       modeName: session.modeName,
       map: session.map,
       mapState: session.mapState || null,
@@ -2706,7 +2716,7 @@ io.on("connection", socket => {
 
   socket.on("training_spawn_bot", data => {
     const session = trainingSessions.get(socket.user?.id);
-    if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
+    if (!session || session.prototype || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
     if (session.bot) {
       socket.emit("training_state", { bot: session.bot, message: "Бот уже створений." });
       return;
@@ -2737,7 +2747,7 @@ io.on("connection", socket => {
 
   socket.on("training_remove_bot", data => {
     const session = trainingSessions.get(socket.user?.id);
-    if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
+    if (!session || session.prototype || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
     const now = Date.now();
     if (now - session.lastActionAt < 180) return;
     session.lastActionAt = now;
@@ -2747,7 +2757,7 @@ io.on("connection", socket => {
 
   socket.on("training_bot_action", data => {
     const session = trainingSessions.get(socket.user?.id);
-    if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || !session.bot) return;
+    if (!session || session.prototype || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || !session.bot) return;
     const now = Date.now();
     if (now - session.lastActionAt < 180) return;
     session.lastActionAt = now;
@@ -2881,7 +2891,7 @@ io.on("connection", socket => {
 
     const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
     const requestedMap = normalizeMapId(data?.map);
-    const map = mode === "allies" ? "SANDSTONE" : "SMALL_YARD";
+    const map = mode === "allies" ? "SANDSTONE" : (requestedMap === "NEON_YARD" ? "NEON_YARD" : "SMALL_YARD");
     removeFromQueue(user.uuid || user.id);
 
     matchmakingQueue.push({
