@@ -1503,6 +1503,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   if (candidates.length < requiredPlayers) return;
 
   const players = candidates.slice(0, requiredPlayers);
+  const prototypeBotMatch = players.some(p => p.prototypeBot === true);
   for (const p of players) if (!p.isBot) removeFromQueue(p.uuid || p.userId);
 
   const cfg = getModeConfig(mode);
@@ -1522,6 +1523,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     id: matchId,
     mode: cfg.id,
     modeName: cfg.name,
+    prototypeBotMatch,
     map: safeMapId,
     mapName: PLAYABLE_MAPS[safeMapId]?.name || PLAYABLE_MAPS.M3_Maze.name,
     mapState: safeMapId === "HILL_TOWN" ? createMapInteractionState() : null,
@@ -1536,9 +1538,9 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
         : mode === "allies" ? (i < 2 ? "teamA" : "teamB")
         : (i % 2 === 0 ? "teamA" : "teamB"),
       team: mode === "allies"
-        ? (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i < 2 ? "A" : "B"))
+        ? (prototypeBotMatch ? (i < 2 ? "A" : "B") : (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i < 2 ? "A" : "B")))
         : mode === "team_fight"
-          ? (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : ["A", "B", "C"][i % 3]) : ["A", "B", "C"][i % 3])
+          ? (prototypeBotMatch ? ["A", "B", "C"][i % 3] : (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : ["A", "B", "C"][i % 3]) : ["A", "B", "C"][i % 3]))
           : null,
       hp: 100,
       score: 0,
@@ -1586,7 +1588,8 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
       uuid: p.uuid,
       mode: cfg.id,
       modeName: cfg.name,
-      map: match.map
+      map: match.map,
+      prototype: Boolean(match.prototypeBotMatch)
     });
   }
 
@@ -1665,7 +1668,7 @@ function startMatchWhenReady(io, match) {
     return;
   }
 
-  if (match.players.some(p => p.isBot)) {
+  if (match.players.some(p => p.isBot) && !match.prototypeBotMatch) {
     match.phase = "game";
     match.remaining = GAME_SECONDS;
     io.to(match.id).emit("match_phase", { phase: "game", time: match.remaining, mode: match.mode, modeName: match.modeName });
@@ -1837,10 +1840,11 @@ function alliesRoundPayload(match) {
     players: match.players.map(player => ({
       userId: player.userId, nickname: player.nickname,
       playerAvatar: player.playerAvatar || "/avatars/default.jpg",
+      isBot: Boolean(player.isBot),
       team: player.team, hp: player.hp,
       x: player.pos.x, y: player.pos.y, z: player.pos.z,
       rotY: player.rotY, spawn: { ...player.spawn },
-      alive: player.hp > 0, connected: Boolean(player.socketId)
+      alive: player.hp > 0, connected: player.isBot || Boolean(player.socketId)
     }))
   };
 }
@@ -2878,6 +2882,50 @@ io.on("connection", socket => {
     trainingSessions.delete(socket.user.id);
   });
 
+  socket.on("start_prototype_match", data => {
+    const user = socket.user;
+    if (!user || (user.isBanned && user.id !== ADMIN_ID)) {
+      socket.emit("auth_required");
+      return;
+    }
+    if (playerMatch(user.uuid || user.id)) {
+      socket.emit("search_error", { message: "Ти вже перебуваєш у матчі." });
+      return;
+    }
+
+    const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
+    const requestedMap = normalizeMapId(data?.map);
+    const map = mode === "allies" ? "SANDSTONE" : (requestedMap === "NEON_YARD" ? "NEON_YARD" : "SMALL_YARD");
+    removeFromQueue(user.uuid || user.id);
+
+    const botCandidate = (nickname, suffix) => ({
+      socketId: null,
+      userId: "prototype_bot_" + crypto.randomBytes(8).toString("hex"),
+      uuid: "",
+      isBot: true,
+      prototypeBot: true,
+      nickname,
+      playerAvatar: "/avatars/default.jpg",
+      mode,
+      map,
+      botSlot: suffix
+    });
+    const humanCandidate = {
+      socketId: socket.id,
+      userId: user.id,
+      nickname: user.nickname,
+      playerAvatar: user.playerAvatar || "/avatars/default.jpg",
+      uuid: user.uuid || "",
+      isBot: false,
+      mode,
+      map
+    };
+    const bots = mode === "allies"
+      ? [botCandidate("BOT · СОЮЗНИК", "ally"), botCandidate("BOT · ПРОТИВНИК 1", "enemy1"), botCandidate("BOT · ПРОТИВНИК 2", "enemy2")]
+      : [botCandidate("BOT · ПРОТИВНИК 1", "enemy1"), botCandidate("BOT · ПРОТИВНИК 2", "enemy2")];
+    createMatch(io, mode, map, [humanCandidate, ...bots]);
+  });
+
   socket.on("start_search", data => {
     const user = socket.user;
     if (playerMatch(user.uuid || user.id)) return socket.emit("search_error", { message: "Ти вже в матчі." });
@@ -2967,6 +3015,7 @@ io.on("connection", socket => {
       map: match.map,
       mode: match.mode,
       modeName: match.modeName,
+      prototype: Boolean(match.prototypeBotMatch),
       mapState: match.mapState || null,
       round: match.mode === "allies" ? alliesRoundPayload(match) : null,
       me: {
