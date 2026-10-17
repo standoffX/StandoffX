@@ -251,6 +251,12 @@ assert.match(server, /socket\.on\("allies_buy"/, "Allies purchases must be serve
 assert.match(server, /shooter\.equippedWeapon !== weaponId/, "the server must validate a player equipped weapon");
 assert.match(server, /player\.team !== match\.attackingTeam \|\| player\.userId !== bomb\.carrierUserId/, "only the bomb carrier on attack may initiate a plant");
 assert.match(game, /function buildSandstoneMap\(\)/, "the client must build a closed Sandstone-style bomb map locally");
+assert.match(game, /let matchJoined=false,clientMapReady=false,clientReadySent=false/, "game readiness waits for both map completion and successful room join");
+assert.match(game, /function emitClientReadyWhenJoined\(\)[\s\S]{0,220}socket\.emit\("client_ready",\{matchId\}\)/, "the client only confirms readiness after init_match is received");
+assert.match(game, /socket\.on\("init_match",data=>\{\s*matchJoined=true/, "server room join is acknowledged before client readiness");
+assert.match(game, /socket\.on\("disconnect",\(\)=>\{\s*matchJoined=false;\s*clientReadySent=false;/, "reconnects may confirm readiness again");
+assert.match(server, /function armMatchJoinTimeout\(io, match\)/, "waiting matches retain a timeout after a socket transition");
+assert.match(server, /if \(!match\.joinTimer\) armMatchJoinTimeout\(io, match\)/, "the readiness wait is re-timed if the previous lobby socket disconnected");
 assert.match(game, /function buildSmallYard\(\)/, "the client must build a compact map for 1v1v1 KB locally");
 assert.match(game, /socket\.emit\("bomb_action",\{matchId,action:"plant",site:site\.site\}\)/, "the client must request bomb planting on a nearby site");
 assert.match(game, /socket\.emit\("bomb_action",\{matchId,action:"defuse",site:site\.site\}\)/, "the client must request defusing on the planted site");
