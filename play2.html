@@ -903,15 +903,24 @@ function updateInteractButtonLabel(){
   if(mode==="allies"&&!isTrainingMode){
     const site=nearestSandstoneSite(5.7);
     const state=bombState?.state||"carried";
-    if(site&&myTeam===attackingTeam&&String(bombState?.carrierUserId)===String(myId)&&(state==="carried"||(state==="planting"&&bombState?.actorUserId===String(myId)))){
-      button.textContent=state==="planting"?"E · СКАСУВАТИ":"E · ЗАКЛАСТИ "+site.site;
-      updateBombHud();return;
+    const isCarrier=String(bombState?.carrierUserId)===String(myId)&&myTeam===attackingTeam;
+    if(state==="planted"&&myTeam===defendingTeam){
+      button.textContent=site&&site.site===bombState?.site?"E · ЗНЕШКОДИТИ "+site.site:"БОМБА НА "+(bombState?.site||"?");
+      return;
     }
-    if(site&&myTeam===defendingTeam&&state==="planted"&&site.site===bombState?.site){
-      button.textContent="E · ЗНЕШКОДИТИ "+site.site;updateBombHud();return;
+    if(isCarrier&&(state==="carried"||state==="planting")){
+      if(state==="planting"){
+        button.textContent=bombState?.actorUserId===String(myId)?"E · СКАСУВАТИ · НЕ РУХАЙСЯ":"C4 ЗАКЛАДАЮТЬ";
+      }else if(site){
+        button.textContent="E · ЗАКЛАСТИ "+site.site;
+      }else{
+        button.textContent=bombToolActive?"ЗНАЙДИ САЙТ A / B":"5 · ДІСТАТИ C4";
+      }
+      return;
     }
-    button.textContent=state==="planted"?"БОМБА НА "+bombState.site:"A / B · БОМБА";
-    updateBombHud();return;
+    if(state==="planted"){button.textContent="БОМБА НА "+bombState.site;return}
+    button.textContent=state==="carried"?"C4 У "+(squadRoster.find(p=>String(p.userId)===String(bombState?.carrierUserId))?.nickname||"НАПАРНИКА"):"A / B · C4";
+    return;
   }
   if(!player){button.textContent="E · ДВЕРІ";return}
   let nearest=null,best=5.5;
@@ -1621,16 +1630,65 @@ function renderBombWorldVisual(){
   if(mode!=="allies"||selectedMap!=="SANDSTONE"||!bombState||!["planting","planted"].includes(bombState.state)||!bombState.site)return;
   const center=bombState.site==="A"?{x:37.5,z:-33.75}:{x:22.5,z:37.5};
   const group=new THREE.Group();
-  const body=new THREE.Mesh(new THREE.BoxGeometry(.48,.24,.34),new THREE.MeshStandardMaterial({color:0x232b31,roughness:.55,metalness:.65}));
-  body.position.y=.25;group.add(body);
-  const top=new THREE.Mesh(new THREE.BoxGeometry(.31,.07,.22),new THREE.MeshStandardMaterial({color:0x6d7a7d,roughness:.36,metalness:.7}));
-  top.position.set(0,.405,0);group.add(top);
-  const led=new THREE.Mesh(new THREE.SphereGeometry(.055,8,6),new THREE.MeshBasicMaterial({color:bombState.state==="planted"?0xff3b43:0xffbb46}));
-  led.position.set(.1,.465,.03);group.add(led);
-  const ring=new THREE.Mesh(new THREE.TorusGeometry(.44,.035,6,20),new THREE.MeshBasicMaterial({color:bombState.state==="planted"?0xff4e4e:0xffc465,transparent:true,opacity:.82}));
-  ring.rotation.x=Math.PI/2;ring.position.y=.045;group.add(ring);
+  const caseMat=new THREE.MeshStandardMaterial({color:0x292f33,roughness:.88,metalness:.16});
+  const darkMat=new THREE.MeshStandardMaterial({color:0x111619,roughness:.9,metalness:.05});
+  const cableMat=new THREE.MeshStandardMaterial({color:0x6e473e,roughness:.95,metalness:0});
+  const keypadMat=new THREE.MeshStandardMaterial({color:0x667178,roughness:.82,metalness:.1});
+  const body=new THREE.Mesh(new THREE.BoxGeometry(.52,.23,.37),caseMat);
+  body.position.y=.18;group.add(body);
+  const top=new THREE.Mesh(new THREE.BoxGeometry(.38,.035,.27),darkMat);
+  top.position.set(0,.315,0);group.add(top);
+  for(let i=0;i<8;i++){
+    const key=new THREE.Mesh(new THREE.BoxGeometry(.035,.012,.026),keypadMat);
+    key.position.set(-.125+(i%4)*.083,.34,-.035+Math.floor(i/4)*.08);
+    group.add(key);
+  }
+  const cable=new THREE.Mesh(new THREE.TorusGeometry(.12,.012,5,16,.9*Math.PI),cableMat);
+  cable.rotation.x=Math.PI/2;cable.position.set(-.16,.24,.14);group.add(cable);
   group.position.set(center.x,0,center.z);
   scene.add(group);bombWorldVisual=group;
+}
+function createHeldBombVisual(){
+  const group=new THREE.Group();
+  const bodyMat=new THREE.MeshStandardMaterial({color:0x30383c,roughness:.82,metalness:.18});
+  const edgeMat=new THREE.MeshStandardMaterial({color:0x111719,roughness:.9,metalness:.05});
+  const strapMat=new THREE.MeshStandardMaterial({color:0x75634b,roughness:1,metalness:0});
+  const top=new THREE.Mesh(new THREE.BoxGeometry(.28,.19,.13),bodyMat);
+  group.add(top);
+  const face=new THREE.Mesh(new THREE.BoxGeometry(.215,.105,.012),edgeMat);
+  face.position.set(0,.015,.071);group.add(face);
+  for(let i=0;i<6;i++){
+    const key=new THREE.Mesh(new THREE.BoxGeometry(.025,.018,.008),strapMat);
+    key.position.set(-.07+(i%3)*.07,-.008+Math.floor(i/3)*.04,.08);
+    group.add(key);
+  }
+  const strap=new THREE.Mesh(new THREE.BoxGeometry(.33,.028,.16),strapMat);
+  strap.position.set(0,-.07,0);group.add(strap);
+  group.position.set(-.34,-.31,-.66);
+  group.rotation.set(.12,.19,-.16);
+  camera.add(group);
+  return group;
+}
+function refreshBombToolVisual(){
+  const canShow=Boolean(bombToolActive&&mode==="allies"&&!isTrainingMode&&matchPhase==="game"&&hp>0&&
+    bombState?.state==="carried"&&String(bombState?.carrierUserId)===String(myId)&&myTeam===attackingTeam);
+  if(canShow&&!bombToolRoot)bombToolRoot=createHeldBombVisual();
+  if(bombToolRoot)bombToolRoot.visible=canShow;
+  if(heldWeaponRoot)heldWeaponRoot.visible=!canShow;
+}
+function toggleBombTool(){
+  const canCarry=mode==="allies"&&!isTrainingMode&&matchPhase==="game"&&hp>0&&
+    bombState?.state==="carried"&&String(bombState?.carrierUserId)===String(myId)&&myTeam===attackingTeam;
+  if(!canCarry){showDamagePopup("C4 ВИДАЄТЬСЯ АВТОМАТИЧНО НОСІЮ АТАКИ");return}
+  bombToolActive=!bombToolActive;
+  refreshBombToolVisual();
+  updateBombHud();
+  updateInteractButtonLabel();
+  if(bombToolActive)showDamagePopup("C4 В РУКАХ · ПІДІЙДИ ДО A/B · E — ЗАКЛАСТИ");
+}
+function holsterBombTool(){
+  bombToolActive=false;
+  refreshBombToolVisual();
 }
 
 function buildSandstoneMap(){
@@ -1660,7 +1718,7 @@ function buildSandstoneMap(){
     ctx.fillStyle=color;ctx.fillRect(7,7,114,114);ctx.fillStyle="#f8eedc";
     ctx.font="bold 78px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(letter,64,67);
     const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
-    const panel=new THREE.Mesh(new THREE.PlaneGeometry(1.25,1.25),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide}));
+    const panel=new THREE.Mesh(new THREE.PlaneGeometry(1.25,1.25),new THREE.MeshStandardMaterial({map:texture,roughness:1,metalness:0,side:THREE.DoubleSide}));
     panel.position.set(x,2.6,z);panel.lookAt(x,2.6,0);sandstoneRoot.add(panel);
   };
 
@@ -1717,8 +1775,14 @@ function buildSandstoneMap(){
   // Bombsites sit on the east side of the expanded layout, like the top-down reference.
   addGround(30,-27,11,11,road,-.018);
   addGround(18,30,11,11,road,-.017);
-  addGround(30,-27,8,8,red,-.014);
-  addGround(18,30,8,8,blue,-.013);
+  addGround(30,-27,8,8,sandstoneDark,-.014);
+  addGround(18,30,8,8,sandstoneDark,-.013);
+  for(const [cx,cz] of [[30,-27],[18,30]]){
+    addGround(cx,cz-4.25,7,.12,trim,-.012);
+    addGround(cx,cz+4.25,7,.12,trim,-.011);
+    addGround(cx-4.25,cz,.12,7,trim,-.010);
+    addGround(cx+4.25,cz,.12,7,trim,-.009);
+  }
   addBox(28.5,1.05,-32.5,7,2.1,3,wood,true);
   addBox(31,1.05,-32.2,1.3,2.1,2.3,cloth,false);
   addBox(16.5,1.05,35.5,7,2.1,3,wood,true);
@@ -1743,25 +1807,8 @@ function buildSandstoneMap(){
   for(const [x,z] of [[-7,-39],[7,-39],[-7,39],[7,39]]){
     addGround(x,z,3,3,trim,-.012);
   }
-  const zoneMarker=(label,x,z,color)=>{
-    const canvas=document.createElement("canvas");canvas.width=256;canvas.height=80;
-    const ctx=canvas.getContext("2d");
-    ctx.fillStyle="#171b1d";ctx.fillRect(0,0,256,80);
-    ctx.fillStyle=color;ctx.fillRect(5,5,246,70);
-    ctx.strokeStyle="#e4d4b1";ctx.lineWidth=3;ctx.strokeRect(7,7,242,66);
-    ctx.fillStyle="#fff5df";ctx.font="bold 31px Arial";ctx.textAlign="center";ctx.textBaseline="middle";
-    ctx.fillText(label,128,41,228);
-    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
-    const panel=new THREE.Mesh(new THREE.PlaneGeometry(4.5,1.35),new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide}));
-    panel.position.set(x,2.6,z);panel.lookAt(x,2.6,0);sandstoneRoot.add(panel);
-  };
-  zoneMarker("MID",0,2,"#615a4c");
-  zoneMarker("MARKET",-34,16,"#80553b");
-  zoneMarker("TITANIC",-34,4,"#a34931");
-  zoneMarker("ZIGA",17,2,"#62548c");
-  zoneMarker("KITCHEN",9,-15,"#35657f");
-  zoneMarker("A SITE",29,-20,"#a33d31");
-  zoneMarker("B SITE",18,23,"#315a77");
+  // No floating text overlays or glowing zone plates on the playable map.
+  // Site identity is conveyed by subdued physical A/B signs and the tactical HUD.
   sandstoneRoot.scale.setScalar(sandstoneScale);
   scene.add(sandstoneRoot);
   $("progress").style.width="100%";mapLoaded=true;mapLoadFinished=true;
