@@ -331,7 +331,7 @@ assert.match(game, /addBox\(0,3\.5,-228,456,7,4,shadowMat,true\)/, "M3 Maze must
 assert.doesNotMatch(game.slice(game.indexOf("function loadMap()"), game.indexOf("function makeVisual(")), /loader\.load\("m3\.glb"/, "M3 map loading must not depend on a remote model");
 assert.match(game, /function rebuildCollisionIndex\(\)/, "map geometry must be registered for solid collision");
 assert.match(game, /if\(size\.y<\.24\|\|bounds\.max\.y<\.16\|\|size\.y>18\|\|\(size\.x>28&&size\.z>28\)\)continue/, "collision filtering must keep long thin walls instead of deleting arena borders");
-assert.match(game, /return \(\{SANDSTONE:48,SMALL_YARD:32,HILL_TOWN:54\.2,NEON_YARD:167,FIELD_ARENA:291,M3_Maze:225\}\)/, "all client movement bounds must stay inside the matching physical map walls");
+assert.match(game, /return \(\{SANDSTONE:60,SMALL_YARD:32,HILL_TOWN:54\.2,NEON_YARD:167,FIELD_ARENA:291,M3_Maze:225\}\)/, "all client movement bounds must stay inside the matching physical map walls");
 assert.match(game, /function applyMapInteractionState\(state\)/, "door and destructible-cover state must be applied to reconnecting clients");
 assert.match(game, /const hits=raycaster\.intersectObjects\(mapObjects\.filter\(o=>o\?\.visible\),false\)/, "shots raycast against the actual map geometry");
 assert.match(game, /const hit=hits\.find\(h=>h\.distance<CLIENT_WEAPON_INFO\[selectedWeapon\]\.range\)/, "the nearest scenery impact is chosen before wood damage is applied");
