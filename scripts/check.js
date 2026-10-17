@@ -223,10 +223,16 @@ assert.match(menu, /data-map="SMALL_YARD"/, "public KB map pool must include the
 assert.match(server, /id: "team_fight"[\s\S]*?map: "SMALL_YARD"[\s\S]*?requiredPlayers: 3/, "KB must be free-for-all with three players on the small yard");
 assert.match(server, /function startAlliesRound\(io, match, initial = false\)/, "Allies must start discrete bomb rounds after every client is ready");
 assert.match(server, /function handleBombAction\(io, match, player, data = \{\}\)/, "the server must validate bomb plant and defuse inputs");
-assert.match(server, /bomb\.explodeAt = bomb\.plantedAt \+ 35000/, "a planted bomb must have a server-controlled explosion timer");
+assert.match(server, /bomb\.explodeAt = bomb\.plantedAt \+ 40000/, "a planted bomb must have a server-controlled 40-second explosion timer");
 assert.match(server, /Date\.now\(\) - action\.startedAt >= 3000/, "planting must take three uninterrupted seconds");
 assert.match(server, /Date\.now\(\) - action\.startedAt >= 5000/, "defusing must take five uninterrupted seconds");
-assert.match(server, /match\.roundWins\.A >= 7 \|\| match\.roundWins\.B >= 7/, "Allies matches must be won by reaching seven rounds");
+assert.match(server, /match\.roundWins\.A >= 8 \|\| match\.roundWins\.B >= 8/, "Allies matches must be won by reaching eight rounds");
+assert.match(server, /match\.roundNumber >= 15/, "Allies must have a maximum of fifteen rounds");
+assert.match(server, /match\.roundNumber % 7 === 0/, "Allies teams must switch sides after seven rounds");
+assert.match(server, /match\.roundRemaining = 110/, "Allies rounds must last 110 seconds");
+assert.match(server, /match\.phaseRemaining = 10/, "Allies must have a ten-second preparation and purchase phase");
+assert.match(server, /socket\.on\("allies_buy"/, "Allies purchases must be server-authoritative");
+assert.match(server, /shooter\.equippedWeapon !== weaponId/, "the server must validate a player equipped weapon");
 assert.match(server, /player\.team !== match\.attackingTeam \|\| player\.userId !== bomb\.carrierUserId/, "only the bomb carrier on attack may initiate a plant");
 assert.match(game, /function buildSandstoneMap\(\)/, "the client must build a closed Sandstone-style bomb map locally");
 assert.match(game, /function buildSmallYard\(\)/, "the client must build a compact map for 1v1v1 KB locally");
@@ -235,6 +241,9 @@ assert.match(game, /socket\.emit\("bomb_action",\{matchId,action:"defuse",site:s
 assert.match(game, /socket\.on\("allies_round_start"/, "clients must reset spawns and weapons at each bomb round");
 assert.match(game, /socket\.on\("allies_round_end"/, "clients must show the winner and reason at round end");
 assert.match(game, /id="bombHud"/, "Allies must have a bomb objective HUD");
+assert.match(game, /id="alliesBuyPanel"/, "Allies must show a buy panel during preparation");
+assert.match(game, /socket\.emit\("allies_buy"/, "the buy panel must submit purchases to the server");
+assert.match(game, /socket\.on\("allies_loadout"/, "the client must apply server-authoritative Allies loadouts");
 assert.match(game, /function buildHillTownMap\(\)[\s\S]*?wallAlongZ\(-55\.5,-48,48,wallShadowMat,1,6\)[\s\S]*?addGameplayInteractables\(\);[\s\S]*?mapLoadFinished=true/, "Hill Town must build a deterministic local competitive map with solid walls");
 assert.match(game, /HILL_TOWN_MANIFEST_URL/, "the optional first-person AKR model may still use the CC0 weapon manifest");
 assert.match(game, /async function loadHeldWeapon\(\)/, "game must load a first-person weapon model");
