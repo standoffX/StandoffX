@@ -2521,7 +2521,7 @@ if(hero&&canvas){
             const materials=Array.isArray(node.material)?node.material:[node.material];
             const clones=materials.map(material=>{
               const clone=material.clone();
-              if(clone.color)clone.color.multiply(new THREE.Color(.88,.92,.96));
+              if(clone.color){clone.color.multiply(new THREE.Color(.88,.92,.96));clone.color.lerp(tint,.18);}
               if("roughness" in clone)clone.roughness=Math.max(.48,clone.roughness||.6);
               return clone;
             });
