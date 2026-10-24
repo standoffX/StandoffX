@@ -1018,6 +1018,146 @@ body.lobby-screen .lobby-member-id{font-size:9px}
 }
 @media(prefers-reduced-motion:reduce){body.lobby-screen .home-loadout-options button,body.lobby-screen .home-hero .playbutton{transition:none!important}}
 </style>
+
+<style id="sx-clean-home-menu">
+/* Minimal home screen: one hero, one primary action, existing sections remain available in navigation. */
+body.lobby-screen .shell{height:100dvh;min-height:0;overflow:hidden}
+body.lobby-screen .content{flex:1;min-height:0;height:auto;padding:0!important;overflow:hidden!important}
+body.lobby-screen #home.active{display:block!important;height:100%;min-height:0!important;overflow:hidden}
+body.lobby-screen #home .home-layout{
+  display:block!important;height:100%!important;min-height:0!important;max-height:none!important;
+  margin:0!important;padding:0!important;overflow:hidden!important;
+}
+body.lobby-screen #home .home-friends,
+body.lobby-screen #home .profile-col,
+body.lobby-screen #home .promo-col,
+body.lobby-screen #home .passpanel,
+body.lobby-screen #home>.homefooter{display:none!important}
+body.lobby-screen #home .home-hero{
+  position:relative!important;display:block!important;width:100%!important;height:100%!important;
+  min-height:0!important;max-height:none!important;grid-column:auto!important;grid-row:auto!important;
+  border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden!important;
+  background:#10171d!important;
+}
+body.lobby-screen #home .home-hero-art{
+  position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+  object-fit:cover!important;object-position:center 42%!important;
+  opacity:.28!important;filter:saturate(.7) contrast(1.05) brightness(.72)!important;
+  mix-blend-mode:normal!important;z-index:0!important;
+}
+body.lobby-screen #home .home-hero:after{
+  z-index:1!important;border:0!important;
+  background:linear-gradient(90deg,#0b1118df 0%,#0e151c73 35%,#10171d10 68%,#10171da8 100%),
+             linear-gradient(0deg,#090e14dc 0%,transparent 42%,#090e143b 100%)!important;
+}
+body.lobby-screen #home .home-agent-canvas{
+  position:absolute!important;inset:0!important;z-index:2!important;
+  width:100%!important;height:100%!important;opacity:1!important;
+  pointer-events:none!important;filter:drop-shadow(0 16px 30px #0006);
+}
+body.lobby-screen #home .home-hero-copy{
+  top:26px!important;left:28px!important;z-index:5!important;max-width:min(50%,520px)!important;
+}
+body.lobby-screen #home .home-hero-overline{
+  display:flex!important;align-items:center!important;gap:8px!important;
+  color:#c0ced8!important;font-size:9px!important;font-weight:800!important;letter-spacing:2.2px!important;
+}
+body.lobby-screen #home .home-hero-copy h1{
+  margin-top:14px!important;font-size:clamp(28px,3vw,44px)!important;
+  line-height:.95!important;letter-spacing:1px!important;color:#f1f5f8!important;
+  text-shadow:0 5px 28px #000b!important;
+}
+body.lobby-screen #home .home-hero-copy h1 em{color:#b8d4e8!important}
+body.lobby-screen #home .home-agent-spec,
+body.lobby-screen #home .home-loadout{display:none!important}
+body.lobby-screen #home .home-hero .playarea{
+  position:absolute!important;right:28px!important;left:auto!important;top:auto!important;bottom:25px!important;
+  z-index:8!important;display:flex!important;min-height:0!important;padding:0!important;
+  align-items:flex-end!important;justify-content:flex-end!important;pointer-events:none!important;
+}
+body.lobby-screen #home .home-hero .playwrap{
+  display:flex!important;flex-direction:column!important;align-items:flex-end!important;
+  gap:7px!important;pointer-events:auto!important;
+}
+body.lobby-screen #home .home-hero .playbutton{
+  display:flex!important;justify-content:center!important;align-items:center!important;
+  width:218px!important;min-width:218px!important;height:54px!important;min-height:54px!important;
+  padding:0 24px!important;border:1px solid #d2e4f1!important;border-radius:2px!important;
+  background:linear-gradient(105deg,#c1dced,#8bb7d9)!important;color:#111b23!important;
+  font-size:13px!important;font-weight:950!important;letter-spacing:1.8px!important;
+  box-shadow:0 12px 36px #0005!important;clip-path:none!important;
+  transition:filter .15s,transform .15s!important;
+}
+body.lobby-screen #home .home-hero .playbutton:hover{transform:translateY(-2px)!important;filter:brightness(1.08)!important}
+body.lobby-screen #home .home-hero #selectedModeText{
+  font-size:9px!important;color:#e3edf4!important;font-weight:850!important;letter-spacing:1.2px!important;
+}
+body.lobby-screen #home .home-hero #selectedMapText{font-size:8px!important;color:#91a3b0!important;letter-spacing:1.5px!important}
+body.lobby-screen #home .home-hero #resumeMatchBtn{min-width:218px!important}
+body.lobby-screen #modeModal.modal{padding:18px!important;background:#070b10d9!important;backdrop-filter:blur(12px)!important}
+body.lobby-screen #modeModal .modalbox.modebox{
+  width:min(760px,94vw)!important;max-height:min(88dvh,780px)!important;overflow-y:auto!important;
+  padding:22px!important;border:1px solid #9db9cf35!important;border-radius:3px!important;
+  background:linear-gradient(145deg,#202a33f7,#11181ffb)!important;box-shadow:0 30px 100px #000b!important;
+}
+body.lobby-screen #modeModal .modalhead{
+  margin:0 0 5px!important;padding:0 0 13px!important;border-bottom:1px solid #b4c7d31c!important;
+  color:#f0f5f8!important;font-size:18px!important;letter-spacing:1.6px!important;
+}
+body.lobby-screen #modeModal .mode-modal-subtitle{margin:10px 0 14px!important;color:#9eafbb!important;font-size:11px!important}
+body.lobby-screen #modeModal .modecards{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;margin:0 0 17px!important}
+body.lobby-screen #modeModal .modecards .modebtn{
+  min-height:116px!important;padding:19px!important;justify-content:flex-end!important;
+  border:1px solid #afc4d221!important;border-radius:2px!important;
+  background:linear-gradient(135deg,#18232b,#2b3944)!important;box-shadow:none!important;
+}
+body.lobby-screen #modeModal .modecards .modebtn:before{
+  background:radial-gradient(ellipse at 80% 20%,#c8d9e420,transparent 36%),
+             linear-gradient(120deg,#0c151bc9,#26394490)!important;
+}
+body.lobby-screen #modeModal .modecards .modebtn:after{top:14px!important;left:18px!important;font-size:8px!important;letter-spacing:1.5px!important}
+body.lobby-screen #modeModal .modecards .modebtn strong{font-size:18px!important;letter-spacing:1px!important}
+body.lobby-screen #modeModal .modecards .mode-desc{margin-top:5px!important;font-size:10px!important;line-height:1.45!important;color:#adbec9!important}
+body.lobby-screen #modeModal .modecards .modebtn.active{
+  border-color:#bfd9eb!important;background:linear-gradient(135deg,#253a47,#3d5667)!important;
+  box-shadow:inset 0 -3px #b9d9ef!important;
+}
+body.lobby-screen #modeModal h3{margin:0 0 8px!important;font-size:10px!important;letter-spacing:1.5px!important;color:#dbe6ed!important}
+body.lobby-screen #modeModal .mapcards{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important;margin:0 0 16px!important}
+body.lobby-screen #modeModal .map-option{
+  min-height:64px!important;padding:10px 11px!important;border:1px solid #aabdc51c!important;
+  background:#151e26!important;border-radius:2px!important;
+}
+body.lobby-screen #modeModal .map-option b{font-size:10px!important;letter-spacing:1px!important;margin-bottom:5px!important}
+body.lobby-screen #modeModal .map-option span{font-size:9px!important;line-height:1.4!important;color:#94a7b4!important}
+body.lobby-screen #modeModal .map-option.active{border-color:#b8d7ed!important;background:#243541!important;box-shadow:inset 0 -2px #b8d7ed!important}
+body.lobby-screen #modeModal #confirmModeBtn{
+  width:100%!important;min-height:48px!important;margin-top:0!important;padding:13px 18px!important;
+  border:1px solid #d3e5f1!important;border-radius:2px!important;background:#b6d3e8!important;
+  color:#101920!important;font-size:11px!important;font-weight:950!important;letter-spacing:1.4px!important;
+}
+body.lobby-screen #modeModal .tester-mode-switch{margin:0 0 15px!important;padding:12px 0!important}
+body.lobby-screen #searchModal .modalbox{border-radius:3px!important}
+@media(max-width:700px){
+  body.lobby-screen #home .home-hero-copy{top:20px!important;left:17px!important;max-width:70%!important}
+  body.lobby-screen #home .home-hero-copy h1{font-size:30px!important}
+  body.lobby-screen #home .home-hero-art{object-position:54% center!important;opacity:.2!important}
+  body.lobby-screen #home .home-agent-canvas{inset:18px 0 0!important;height:calc(100% - 18px)!important}
+  body.lobby-screen #home .home-hero .playarea{left:12px!important;right:12px!important;bottom:16px!important}
+  body.lobby-screen #home .home-hero .playwrap{width:100%!important;align-items:stretch!important}
+  body.lobby-screen #home .home-hero .playbutton,
+  body.lobby-screen #home .home-hero #resumeMatchBtn{width:100%!important;min-width:0!important;height:48px!important;min-height:48px!important}
+  body.lobby-screen #home .home-hero #selectedModeText,
+  body.lobby-screen #home .home-hero #selectedMapText{text-align:center!important}
+  body.lobby-screen #modeModal .modalbox.modebox{padding:15px!important;width:96vw!important;max-height:92dvh!important}
+  body.lobby-screen #modeModal .modalhead{font-size:15px!important}
+  body.lobby-screen #modeModal .modecards{grid-template-columns:1fr!important;gap:7px!important;margin-bottom:14px!important}
+  body.lobby-screen #modeModal .modecards .modebtn{min-height:90px!important;padding:15px!important}
+  body.lobby-screen #modeModal .modecards .modebtn strong{font-size:16px!important}
+  body.lobby-screen #modeModal .mapcards{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(prefers-reduced-motion:reduce){body.lobby-screen #home .home-hero .playbutton{transition:none!important}}
+</style>
 </head>
 <body class="lobby-screen">
 <div class="app">
@@ -1063,19 +1203,6 @@ body.lobby-screen .lobby-member-id{font-size:9px}
     <section class="home-hero panel" aria-label="Головне ігрове меню">
       <img class="home-hero-art" src="game1.png" alt="" aria-hidden="true">
       <canvas id="homeAgentCanvas" class="home-agent-canvas" aria-label="3D-персонаж StandoffX"></canvas>
-      <div class="home-agent-spec"><span class="spec-dot"></span><span>АГЕНТ · LOADOUT</span><b id="homeAgentWeaponName">AKR</b><small id="homeAgentWeaponHint">ОГЛЯД ЗБРОЇ</small></div>
-      <div class="home-loadout" aria-label="Вибір зброї для перегляду">
-        <div class="home-loadout-heading"><span>ВИБІР ЗБРОЇ</span><small>SHOWCASE</small></div>
-        <div class="home-loadout-options">
-          <button type="button" data-agent-weapon="akr" aria-pressed="true"><span class="loadout-icon loadout-rifle"></span><b>AKR</b><small>RIFLE</small></button>
-          <button type="button" data-agent-weapon="p350" aria-pressed="false"><span class="loadout-icon loadout-pistol"></span><b>P350</b><small>PISTOL</small></button>
-          <button type="button" data-agent-weapon="knife" aria-pressed="false"><span class="loadout-icon loadout-knife"></span><b>НІЖ</b><small>MELEE</small></button>
-          <button type="button" data-agent-weapon="m4a1" aria-pressed="false"><span class="loadout-icon loadout-rifle"></span><b>M4A1</b><small>RIFLE</small></button>
-          <button type="button" data-agent-weapon="p90" aria-pressed="false"><span class="loadout-icon loadout-rifle"></span><b>P90</b><small>SMG</small></button>
-          <button type="button" data-agent-weapon="shotgun" aria-pressed="false"><span class="loadout-icon loadout-rifle"></span><b>SHOTGUN</b><small>SHOTGUN</small></button>
-          <button type="button" data-agent-weapon="sniper" aria-pressed="false"><span class="loadout-icon loadout-rifle"></span><b>SNIPER</b><small>SNIPER</small></button>
-        </div>
-      </div>
       <div class="home-hero-copy">
         <div class="home-hero-overline"><span class="hero-live-dot"></span> STANDOFFX <span class="hero-separator">/</span> TACTICAL COMBAT</div>
         <h1>STANDOFF<em>X</em></h1>
@@ -1234,7 +1361,7 @@ body.lobby-screen .lobby-member-id{font-size:9px}
 </div>
 </div>
 
-<div id="modeModal" class="modal"><div class="modalbox modebox"><div class="modalhead"><span>ВИБІР ІГРОВОГО РЕЖИМУ</span><button class="close" data-close="modeModal" aria-label="Закрити">×</button></div><div class="muted">Обери режим, карту та формат матчу.</div><div class="modecards" id="modeBar">
+<div id="modeModal" class="modal"><div class="modalbox modebox"><div class="modalhead"><span>ОБЕРИ РЕЖИМ</span><button class="close" data-close="modeModal" aria-label="Закрити">×</button></div><div class="muted mode-modal-subtitle">Обери режим і карту. Налаштування зброї — вже в грі.</div><div class="modecards" id="modeBar">
   <button class="modebtn active" data-mode="allies"><strong>СОЮЗНИКИ · 2 НА 2</strong><span class="mode-desc">Раунди · закладка та знешкодження бомби</span></button>
   <button class="modebtn" data-mode="team_fight"><strong>КБ · 1 НА 1 НА 1</strong><span class="mode-desc">Кожен сам за себе · різні точки респавну</span></button>
 </div><div id="testerGameplaySwitch" class="tester-mode-switch" role="group" aria-label="Тип гри">
@@ -1506,7 +1633,7 @@ function render(){
   $("verifiedMark").textContent=me.isVerified?"✓ VERIFIED":"";
   $("adminBtn").style.display=(me.isAdmin||me.id==="Dev_01")?"grid":"none";
   const testerSwitch=$("testerGameplaySwitch");
-  if(testerSwitch)testerSwitch.style.display="flex";
+  if(testerSwitch)testerSwitch.style.display=canTest()?"flex":"none";
   const testerKeybinds=$("testKeybindSettings");
   if(testerKeybinds)testerKeybinds.style.display=canTest()?"block":"none";
   $("passXp").textContent=(me.XP||0)%1000+" / 1000 XP";
@@ -2313,79 +2440,6 @@ if(hero&&canvas){
       mesh.rotation.set(rotation[0],rotation[1],rotation[2]);
       mesh.castShadow=false;mesh.receiveShadow=false;parent.add(mesh);return mesh;
     };
-    const weaponSteel=new THREE.MeshStandardMaterial({color:0x313b44,roughness:.38,metalness:.78});
-    const weaponDark=new THREE.MeshStandardMaterial({color:0x131b22,roughness:.67,metalness:.25});
-    const weaponGrip=new THREE.MeshStandardMaterial({color:0x202c34,roughness:.9,metalness:.06});
-    const pistol=new THREE.Group();pistol.position.set(.215,1.16,.27);pistol.rotation.x=-.12;agent.add(pistol);
-    addPreviewPart(pistol,new THREE.BoxGeometry(.075,.064,.245),weaponSteel,[0,.018,.075]);
-    addPreviewPart(pistol,new THREE.BoxGeometry(.062,.14,.082),weaponGrip,[0,-.075,.015],[-.22,0,0]);
-    addPreviewPart(pistol,new THREE.BoxGeometry(.085,.018,.065),weaponDark,[0,.052,-.018]);
-    addPreviewPart(pistol,new THREE.CylinderGeometry(.012,.012,.11,8),weaponDark,[0,.018,.245],[Math.PI/2,0,0]);
-    addPreviewPart(pistol,new THREE.BoxGeometry(.035,.019,.1),weaponDark,[0,-.025,.12]);
-    const knife=new THREE.Group();knife.position.set(.215,1.16,.27);knife.rotation.x=-.18;agent.add(knife);
-    addPreviewPart(knife,new THREE.BoxGeometry(.052,.046,.135),weaponGrip,[0,-.035,.05],[.15,0,0]);
-    for(let i=0;i<3;i++)addPreviewPart(knife,new THREE.BoxGeometry(.055,.048,.009),weaponSteel,[0,-.034,.005+i*.035]);
-    addPreviewPart(knife,new THREE.BoxGeometry(.046,.016,.225),weaponSteel,[0,.005,.205],[0,0,-.025]);
-    addPreviewPart(knife,new THREE.ConeGeometry(.034,.09,4),weaponSteel,[0,.005,.355],[Math.PI/2,0,0]);
-    pistol.visible=false;knife.visible=false;
-    const previewGuns={};
-    const previewGun=(key,parts)=>{
-      const group=new THREE.Group();group.position.set(.215,1.16,.27);group.rotation.x=-.12;agent.add(group);
-      for(const part of parts){
-        const geometry=part.kind==="tube"?new THREE.CylinderGeometry(part.r,part.r,part.length,8):new THREE.BoxGeometry(part.w,part.h,part.d);
-        const material=part.material==="wood"?weaponGrip:part.material==="dark"?weaponDark:weaponSteel;
-        const pos=part.pos;const rot=part.kind==="tube"?[Math.PI/2,0,0]:(part.rot||[0,0,0]);
-        addPreviewPart(group,geometry,material,pos,rot);
-      }
-      group.visible=false;previewGuns[key]=group;
-    };
-    previewGun("m4a1",[
-      {w:.09,h:.10,d:.30,pos:[0,0,.02]},{w:.075,h:.08,d:.22,pos:[0,.015,.25],material:"wood"},
-      {w:.06,h:.15,d:.11,pos:[0,-.12,.03],material:"dark",rot:[-.18,0,0]},
-      {w:.04,h:.035,d:.20,pos:[0,.065,-.13],material:"dark"},
-      {kind:"tube",r:.012,length:.36,pos:[0,.022,-.42]}
-    ]);
-    previewGun("p90",[
-      {w:.12,h:.12,d:.28,pos:[0,.005,.03],material:"dark"},{w:.10,h:.065,d:.25,pos:[0,.05,-.02]},
-      {w:.08,h:.03,d:.23,pos:[0,.085,-.02],material:"dark"},
-      {w:.075,h:.16,d:.10,pos:[0,-.10,.08],material:"wood",rot:[-.14,0,0]},
-      {kind:"tube",r:.011,length:.17,pos:[0,.014,-.28]}
-    ]);
-    previewGun("shotgun",[
-      {w:.09,h:.095,d:.30,pos:[0,0,.09]},{w:.075,h:.08,d:.22,pos:[0,.012,.30],material:"wood"},
-      {w:.06,h:.08,d:.16,pos:[0,-.06,.14],material:"wood",rot:[-.1,0,0]},
-      {kind:"tube",r:.017,length:.46,pos:[0,.02,-.29]},
-      {kind:"tube",r:.021,length:.20,pos:[0,-.045,-.17],material:"dark"}
-    ]);
-    previewGun("sniper",[
-      {w:.08,h:.09,d:.35,pos:[0,0,.08],material:"wood"},{w:.075,h:.07,d:.23,pos:[0,.015,.32]},
-      {w:.055,h:.14,d:.11,pos:[0,-.11,.04],material:"dark",rot:[-.18,0,0]},
-      {kind:"tube",r:.011,length:.67,pos:[0,.03,-.43]},
-      {w:.14,h:.03,d:.06,pos:[0,.085,-.10],material:"dark"},
-      {kind:"tube",r:.027,length:.16,pos:[0,.12,-.11],material:"dark"}
-    ]);
-    const pickerButtons=[...document.querySelectorAll("[data-agent-weapon]")];
-    const pickerNames={akr:"AKR",p350:"P350",knife:"НІЖ",m4a1:"M4A1",p90:"P90",shotgun:"SHOTGUN",sniper:"SNIPER"};
-    function setPreviewWeapon(kind){
-      if(!Object.prototype.hasOwnProperty.call(pickerNames,kind))kind="akr";
-      if(rig?.rifle)rig.rifle.visible=kind==="akr";
-      pistol.visible=kind==="p350";knife.visible=kind==="knife";
-      Object.entries(previewGuns).forEach(([name,group])=>{group.visible=kind===name});
-      const label=document.getElementById("homeAgentWeaponName");
-      const hint=document.getElementById("homeAgentWeaponHint");
-      if(label)label.textContent=pickerNames[kind];
-      if(hint)hint.textContent=({akr:"ШТУРМОВА ГВИНТІВКА",p350:"НАПІВАВТОМАТИЧНИЙ ПІСТОЛЕТ",knife:"ЗБРОЯ БЛИЖНЬОГО БОЮ",m4a1:"ШТУРМОВА ГВИНТІВКА",p90:"КОМПАКТНИЙ АВТОМАТ",shotgun:"ДРОБОВИК",sniper:"СНАЙПЕРСЬКА ГВИНТІВКА"})[kind]||"ЗБРОЯ";
-      pickerButtons.forEach(button=>{
-        const active=button.dataset.agentWeapon===kind;
-        button.classList.toggle("active",active);
-        button.setAttribute("aria-pressed",String(active));
-      });
-      try{localStorage.setItem("sx_agent_preview_weapon",kind)}catch{}
-    }
-    pickerButtons.forEach(button=>button.addEventListener("click",()=>setPreviewWeapon(button.dataset.agentWeapon)));
-    let savedPreviewWeapon="akr";
-    try{savedPreviewWeapon=localStorage.getItem("sx_agent_preview_weapon")||"akr"}catch{}
-    setPreviewWeapon(savedPreviewWeapon);
     const resize=()=>{
       if(!renderer||!camera)return;
       const rect=hero.getBoundingClientRect();
