@@ -192,6 +192,106 @@ body.device-mobile .interactButton{top:39%;left:70%;width:76px;height:40px}
 .bomb-progress i{display:block;width:0;height:100%;background:#ffc45d;transition:width .12s linear}
 @media(max-width:800px){.bomb-hud{top:75px;min-width:180px;padding:7px 10px}.bomb-hud b{font-size:9px}.bomb-hud span{font-size:9px}.top-right{gap:7px}#roundInfo{font-size:8px}}
 </style>
+<style id="game-interface-overhaul">
+:root{--hud-bg:#091017d9;--hud-line:#cbd8e321;--hud-text:#edf4f8;--hud-muted:#a1b0bd;--hud-accent:#b6d7eb}
+html,body{background:#05090d!important;color:var(--hud-text)!important;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
+#game{background:linear-gradient(#081018,#05090d)!important}
+.hud{z-index:20!important}
+.top{top:12px!important;left:50%!important;transform:translateX(-50%)!important;gap:14px!important;padding:7px 15px!important;border:1px solid var(--hud-line)!important;border-radius:3px!important;background:linear-gradient(140deg,#131e27ed,#0a1118eF)!important;box-shadow:0 8px 30px #0005!important;backdrop-filter:blur(10px)!important}
+.top b{font-size:10px!important;letter-spacing:1.5px!important;color:#c6d2db!important}
+.top span{font-size:25px!important;line-height:1!important;color:#f4f7f9!important;font-variant-numeric:tabular-nums}
+.status{color:#a8cce5!important}
+#score{top:12px!important;left:12px!important;padding:8px 10px!important;border:1px solid var(--hud-line)!important;border-radius:3px!important;background:var(--hud-bg)!important;color:#dfe8ee!important;font-size:10px!important;font-weight:900!important;letter-spacing:.6px!important;backdrop-filter:blur(10px)!important}
+.teamA{color:#b8d9ee!important}.teamB{color:#eda9ad!important}
+#radarWrap{top:12px!important;right:12px!important;width:143px!important;gap:5px!important;color:#a9cde5!important;text-shadow:0 1px 8px #000!important}
+#radarCanvas{width:136px!important;height:136px!important;border:1px solid #a3c8e537!important;border-radius:3px!important;background:#071018e8!important;box-shadow:0 7px 25px #0005!important}
+#radarWrap>span{font-size:8px!important;letter-spacing:1.7px!important;color:#9cb7c9!important}
+#hint{left:12px!important;bottom:12px!important;max-width:min(510px,45vw)!important;padding:8px 11px!important;border:1px solid var(--hud-line)!important;border-radius:3px!important;background:var(--hud-bg)!important;color:#c0cbd3!important;font-size:9px!important;letter-spacing:.3px!important;backdrop-filter:blur(10px)!important}
+#ammo{right:14px!important;bottom:14px!important;min-width:190px!important;padding:12px 14px!important;border:1px solid var(--hud-line)!important;border-right:2px solid #bbd9ea!important;border-radius:3px!important;background:linear-gradient(145deg,#101a23ee,#070d12ed)!important;box-shadow:0 10px 28px #0005!important;backdrop-filter:blur(12px)!important}
+.ammo-name{font-size:10px!important;letter-spacing:1.9px!important;color:#c2dcec!important}
+.ammo-num{font-size:37px!important;line-height:1.05!important;font-weight:950!important;color:#f3f6f8!important;font-variant-numeric:tabular-nums}
+.ammo-sub{font-size:9px!important;letter-spacing:.3px!important;color:#9babb8!important}
+#weaponDamage{font-size:8px!important;color:#8ca8bb!important}
+#weaponActionLabel{z-index:30!important;border-radius:3px!important;background:#071018ed!important;color:#d7ebf6!important;border-color:#a9cee23a!important;box-shadow:0 8px 22px #0005!important;backdrop-filter:blur(8px)!important}
+#crosshair{filter:drop-shadow(0 1px 2px #000b)!important}
+#crosshair i,#crosshair:before,#crosshair:after{box-shadow:0 0 2px #000a!important}
+#crosshair.hit i,#crosshair.hit:before{box-shadow:0 0 8px #6affbf!important}
+#damagePopup{top:calc(50% + 35px)!important;z-index:40!important;max-width:min(92vw,540px)!important;padding:8px 12px!important;border-radius:3px!important;background:#0a151feF!important;border-color:#bad6e52e!important;color:#d9edf8!important;box-shadow:0 8px 30px #0008!important;font-size:10px!important;letter-spacing:1px!important;backdrop-filter:blur(8px)!important}
+#damagePopup.incoming{background:#241115f2!important;border-color:#e99ca13d!important;color:#ffc8cb!important}
+#bombHud{top:72px!important;min-width:270px!important;gap:6px!important;padding:10px 14px!important;border-radius:3px!important;border-color:#d4be8f30!important;background:linear-gradient(105deg,#191911eF,#0a1014ee)!important;box-shadow:0 12px 28px #0006!important;backdrop-filter:blur(12px)!important}
+#bombHud b{font-size:9px!important;letter-spacing:1.8px!important;color:#ead6a6!important}
+#bombHud span{font-size:10px!important;color:#d0d8dc!important}
+.bomb-progress{background:#3d3a2d!important;height:3px!important}
+.bomb-progress i{background:#d5b66d!important}
+#overlay{z-index:50!important;background:radial-gradient(ellipse at 50% 25%,#1a2a36e8,#070c12f4 68%)!important;backdrop-filter:blur(10px)!important}
+#overlay .panel{border:1px solid #c7d7e31d!important;border-radius:3px!important;background:linear-gradient(145deg,#16232dF2,#0a1118F7)!important;box-shadow:0 26px 90px #0009!important}
+#overlay h1{font-size:clamp(23px,4vw,34px)!important;letter-spacing:1px!important;color:#f1f6f9!important}
+#overlay p{color:#a0b1bd!important;line-height:1.6!important}
+#phase{font-size:clamp(17px,2.4vw,23px)!important;letter-spacing:1px!important;color:#b5d8ee!important}
+#bigTimer{font-size:clamp(42px,7vw,58px)!important;color:#f3f6f8!important;font-variant-numeric:tabular-nums}
+.player{border:1px solid #c0d1dc12!important;border-radius:3px!important;background:#0a1219!important}
+.player.online .dot{background:#9bd9b7!important}.player.ready .dot{background:#9dc9e8!important}
+#progressWrap{background:#26343d!important;border-radius:0!important}
+#progress{background:linear-gradient(90deg,#89b9da,#d8eaf4)!important}
+#reconnectBtn.reconnect-primary{border-radius:3px!important;background:linear-gradient(105deg,#d1e5f0,#9ac2dd)!important;color:#101920!important;border:1px solid #d6eaf5!important;box-shadow:none!important}
+#reconnectExitBtn{border-radius:3px!important;background:#111b23!important;border-color:#c4d4df20!important}
+#leaveGameDesktop{top:12px!important;right:12px!important;border:1px solid #c5d6e01f!important;border-radius:3px!important;background:#0b1219e8!important;color:#c9d8e2!important;backdrop-filter:blur(10px)!important}
+#results{z-index:80!important;background:#030608ee!important;backdrop-filter:blur(10px)!important}
+.resultBox{border:1px solid #c4d4de20!important;border-radius:3px!important;background:linear-gradient(145deg,#17232d,#0b1117)!important;box-shadow:0 25px 80px #000b!important}
+.resultBox button{border-radius:2px!important;background:linear-gradient(105deg,#d6e8f2,#9cbfd7)!important;color:#0e171f!important}
+#roundResult{z-index:70!important;backdrop-filter:blur(2px)!important}
+.round-result-shell{border:1px solid #c6d2dc2d!important;border-radius:3px!important;background:linear-gradient(145deg,#121c25f4,#0b1118f2)!important;box-shadow:0 22px 75px #0008!important}
+.round-result-banner{background:linear-gradient(110deg,#263b49dc,#101820ee)!important}
+.round-result-banner h2{letter-spacing:1.8px!important}
+.round-result-mvp{background:#d3b16e09!important}
+.round-result-player{font-variant-numeric:tabular-nums}
+#alliesBuyBackdrop{z-index:65!important;background:#020609d9!important;backdrop-filter:blur(8px)!important}
+.allies-buy-panel{border-radius:3px!important;border-color:#b8cbd526!important;background:linear-gradient(150deg,#17212aF5,#091016F6)!important;box-shadow:0 24px 80px #000b!important}
+.allies-buy-card,.buy-info-card{border-radius:2px!important;background:linear-gradient(145deg,#1a2731,#0d151c)!important}
+.allies-buy-card:hover,.allies-buy-card.is-equipped{border-color:#b4d3e7!important;background:linear-gradient(145deg,#243945,#111a22)!important}
+.allies-buy-card .buy-name{color:#e8f0f5!important}
+.allies-buy-card b{color:#c4deef!important}
+#mobile{z-index:25!important}
+.mbtn{border:1px solid #cfdee628!important;border-radius:3px!important;background:#101a23dd!important;color:#e3eef5!important;box-shadow:0 5px 15px #0004!important;backdrop-filter:blur(8px)!important;font-size:9px!important;letter-spacing:.8px!important;transition:transform .12s,background .12s,border-color .12s!important}
+.mbtn:active,.mbtn.active{background:#b3d7eb2e!important;border-color:#c0e3f57a!important;transform:scale(.97)!important;box-shadow:0 0 18px #9ccfeb18!important}
+.mbtn.fire{background:#b3d6eaee!important;color:#0d1720!important;border-color:#d2eaf8!important}
+.mbtn.crouch{background:#24303be8!important}
+.mbtn.sprint{background:#213a3de8!important}
+.mbtn.mapButton{background:#172b38e8!important}
+.mbtn.weaponButton{background:#213744f0!important}
+.mbtn.bombButton{background:#3b3324f0!important;border-color:#d5bd8260!important}
+.mbtn.interactButton{background:#1b3a31f0!important;border-color:#9bdac080!important}
+.stick{border-radius:3px!important;border-color:#c6d9e01c!important;background:#0c151d89!important;backdrop-filter:blur(4px)!important}
+.stick i{border-radius:3px!important;background:#aacbe22b!important}
+#trainingControls{border-color:#9cbfd729!important;background:#0a131beF!important;border-radius:3px!important;box-shadow:0 12px 35px #0006!important}
+#trainingControls button{border-color:#c3d8e018!important;border-radius:2px!important;background:#16252f!important;color:#deebf3!important}
+.training-action-grid kbd{border-radius:2px!important;border-color:#bad8eb40!important;background:#081118!important;color:#c0dfef!important}
+@media(max-width:800px),(pointer:coarse){
+ #radarWrap{top:6px!important;right:6px!important;width:90px!important}
+ #radarCanvas{width:84px!important;height:84px!important}
+ #radarWrap>span{font-size:6px!important;letter-spacing:1.2px!important}
+ #ammo{right:9px!important;bottom:9px!important;min-width:126px!important;padding:8px 10px!important}
+ .ammo-num{font-size:27px!important}.ammo-name{font-size:8px!important}.ammo-sub{font-size:8px!important}
+ #hint{display:none!important}
+ .top{top:6px!important;padding:6px 8px!important;gap:8px!important}
+ .top span{font-size:19px!important}.top b{font-size:8px!important;letter-spacing:.8px!important}
+ #score{top:7px!important;left:7px!important;max-width:calc(100vw - 205px)!important;font-size:8px!important;padding:6px!important}
+ #bombHud{top:60px!important;min-width:178px!important;max-width:min(74vw,280px)!important;padding:7px 9px!important}
+ #bombHud b{font-size:8px!important}#bombHud span{font-size:8px!important}
+ #damagePopup{max-width:88vw!important;white-space:normal!important;text-align:center!important}
+ .mbtn{width:57px!important;height:57px!important;font-size:8px!important}
+ .mbtn.sprint{width:52px!important;height:44px!important;border-radius:3px!important}
+ .mbtn.leave{width:42px!important;height:37px!important}
+ .weaponButton,.bombButton,.interactButton{width:69px!important;height:37px!important}
+}
+@media(max-height:620px) and (min-width:801px){
+ #ammo{right:9px!important;bottom:8px!important;padding:7px 9px!important}
+ #radarCanvas{width:100px!important;height:100px!important}
+ #radarWrap{width:106px!important;top:7px!important;right:7px!important}
+ .top{top:7px!important}
+}
+@media(prefers-reduced-motion:reduce){.mbtn{transition:none!important}#roundResult{animation:none!important}}
+</style>
 </head>
 <body>
 <div id="game"></div>
