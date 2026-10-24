@@ -1616,6 +1616,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     started: false,
     finished: false,
     timer: null,
+    botTimer: null,
     phaseTimer: null,
     joinTimer: null,
     roundTimer: null,
@@ -1877,6 +1878,7 @@ function cleanMatch(io, matchId, returnToMenu = true) {
   const match = activeMatches.get(matchId);
   if (!match) return;
   if (match.timer) clearInterval(match.timer);
+  if (match.botTimer) clearInterval(match.botTimer);
   if (match.phaseTimer) clearInterval(match.phaseTimer);
   if (match.joinTimer) clearTimeout(match.joinTimer);
   if (match.roundTimer) clearInterval(match.roundTimer);
@@ -1890,6 +1892,68 @@ function cleanMatch(io, matchId, returnToMenu = true) {
   }
   activeMatches.delete(matchId);
   processMatchmakingQueue(io);
+}
+
+
+function startMatchBotAI(io, match) {
+  if (!match || match.botTimer || !match.players.some(player => player.isBot)) return;
+  const broadcast = bot => io.to(match.id).emit("enemy_moved", {
+    uuid: bot.uuid || "",
+    userId: bot.userId,
+    id: bot.userId,
+    nickname: bot.nickname,
+    playerAvatar: bot.playerAvatar || "/avatars/default.jpg",
+    role: bot.role,
+    team: bot.team,
+    hp: bot.hp,
+    score: bot.score,
+    x: bot.pos.x, y: bot.pos.y, z: bot.pos.z,
+    rotY: bot.rotY,
+    anim: bot.anim || "Idle",
+    connected: true
+  });
+  match.botTimer = setInterval(() => {
+    const current = activeMatches.get(match.id);
+    if (!current || current.finished || current.phase !== "game") return;
+    const now = Date.now();
+    for (const bot of current.players) {
+      if (!bot.isBot || bot.hp <= 0) continue;
+      if (current.mode === "allies") {
+        bot.weapons = [...new Set([...(Array.isArray(bot.weapons) ? bot.weapons : []), "akr", "p350", "knife", "m4a1", "p90", "shotgun", "sniper"])];
+        bot.equippedWeapon = "akr";
+      }
+      const opponents = current.players
+        .filter(other => other !== bot && other.hp > 0 && other.team !== bot.team)
+        .sort((a, b) => Math.hypot(a.pos.x - bot.pos.x, a.pos.z - bot.pos.z) - Math.hypot(b.pos.x - bot.pos.x, b.pos.z - bot.pos.z));
+      const target = opponents[0];
+      if (!target) continue;
+      let dx = target.pos.x - bot.pos.x, dz = target.pos.z - bot.pos.z;
+      const distance = Math.max(.01, Math.hypot(dx, dz));
+      dx /= distance; dz /= distance;
+      bot.rotY = Math.atan2(dx, dz);
+      let moved = false;
+      const moveToward = distance > 9.5 ? 1 : distance < 5 ? -1 : 0;
+      const strafe = Math.sin(now / 770 + (Number.parseInt(String(bot.userId).slice(-2), 16) || 0)) * .42;
+      const dirs = [];
+      if (moveToward) dirs.push({ x: dx * moveToward - dz * strafe, z: dz * moveToward + dx * strafe });
+      dirs.push({ x: -dz, z: dx }, { x: dz, z: -dx }, { x: -dx, z: -dz });
+      for (const candidate of dirs) {
+        const len = Math.hypot(candidate.x, candidate.z) || 1;
+        const step = current.mode === "allies" ? 1.15 : 1.3;
+        const proposed = { x: bot.pos.x + candidate.x / len * step, y: bot.pos.y, z: bot.pos.z + candidate.z / len * step };
+        if (mapPathBlocked(current.map, bot.pos, proposed, current.mapState || {}, .42)) continue;
+        bot.pos.x = proposed.x; bot.pos.z = proposed.z;
+        bot.anim = "Running";
+        moved = true;
+        break;
+      }
+      if (!moved) bot.anim = "Idle";
+      broadcast(bot);
+      if (distance <= 38 && now - (bot.lastShotAt || 0) >= 420) {
+        handleTeamShot(io, current, bot, { weapon: "akr", dx, dy: -.055, dz, impact: null });
+      }
+    }
+  }, 350);
 }
 
 function startMatchWhenReady(io, match) {
@@ -1907,6 +1971,7 @@ function startMatchWhenReady(io, match) {
 
   match.started = true;
   if (match.joinTimer) clearTimeout(match.joinTimer);
+  startMatchBotAI(io, match);
 
   if (match.mode === "allies") {
     startAlliesRound(io, match, true);
