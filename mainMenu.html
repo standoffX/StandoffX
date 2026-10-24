@@ -198,6 +198,16 @@ button:disabled{opacity:.45;cursor:not-allowed}
  .home-friends-body{gap:10px!important}.home-friends-list{grid-template-columns:1fr!important}
 }
 
+
+/* Transparent real-time preview of the same procedural soldier used by play2.html. */
+.home-agent-canvas{position:absolute!important;inset:0!important;z-index:2!important;display:block;width:100%;height:100%;opacity:1;pointer-events:none;outline:0}
+.home-hero-art{opacity:.14!important;filter:saturate(.3) brightness(.6)!important;mix-blend-mode:normal!important;z-index:0!important}
+.home-hero-copy{z-index:4!important;pointer-events:none!important}
+.home-hero .playarea{z-index:6!important;pointer-events:auto!important}
+.home-hero .home-hero-overline,.home-hero-copy h1{position:relative;z-index:4}
+@media(max-width:650px){.home-agent-canvas{opacity:.88}.home-hero-art{opacity:.2!important}}
+@media(prefers-reduced-motion:reduce){.home-agent-canvas{opacity:.9}}
+
 </style>
 <style>
 /* StandoffX menu remake */
@@ -532,6 +542,7 @@ body:before{
     </aside>
     <section class="home-hero panel" aria-label="Головне ігрове меню">
       <img class="home-hero-art" src="game1.png" alt="" aria-hidden="true">
+      <canvas id="homeAgentCanvas" class="home-agent-canvas" aria-label="Агент StandoffX зі зброєю"></canvas>
       <div class="home-hero-copy">
         <div class="home-hero-overline"><span class="hero-live-dot"></span> UPDATE 0.30.0 <span class="hero-separator">/</span> REFORGED</div>
         <h1>STANDOFF<em>X</em></h1>
@@ -1579,6 +1590,212 @@ async function refreshAtlasIndicator(){}
     render();settings();initSocialSocket();loadFriends();loadClan();loadInventory();loadMarket();refreshAtlasIndicator();
   }catch{location.href="/"}
 })();
+</script>
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}
+</script>
+<script type="module">
+import * as THREE from "three";
+function makeVisual(color){
+  const g=new THREE.Group();
+  const mat={
+    armor:new THREE.MeshStandardMaterial({color,roughness:.72,metalness:.16}),
+    cloth:new THREE.MeshStandardMaterial({color:0x263241,roughness:.94}),
+    pants:new THREE.MeshStandardMaterial({color:0x18222d,roughness:.96}),
+    skin:new THREE.MeshStandardMaterial({color:0xb98768,roughness:.9}),
+    helmet:new THREE.MeshStandardMaterial({color:0x354653,roughness:.63,metalness:.22}),
+    vest:new THREE.MeshStandardMaterial({color:0x17212a,roughness:.9}),
+    visor:new THREE.MeshStandardMaterial({color:0x08111c,roughness:.28,metalness:.35}),
+    metal:new THREE.MeshStandardMaterial({color:0x202932,roughness:.42,metalness:.68}),
+    boot:new THREE.MeshStandardMaterial({color:0x101820,roughness:.92}),
+    accent:new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.35,roughness:.42,metalness:.22})
+  };
+  const mesh=(parent,geometry,material,pos,scale)=>{
+    const m=new THREE.Mesh(geometry,material);
+    m.position.set(pos[0],pos[1],pos[2]);
+    if(scale)m.scale.set(scale[0],scale[1],scale[2]);
+    m.castShadow=false;m.receiveShadow=false;
+    parent.add(m);
+    return m;
+  };
+  const box=(parent,material,pos,size)=>mesh(parent,new THREE.BoxGeometry(size[0],size[1],size[2]),material,pos);
+  const ellipsoid=(parent,material,pos,scale)=>mesh(parent,new THREE.SphereGeometry(1,12,9),material,pos,scale);
+  // The soldier faces +Z. Every limb is a pivot so the movement cycle works without external assets.
+  const torso=new THREE.Group();torso.position.y=1.05;g.add(torso);
+  box(torso,mat.cloth,[0,0,0],[.53,.67,.34]);
+  box(torso,mat.armor,[0,.015,.035],[.49,.57,.34]);
+  box(torso,mat.vest,[0,-.01,.198],[.43,.47,.105]);
+  box(torso,mat.accent,[0,.195,.254],[.27,.035,.018]);
+  box(torso,mat.vest,[0,-.205,.258],[.43,.075,.055]);
+  for(const x of [-.145,0,.145]){
+    box(torso,mat.helmet,[x,-.08,.265],[.09,.105,.065]);
+  }
+  box(torso,mat.vest,[0,-.31,0],[.46,.09,.33]);
+  box(torso,mat.vest,[0,.035,-.22],[.36,.45,.13]);
+  box(torso,mat.accent,[-.205,.16,-.14],[.045,.23,.035]);
+  const neck=mesh(g,new THREE.CylinderGeometry(.085,.095,.14,8),mat.skin,[0,1.43,0]);
+  ellipsoid(g,mat.skin,[0,1.63,.015],[.205,.245,.195]);
+  ellipsoid(g,mat.helmet,[0,1.805,-.005],[.235,.16,.225]);
+  box(g,mat.helmet,[0,1.765,.17],[.35,.05,.16]);
+  box(g,mat.visor,[0,1.655,.198],[.285,.072,.025]);
+  for(const side of [-1,1]){
+    box(g,mat.helmet,[side*.207,1.67,.015],[.045,.115,.08]);
+    ellipsoid(g,mat.helmet,[side*.36,1.3,0],[.15,.145,.16]);
+  }
+  const leftArm=new THREE.Group();leftArm.position.set(-.355,1.32,.025);g.add(leftArm);
+  box(leftArm,mat.cloth,[0,-.165,0],[.17,.34,.18]);
+  ellipsoid(leftArm,mat.armor,[0,-.055,.01],[.115,.12,.115]);
+  const leftForearm=new THREE.Group();leftForearm.position.set(0,-.32,.025);leftArm.add(leftForearm);
+  box(leftForearm,mat.armor,[0,-.145,.015],[.145,.29,.155]);
+  box(leftForearm,mat.vest,[0,-.295,.055],[.13,.11,.13]);
+  const rightArm=new THREE.Group();rightArm.position.set(.355,1.32,.025);g.add(rightArm);
+  box(rightArm,mat.cloth,[0,-.165,0],[.17,.34,.18]);
+  ellipsoid(rightArm,mat.armor,[0,-.055,.01],[.115,.12,.115]);
+  const rightForearm=new THREE.Group();rightForearm.position.set(0,-.32,.025);rightArm.add(rightForearm);
+  box(rightForearm,mat.armor,[0,-.145,.015],[.145,.29,.155]);
+  box(rightForearm,mat.vest,[0,-.295,.055],[.13,.11,.13]);
+  const leftLeg=new THREE.Group();leftLeg.position.set(-.15,.75,0);g.add(leftLeg);
+  box(leftLeg,mat.pants,[0,-.18,0],[.205,.39,.23]);
+  ellipsoid(leftLeg,mat.vest,[0,-.36,.01],[.105,.105,.12]);
+  const leftKnee=new THREE.Group();leftKnee.position.set(0,-.36,0);leftLeg.add(leftKnee);
+  box(leftKnee,mat.pants,[0,-.15,0],[.18,.32,.2]);
+  box(leftKnee,mat.boot,[0,-.325,.055],[.205,.115,.31]);
+  const rightLeg=new THREE.Group();rightLeg.position.set(.15,.75,0);g.add(rightLeg);
+  box(rightLeg,mat.pants,[0,-.18,0],[.205,.39,.23]);
+  ellipsoid(rightLeg,mat.vest,[0,-.36,.01],[.105,.105,.12]);
+  const rightKnee=new THREE.Group();rightKnee.position.set(0,-.36,0);rightLeg.add(rightKnee);
+  box(rightKnee,mat.pants,[0,-.15,0],[.18,.32,.2]);
+  box(rightKnee,mat.boot,[0,-.325,.055],[.205,.115,.31]);
+  const rifle=new THREE.Group();rifle.position.set(.215,1.16,.27);rifle.rotation.x=-.12;g.add(rifle);
+  box(rifle,mat.metal,[0,0,.105],[.09,.105,.38]);
+  box(rifle,mat.vest,[0,-.105,.035],[.075,.18,.12]);
+  box(rifle,mat.vest,[0,.015,-.105],[.08,.075,.13]);
+  const barrel=mesh(rifle,new THREE.CylinderGeometry(.014,.014,.34,7),mat.metal,[0,.015,.44]);
+  barrel.rotation.x=Math.PI/2;
+  box(rifle,mat.metal,[0,.078,.12],[.04,.045,.12]);
+  box(rifle,mat.vest,[0,-.055,.25],[.07,.16,.11]);
+  g.userData.tintMaterial=mat.armor;
+  g.userData.accentMaterial=mat.accent;
+  g.userData.rig={leftArm,rightArm,leftLeg,rightLeg,leftKnee,rightKnee,torso,head:g.children.find(n=>n.position?.y===1.63),rifle,offset:0.7};
+  g.userData.anim="Idle";
+  g.traverse(n=>{if(n.isMesh)n.frustumCulled=false});
+  return g;
+}
+function animateSoldier(model,dt,now,moving=false,inAir=false,crouching=false){
+  const r=model?.userData?.rig;if(!r||model.userData.dead)return;
+  model.scale.y=crouching?.72:1;
+  const phase=now*.010+r.offset;
+  const stride=moving?.62:0;
+  const left=Math.sin(phase)*stride;
+  const right=Math.sin(phase+Math.PI)*stride;
+  const kneeLeft=Math.max(0,Math.sin(phase+Math.PI))*stride*.9;
+  const kneeRight=Math.max(0,Math.sin(phase))*stride*.9;
+  const damp=(node,axis,value,rate=13)=>{node.rotation[axis]=THREE.MathUtils.damp(node.rotation[axis],value,rate,dt)};
+  damp(r.leftLeg,"x",left+(inAir?-.22:0));
+  damp(r.rightLeg,"x",right+(inAir?-.22:0));
+  damp(r.leftKnee,"x",kneeLeft);
+  damp(r.rightKnee,"x",kneeRight);
+  damp(r.leftArm,"x",-.36-right*.42+(inAir?-.12:0));
+  damp(r.rightArm,"x",-.48+left*.28+(inAir?-.1:0));
+  damp(r.torso,"z",crouching?.1:(moving?Math.sin(phase*.5)*.025:Math.sin(now*.0015+r.offset)*.008));
+  if(r.head)damp(r.head,"y",Math.sin(now*.0012+r.offset)*.025,5);
+  damp(r.rifle,"x",-.12+(moving?Math.sin(phase*2)*.025:0)+(inAir?-.03:0));
+}
+
+
+const hero=document.querySelector(".home-hero");
+const canvas=document.getElementById("homeAgentCanvas");
+if(hero&&canvas){
+  let renderer=null,scene=null,camera=null,agent=null,shadow=null,last=0,mouseOffset=0,resizeObserver=null;
+  try{
+    renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:!matchMedia("(max-width: 700px)").matches,powerPreference:"low-power"});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.45));
+    renderer.outputColorSpace=THREE.SRGBColorSpace;
+    renderer.toneMapping=THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure=1.08;
+    renderer.setClearColor(0x000000,0);
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(34,1,.1,35);
+    camera.position.set(0,1.22,5.55);
+    camera.lookAt(0,1.06,0);
+    scene.add(new THREE.HemisphereLight(0xc8e4f6,0x1a2531,2.15));
+    const keyLight=new THREE.DirectionalLight(0xffe8d1,2.5);
+    keyLight.position.set(-3.2,4.5,4);scene.add(keyLight);
+    const fillLight=new THREE.DirectionalLight(0x6caedc,1.35);
+    fillLight.position.set(3,2.5,-3);scene.add(fillLight);
+    const rimLight=new THREE.PointLight(0x79bde7,1.4,9);
+    rimLight.position.set(-2,2.6,-1.8);scene.add(rimLight);
+
+    const shadowCanvas=document.createElement("canvas");
+    shadowCanvas.width=shadowCanvas.height=128;
+    const ctx=shadowCanvas.getContext("2d");
+    const gradient=ctx.createRadialGradient(64,64,4,64,64,62);
+    gradient.addColorStop(0,"rgba(0,0,0,.52)");
+    gradient.addColorStop(.48,"rgba(0,0,0,.2)");
+    gradient.addColorStop(1,"rgba(0,0,0,0)");
+    ctx.fillStyle=gradient;ctx.fillRect(0,0,128,128);
+    const shadowTexture=new THREE.CanvasTexture(shadowCanvas);
+    shadow=new THREE.Mesh(new THREE.PlaneGeometry(2.45,.95),new THREE.MeshBasicMaterial({map:shadowTexture,transparent:true,opacity:.8,depthWrite:false,side:THREE.DoubleSide}));
+    shadow.rotation.x=-Math.PI/2;shadow.position.set(0,.015,.02);scene.add(shadow);
+
+    // Reuses the exact in-game procedural agent mesh and the rifle attached to it.
+    agent=makeVisual(0x8e9ba6);
+    agent.scale.setScalar(1.36);
+    agent.position.set(0,0,0);
+    agent.rotation.y=.12;
+    const rig=agent.userData.rig;
+    if(rig){
+      rig.offset=.7;
+      rig.leftArm.rotation.x=-.68;
+      rig.rightArm.rotation.x=-.74;
+      rig.leftLeg.rotation.x=0;
+      rig.rightLeg.rotation.x=0;
+      rig.rifle.rotation.x=-.10;
+    }
+    scene.add(agent);
+    const resize=()=>{
+      if(!renderer||!camera)return;
+      const rect=hero.getBoundingClientRect();
+      const width=Math.max(1,Math.round(rect.width));
+      const height=Math.max(1,Math.round(rect.height));
+      renderer.setSize(width,height,false);
+      camera.aspect=width/height;
+      camera.updateProjectionMatrix();
+    };
+    if("ResizeObserver" in window){resizeObserver=new ResizeObserver(resize);resizeObserver.observe(hero)}
+    window.addEventListener("resize",resize,{passive:true});
+    hero.addEventListener("pointermove",event=>{
+      const rect=hero.getBoundingClientRect();
+      mouseOffset=Math.max(-1,Math.min(1,((event.clientX-rect.left)/Math.max(1,rect.width)-.5)*2));
+    },{passive:true});
+    hero.addEventListener("pointerleave",()=>{mouseOffset=0},{passive:true});
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden)last=performance.now()});
+    resize();
+    function draw(now){
+      requestAnimationFrame(draw);
+      if(document.hidden||!renderer||!scene||!camera||!agent)return;
+      const dt=last?Math.min(.05,(now-last)/1000):0;last=now;
+      animateSoldier(agent,dt,now,false,false,false);
+      const rig=agent.userData.rig;
+      agent.rotation.y=.12+Math.sin(now*.00042)*.075+mouseOffset*.11;
+      agent.position.y=Math.sin(now*.00125)*.018;
+      if(rig){
+        rig.torso.rotation.y=Math.sin(now*.00053)*.022;
+        rig.leftArm.rotation.x=-.68+Math.sin(now*.0009)*.022;
+        rig.rightArm.rotation.x=-.74+Math.sin(now*.0009+1)*.018;
+        rig.rifle.rotation.x=-.10+Math.sin(now*.0011)*.012;
+      }
+      renderer.render(scene,camera);
+    }
+    requestAnimationFrame(draw);
+  }catch(error){
+    console.warn("[MENU AGENT] 3D preview unavailable; using the static backdrop.",error);
+    canvas.style.display="none";
+    hero.classList.add("agent-preview-unavailable");
+    if(resizeObserver)resizeObserver.disconnect();
+    if(renderer)renderer.dispose();
+  }
+}
 </script>
 </body>
 </html>
