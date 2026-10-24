@@ -2356,7 +2356,7 @@ document.addEventListener("keyup",e=>{if(e.code==="KeyF")setFullMapOpen(false)})
 document.addEventListener("visibilitychange",()=>{if(document.hidden)setFullMapOpen(false)});
 function sendMove(force=false){
   const now=performance.now();
-  if(!force&&now-lastMoveSend<50)return;
+  if(!force&&now-lastMoveSend<80)return;
   lastMoveSend=now;
   const data={uuid:myUuid,x:player.position.x,y:player.position.y,z:player.position.z,rotY:player.rotationY,anim:jumping?"Jump":(isCrouching?"Crouch":((keys.w||keys.s||keys.a||keys.d)?"Running":"Idle"))};
   if(isTrainingMode)socket.emit("training_move",{trainingId,viewY:camera.rotation.y,...data});
