@@ -1407,6 +1407,9 @@ app.post("/api/clans/avatar", requireAuth, (req, res, next) => {
 const matchmakingQueue = [];
 const activeMatches = new Map(); // in-memory only; never written to MongoDB
 const trainingSessions = new Map(); // private tester sessions; never written to MongoDB
+const activeLobbies = new Map(); // transient party lobbies; never persisted
+const lobbyByUser = new Map();
+const lobbyInvites = new Map();
 const DEFAULT_MATCH_SIZE = 3;
 const GAME_SECONDS = 300;
 const WARMUP_SECONDS = 10;
@@ -1542,6 +1545,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
 
   const players = candidates.slice(0, requiredPlayers);
   const prototypeBotMatch = players.some(p => p.prototypeBot === true);
+  const lobbyMatch = players.some(p => p.lobbyMatch === true);
   for (const p of players) if (!p.isBot) removeFromQueue(p.uuid || p.userId);
 
   const cfg = getModeConfig(mode);
@@ -1562,6 +1566,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     mode: cfg.id,
     modeName: cfg.name,
     prototypeBotMatch,
+    lobbyMatch,
     map: safeMapId,
     mapName: PLAYABLE_MAPS[safeMapId]?.name || PLAYABLE_MAPS.M3_Maze.name,
     mapState: safeMapId === "HILL_TOWN" ? createMapInteractionState() : null,
@@ -1576,7 +1581,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
         : mode === "allies" ? (i < 2 ? "teamA" : "teamB")
         : (i % 2 === 0 ? "teamA" : "teamB"),
       team: mode === "allies"
-        ? (prototypeBotMatch ? (i < 2 ? "A" : "B") : (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i < 2 ? "A" : "B")))
+        ? ((prototypeBotMatch || lobbyMatch) ? (i < 2 ? "A" : "B") : (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i < 2 ? "A" : "B")))
         : mode === "team_fight"
           ? (prototypeBotMatch ? ["A", "B", "C"][i % 3] : (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : ["A", "B", "C"][i % 3]) : ["A", "B", "C"][i % 3]))
           : null,
@@ -1607,6 +1612,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     roundTimer: null,
     bombActionTimer: null,
     bomb: null,
+    droppedItems: [],
     roundNumber: 0,
     roundWins: { A: 0, B: 0 },
     attackingTeam: "A",
@@ -1867,7 +1873,8 @@ function bombPublicState(match) {
     roundWins: { ...(match.roundWins || { A: 0, B: 0 }) },
     attackingTeam: match.attackingTeam,
     defendingTeam: match.defendingTeam,
-    roundRemaining: match.roundRemaining || 0
+    roundRemaining: match.roundRemaining || 0,
+    position: bomb.state === "dropped" && bomb.droppedPosition ? { ...bomb.droppedPosition } : null
   };
 }
 
@@ -1888,7 +1895,9 @@ function alliesRoundPayload(match) {
       userId: player.userId, nickname: player.nickname,
       playerAvatar: player.playerAvatar || "/avatars/default.jpg",
       isBot: Boolean(player.isBot),
-      team: player.team, hp: player.hp,
+      team: player.team, hp: player.hp, score: Number(player.score) || 0,
+      kills: Number(player.kills) || 0, deaths: Number(player.deaths) || 0,
+      cash: Number(player.cash) || 0, equippedWeapon: player.equippedWeapon || "p350",
       x: player.pos.x, y: player.pos.y, z: player.pos.z,
       rotY: player.rotY, spawn: { ...player.spawn },
       alive: player.hp > 0, connected: player.isBot || Boolean(player.socketId)
@@ -1941,12 +1950,31 @@ function finishAlliesRound(io, match, winningTeam, reason) {
   match.phaseRemaining = 5;
   match.roundWins[winningTeam] = (match.roundWins[winningTeam] || 0) + 1;
   for (const player of match.players) player.cash = Math.min(16000, Math.max(0, Number(player.cash) || 0) + (player.team === winningTeam ? 3250 : 1900));
+  const players = match.players.map(player => ({
+    userId: player.userId,
+    nickname: player.nickname,
+    playerAvatar: player.playerAvatar || "/avatars/default.jpg",
+    isBot: Boolean(player.isBot),
+    team: player.team,
+    hp: player.hp,
+    alive: player.hp > 0,
+    score: Number(player.score) || 0,
+    kills: Number(player.kills) || 0,
+    deaths: Number(player.deaths) || 0,
+    cash: Number(player.cash) || 0,
+    equippedWeapon: player.equippedWeapon || "p350"
+  }));
+  const mvp = [...players].sort((a, b) => b.kills - a.kills || b.score - a.score || a.deaths - b.deaths)[0] || null;
   const payload = {
     ...alliesRoundPayload(match),
     phase: "round_end",
     winningTeam,
     reason,
     roundWins: { ...match.roundWins },
+    attackingTeam: match.attackingTeam,
+    defendingTeam: match.defendingTeam,
+    players,
+    mvp: mvp ? { userId: mvp.userId, nickname: mvp.nickname, kills: mvp.kills } : null,
     nextRoundIn: 5
   };
   io.to(match.id).emit("allies_round_end", payload);
@@ -1982,6 +2010,8 @@ function startAlliesRound(io, match, initial = false) {
   if (!match || match.finished) return;
   if (match.phaseTimer) { clearTimeout(match.phaseTimer); clearInterval(match.phaseTimer); }
   stopAlliesRoundTimers(match);
+  match.droppedItems = [];
+  io.to(match.id).emit("dropped_items_state", []);
   if (match.roundNumber > 0 && match.roundNumber % 7 === 0) {
     const previousAttacker = match.attackingTeam;
     match.attackingTeam = match.defendingTeam;
@@ -2155,7 +2185,7 @@ function startAlliesRound(io, match, initial = false) {
 
 function maintainBombCarrier(io, match) {
   const bomb = match?.bomb;
-  if (!match || match.mode !== "allies" || match.phase !== "game" || !bomb || ["planted", "defused"].includes(bomb.state)) return;
+  if (!match || match.mode !== "allies" || match.phase !== "game" || !bomb || ["planted", "defused", "dropped"].includes(bomb.state)) return;
   const carrier = match.players.find(player => player.userId === bomb.carrierUserId);
   if (carrier && carrier.hp > 0 && carrier.socketId) return;
   const replacement = match.players.find(player => player.team === match.attackingTeam && player.hp > 0 && player.socketId);
@@ -2172,6 +2202,97 @@ function maintainBombCarrier(io, match) {
   bomb.action = null;
   checkAlliesRoundWin(io, match);
   io.to(match.id).emit("bomb_state", bombPublicState(match));
+}
+
+function droppedItemsPayload(match) {
+  return (Array.isArray(match?.droppedItems) ? match.droppedItems : []).map(item => ({
+    id: item.id, type: item.type, weapon: item.weapon || null,
+    position: { ...item.position }, ownerId: item.ownerId || null
+  }));
+}
+function emitDroppedItems(io, match) {
+  io.to(match.id).emit("dropped_items_state", droppedItemsPayload(match));
+}
+function handleDropItem(io, match, player, data = {}) {
+  if (!match || match.finished || match.phase !== "game" || player.hp <= 0) return;
+  const itemType = cleanText(data?.itemType, 12).toLowerCase();
+  if (itemType === "bomb") {
+    if (match.mode !== "allies" || match.bomb?.state !== "carried" || match.bomb.carrierUserId !== player.userId || player.team !== match.attackingTeam) {
+      if (player.socketId) io.to(player.socketId).emit("drop_item_result", { success: false, message: "Ти не несеш C4." });
+      return;
+    }
+    match.bomb.state = "dropped";
+    match.bomb.droppedPosition = {
+      x: player.pos.x + Math.sin(Number(player.rotY) || 0) * 0.8,
+      y: 0.12,
+      z: player.pos.z + Math.cos(Number(player.rotY) || 0) * 0.8
+    };
+    match.bomb.carrierUserId = null;
+    match.bomb.site = null;
+    match.bomb.action = null;
+    match.bomb.botPlantAt = null;
+    io.to(match.id).emit("bomb_state", bombPublicState(match));
+    io.to(match.id).emit("drop_item_result", { success: true, itemType: "bomb" });
+    return;
+  }
+  const weaponId = normalizeWeaponId(data?.weapon || player.equippedWeapon);
+  if (!weaponId || weaponId === "knife" || weaponId !== player.equippedWeapon ||
+      !Array.isArray(player.weapons) || !player.weapons.includes(weaponId)) {
+    if (player.socketId) io.to(player.socketId).emit("drop_item_result", { success: false, message: "Ніж не можна викинути." });
+    return;
+  }
+  const position = {
+    x: player.pos.x + Math.sin(Number(player.rotY) || 0) * 0.85,
+    y: 0.15,
+    z: player.pos.z + Math.cos(Number(player.rotY) || 0) * 0.85
+  };
+  const item = {
+    id: "drop_" + crypto.randomBytes(10).toString("hex"),
+    type: "weapon", weapon: weaponId, ownerId: player.userId, position
+  };
+  match.droppedItems = Array.isArray(match.droppedItems) ? match.droppedItems : [];
+  match.droppedItems.push(item);
+  player.weapons = player.weapons.filter(id => id !== weaponId);
+  if (!player.weapons.includes("knife")) player.weapons.push("knife");
+  player.equippedWeapon = player.weapons.includes("p350") ? "p350" : "knife";
+  emitDroppedItems(io, match);
+  emitAlliesLoadout(io, match, player);
+  io.to(match.id).emit("weapon_dropped", { userId: player.userId, weapon: weaponId, itemId: item.id });
+  if (player.socketId) io.to(player.socketId).emit("drop_item_result", { success: true, itemType: "weapon", weapon: weaponId });
+}
+function handlePickupItem(io, match, player, data = {}) {
+  if (!match || match.finished || match.phase !== "game" || player.hp <= 0) return;
+  const itemId = cleanText(data?.itemId, 100);
+  if (match.mode === "allies" && match.bomb?.state === "dropped" && itemId === "bomb") {
+    if (player.team !== match.attackingTeam || !match.bomb.droppedPosition ||
+        Math.hypot(player.pos.x - match.bomb.droppedPosition.x, player.pos.z - match.bomb.droppedPosition.z) > 3.4) return;
+    match.bomb.state = "carried";
+    match.bomb.carrierUserId = player.userId;
+    match.bomb.droppedPosition = null;
+    match.bomb.site = null;
+    match.bomb.action = null;
+    io.to(match.id).emit("bomb_state", bombPublicState(match));
+    io.to(match.id).emit("item_picked_up", { userId: player.userId, itemId: "bomb", type: "bomb" });
+    return;
+  }
+  const items = Array.isArray(match.droppedItems) ? match.droppedItems : [];
+  const index = items.findIndex(item => item.id === itemId);
+  if (index < 0) return;
+  const item = items[index];
+  if (item.type !== "weapon" || !WEAPON_BALANCE[item.weapon] || item.weapon === "knife") return;
+  if (Math.hypot(player.pos.x - item.position.x, player.pos.z - item.position.z) > 3.4) return;
+  player.weapons = Array.isArray(player.weapons) ? player.weapons : [];
+  if (player.weapons.includes(item.weapon)) {
+    if (player.socketId) io.to(player.socketId).emit("drop_item_result", { success: false, message: "У тебе вже є ця зброя." });
+    return;
+  }
+  player.weapons.push(item.weapon);
+  player.equippedWeapon = item.weapon;
+  match.droppedItems.splice(index, 1);
+  emitDroppedItems(io, match);
+  emitAlliesLoadout(io, match, player);
+  io.to(match.id).emit("item_picked_up", { userId: player.userId, itemId: item.id, type: "weapon", weapon: item.weapon });
+  if (player.socketId) io.to(player.socketId).emit("drop_item_result", { success: true, itemType: "weapon", weapon: item.weapon });
 }
 
 function handleBombAction(io, match, player, data = {}) {
@@ -3103,6 +3224,7 @@ io.on("connection", socket => {
       prototype: Boolean(match.prototypeBotMatch),
       mapState: match.mapState || null,
       round: match.mode === "allies" ? alliesRoundPayload(match) : null,
+      droppedItems: Array.isArray(match.droppedItems) ? match.droppedItems.map(item => ({ ...item, position: { ...item.position } })) : [],
       me: {
         userId: player.userId,
         uuid: player.uuid || "",
@@ -3195,6 +3317,20 @@ io.on("connection", socket => {
     startMatchWhenReady(io, match);
   });
 
+  socket.on("drop_item", data => {
+    const match = activeMatches.get(cleanText(data?.matchId, 100));
+    if (!match) return;
+    const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
+    if (!player) return;
+    handleDropItem(io, match, player, data);
+  });
+  socket.on("pickup_item", data => {
+    const match = activeMatches.get(cleanText(data?.matchId, 100));
+    if (!match) return;
+    const player = match.players.find(p => (p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id) && p.socketId === socket.id);
+    if (!player) return;
+    handlePickupItem(io, match, player, data);
+  });
   socket.on("allies_buy", data => {
     const match = activeMatches.get(cleanText(data?.matchId, 100));
     if (!match) return;
