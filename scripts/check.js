@@ -193,7 +193,7 @@ assert.match(game, /sandstoneRoot\.scale\.setScalar\(sandstoneScale\)/, "Sandsto
 assert.doesNotMatch(game, /zoneMarker\("(?:MID|MARKET|TITANIC|ZIGA|KITCHEN|A SITE|B SITE)"/, "Sandstone must not draw floating text callouts over playable routes");
 assert.doesNotMatch(game, /new THREE\.TorusGeometry\(\.44,\.035,6,20/, "the planted C4 must not have an attention-grabbing glow ring");
 assert.match(game, /function createHeldBombVisual\(\)/, "the bomb carrier can equip a visible first-person C4 model");
-assert.match(game, /if\(e\.code==="Digit4"\|\|e\.code==="Digit5"\)\{e\.preventDefault\(\);toggleBombTool\(\);return\}/, "keys 4 and 5 equip or holster C4");
+assert.match(game, /if\(mode==="allies"&&!isTrainingMode\)toggleBombTool\(\)/, "keys 4 and 5 keep C4 controls in Allies while selecting guns in other modes");
 assert.match(game, /\$\("bombBtn"\)\.addEventListener\("click",e=>\{e\.preventDefault\(\);e\.stopPropagation\(\);toggleBombTool\(\)\}\)/, "mobile users can equip C4 with a dedicated button");
 assert.match(game, /data-buy-tab="rifles"/, "the Allies buy menu groups equipment into categories");
 assert.match(game, /document\.querySelectorAll\("\[data-buy-tab\]"\)\.forEach\(tab=>tab\.addEventListener\("click"/, "buy categories must filter the weapon cards");
@@ -314,7 +314,7 @@ assert.match(game, /function damageBreakableWood\(direction\)/, "shooting resolv
 assert.match(game, /function addBulletHole\(/, "shots leave temporary bullet marks on surfaces");
 assert.match(game, /function spawnTracer\(/, "the local player sees a bullet tracer for ranged shots");
 assert.match(game, /function spawnRemoteTracer\(/, "remote player shots also render a tracer");
-assert.match(game, /socket\.on\("player_shot",spawnRemoteTracer\)/, "clients receive server-synchronized shot effects");
+assert.match(game, /socket\.on\("player_shot",data=>\{[\s\S]{0,250}spawnRemoteTracer\(data\)/, "clients receive server-synchronized shot effects and shooting animation");
 assert.match(game, /socket\.emit\("map_door_shot"/, "shooting a door requests it to open");
 assert.match(game, /const addGround=\([\s\S]{0,230}mapObjects\.push\(mesh\)/, "local Hill Town floor surfaces receive impact marks");
 assert.match(game, /id="interactBtn"/, "mobile HUD has a door interaction button");
@@ -342,7 +342,7 @@ assert.match(game, /if\(e\.code==="Digit1"\)[\s\S]{0,100}selectWeapon\("akr"\)/,
 assert.match(game, /if\(e\.code==="Digit2"\)[\s\S]{0,100}selectWeapon\("p350"\)/, "2 must equip the P350");
 assert.match(game, /if\(e\.code==="Digit3"\)[\s\S]{0,100}selectWeapon\("knife"\)/, "3 must equip the knife");
 assert.match(game, /e\.button===2\)\{e\.preventDefault\(\);toggleAimingDownSights\(\)/, "right mouse must toggle AKR aiming on/off");
-assert.match(game, /camera\.fov=aimingDownSights\?48:74/, "AKR aiming must change camera FOV and restore normal view on a second click");
+assert.match(game, /camera\.fov=aimingDownSights\?\(selectedWeapon==="sniper"\?34:48\):74/, "rifle and sniper aiming must change camera FOV and restore normal view on a second click");
 assert.match(game, /id="weaponBtn"/, "mobile HUD must include weapon switching");
 assert.match(game, /weapon:"weaponBtn"/, "mobile weapon switch must use saved HUD position and size");
 assert.match(menu, /data-layout-control="weapon"/, "mobile HUD editor must preview the weapon switch");
@@ -354,7 +354,7 @@ assert.match(game, /if\(selectedMap==="FIELD_ARENA"\)\{/, "prototype must honor 
 assert.doesNotMatch(game, / · UUID "\+uuid/, "the match lobby must not display UUIDs");
 
 assert.match(game, /function makeVisual\(color\)[\s\S]*?new THREE\.CylinderGeometry[\s\S]*?function setSoldierTint/, "soldiers must have a multi-part procedural 3D model");
-assert.match(game, /function animateSoldier\(model,dt,now,moving=false,inAir=false,crouching=false\)/, "player models must animate and crouch without relying on external model downloads");
+assert.match(game, /function animateSoldier\(model,dt,now,moving=false,inAir=false,crouching=false,sprinting=false\)/, "player models must animate walking, sprinting and crouching without external model downloads");
 assert.match(game, /animateSoldier\(e\.mesh,dt,now,e\.anim==="Running"\|\|e\.anim==="Walking",e\.anim==="Jump",e\.anim==="Crouch"\)/, "remote player movement must also animate crouching");
 assert.match(game, /if\(e\.code===binds\.menu\)\{e\.preventDefault\(\);pauseToMenu\(\);return\}/, "M returns to the lobby while preserving the active match");
 assert.match(game, /stick\.addEventListener\("touchcancel",releaseStick\)/, "cancelled mobile joystick touches must release movement");
@@ -563,7 +563,21 @@ assert.match(game, /function buildFieldArena\(\)[\s\S]{0,7000}const obstacles=/,
 assert.match(game, /function buildNeonYard\(\)[\s\S]{0,7000}const structures=/, "Neon Yard must have a defined cover layout");
 assert.match(server, /M3_Maze: \[\s*\{ minX: -78, maxX: -74, minZ: -180, maxZ: -130 \}/, "M3 collision proxy geometry must exist on the server");
 
-console.log("OK project invariants, local maps, authoritative arena collisions, movement correction, graphics, weapons, matchmaking, MongoDB retry, and routes");
+assert.equal((game.match(/function positionHeldWeapon\(\)/g)||[]).length, 1, "the module must declare positionHeldWeapon only once so gameplay can parse");
+assert.match(game, /m4a1:\{label:"M4A1"/, "M4A1 is a selectable client weapon");
+assert.match(game, /p90:\{label:"P90"/, "P90 is a selectable client weapon");
+assert.match(game, /shotgun:\{label:"SHOTGUN"/, "shotgun is a selectable client weapon");
+assert.match(game, /sniper:\{label:"SNIPER"/, "sniper is a selectable client weapon");
+assert.match(server, /id: "m4a1", label: "M4A1"/, "server damage calculations include M4A1");
+assert.match(server, /id: "p90", label: "P90"/, "server damage calculations include P90");
+assert.match(server, /id: "shotgun", label: "SHOTGUN"/, "server damage calculations include shotgun");
+assert.match(server, /id: "sniper", label: "SNIPER"/, "server damage calculations include sniper");
+assert.match(server, /socket\.on\("lobby_set_team"/, "the party leader can assign players to teams");
+assert.match(server, /function startMatchBotAI\(io, match\)/, "lobby agents run movement and shooting AI");
+assert.match(menu, /data-lobby-team/, "the lobby UI allows changing team assignments");
+assert.match(menu, /sx-reference-menu-remake/, "the main menu uses the reference-inspired layout");
+assert.match(menu, /#profilePageUuid\),body\.lobby-screen #copyUuid/, "UUID is hidden from the regular profile UI");
+console.log("OK project invariants, syntax, duplicate declaration regression, local maps, authoritative weapon damage, AI matches, lobby teams, UI, and routes");
 
 
 assert.match(server, /const localUsersSnapshot = users\.map\(user => \(\{ \.\.\.user \}\)\)/, "MongoDB account loading must merge account.json fields instead of discarding them");
@@ -590,7 +604,7 @@ assert.match(game, /action\.type==="inspect"/, "weapon inspection has a dedicate
 assert.match(game, /action\.type==="equip"/, "switching weapons plays a draw/equip animation");
 assert.match(game, /if\(e\.code==="KeyB"&&mode==="allies"&&!isTrainingMode\)\{e\.preventDefault\(\);toggleBuyMenu\(\);return\}/, "B opens the Allies buy menu without stealing training shortcuts");
 assert.match(game, /if\(e\.code==="KeyG"\)\{e\.preventDefault\(\);dropCurrentItem\(\);return\}/, "G is reserved for dropping an item");
-assert.match(game, /if\(e\.code==="Digit4"\|\|e\.code==="Digit5"\)\{e\.preventDefault\(\);toggleBombTool\(\);return\}/, "the bomb has a dedicated inventory slot");
+assert.match(game, /if\(mode==="allies"&&!isTrainingMode\)toggleBombTool\(\)/, "the bomb has a dedicated inventory slot in Allies without stealing weapon hotkeys in other modes");
 assert.match(game, /id="alliesBuyBackdrop"/, "the shop is a standalone overlay over live gameplay");
 assert.match(game, /function renderRoundResult\(data\)/, "the Allies round-end screen shows a scoreboard");
 assert.match(game, /T · АТАКА/, "the results screen identifies the T/attacking side");
