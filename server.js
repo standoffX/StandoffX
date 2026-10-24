@@ -3295,7 +3295,10 @@ io.on("connection", socket => {
     socket.emit("lobby_invite_response_result", { success: true, accepted: true, message: "Ти приєднався до лобі." });
     emitLobbyState(io, lobby);
   });
-  socket.on("lobby_leave", () => removeLobbyMember(io, socket.user?.id, socket.id));
+  socket.on("lobby_leave", () => {
+    removeLobbyMember(io, socket.user?.id, socket.id);
+    socket.emit("lobby_left", { reason: "Ти вийшов із лобі." });
+  });
   socket.on("lobby_kick", data => {
     const current = lobbyMemberFromSocket(socket);
     if (!current || current.lobby.ownerId !== socket.user.id) return emitLobbyError(socket, "Видаляти гравців може лише лідер лобі.");
