@@ -11,6 +11,7 @@
 .top{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:8px 13px;background:#080d14d9;border:1px solid #ffffff12;border-radius:7px;white-space:nowrap}.top b{font-size:12px;letter-spacing:1px}.top span{font-size:26px;font-weight:950}.status{color:#5ba0ff}
 #score{position:absolute;top:14px;left:14px;padding:9px 12px;background:#080d14c9;border:1px solid #ffffff12;border-radius:7px;font-size:12px}.teamA{color:#63a1ff}.teamB{color:#ff6f7d}
 #hint{position:absolute;left:14px;bottom:14px;padding:8px 10px;background:#080d14b8;border:1px solid #ffffff0d;border-radius:6px;color:#bac5d4;font-size:11px}
+#weaponActionLabel{display:none;position:absolute;left:50%;top:calc(50% + 58px);transform:translateX(-50%);padding:5px 9px;border:1px solid #a6c7de66;background:#07131edb;color:#dceef9;font-size:9px;font-weight:950;letter-spacing:1.6px;text-shadow:0 1px 7px #000;white-space:nowrap;backdrop-filter:blur(4px)}
 #ammo{position:absolute;right:16px;bottom:18px;text-align:right;text-shadow:0 2px 8px #000}.ammo-name{font-size:11px;font-weight:1000;letter-spacing:1.6px;color:#d9efff}.ammo-num{font-size:34px;font-weight:950}.ammo-sub{color:#9aa7b8;font-size:10px;line-height:1.45}
 #weaponDamage{color:#a9c9e7;font-size:9px;letter-spacing:.3px}
 #damagePopup{display:none;position:absolute;left:50%;top:calc(50% - 54px);transform:translateX(-50%);padding:6px 9px;border:1px solid #8bc7ff55;border-radius:4px;background:#06182adb;color:#c4ecff;font-size:11px;font-weight:1000;letter-spacing:.8px;text-shadow:0 1px 5px #000;white-space:nowrap}
@@ -249,6 +250,7 @@ body.device-mobile .interactButton{top:39%;left:70%;width:76px;height:40px}
   <div id="score">SCORE 0</div>
   <div id="bombHud" class="bomb-hud" style="display:none"><b id="bombHudTitle">ЗАВДАННЯ РАУНДУ</b><span id="bombHudDetail">Обери A або B</span><div class="bomb-progress"><i id="bombHudProgress"></i></div></div>
   <div id="crosshair"><i></i></div>
+  <div id="weaponActionLabel" aria-live="polite"></div>
   <div id="deathNotice" role="status" aria-live="polite">ТЕБЕ ЛІКВІДУВАЛИ</div>
   <div id="ammo" style="display:none"><div class="ammo-name" id="weaponName">AKR</div><div class="ammo-num" id="ammoNum">30</div><div class="ammo-sub" id="ammoSub">/ 30 · R — RELOAD</div><div class="ammo-sub" id="weaponDamage">5 м · ГОЛ 164 ТІЛ 35 ЖИВ 45 НОГ 27</div></div>
   <div id="damagePopup" role="status" aria-live="polite"></div>
@@ -1288,20 +1290,67 @@ function makeFallbackP350(){
 function makeFallbackKnife(){
   if(!heldWeaponRoot)return;
   clearHeldWeapon();
-  const blade=new THREE.MeshStandardMaterial({color:0xc8d8e5,roughness:.24,metalness:.9});
-  const edge=new THREE.MeshStandardMaterial({color:0x71899a,roughness:.22,metalness:.9});
-  const handle=new THREE.MeshStandardMaterial({color:0x1c2a39,roughness:.75,metalness:.1});
-  const addPart=(w,h,d,x,y,z,mat,rx=0,ry=0,rz=0)=>{
-    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
-    mesh.position.set(x,y,z);mesh.rotation.set(rx,ry,rz);mesh.castShadow=false;mesh.receiveShadow=false;heldWeaponRoot.add(mesh);
-  };
-  addPart(.035,.034,.16,0,-.01,.11,handle,.04);
-  addPart(.14,.022,.028,0,.005,.015,edge);
-  addPart(.032,.018,.27,0,.005,-.125,blade);
-  const point=new THREE.Mesh(new THREE.ConeGeometry(.022,.075,4),blade);
-  point.rotation.x=-Math.PI/2;point.position.set(0,.005,-.29);point.castShadow=false;point.receiveShadow=false;heldWeaponRoot.add(point);
-  addPart(.012,.01,.22,0,-.007,-.12,edge);
+  const bladeMetal=new THREE.MeshStandardMaterial({color:0xc9d5dc,roughness:.22,metalness:.94});
+  const bladeEdge=new THREE.MeshStandardMaterial({color:0x718b9b,roughness:.19,metalness:.96});
+  const guardMat=new THREE.MeshStandardMaterial({color:0x293640,roughness:.4,metalness:.72});
+  const handleMat=new THREE.MeshStandardMaterial({color:0x17222c,roughness:.76,metalness:.12});
+  const gripMat=new THREE.MeshStandardMaterial({color:0x3a4c59,roughness:.88,metalness:.08});
+  const grip=new THREE.Mesh(new THREE.BoxGeometry(.052,.042,.16),handleMat);
+  grip.position.set(0,-.01,.12);grip.rotation.x=.05;heldWeaponRoot.add(grip);
+  for(let i=0;i<4;i++){
+    const ring=new THREE.Mesh(new THREE.BoxGeometry(.055,.045,.008),gripMat);
+    ring.position.set(0,-.008,.065+i*.033);heldWeaponRoot.add(ring);
+  }
+  const pommel=new THREE.Mesh(new THREE.CylinderGeometry(.028,.031,.022,10),guardMat);
+  pommel.rotation.x=Math.PI/2;pommel.position.set(0,-.01,.205);heldWeaponRoot.add(pommel);
+  const guard=new THREE.Mesh(new THREE.BoxGeometry(.16,.026,.04),guardMat);
+  guard.position.set(0,.006,.005);guard.rotation.z=-.06;heldWeaponRoot.add(guard);
+  const bladeShape=new THREE.Shape();
+  bladeShape.moveTo(-.034,0);bladeShape.lineTo(.034,0);bladeShape.lineTo(.029,.16);
+  bladeShape.lineTo(.018,.27);bladeShape.lineTo(0,.355);bladeShape.lineTo(-.025,.235);bladeShape.lineTo(-.034,0);
+  const bladeGeometry=new THREE.ExtrudeGeometry(bladeShape,{depth:.014,bevelEnabled:true,bevelSegments:2,steps:1,bevelSize:.004,bevelThickness:.003});
+  bladeGeometry.translate(0,0,-.007);
+  const blade=new THREE.Mesh(bladeGeometry,bladeMetal);
+  blade.rotation.x=-Math.PI/2;blade.position.set(0,.006,-.01);blade.castShadow=false;heldWeaponRoot.add(blade);
+  const edge=new THREE.Mesh(new THREE.BoxGeometry(.006,.009,.27),bladeEdge);
+  edge.position.set(-.022,.009,-.145);edge.rotation.x=-Math.PI/2;heldWeaponRoot.add(edge);
+  const fuller=new THREE.Mesh(new THREE.BoxGeometry(.009,.004,.17),guardMat);
+  fuller.position.set(.004,.021,-.12);fuller.rotation.x=-Math.PI/2;heldWeaponRoot.add(fuller);
   heldWeaponRoot.userData.realModel=false;
+}
+function addWeaponHands(){
+  if(!heldWeaponRoot)return;
+  const sleeveMat=new THREE.MeshStandardMaterial({color:0x283744,roughness:.95,metalness:.02});
+  const cuffMat=new THREE.MeshStandardMaterial({color:0x111a21,roughness:.87,metalness:.03});
+  const gloveMat=new THREE.MeshStandardMaterial({color:0x171e22,roughness:.94,metalness:.01});
+  const seamMat=new THREE.MeshStandardMaterial({color:0x586a72,roughness:.8,metalness:.06});
+  const limb=(start,end,topRadius,bottomRadius,material)=>{
+    const delta=new THREE.Vector3().subVectors(end,start);
+    const mesh=new THREE.Mesh(new THREE.CylinderGeometry(topRadius,bottomRadius,delta.length(),9),material);
+    mesh.position.copy(start).add(end).multiplyScalar(.5);
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());
+    mesh.castShadow=false;mesh.receiveShadow=false;heldWeaponRoot.add(mesh);return mesh;
+  };
+  const leftShoulder=new THREE.Vector3(-.22,-.25,.3),leftWrist=new THREE.Vector3(-.105,-.075,-.045);
+  const rightShoulder=new THREE.Vector3(.24,-.31,.27),rightWrist=new THREE.Vector3(.085,-.055,-.005);
+  limb(leftShoulder,leftWrist,.075,.047,sleeveMat);
+  limb(rightShoulder,rightWrist,.077,.05,sleeveMat);
+  limb(leftShoulder.clone().lerp(leftWrist,.79),leftWrist,.051,.044,cuffMat);
+  limb(rightShoulder.clone().lerp(rightWrist,.79),rightWrist,.052,.044,cuffMat);
+  const hand=(position,rotationY)=>{
+    const palm=new THREE.Mesh(new THREE.SphereGeometry(.052,10,8),gloveMat);
+    palm.scale.set(1,.75,1.2);palm.position.copy(position);palm.rotation.y=rotationY;heldWeaponRoot.add(palm);
+    for(let i=0;i<3;i++){
+      const knuckle=new THREE.Mesh(new THREE.SphereGeometry(.014,7,6),seamMat);
+      knuckle.position.set(position.x-.021+i*.019,position.y+.019,position.z-.027);
+      heldWeaponRoot.add(knuckle);
+    }
+    const thumb=new THREE.Mesh(new THREE.CapsuleGeometry(.012,.045,3,6),gloveMat);
+    thumb.position.set(position.x+(rotationY<0?.04:-.04),position.y-.012,position.z+.038);
+    thumb.rotation.x=.8;thumb.rotation.z=rotationY<0?-.5:.5;heldWeaponRoot.add(thumb);
+  };
+  hand(leftWrist.clone().add(new THREE.Vector3(0,0,-.008)),-.3);
+  hand(rightWrist.clone().add(new THREE.Vector3(0,0,-.008)),.35);
 }
 const WEAPON_MODEL_URLS={
   akr:"https://raw.githubusercontent.com/petroulacl/fps-asset-kit/main/weapons/flat_guns_west/GLB/Rifle_Assault_West.glb",
@@ -1333,7 +1382,9 @@ async function loadHeldWeapon(){
     heldWeaponRoot.position.set(.29,-.29,heldWeaponBaseZ);
     camera.add(heldWeaponRoot);
   }
-  makeFallbackAK();
+  if(selectedWeapon==="knife")makeFallbackKnife();else if(selectedWeapon==="p350")makeFallbackP350();else makeFallbackAK();
+  addWeaponHands();
+  positionHeldWeapon();
   setLoadingDetail("weaponLoadStatus","ЗАВАНТАЖЕННЯ МОДЕЛЕЙ ЗБРОЇ…","active");
   const jobs=[
     loadRemoteWeapon(WEAPON_MODEL_URLS.akr,.9).then(model=>{
@@ -1376,10 +1427,15 @@ let isThird=false;
 let lastMoveSend=0;
 let lastShot=0;
 let hitConfirmTimer=null;
-let selectedWeapon="akr";
+let selectedWeapon="knife";
 const weaponAmmo={akr:30,p350:13,knife:Infinity};
-let ammo=30;
+const weaponReserve={akr:90,p350:52,knife:0};
+let ammo=Infinity;
 let reloading=false;
+let reloadTimer=null;
+let heldWeaponAction=null;
+let reloadMagazineRoot=null;
+let lastNoAmmoNotice=0;
 let aimingDownSights=false;
 let damagePopupTimer=null;
 const CLIENT_WEAPON_INFO={
@@ -2398,11 +2454,14 @@ function updateWaiting(data){
 }
 
 function updateWeaponHud(){
-  const info=CLIENT_WEAPON_INFO[selectedWeapon]||CLIENT_WEAPON_INFO.akr;
+  const info=CLIENT_WEAPON_INFO[selectedWeapon]||CLIENT_WEAPON_INFO.knife;
   const name=$("weaponName"),number=$("ammoNum"),sub=$("ammoSub"),damage=$("weaponDamage"),button=$("weaponBtn");
   if(name)name.textContent=info.label+(aimingDownSights?" · ADS":"");
   if(number)number.textContent=info.kind==="melee"?"∞":(reloading?"—":String(ammo));
-  if(sub)sub.textContent=info.kind==="melee"?"БЛИЖНІЙ БІЙ · R НЕ ПОТРІБНО":"/ "+info.magazine+" · R — ПЕРЕЗАРЯДКА";
+  if(sub){
+    if(info.kind==="melee")sub.textContent="БЛИЖНІЙ БІЙ · R — ОГЛЯД";
+    else sub.textContent="/ "+info.magazine+" · "+(weaponReserve[selectedWeapon]||0)+" В РЕЗЕРВІ · R — "+(ammo>=info.magazine?"ОГЛЯД":"ПЕРЕЗАРЯДКА");
+  }
   if(damage){
     const d=info.damage;
     damage.textContent=info.kind==="melee"
@@ -2437,11 +2496,93 @@ function toggleAimingDownSights(){
   if(selectedWeapon!=="akr"||matchPhase!=="game"||hp<=0)return;
   setAimingDownSights(!aimingDownSights);
 }
+function clearReloadMagazineVisual(){
+  if(!reloadMagazineRoot)return;
+  camera.remove(reloadMagazineRoot);
+  reloadMagazineRoot.traverse(node=>{
+    if(node.geometry)node.geometry.dispose();
+    if(Array.isArray(node.material))node.material.forEach(material=>material.dispose());
+    else if(node.material)node.material.dispose();
+  });
+  reloadMagazineRoot=null;
+}
+function cancelWeaponAction(){
+  if(reloadTimer){clearTimeout(reloadTimer);reloadTimer=null}
+  reloading=false;
+  heldWeaponAction=null;
+  clearReloadMagazineVisual();
+  const label=$("weaponActionLabel");if(label)label.style.display="none";
+}
+function cancelBombPlantForCombat(){
+  const plantingHere=mode==="allies"&&!isTrainingMode&&bombState?.state==="planting"&&String(bombState?.actorUserId)===String(myId);
+  if(plantingHere){
+    socket.emit("bomb_action",{matchId,action:"cancel",site:bombState?.site});
+    bombState={...bombState,state:"carried",actorUserId:null,action:null,actionStartedAt:null};
+    showDamagePopup("ЗАКЛАДАННЯ СКАСОВАНО · ВІДКРИТО ВОГОНЬ");
+    updateBombHud();updateInteractButtonLabel();
+  }
+  if(bombToolActive)holsterBombTool();
+}
+function createReloadMagazineVisual(weaponId){
+  clearReloadMagazineVisual();
+  const rifle=weaponId==="akr";
+  const root=new THREE.Group();
+  const steel=new THREE.MeshStandardMaterial({color:0x20272d,roughness:.52,metalness:.68});
+  const floor=new THREE.MeshStandardMaterial({color:0x59646c,roughness:.42,metalness:.62});
+  const body=new THREE.Mesh(new THREE.BoxGeometry(rifle?.071:.046,rifle?.16:.095,rifle?.052:.035),steel);
+  body.rotation.x=rifle?-.22:-.08;root.add(body);
+  const plate=new THREE.Mesh(new THREE.BoxGeometry(rifle?.077:.052,.012,rifle?.058:.039),floor);
+  plate.position.y=-((rifle?.16:.095)/2);root.add(plate);
+  if(rifle){
+    for(let i=0;i<4;i++){
+      const rib=new THREE.Mesh(new THREE.BoxGeometry(.073,.008,.055),floor);
+      rib.position.set(0,-.045+i*.026,.002);root.add(rib);
+    }
+  }
+  root.visible=false;camera.add(root);reloadMagazineRoot=root;
+}
+function startWeaponInspect(){
+  if((matchPhase!=="game"&&matchPhase!=="round_start")||hp<=0||!mapLoadFinished||reloading)return;
+  cancelBombPlantForCombat();
+  heldWeaponAction={type:"inspect",startedAt:performance.now(),duration:selectedWeapon==="knife"?1500:selectedWeapon==="akr"?1350:1100,weaponId:selectedWeapon};
+  const label=$("weaponActionLabel");
+  if(label){label.textContent="ОГЛЯД · "+(CLIENT_WEAPON_INFO[selectedWeapon]?.label||selectedWeapon).toUpperCase();label.style.display="block"}
+  updateWeaponHud();
+}
+function positionHeldWeapon(){
+  if(!heldWeaponRoot)return;
+  if(selectedWeapon==="akr"){
+    heldWeaponBaseX=aimingDownSights?.045:.29;
+    heldWeaponBaseY=aimingDownSights?-.245:-.29;
+    heldWeaponBaseZ=aimingDownSights?-.56:-.42;
+    heldWeaponRoot.scale.setScalar(aimingDownSights?.84:1);
+  }else if(selectedWeapon==="p350"){
+    heldWeaponBaseX=.29;heldWeaponBaseY=-.30;heldWeaponBaseZ=-.36;
+    heldWeaponRoot.scale.setScalar(1);
+  }else{
+    heldWeaponBaseX=.245;heldWeaponBaseY=-.285;heldWeaponBaseZ=-.31;
+    heldWeaponRoot.scale.setScalar(1.02);
+  }
+}
+function setAimingDownSights(value){
+  aimingDownSights=Boolean(value)&&selectedWeapon==="akr";
+  camera.fov=aimingDownSights?48:74;
+  camera.updateProjectionMatrix();
+  positionHeldWeapon();
+  updateWeaponHud();
+}
+function toggleAimingDownSights(){
+  if(selectedWeapon!=="akr"||matchPhase!=="game"||hp<=0)return;
+  setAimingDownSights(!aimingDownSights);
+}
 function selectWeapon(weaponId,force=false){
   if(!CLIENT_WEAPON_INFO[weaponId])return;
   if(!force&&((matchPhase!=="game"&&!(mode==="allies"&&!isTrainingMode&&matchPhase==="round_start"))||hp<=0))return;
   if(mode==="allies"&&!isTrainingMode&&!alliesWeapons.includes(weaponId)){showDamagePopup("ЗБРОЮ НЕ ПРИДБАНО");return;}
+  if(!force)cancelBombPlantForCombat();
+  const previousWeapon=selectedWeapon;
   if(selectedWeapon===weaponId&&heldWeaponRoot?.children.length&&!force){updateWeaponHud();return}
+  cancelWeaponAction();
   weaponAmmo[selectedWeapon]=ammo;
   selectedWeapon=weaponId;
   ammo=weaponAmmo[selectedWeapon]??CLIENT_WEAPON_INFO[selectedWeapon].magazine;
@@ -2467,7 +2608,13 @@ function selectWeapon(weaponId,force=false){
       heldWeaponRoot.userData.realModel=true;
     }else makeFallbackP350();
   }else makeFallbackKnife();
+  addWeaponHands();
   positionHeldWeapon();
+  if(!force&&previousWeapon!==weaponId){
+    heldWeaponAction={type:"equip",startedAt:performance.now(),duration:selectedWeapon==="knife"?300:410,weaponId};
+    const label=$("weaponActionLabel");
+    if(label){label.textContent="ЗМІНА ЗБРОЇ";label.style.display="block"}
+  }
   updateWeaponHud();
   if(!force&&mode==="allies"&&!isTrainingMode&&socket?.connected)socket.emit("allies_select_weapon",{matchId,weapon:weaponId});
 }
@@ -2486,19 +2633,54 @@ function showDamagePopup(message,incoming=false){
 }
 function startReload(){
   const info=CLIENT_WEAPON_INFO[selectedWeapon];
-  if((!isTeamCombat&&!isTrainingMode)||info.kind==="melee"||reloading||ammo>=info.magazine||matchPhase!=="game"||hp<=0||!mapLoadFinished)return;
+  if((!isTeamCombat&&!isTrainingMode)||((matchPhase!=="game")&&!(mode==="allies"&&!isTrainingMode&&matchPhase==="round_start"))||hp<=0||!mapLoadFinished)return;
+  cancelBombPlantForCombat();
+  if(info.kind==="melee"){startWeaponInspect();return}
+  if(reloading)return;
+  if(ammo>=info.magazine){startWeaponInspect();return}
+  const reserve=Math.max(0,Number(weaponReserve[selectedWeapon])||0);
+  if(reserve<=0){
+    const now=performance.now();
+    if(now-lastNoAmmoNotice>1000){showDamagePopup("ЗАПАСНИХ ПАТРОНІВ НЕМАЄ");lastNoAmmoNotice=now}
+    return;
+  }
   const reloadWeapon=selectedWeapon;
-  reloading=true;updateWeaponHud();
-  setTimeout(()=>{
-    weaponAmmo[reloadWeapon]=CLIENT_WEAPON_INFO[reloadWeapon].magazine;
-    if(selectedWeapon===reloadWeapon){ammo=weaponAmmo[reloadWeapon];reloading=false;updateWeaponHud()}
+  reloading=true;
+  heldWeaponAction={type:"reload",startedAt:performance.now(),duration:info.reloadMs,weaponId:reloadWeapon};
+  createReloadMagazineVisual(reloadWeapon);
+  const label=$("weaponActionLabel");
+  if(label){label.textContent="ПЕРЕЗАРЯДЖАННЯ";label.style.display="block"}
+  updateWeaponHud();
+  reloadTimer=setTimeout(()=>{
+    reloadTimer=null;
+    const capacity=CLIENT_WEAPON_INFO[reloadWeapon].magazine;
+    const before=Math.max(0,Number(weaponAmmo[reloadWeapon])||0);
+    const available=Math.max(0,Number(weaponReserve[reloadWeapon])||0);
+    const loaded=Math.min(Math.max(0,capacity-before),available);
+    weaponAmmo[reloadWeapon]=before+loaded;
+    weaponReserve[reloadWeapon]=available-loaded;
+    if(selectedWeapon===reloadWeapon){
+      ammo=weaponAmmo[reloadWeapon];
+      reloading=false;
+      heldWeaponAction=null;
+      clearReloadMagazineVisual();
+      const actionLabel=$("weaponActionLabel");if(actionLabel)actionLabel.style.display="none";
+      updateWeaponHud();
+    }
   },info.reloadMs);
 }
 function shoot(){
-  if(bombToolActive||(!isTeamCombat&&!isTrainingMode)||matchPhase!=="game"||reloading||hp<=0||!mapLoadFinished)return;
+  if(!isTeamCombat&&!isTrainingMode)return;
+  if(matchPhase!=="game"||hp<=0||!mapLoadFinished)return;
+  cancelBombPlantForCombat();
+  if(reloading||heldWeaponAction?.type==="equip")return;
+  if(heldWeaponAction?.type==="inspect"){
+    heldWeaponAction=null;
+    const label=$("weaponActionLabel");if(label)label.style.display="none";
+  }
   const info=CLIENT_WEAPON_INFO[selectedWeapon];
   const now=performance.now();
-  if(now-lastShot<info.fireDelay||ammo<=0){if(ammo<=0)startReload();return}
+  if(now-lastShot<info.fireDelay||ammo<=0){if(ammo<=0&&info.kind!=="melee")startReload();return}
   lastShot=now;
   weaponKick=Math.min(info.kind==="melee"?.22:.09,weaponKick+(info.kind==="melee"?.11:.045));
   if(info.kind!=="melee"){
@@ -2552,7 +2734,7 @@ addEventListener("keydown",e=>{
   if(e.code==="ShiftLeft"||e.code==="ShiftRight")keys.shift=true;
   if(e.code==="Space"){e.preventDefault();queueJump()}
   if(e.code==="KeyV"){isThird=!isThird;updateVisual()}
-  if(e.code==="KeyR")startReload();
+  if(e.code==="KeyR"){e.preventDefault();startReload();}
   if(e.code==="Mouse0")shoot();
 });
 addEventListener("keyup",e=>{
@@ -2811,6 +2993,8 @@ socket.on("timer_update",data=>{
   }
 });
 socket.on("match_start_now",()=>{
+  cancelWeaponAction();weaponAmmo.akr=30;weaponAmmo.p350=13;weaponReserve.akr=90;weaponReserve.p350=52;
+  if(!isTrainingMode)selectWeapon("knife",true);
   $("trainingControls").style.display="none";
   matchPhase="game";canControl=true;
   $("overlayTitle").textContent=mode==="allies"?"СОЮЗНИКИ":mode==="team_fight"?"КОМАНДНИЙ БІЙ":"HIDE & SEEK";
@@ -2831,7 +3015,7 @@ socket.on("allies_round_start",data=>{
   bombState=data.bomb||{state:"carried"};
   bombToolActive=false;refreshBombToolVisual();
   hp=100;keys.w=keys.a=keys.s=keys.d=keys.shift=false;fireHeld=false;jumpQueued=false;isCrouching=false;
-  weaponAmmo.akr=CLIENT_WEAPON_INFO.akr.magazine;weaponAmmo.p350=CLIENT_WEAPON_INFO.p350.magazine;ammo=weaponAmmo[alliesEquippedWeapon]??weaponAmmo.p350;reloading=false;
+  cancelWeaponAction();weaponAmmo.akr=CLIENT_WEAPON_INFO.akr.magazine;weaponAmmo.p350=CLIENT_WEAPON_INFO.p350.magazine;weaponReserve.akr=90;weaponReserve.p350=52;ammo=weaponAmmo[alliesEquippedWeapon]??weaponAmmo.knife;reloading=false;
   setAimingDownSights(false);selectWeapon(alliesWeapons.includes(alliesEquippedWeapon)?alliesEquippedWeapon:(alliesWeapons.includes("p350")?"p350":"knife"),true);updateWeaponHud();
   $("deathNotice").style.display="none";
   for(const p of (data.players||[])){
@@ -2877,7 +3061,7 @@ socket.on("allies_loadout",data=>{
   alliesWeapons=Array.isArray(data.weapons)?[...new Set(data.weapons.filter(id=>CLIENT_WEAPON_INFO[id]))]:["p350","knife"];
   alliesEquippedWeapon=CLIENT_WEAPON_INFO[data.equippedWeapon]?data.equippedWeapon:(alliesWeapons.includes("p350")?"p350":alliesWeapons[0]||"knife");
   if((matchPhase==="round_start"||matchPhase==="game")&&selectedWeapon!==alliesEquippedWeapon){
-    selectWeapon(alliesWeapons.includes(alliesEquippedWeapon)?alliesEquippedWeapon:"p350",true);
+    selectWeapon(alliesWeapons.includes(alliesEquippedWeapon)?alliesEquippedWeapon:"knife",false);
   }
   updateWeaponHud();updateAlliesBuyPanel();
 });
@@ -3280,12 +3464,50 @@ function animate(){
     animateSoldier(e.mesh,dt,now,e.anim==="Running"||e.anim==="Walking",e.anim==="Jump",e.anim==="Crouch");
   });
   if(heldWeaponRoot){
-    // Small idle sway, recoil and reload motion keep the procedural fallback weapons alive.
-    heldWeaponRoot.position.x=heldWeaponBaseX+Math.sin(now*.0016)*.0028;
-    heldWeaponRoot.position.y=heldWeaponBaseY+Math.abs(Math.sin(now*.006))* .0024;
-    heldWeaponRoot.position.z=heldWeaponBaseZ+weaponKick;
-    heldWeaponRoot.rotation.x=(reloading?-.13:0)+weaponKick*.52;
-    heldWeaponRoot.rotation.y=Math.sin(now*.0019)*.008;
+    let actionX=0,actionY=0,actionZ=0,actionRotX=0,actionRotY=0,actionRotZ=0;
+    const action=heldWeaponAction;
+    if(action){
+      const progress=Math.max(0,Math.min(1,(now-action.startedAt)/Math.max(1,action.duration)));
+      if(action.type==="equip"){
+        const eased=1-Math.pow(1-progress,3);
+        actionX=(1-eased)*.055;actionY=-(1-eased)*.23;actionZ=(1-eased)*.34;
+        actionRotX=(1-eased)*.55;actionRotY=(1-eased)*-.12;actionRotZ=(1-eased)*-.24;
+      }else if(action.type==="inspect"){
+        const wave=Math.sin(progress*Math.PI);
+        actionX=Math.sin(progress*Math.PI*2)*.075;
+        actionY=wave*.025;
+        actionZ=-wave*.09;
+        actionRotX=Math.sin(progress*Math.PI*2)*.18;
+        actionRotY=Math.sin(progress*Math.PI*2)*.58;
+        actionRotZ=wave*(action.weaponId==="knife"?.48:.20);
+      }else if(action.type==="reload"){
+        const dip=progress<.22?progress/.22:progress<.68?1:Math.max(0,(1-progress)/.32);
+        const smoothDip=dip*dip*(3-2*dip);
+        actionY=-smoothDip*.15;
+        actionZ=smoothDip*.08;
+        actionRotX=-smoothDip*.67;
+        actionRotY=smoothDip*.08;
+        actionRotZ=smoothDip*.28;
+        if(reloadMagazineRoot){
+          const detached=Math.max(0,Math.min(1,(progress-.20)/.47));
+          const returnPhase=Math.max(0,Math.min(1,(progress-.63)/.16));
+          reloadMagazineRoot.visible=progress>.20&&progress<.82;
+          reloadMagazineRoot.position.set(.20-detached*.24+returnPhase*.24,-.45-Math.sin(detached*Math.PI/2)*.16+returnPhase*.16,-.54);
+          reloadMagazineRoot.rotation.set(.18+detached*.85,0,-.16+detached*.34);
+        }
+      }
+      if(progress>=1&&action.type!=="reload"){
+        heldWeaponAction=null;
+        const actionLabel=$("weaponActionLabel");if(actionLabel)actionLabel.style.display="none";
+      }
+    }
+    if(reloadMagazineRoot&&(!action||action.type!=="reload"))reloadMagazineRoot.visible=false;
+    heldWeaponRoot.position.set(
+      heldWeaponBaseX+Math.sin(now*.0016)*.0028+actionX,
+      heldWeaponBaseY+Math.abs(Math.sin(now*.006))*.0024+actionY,
+      heldWeaponBaseZ+weaponKick+actionZ
+    );
+    heldWeaponRoot.rotation.set(actionRotX+weaponKick*.52,actionRotY+Math.sin(now*.0019)*.008,actionRotZ);
     weaponKick=Math.max(0,weaponKick-dt*.58);
   }
   if(roundCinematic&&matchPhase==="round_end")updateRoundCinematic(now);
