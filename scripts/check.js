@@ -94,6 +94,11 @@ assert.match(server, /socket\.on\("leave_match"/, "gameplay client must be able 
 assert.match(server, /disconnectTimer: null/, "live matches must support reconnect grace periods");
 assert.match(server, /ready < current\.players\.length/, "lobbies must time out if map loading never becomes ready");
 assert.match(server, /const activeMatches = new Map\(\);[^\n]*in-memory only/);
+assert.match(server, /const MAX_CONCURRENT_MATCHES = Math\.max\(1, Math\.min\(100, Number\.parseInt\(process\.env\.MAX_CONCURRENT_MATCHES \|\| "100", 10\) \|\| 100\)\)/, "the server has a configurable but hard-capped limit of 100 live matches");
+assert.match(server, /function createMatch\(io, mode, mapId = "M3_Maze", forcedCandidates = null\) \{\s*if \(activeMatches\.size >= MAX_CONCURRENT_MATCHES\) return null;/, "match creation stops cleanly at capacity without consuming queued players");
+assert.match(server, /function processMatchmakingQueue\(io\)[\s\S]{0,1500}createMatch\(io, group\.mode, group\.map, candidates\)/, "the queued matchmaking groups are drained when match slots open");
+assert.match(server, /maxConcurrentMatches: MAX_CONCURRENT_MATCHES/, "the health endpoint exposes the configured match limit");
+assert.match(server, /available: Math\.max\(0, MAX_CONCURRENT_MATCHES - activeMatches\.size\)/, "admin status reports available match slots");
 assert.match(server, /const trainingSessions = new Map\(\);[^\n]*never written to MongoDB/);
 assert.match(server, /app\.post\("\/api\/admin\/atlas\/check"/);
 assert.match(server, /tls: true/, "Atlas TLS must stay enabled without disabling certificate verification");
@@ -171,6 +176,11 @@ assert.match(game, /new PointerLockControls\(camera,renderer\.domElement\)/, "mo
 assert.match(game, /document\.pointerLockElement===renderer\.domElement/, "camera input must track canvas pointer lock");
 assert.doesNotMatch(read("auth.html"), /DEV BUILD/i, "sign-in must not show development labels");
 assert.match(menu, /StandoffX menu remake/, "the menu must use the refreshed neon styling");
+assert.match(menu, /id="homeAgentCanvas"/, "the main screen has a dedicated transparent canvas for its central 3D agent");
+assert.match(menu, /const agent=makeVisual\(0x8e9ba6\)/, "the menu preview reuses the in-game procedural soldier and rifle");
+assert.match(menu, /function makeVisual\(color\)[\s\S]*?function animateSoldier\(/, "the menu includes the existing game character builder and idle animation");
+assert.match(menu, /home-friends-title/, "friends and squad are visible in the main menu");
+assert.match(menu, /Battle Pass|SEASON PASS/, "pass/event content remains on the right side of the home menu");
 assert.match(menu, /position:fixed!important;right:28px!important;bottom:28px!important/, "Play must be anchored to the lower-right corner");
 assert.match(game, /controls\.pointerSpeed=mouseSensitivity/, "mouse look must use the saved sensitivity");
 assert.match(game, /function buildNeonYard\(\)/, "the selected neon map must be implemented");
@@ -183,7 +193,9 @@ assert.match(game, /if\(e\.code==="Digit4"\|\|e\.code==="Digit5"\)\{e\.preventDe
 assert.match(game, /\$\("bombBtn"\)\.addEventListener\("click",e=>\{e\.preventDefault\(\);e\.stopPropagation\(\);toggleBombTool\(\)\}\)/, "mobile users can equip C4 with a dedicated button");
 assert.match(game, /data-buy-tab="rifles"/, "the Allies buy menu groups equipment into categories");
 assert.match(game, /document\.querySelectorAll\("\[data-buy-tab\]"\)\.forEach\(tab=>tab\.addEventListener\("click"/, "buy categories must filter the weapon cards");
-assert.match(game, /function shoot\(\)\{\s*if\(bombToolActive\|\|/, "players cannot fire while holding the C4 device");
+assert.match(game, /function cancelBombPlantForCombat\(\)[\s\S]{0,400}socket\.emit\("bomb_action",\{matchId,action:"cancel"/, "shooting or weapon changes can interrupt bomb planting");
+assert.match(game, /function shoot\(\)\{[\s\S]{0,220}cancelBombPlantForCombat\(\);/, "firing cancels your own C4 planting action instead of locking the gun");
+assert.doesNotMatch(game, /function shoot\(\)\{\s*if\(bombToolActive\|\|/, "holding C4 no longer blocks firing");
 assert.match(game, /A:\{x:37\.5,z:-33\.75\},B:\{x:22\.5,z:37\.5\}/, "client bomb interactions must use scaled site positions");
 assert.match(game, /addGround\(18,30,11,11,road/, "B site must sit in the lower-right portion of Sandstone");
 assert.match(server, /attack: \[\{ x: -8\.75, y: 0, z: -50 \}/, "Allies attack spawns must align with expanded Sandstone geometry");
@@ -422,12 +434,15 @@ assert.match(server, /Пошук перенесено в інше вікно/, "
 assert.match(server, /if \(!player \|\| player\.hp <= 0\) return;\s*handleTeamShot/, "dead players must not be able to shoot on the server");
 assert.match(server, /if \(!player \|\| player\.socketId !== socket\.id \|\| player\.hp <= 0\) return;\s*if \(match\.mode === "allies" && match\.phase !== "game"\) return;\s*if \(!validateMove/, "dead players and players outside a live round must not move on the server");
 assert.match(game, /id="deathNotice"/, "players must receive clear feedback when eliminated");
-assert.match(game, /matchPhase!=="game"\|\|reloading\|\|hp<=0/, "dead clients cannot fire or reload");
+assert.match(game, /function shoot\(\)[\s\S]{0,240}matchPhase!=="game"\|\|hp<=0\|\|!mapLoadFinished/, "shooting is blocked outside live gameplay and until the map loads");
+assert.match(game, /function startReload\(\)[\s\S]{0,280}hp<=0\|\|!mapLoadFinished/, "reloading is blocked for dead players and before the map loads");
+assert.match(game, /if\(reloading\|\|heldWeaponAction\?\.type==="equip"\)return/, "players cannot shoot while changing weapons or reloading");
 assert.match(game, /matchPhase==="game"&&player&&hp>0/, "local movement must freeze until respawn");
 
 assert.match(game, /mapLoadFinished\?"none":"flex"/, "the prototype must keep its loading screen until the map is ready");
 assert.match(game, /matchPhase==="game"&&player&&hp>0&&mapLoadFinished/, "movement must wait until the selected map has finished loading");
-assert.match(game, /matchPhase!=="game"\|\|reloading\|\|hp<=0\|\|!mapLoadFinished/, "shooting and reloading must be blocked until the map loads");
+assert.match(game, /function startReload\(\)[\s\S]{0,280}!mapLoadFinished/, "reload cannot begin before the map loads");
+assert.match(game, /function shoot\(\)[\s\S]{0,240}!mapLoadFinished/, "shoot cannot begin before the map loads");
 
 assert.match(game, /function setSoldierDown\(model,down\)/, "eliminated soldiers must visibly drop until respawn");
 assert.match(game, /victim\.hp=Math\.max\(0,Number\(data\.hp\)\|\|0\);[\s\S]{0,100}setSoldierDown\(victim\.mesh,true\)/, "the victim HP is updated and lethal hits visibly eliminate the model");
@@ -557,6 +572,12 @@ assert.match(ui, /\.clan-search-card/, "clan search should render a visual list 
 assert.match(ui, /\.active-squad-player/, "lobby teammate portraits display nicknames, IDs and death status");
 assert.match(game, /function dropCurrentItem\(\)/, "G drops the currently equipped weapon or C4");
 assert.match(game, /if\(selectedWeapon==="knife"\)\{showDamagePopup\("НІЖ НЕ МОЖНА ВИКИНУТИ"\);return\}/, "the knife cannot be dropped");
+assert.match(game, /let selectedWeapon="knife"/, "the knife is equipped by default");
+assert.match(game, /const weaponReserve=\{akr:90,p350:52,knife:0\}/, "firearms track finite reserve ammunition");
+assert.match(game, /if\(ammo>=info\.magazine\)\{startWeaponInspect\(\);return\}/, "R inspects a weapon when its magazine is already full");
+assert.match(game, /function createReloadMagazineVisual\(weaponId\)/, "reload uses a visible magazine model");
+assert.match(game, /action\.type==="inspect"/, "weapon inspection has a dedicated animation state");
+assert.match(game, /action\.type==="equip"/, "switching weapons plays a draw/equip animation");
 assert.match(game, /if\(e\.code==="KeyB"&&mode==="allies"&&!isTrainingMode\)\{e\.preventDefault\(\);toggleBuyMenu\(\);return\}/, "B opens the Allies buy menu without stealing training shortcuts");
 assert.match(game, /if\(e\.code==="KeyG"\)\{e\.preventDefault\(\);dropCurrentItem\(\);return\}/, "G is reserved for dropping an item");
 assert.match(game, /if\(e\.code==="Digit4"\|\|e\.code==="Digit5"\)\{e\.preventDefault\(\);toggleBombTool\(\);return\}/, "the bomb has a dedicated inventory slot");
