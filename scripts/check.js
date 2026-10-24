@@ -235,8 +235,14 @@ assert.match(game, /socket\.on\("init_match",data=>\{\s*matchJoined=true;\s*\$\(
 assert.match(game, /#trainingControls\.prototype-bot-panel/, "prototype static-bot status must have dedicated responsive styling");
 assert.match(game, /textContent=mode/, "prototype uses the normal mode title and HUD");
 assert.match(game, /const isPrototypeMode=sessionStorage.getItem\("prototypeMode"\)==="true"/, "prototype UI must distinguish the bot sandbox from a real lobby match");
-assert.match(menu, /REFORGED/, "the main menu uses the Season 8 Reforged label");
-assert.match(menu, /Reforged 0.30.0-inspired lobby/, "the menu uses a 0.30.0-inspired steel-and-blue visual system");
+assert.match(menu, /SEASON 12 · OSIRIS/, "the main menu reflects the current Osiris season theme");
+assert.match(menu, /standoffx-interface-overhaul/, "the menu uses the unified tactical interface system");
+assert.match(menu, /data-agent-weapon="akr"/, "the central agent preview can select the AKR");
+assert.match(menu, /data-agent-weapon="p350"/, "the central agent preview can select the P350");
+assert.match(menu, /data-agent-weapon="knife"/, "the central agent preview can select the knife");
+assert.match(menu, /function setPreviewWeapon\(kind\)/, "menu weapon buttons update the 3D agent model");
+assert.match(menu, /grid-template-columns:minmax\(220px,\.82fr\) minmax\(370px,1\.42fr\) minmax\(235px,\.88fr\)/, "the menu uses friend, central-agent, and events/pass columns");
+assert.match(menu, /home-hero\{grid-column:2!important;grid-row:1\/span 2!important/, "the 3D agent is the primary center panel");
 assert.match(menu, /saved.prototype/, "resume preserves whether the match uses prototype bots");
 assert.match(menu, /class="home-hero panel"/, "main menu must use the redesigned integrated game hero");
 assert.match(ui, /\.home-hero h1/, "main menu hero must have dedicated responsive styling");
