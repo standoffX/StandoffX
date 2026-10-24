@@ -530,6 +530,175 @@ body:before{
 
 </style>
 <link rel="stylesheet" href="/ui.css">
+<style id="standoffx-interface-overhaul">
+:root{--sx-ink:#eaf0f5;--sx-muted:#9aa8b4;--sx-line:#d4e0e91b;--sx-card:#121b23;--sx-card-2:#0e151c;--sx-edge:#a8cde71b;--sx-accent:#b5d7ef;--sx-positive:#8ee0b6}
+html,body{background:#080d12!important;color:var(--sx-ink)!important}
+body.lobby-screen{background:radial-gradient(ellipse at 50% 38%,#263d4a55,transparent 35%),radial-gradient(ellipse at 80% 4%,#a1c9e30c,transparent 33%),linear-gradient(135deg,#080d12,#0d151c 55%,#080d12)!important}
+body.lobby-screen:before{opacity:.11;background-size:56px 56px!important;background-image:linear-gradient(#c6d4df0c 1px,transparent 1px),linear-gradient(90deg,#c6d4df0c 1px,transparent 1px)!important}
+body.lobby-screen:after{display:none!important}
+.lobby-screen .rail{width:68px!important;flex-basis:68px!important;background:#090f14f2!important;border-right:1px solid #c5d8e50d!important;backdrop-filter:blur(18px)}
+.lobby-screen .logo{height:62px!important;background:#101820!important;border-bottom:1px solid #c5d8e512!important;font-size:18px!important;letter-spacing:-1.5px!important}
+.lobby-screen .rail button{height:53px!important;border-left-width:2px!important;color:#8294a2!important;transition:background .18s,color .18s,border-color .18s}
+.lobby-screen .rail button.active,.lobby-screen .rail button:hover{background:#c2d9eb0e!important;color:#e5f2fb!important;border-left-color:#a9cee9!important}
+.lobby-screen .rail svg{width:19px!important;height:19px!important}
+.lobby-screen .topbar{height:58px!important;flex-basis:58px!important;background:#0b1118eF!important;border-bottom:1px solid #c1d0dc12!important;backdrop-filter:blur(18px)}
+.lobby-screen .topbrand{font-size:13px!important;letter-spacing:2.5px!important;color:#f0f5f8!important}
+.lobby-screen .topbrand b{color:#a9cde9!important}
+.lobby-screen .pill{background:#121b23!important;border:1px solid #c9d5df18!important;border-radius:3px!important;color:#d4e1ea!important}
+.lobby-screen .content{padding:clamp(12px,1.6vw,25px)!important}
+.lobby-screen .screen{max-width:1720px!important}
+.lobby-screen .panel,.lobby-screen .statcard,.lobby-screen .listcard,.lobby-screen .row{border:1px solid var(--sx-line)!important;border-radius:3px!important;background:linear-gradient(145deg,#151e26f0,#0d141bee)!important;box-shadow:0 13px 34px #0002!important}
+.lobby-screen .panelhead{height:42px!important;background:#0d141bba!important;border-bottom:1px solid #c7d9e30f!important;color:#aebfcd!important;font-size:9px!important;letter-spacing:1.5px!important}
+.lobby-screen .panelbody{padding:14px!important}
+.lobby-screen .primary,.lobby-screen button.primary{background:linear-gradient(105deg,#d3e7f4,#9fbfd8)!important;border:1px solid #d4e7f3!important;color:#101a22!important;border-radius:2px!important;box-shadow:none!important;transition:filter .16s,transform .16s!important}
+.lobby-screen .primary:hover,.lobby-screen button.primary:hover{filter:brightness(1.07)!important;transform:translateY(-1px)}
+.lobby-screen .secondary{background:#17212a!important;border:1px solid #b4c8d51f!important;color:#c4d2dc!important;border-radius:2px!important}
+.lobby-screen .secondary:hover{background:#202e39!important;border-color:#b4d0e24d!important}
+.lobby-screen .danger{background:#391b22!important;border:1px solid #f28a9a33!important;border-radius:2px!important}
+.lobby-screen .muted,.lobby-screen .playerid{color:#98a8b5!important}
+.lobby-screen input,.lobby-screen select,.lobby-screen textarea{background:#0a1117!important;border:1px solid #adbecb25!important;border-radius:2px!important;color:#edf3f7!important}
+.lobby-screen input:focus,.lobby-screen select:focus,.lobby-screen textarea:focus{border-color:#a6cce8!important;box-shadow:0 0 0 2px #a6cce814!important;outline:none!important}
+.lobby-screen .sectionhead{margin-bottom:16px!important;border-bottom:1px solid #c2d2de10!important;padding-bottom:12px!important}
+.lobby-screen .sectionhead h2{font-size:16px!important;letter-spacing:1.5px!important;color:#e2ebf1!important}
+.lobby-screen .modal{background:#02060adf!important;backdrop-filter:blur(10px)!important}
+.lobby-screen .modalbox{border:1px solid #b8d1e327!important;border-radius:3px!important;background:linear-gradient(145deg,#17232d,#0a1016)!important;box-shadow:0 28px 100px #000b!important}
+.lobby-screen .modalhead{color:#ebf3f8!important;border-bottom:1px solid #d3e0e811!important;padding-bottom:12px!important}
+.lobby-screen .close{color:#c1d1dc!important}
+.lobby-screen .home-layout{
+  grid-template-columns:minmax(220px,.82fr) minmax(370px,1.42fr) minmax(235px,.88fr)!important;
+  grid-template-rows:minmax(265px,auto) minmax(250px,auto)!important;
+  gap:12px!important;align-items:stretch!important
+}
+.lobby-screen .home-friends{grid-column:1!important;grid-row:1!important;min-height:330px!important}
+.lobby-screen .profile-col{grid-column:1!important;grid-row:2!important;display:block!important;min-height:235px!important}
+.lobby-screen .home-hero{grid-column:2!important;grid-row:1/span 2!important;min-height:610px!important;isolation:isolate!important;border:1px solid #c2d3de1b!important;background:radial-gradient(ellipse at 53% 46%,#4a657322,transparent 43%),linear-gradient(155deg,#1a2731,#0b1218 72%)!important}
+.lobby-screen .home-hero:after{z-index:1!important;background:linear-gradient(90deg,#0b131bbd 0%,#0b131b18 38%,#0b131b06 66%,#0b131b74 100%),linear-gradient(0deg,#080f15ef 0%,transparent 38%)!important;border:0!important}
+.lobby-screen .home-hero-art{opacity:.15!important;filter:saturate(.35) brightness(.6)!important;mix-blend-mode:screen!important;object-position:center!important}
+.lobby-screen .home-agent-canvas{z-index:2!important;inset:22px 0 0!important;width:100%!important;height:calc(100% - 22px)!important;opacity:1!important}
+.lobby-screen .home-hero-copy{top:25px!important;left:25px!important;z-index:5!important;max-width:72%!important}
+.lobby-screen .home-hero-overline{color:#a1b4c2!important;font-size:9px!important;letter-spacing:2.1px!important}
+.lobby-screen .hero-live-dot{background:#b3d9ef!important;box-shadow:0 0 0 4px #a9cde914!important}
+.lobby-screen .home-hero-copy h1{font-size:clamp(25px,2.4vw,38px)!important;line-height:.95!important;letter-spacing:1px!important;color:#f1f6f9!important;text-shadow:0 6px 26px #000b!important}
+.lobby-screen .home-hero-copy h1 em{color:#bbd8ec!important}
+.lobby-screen .home-agent-spec{position:absolute;z-index:5;top:31%;left:24px;display:grid;grid-template-columns:8px auto;gap:7px 8px;align-items:center;padding:10px 12px;border:1px solid #d5e3ec18;background:#0a1118a8;backdrop-filter:blur(8px);pointer-events:none}
+.lobby-screen .home-agent-spec .spec-dot{width:6px;height:6px;border-radius:50%;background:#9cceec;box-shadow:0 0 12px #9cceec4c}
+.lobby-screen .home-agent-spec>span:nth-child(2){font-size:8px;font-weight:900;letter-spacing:1.5px;color:#a7b8c5}
+.lobby-screen .home-agent-spec b{grid-column:2;font-size:17px;letter-spacing:1px;color:#f1f6fa}
+.lobby-screen .home-agent-spec small{grid-column:2;font-size:8px;letter-spacing:.7px;color:#8296a5}
+.lobby-screen .home-loadout{position:absolute;left:22px;bottom:24px;z-index:7;width:min(265px,52%);padding:10px;border:1px solid #b6cddd20;background:#0a1118e8;box-shadow:0 10px 28px #0004;backdrop-filter:blur(10px)}
+.lobby-screen .home-loadout-heading{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px;font-size:8px;letter-spacing:1.4px;font-weight:950;color:#b7c7d3}
+.lobby-screen .home-loadout-heading small{font-size:7px;color:#687d8b}
+.lobby-screen .home-loadout-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.lobby-screen .home-loadout-options button{min-width:0;display:grid;justify-items:center;gap:4px;padding:7px 4px 6px;border:1px solid #c5d5df12;background:#111a22;color:#d3dee6;transition:background .15s,border-color .15s,transform .15s;cursor:pointer}
+.lobby-screen .home-loadout-options button:hover{background:#1b2a35;border-color:#bdd9ed3d;transform:translateY(-1px)}
+.lobby-screen .home-loadout-options button.active{border-color:#b5d8ef78;background:linear-gradient(155deg,#2a3d4a,#141f28);box-shadow:inset 0 -2px #b9d9ef}
+.lobby-screen .home-loadout-options button b{font-size:10px;letter-spacing:.6px}
+.lobby-screen .home-loadout-options button small{font-size:7px;color:#8497a6;letter-spacing:.8px}
+.lobby-screen .loadout-icon{position:relative;display:block;width:53px;height:23px}
+.lobby-screen .loadout-icon:before,.lobby-screen .loadout-icon:after{content:"";position:absolute;display:block;background:#9fb2c0;border:1px solid #d3e1eb22}
+.lobby-screen .loadout-rifle:before{left:4px;top:8px;width:44px;height:6px}
+.lobby-screen .loadout-rifle:after{left:22px;top:14px;width:6px;height:7px;background:#617887}
+.lobby-screen .loadout-pistol:before{left:10px;top:8px;width:33px;height:7px}
+.lobby-screen .loadout-pistol:after{left:22px;top:14px;width:7px;height:8px;transform:rotate(-18deg);background:#617887}
+.lobby-screen .loadout-knife:before{left:7px;top:9px;width:30px;height:4px;transform:skewX(-24deg)}
+.lobby-screen .loadout-knife:after{left:34px;top:6px;width:12px;height:7px;clip-path:polygon(0 50%,100% 0,75% 100%);background:#d0e1eb}
+.lobby-screen .home-hero .playarea{position:absolute!important;left:auto!important;right:22px!important;top:auto!important;bottom:23px!important;z-index:8!important;min-height:0!important;padding:0!important;pointer-events:none!important}
+.lobby-screen .home-hero .playwrap{display:flex!important;align-items:flex-end!important;gap:8px!important;pointer-events:auto!important}
+.lobby-screen .home-hero .playbutton{width:230px!important;height:55px!important;min-width:0!important;border:1px solid #d4e6f0!important;background:linear-gradient(105deg,#dcebf4,#a4c5de)!important;color:#121b22!important;font-size:13px!important;letter-spacing:1.4px!important;clip-path:none!important;box-shadow:0 8px 28px #0006!important}
+.lobby-screen .home-hero .playbutton:hover{filter:brightness(1.06)!important;transform:translateY(-1px)!important}
+.lobby-screen .home-hero #selectedModeText{padding-top:4px!important;color:#cedce6!important;font-size:9px!important;letter-spacing:1.2px!important}
+.lobby-screen .home-hero #selectedMapText{color:#8fa4b3!important}
+.lobby-screen .profile-col .avatar{width:64px!important;height:64px!important}
+.lobby-screen .profile-col .ranks{gap:4px!important}
+.lobby-screen .profile-col .rankcard{min-height:60px!important;padding:6px 3px!important}
+.lobby-screen .profile-col .rankicon{font-size:18px!important}
+.lobby-screen .profile-col .rankname{font-size:7px!important}
+.lobby-screen .profile-col .rankdesc{font-size:7px!important}
+.lobby-screen .promo-col{grid-column:3!important;grid-row:2!important;display:block!important;min-height:300px!important}
+.lobby-screen .promo-col .promo{height:185px!important}
+.lobby-screen .promo-col .panelhead{height:42px!important}
+.lobby-screen .news-soon{font-size:10px!important}
+.lobby-screen .passpanel{grid-column:3!important;grid-row:1!important;min-height:290px!important}
+.lobby-screen .passhero{height:125px!important;background:linear-gradient(120deg,#273b48,#15232d)!important}
+.lobby-screen .passhero img{opacity:.37!important;filter:saturate(.25) contrast(1.12)!important}
+.lobby-screen .passheroText{background:linear-gradient(90deg,#0b131ad9,#111f2b2c)!important}
+.lobby-screen .passheroText strong{font-size:22px!important;letter-spacing:1.3px!important;color:#e9f2f7!important}
+.lobby-screen .passheroText span{color:#b0c2ce!important}
+.lobby-screen .passprogress{padding:10px 12px 4px!important}
+.lobby-screen .progress{height:4px!important;background:#28343d!important;border:0!important}
+.lobby-screen .progress span{background:linear-gradient(90deg,#8eb9d7,#d9e9f3)!important}
+.lobby-screen .reward{min-height:58px!important;height:58px!important;border:1px solid #c4d6e00e!important;background:#111a22!important}
+.lobby-screen .reward b{color:#c3d9e8!important}
+.lobby-screen .reward span{font-size:7px!important;color:#8799a6!important}
+.lobby-screen .homefooter{margin-top:12px!important;border-top:1px solid #c0d0dc10!important;color:#8598a6!important}
+.lobby-screen .theme-option,.lobby-screen .map-option{border-radius:2px!important;background:#101820!important}
+.lobby-screen .theme-option.active,.lobby-screen .map-option.active{border-color:#b5d7ed!important}
+.lobby-screen .statcard strong{color:#e6f0f6!important}
+.lobby-screen .rankline span{background:linear-gradient(90deg,#9bbfd8,#d3e7f4)!important}
+.lobby-screen .passpanel .panelhead{color:#b7c8d3!important}
+.lobby-screen .home-friend{border:1px solid #c2d4df0f!important;background:#10181e!important}
+.lobby-screen .home-friend-invite{background:#1b2b36!important;border-color:#b7cfde26!important;color:#e3eff6!important}
+.lobby-screen #homeInviteBtn{border-color:#adc9dc2f!important;background:#192c38!important;color:#d2e7f4!important}
+.lobby-screen .home-squad-note{color:#7e919e!important}
+.lobby-screen .home-friends-title{color:#bdccd6!important;border-bottom-color:#c0d0dc13!important}
+.lobby-screen .home-friends-title small{color:#7f95a4!important}
+.lobby-screen .screen>.sectionhead{border-bottom:1px solid #c0d0dc10}
+.lobby-screen .lobby-layout{gap:12px!important}
+.lobby-screen .lobby-code{border-radius:3px!important;background:#0c141b!important}
+.lobby-screen .layout-stage{background:#0b131a!important;border-color:#c0d2de1b!important}
+.lobby-screen .layout-control{border-radius:2px!important;background:#223743!important;border-color:#a8cadf45!important}
+.lobby-screen .layout-control[data-layout-control="fire"]{background:#35546a!important}
+.lobby-screen .theme-option:before{box-shadow:none!important}
+.lobby-screen .promo-title,.lobby-screen .promo-tag{color:#eff5f8!important}
+.lobby-screen .promo-tag{background:#0c151bdc!important;border-color:#d4e2ea20!important}
+@media(max-width:1200px){
+ .lobby-screen .home-layout{grid-template-columns:minmax(210px,.84fr) minmax(320px,1.2fr)!important;grid-template-rows:auto!important}
+ .lobby-screen .home-friends{grid-column:1!important;grid-row:1!important}
+ .lobby-screen .profile-col{grid-column:1!important;grid-row:2!important}
+ .lobby-screen .home-hero{grid-column:2!important;grid-row:1/span 2!important;min-height:570px!important}
+ .lobby-screen .passpanel{grid-column:1!important;grid-row:3!important}
+ .lobby-screen .promo-col{grid-column:2!important;grid-row:3!important;min-height:230px!important}
+ .lobby-screen .promo-col .promo{height:145px!important}
+}
+@media(max-width:760px){
+ .lobby-screen .home-layout{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto!important}
+ .lobby-screen .home-hero{grid-column:1!important;grid-row:1!important;min-height:510px!important;order:0!important}
+ .lobby-screen .home-friends{grid-column:1!important;grid-row:2!important;min-height:0!important}
+ .lobby-screen .passpanel{grid-column:1!important;grid-row:3!important}
+ .lobby-screen .promo-col{grid-column:1!important;grid-row:4!important}
+ .lobby-screen .profile-col{grid-column:1!important;grid-row:5!important}
+ .lobby-screen .home-hero-art{opacity:.08!important}
+ .lobby-screen .home-agent-canvas{inset:35px 0 0!important;height:calc(100% - 35px)!important;opacity:.98!important}
+ .lobby-screen .home-agent-spec{top:94px!important;left:12px!important;padding:7px 9px!important}
+ .lobby-screen .home-loadout{left:10px!important;right:10px!important;bottom:78px!important;width:auto!important;padding:7px!important}
+ .lobby-screen .home-loadout-options button{padding:4px 2px!important}
+ .lobby-screen .loadout-icon{height:18px!important;transform:scale(.82)}
+ .lobby-screen .home-hero .playarea{left:10px!important;right:10px!important;bottom:10px!important}
+ .lobby-screen .home-hero .playwrap{width:100%!important;align-items:stretch!important}
+ .lobby-screen .home-hero .playbutton{width:100%!important;height:48px!important}
+ .lobby-screen .home-hero #selectedModeText,.lobby-screen .home-hero #selectedMapText{text-align:center!important}
+ .lobby-screen .profile-col{display:block!important}
+ .lobby-screen .passpanel{min-height:0!important}
+ .lobby-screen .promo-col .promo{height:160px!important}
+}
+@media(max-width:540px){
+ .lobby-screen .rail{width:48px!important;flex-basis:48px!important}
+ .lobby-screen .rail button{height:47px!important}
+ .lobby-screen .content{padding:8px!important}
+ .lobby-screen .topbar{height:48px!important;flex-basis:48px!important;padding:0 8px!important}
+ .lobby-screen .topbrand{font-size:10px!important}
+ .lobby-screen .home-hero{min-height:480px!important}
+ .lobby-screen .home-hero-copy{left:13px!important;top:16px!important;max-width:90%!important}
+ .lobby-screen .home-hero-copy h1{font-size:24px!important}
+ .lobby-screen .home-loadout{bottom:74px!important}
+ .lobby-screen .home-loadout-heading{font-size:7px!important}
+ .lobby-screen .home-agent-spec{left:9px!important;top:81px!important}
+ .lobby-screen .profile-col .panelbody{padding:10px!important}
+ .lobby-screen .theme-picker{grid-template-columns:1fr!important}
+ .lobby-screen .sectionhead h2{font-size:13px!important}
+}
+@media(prefers-reduced-motion:reduce){.lobby-screen *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+</style>
 </head>
 <body class="lobby-screen">
 <div class="app">
@@ -574,7 +743,16 @@ body:before{
     </aside>
     <section class="home-hero panel" aria-label="Головне ігрове меню">
       <img class="home-hero-art" src="game1.png" alt="" aria-hidden="true">
-      <canvas id="homeAgentCanvas" class="home-agent-canvas" aria-label="Агент StandoffX зі зброєю"></canvas>
+      <canvas id="homeAgentCanvas" class="home-agent-canvas" aria-label="3D-персонаж StandoffX"></canvas>
+      <div class="home-agent-spec"><span class="spec-dot"></span><span>АГЕНТ · LOADOUT</span><b id="homeAgentWeaponName">AKR</b><small id="homeAgentWeaponHint">ОГЛЯД ЗБРОЇ</small></div>
+      <div class="home-loadout" aria-label="Вибір зброї для перегляду">
+        <div class="home-loadout-heading"><span>ВИБІР ЗБРОЇ</span><small>SHOWCASE</small></div>
+        <div class="home-loadout-options">
+          <button type="button" data-agent-weapon="akr" aria-pressed="true"><span class="loadout-icon loadout-rifle"></span><b>AKR</b><small>RIFLE</small></button>
+          <button type="button" data-agent-weapon="p350" aria-pressed="false"><span class="loadout-icon loadout-pistol"></span><b>P350</b><small>PISTOL</small></button>
+          <button type="button" data-agent-weapon="knife" aria-pressed="false"><span class="loadout-icon loadout-knife"></span><b>НІЖ</b><small>MELEE</small></button>
+        </div>
+      </div>
       <div class="home-hero-copy">
         <div class="home-hero-overline"><span class="hero-live-dot"></span> UPDATE 0.30.0 <span class="hero-separator">/</span> REFORGED</div>
         <h1>STANDOFF<em>X</em></h1>
@@ -1795,6 +1973,48 @@ if(hero&&canvas){
       rig.rifle.rotation.x=-.10;
     }
     scene.add(agent);
+    const addPreviewPart=(parent,geometry,material,position,rotation=[0,0,0])=>{
+      const mesh=new THREE.Mesh(geometry,material);
+      mesh.position.set(position[0],position[1],position[2]);
+      mesh.rotation.set(rotation[0],rotation[1],rotation[2]);
+      mesh.castShadow=false;mesh.receiveShadow=false;parent.add(mesh);return mesh;
+    };
+    const weaponSteel=new THREE.MeshStandardMaterial({color:0x313b44,roughness:.38,metalness:.78});
+    const weaponDark=new THREE.MeshStandardMaterial({color:0x131b22,roughness:.67,metalness:.25});
+    const weaponGrip=new THREE.MeshStandardMaterial({color:0x202c34,roughness:.9,metalness:.06});
+    const pistol=new THREE.Group();pistol.position.set(.215,1.16,.27);pistol.rotation.x=-.12;agent.add(pistol);
+    addPreviewPart(pistol,new THREE.BoxGeometry(.075,.064,.245),weaponSteel,[0,.018,.075]);
+    addPreviewPart(pistol,new THREE.BoxGeometry(.062,.14,.082),weaponGrip,[0,-.075,.015],[-.22,0,0]);
+    addPreviewPart(pistol,new THREE.BoxGeometry(.085,.018,.065),weaponDark,[0,.052,-.018]);
+    addPreviewPart(pistol,new THREE.CylinderGeometry(.012,.012,.11,8),weaponDark,[0,.018,.245],[Math.PI/2,0,0]);
+    addPreviewPart(pistol,new THREE.BoxGeometry(.035,.019,.1),weaponDark,[0,-.025,.12]);
+    const knife=new THREE.Group();knife.position.set(.215,1.16,.27);knife.rotation.x=-.18;agent.add(knife);
+    addPreviewPart(knife,new THREE.BoxGeometry(.052,.046,.135),weaponGrip,[0,-.035,.05],[.15,0,0]);
+    for(let i=0;i<3;i++)addPreviewPart(knife,new THREE.BoxGeometry(.055,.048,.009),weaponSteel,[0,-.034,.005+i*.035]);
+    addPreviewPart(knife,new THREE.BoxGeometry(.046,.016,.225),weaponSteel,[0,.005,.205],[0,0,-.025]);
+    addPreviewPart(knife,new THREE.ConeGeometry(.034,.09,4),weaponSteel,[0,.005,.355],[Math.PI/2,0,0]);
+    pistol.visible=false;knife.visible=false;
+    const pickerButtons=[...document.querySelectorAll("[data-agent-weapon]")];
+    const pickerNames={akr:"AKR",p350:"P350",knife:"НІЖ"};
+    function setPreviewWeapon(kind){
+      if(!Object.prototype.hasOwnProperty.call(pickerNames,kind))kind="akr";
+      if(rig?.rifle)rig.rifle.visible=kind==="akr";
+      pistol.visible=kind==="p350";knife.visible=kind==="knife";
+      const label=document.getElementById("homeAgentWeaponName");
+      const hint=document.getElementById("homeAgentWeaponHint");
+      if(label)label.textContent=pickerNames[kind];
+      if(hint)hint.textContent=kind==="akr"?"ШТУРМОВА ГВИНТІВКА":kind==="p350"?"НАПІВАВТОМАТИЧНИЙ ПІСТОЛЕТ":"ЗБРОЯ БЛИЖНЬОГО БОЮ";
+      pickerButtons.forEach(button=>{
+        const active=button.dataset.agentWeapon===kind;
+        button.classList.toggle("active",active);
+        button.setAttribute("aria-pressed",String(active));
+      });
+      try{localStorage.setItem("sx_agent_preview_weapon",kind)}catch{}
+    }
+    pickerButtons.forEach(button=>button.addEventListener("click",()=>setPreviewWeapon(button.dataset.agentWeapon)));
+    let savedPreviewWeapon="akr";
+    try{savedPreviewWeapon=localStorage.getItem("sx_agent_preview_weapon")||"akr"}catch{}
+    setPreviewWeapon(savedPreviewWeapon);
     const resize=()=>{
       if(!renderer||!camera)return;
       const rect=hero.getBoundingClientRect();
