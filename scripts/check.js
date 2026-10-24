@@ -182,6 +182,8 @@ assert.match(menu, /id="homeAgentCanvas"/, "the main screen has a dedicated tran
 assert.match(menu, /agent=makeVisual\(0x8e9ba6\)/, "the menu preview reuses the in-game procedural soldier and rifle");
 assert.match(menu, /function makeVisual\(color\)[\s\S]*?function animateSoldier\(/, "the menu includes the existing game character builder and idle animation");
 assert.match(menu, /home-friends-title/, "friends and squad are visible in the main menu");
+assert.match(menu, /pendingHomeInvite=String\(userId\|\|""\)/, "quick invites create a lobby automatically when needed");
+assert.match(menu, /const disabled=!friend\.status\|\|\(Boolean\(currentLobby\)\&\&currentLobby\.members\.length>=currentLobby\.maxPlayers\)/, "online friends can be invited from the main menu before a lobby exists");
 assert.match(menu, /Battle Pass|SEASON PASS/, "pass/event content remains on the right side of the home menu");
 assert.match(menu, /position:fixed!important;right:28px!important;bottom:28px!important/, "Play must be anchored to the lower-right corner");
 assert.match(game, /controls\.pointerSpeed=mouseSensitivity/, "mouse look must use the saved sensitivity");
