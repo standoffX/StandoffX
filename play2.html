@@ -22,6 +22,8 @@
 #overlay{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:linear-gradient(180deg,#070b10ee,#070b10f5);padding:24px;cursor:pointer}
 #overlay .panel{width:min(580px,92vw);padding:26px;border:1px solid #ffffff12;background:#0f151ed9;border-radius:12px;box-shadow:0 30px 100px #000a}
 #overlay h1{margin:0 0 8px;font-size:34px;letter-spacing:-1px}#overlay p{margin:8px 0;color:#8391a5;font-size:13px}
+.buy-backdrop{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:16px;background:#02060cbd;backdrop-filter:blur(4px);pointer-events:auto}
+.buy-backdrop .allies-buy-panel{width:min(640px,96vw);max-height:90dvh;overflow-y:auto;margin:0;overscroll-behavior:contain}
 .allies-buy-panel{display:none;gap:11px;margin:14px 0 4px;padding:13px;border:1px solid #667382;border-radius:4px;background:linear-gradient(160deg,#171d24f5,#090d12f5);text-align:left;box-shadow:inset 0 1px #ffffff0c}
 .allies-buy-head{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#d8dde2;font-size:11px;letter-spacing:.12em;font-weight:950}
 .allies-buy-head>div{display:grid;gap:4px}.allies-buy-head small{font-size:8px;letter-spacing:.09em;color:#8c9aa8;font-weight:800}
@@ -63,7 +65,29 @@
 #reconnectBtn.reconnect-primary:hover{filter:brightness(1.1)}
 #reconnectExitBtn{display:block;width:min(360px,100%);min-height:40px;margin:8px auto 0;padding:10px 18px;border:1px solid #a6b6cc42;border-radius:4px;background:#141c2a;color:#d4deed;font-size:11px;font-weight:900;letter-spacing:1px}
 #reconnectExitBtn:hover{background:#202b3b;color:#fff}
-#results{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;background:#05080def}.resultBox{padding:28px;width:min(420px,90vw);background:#111821;border:1px solid #ffffff14;border-radius:11px;text-align:center}.resultBox h2{margin:0 0 12px}.resultBox .reward{font-size:20px;font-weight:900}.resultBox button{margin-top:18px;width:100%;height:44px;border:0;border-radius:6px;background:#327cff;color:white;font-weight:900}
+#results{display:none;position:fixed;inset:0;z-index:70;align-items:center;justify-content:center;background:#05080def}.resultBox{padding:28px;width:min(420px,90vw);background:#111821;border:1px solid #ffffff14;border-radius:11px;text-align:center}.resultBox h2{margin:0 0 12px}.resultBox .reward{font-size:20px;font-weight:900}.resultBox button{margin-top:18px;width:100%;height:44px;border:0;border-radius:6px;background:#327cff;color:white;font-weight:900}
+#roundResult{display:none;position:fixed;inset:0;z-index:48;pointer-events:none;align-items:flex-start;justify-content:center;padding:clamp(14px,3vh,38px) 12px;background:linear-gradient(180deg,#05090de8 0%,#05090d9c 17%,#05090d25 47%,#05090d79 100%);animation:round-result-in .38s ease-out}
+.round-result-shell{width:min(850px,96vw);max-height:92vh;overflow:hidden;border:1px solid #c6d2dc4b;background:linear-gradient(145deg,#121b24ed,#0c1219e8);box-shadow:0 22px 75px #0007}
+.round-result-banner{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;padding:15px 18px;border-bottom:1px solid #ffffff1c;background:linear-gradient(100deg,#293944d9,#101820ee)}
+.round-result-kicker{font-size:9px;font-weight:950;letter-spacing:2px;color:#b8c6d0}
+.round-result-banner h2{margin:6px 0 4px;font-size:clamp(20px,4vw,31px);letter-spacing:1.4px;color:#f1f5f7}
+.round-result-sub{font-size:10px;color:#bbc6cf;letter-spacing:.7px}
+.round-result-score{display:flex;align-items:center;gap:10px;font-size:clamp(20px,4vw,32px);font-weight:950;color:#e3ebf1;font-variant-numeric:tabular-nums}
+.round-result-score span{font-size:9px;letter-spacing:1px;color:#b7c7d3}
+.round-result-mvp{display:flex;align-items:center;gap:10px;padding:10px 17px;border-bottom:1px solid #ffffff12;background:#d3b16e0e;color:#e6d3a9;font-size:10px;font-weight:900;letter-spacing:.7px}
+.round-result-mvp strong{color:#fff0cb;font-size:12px}
+.round-result-board{display:grid;grid-template-columns:1fr 1fr}
+.round-result-team{min-width:0}.round-result-team+.round-result-team{border-left:1px solid #ffffff17}
+.round-result-team-head{display:flex;justify-content:space-between;gap:8px;padding:10px 13px;border-bottom:1px solid #ffffff16;background:#080e14a8;font-size:10px;font-weight:950;letter-spacing:1px;color:#e1e8ee}
+.round-result-team-head span{font-size:9px;color:#aab9c5}
+.round-result-player{display:grid;grid-template-columns:minmax(0,1fr) 34px 34px 38px;gap:6px;align-items:center;padding:8px 13px;border-bottom:1px solid #ffffff0a;font-size:10px;color:#d9e1e7}
+.round-result-player:last-child{border-bottom:0}
+.round-result-player .rr-nick{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:800}
+.round-result-player .rr-bot{color:#94a5b3;font-size:8px;font-weight:800}
+.round-result-player .rr-stat{text-align:right;color:#c2cdd5;font-variant-numeric:tabular-nums}
+.round-result-player.is-mvp{background:#d2b46a13}.round-result-player.is-dead{opacity:.55}
+@keyframes round-result-in{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:580px){.buy-backdrop{padding:7px}.buy-backdrop .allies-buy-panel{max-height:94dvh}.round-result-banner{padding:10px;gap:7px}.round-result-mvp{padding:8px 10px}.round-result-team-head{padding:8px 7px;font-size:8px;letter-spacing:.4px}.round-result-player{grid-template-columns:minmax(0,1fr) 24px 24px 28px;gap:3px;padding:8px 6px;font-size:8px}.round-result-player .rr-bot{font-size:7px}.round-result-player .rr-stat{font-size:8px}}
 #mobile{display:none;position:fixed;inset:0;z-index:20;pointer-events:none}
 #leaveGameDesktop{position:fixed;right:14px;top:14px;z-index:25;pointer-events:auto;border:1px solid #ffffff28;background:#0b111bd9;color:#fff;border-radius:6px;padding:10px 13px;font-size:11px;font-weight:900;cursor:pointer}
 @media(max-width:800px),(pointer:coarse){#leaveGameDesktop{display:none}}.stick{position:absolute;left:20px;bottom:25px;width:125px;height:125px;border-radius:50%;background:#ffffff0d;border:1px solid #ffffff1c;pointer-events:auto;touch-action:none}.stick i{position:absolute;left:35px;top:35px;width:55px;height:55px;border-radius:50%;background:#ffffff22}.mbtn{position:absolute;width:64px;height:64px;border-radius:50%;border:1px solid #ffffff1d;background:#0b111bd9;color:#fff;font-size:10px;font-weight:950;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none}.mbtn.active{border-color:#d7f4ff;background:#d7f4ff35;box-shadow:0 0 18px #78cfff33}.fire{right:18px;bottom:54px;background:#3e6fb3e6}.jump{right:92px;bottom:128px}.reload{right:92px;bottom:54px}.crouch{right:18px;bottom:128px;background:#7258a8e8}.sprint{right:24px;bottom:202px;background:#237f78e8;width:58px;height:52px;border-radius:14px}.leave{right:20px;top:20px;width:48px;height:40px;border-radius:6px}
@@ -177,7 +201,21 @@ body.device-mobile .interactButton{top:39%;left:70%;width:76px;height:40px}
     <div id="phase">Синхронізація...</div>
     <div id="bigTimer">—</div>
     <p id="overlayText">Завантажуються карта, зброя та дані матчу. Це може зайняти кілька секунд.</p>
-    <div id="alliesBuyPanel" class="allies-buy-panel">
+    <div id="progressWrap"><div id="progress"></div></div>
+    <div id="loadingDetails" aria-live="polite">
+      <div class="loading-detail is-active"><span>КАРТА</span><b id="mapLoadStatus">ОЧІКУЄМО…</b></div>
+      <div class="loading-detail is-active"><span>ЗБРОЯ</span><b id="weaponLoadStatus">ОЧІКУЄМО…</b></div>
+      <div class="loading-detail is-active"><span>СЕРВЕР</span><b id="connectionLoadStatus">ПІДКЛЮЧЕННЯ…</b></div>
+    </div>
+    <div id="players" class="players"></div>
+    <div id="clickHint">Клікни для огляду мишкою. WASD — рух · Shift — біг · Ctrl — присісти · F — карта</div>
+    <button id="reconnectBtn" class="reconnect-primary" type="button" style="display:none">ПІДКЛЮЧИТИСЯ</button>
+    <button id="reconnectExitBtn" type="button" style="display:none">ВИЙТИ З МАТЧУ</button>
+  </div>
+</div>
+
+<div id="alliesBuyBackdrop" class="buy-backdrop" style="display:none">
+<div id="alliesBuyPanel" class="allies-buy-panel">
       <div class="allies-buy-head">
         <div><span>BUY MENU / ЗАКУПІВЛЯ</span><small>ВИБІР СПОРЯДЖЕННЯ · ТІЛЬКИ ПІД ЧАС ПІДГОТОВКИ</small></div>
         <span>ГРОШІ <strong id="alliesCash">$800</strong></span>
@@ -204,17 +242,6 @@ body.device-mobile .interactButton{top:39%;left:70%;width:76px;height:40px}
       </div>
       <p class="allies-buy-note">Підготовка триває <strong>10 секунд</strong>. Бомба не є товаром у магазині. На атакувальнику натисни <strong>5</strong>, дістань C4 та натисни <strong>E</strong> на сайті A або B.</p>
     </div>
-    <div id="progressWrap"><div id="progress"></div></div>
-    <div id="loadingDetails" aria-live="polite">
-      <div class="loading-detail is-active"><span>КАРТА</span><b id="mapLoadStatus">ОЧІКУЄМО…</b></div>
-      <div class="loading-detail is-active"><span>ЗБРОЯ</span><b id="weaponLoadStatus">ОЧІКУЄМО…</b></div>
-      <div class="loading-detail is-active"><span>СЕРВЕР</span><b id="connectionLoadStatus">ПІДКЛЮЧЕННЯ…</b></div>
-    </div>
-    <div id="players" class="players"></div>
-    <div id="clickHint">Клікни для огляду мишкою. WASD — рух · Shift — біг · Ctrl — присісти · F — карта</div>
-    <button id="reconnectBtn" class="reconnect-primary" type="button" style="display:none">ПІДКЛЮЧИТИСЯ</button>
-    <button id="reconnectExitBtn" type="button" style="display:none">ВИЙТИ З МАТЧУ</button>
-  </div>
 </div>
 
 <div class="hud">
@@ -225,13 +252,26 @@ body.device-mobile .interactButton{top:39%;left:70%;width:76px;height:40px}
   <div id="deathNotice" role="status" aria-live="polite">ТЕБЕ ЛІКВІДУВАЛИ</div>
   <div id="ammo" style="display:none"><div class="ammo-name" id="weaponName">AKR</div><div class="ammo-num" id="ammoNum">30</div><div class="ammo-sub" id="ammoSub">/ 30 · R — RELOAD</div><div class="ammo-sub" id="weaponDamage">5 м · ГОЛ 164 ТІЛ 35 ЖИВ 45 НОГ 27</div></div>
   <div id="damagePopup" role="status" aria-live="polite"></div>
-  <div id="hint">WASD — рух · Space — стрибок · Shift — біг · 1–3 — зброя · 5 — C4 · E — плент / деф’юз · LMB — вогонь</div>
+  <div id="hint">WASD — рух · B — магазин · 1–3 — зброя · 4 — C4 · G — кинути предмет · F — підібрати / карта · V — камера</div>
   <div id="squadStrip" class="squad-strip" aria-label="Учасники матчу"></div>
 </div>
 <div id="radarWrap" aria-label="Радар команди"><canvas id="radarCanvas" width="220" height="220"></canvas><span>TEAM RADAR</span></div>
 <div id="fullMapOverlay" aria-label="Повна карта" style="display:none"><div id="fullMapPanel"><div id="fullMapTitle">TACTICAL MAP <span>F — УТРИМУВАТИ</span></div><canvas id="fullMapCanvas" width="1000" height="760"></canvas><div id="fullMapLegend"><span class="legend-me">● ТИ</span><span class="legend-team">● СОЮЗНИКИ</span><span class="legend-wall">■ СТІНИ / УКРИТТЯ</span></div></div></div>
 
 <div id="results"><div class="resultBox"><h2 id="resultTitle">МАТЧ ЗАВЕРШЕНО</h2><div id="resultText" class="reward"></div><button id="menuResult">У МЕНЮ</button></div></div>
+<div id="roundResult" aria-live="polite">
+  <div class="round-result-shell">
+    <div class="round-result-banner">
+      <div><div class="round-result-kicker" id="roundResultKicker">ROUND RESULT</div><h2 id="roundResultTitle">РАУНД ВИГРАНО</h2><div class="round-result-sub" id="roundResultReason">Команда перемогла.</div></div>
+      <div class="round-result-score"><div><span id="roundResultATitle">T · АТАКА</span><div id="roundResultAScore">0</div></div><span>:</span><div><span id="roundResultBTitle">CT · ЗАХИСТ</span><div id="roundResultBScore">0</div></div></div>
+    </div>
+    <div class="round-result-mvp" id="roundResultMvp">★ MVP РАУНДУ</div>
+    <div class="round-result-board">
+      <div class="round-result-team"><div class="round-result-team-head"><b id="roundTeamATitle">T · АТАКА</b><span>K / D / SCORE</span></div><div id="roundTeamA"></div></div>
+      <div class="round-result-team"><div class="round-result-team-head"><b id="roundTeamBTitle">CT · ЗАХИСТ</b><span>K / D / SCORE</span></div><div id="roundTeamB"></div></div>
+    </div>
+  </div>
+</div>
 <button id="leaveGameDesktop" type="button">← МЕНЮ</button>
 <div id="trainingControls" class="prototype-bot-panel" style="display:none">
   <div class="prototype-panel-head">
@@ -850,21 +890,29 @@ function nearestSandstoneSite(maxDistance=5.5){
   return nearest;
 }
 function updateAlliesBuyPanel(){
-  const panel=$("alliesBuyPanel");
-  if(!panel)return;
-  const visible=mode==="allies"&&!isTrainingMode&&matchPhase==="round_start";
+  const panel=$("alliesBuyPanel"),backdrop=$("alliesBuyBackdrop");
+  if(!panel||!backdrop)return;
+  const visible=mode==="allies"&&!isTrainingMode&&matchPhase==="round_start"&&buyMenuOpen;
+  backdrop.style.display=visible?"flex":"none";
   panel.style.display=visible?"grid":"none";
   const cash=$("alliesCash");
   if(cash)cash.textContent="$"+Math.max(0,Number(alliesCash)||0).toLocaleString("en-US");
   for(const button of document.querySelectorAll("[data-allies-weapon]")){
-    const weapon=button.dataset.alliesWeapon;
-    const owned=alliesWeapons.includes(weapon);
-    const equipped=alliesEquippedWeapon===weapon;
+    const weapon=button.dataset.alliesWeapon,owned=alliesWeapons.includes(weapon),equipped=alliesEquippedWeapon===weapon;
     const status=button.querySelector("[data-status]");
     button.classList.toggle("is-equipped",equipped);
     if(status)status.textContent=owned?(equipped?"ОБРАНО":"ВИБРАТИ"):(weapon==="akr"?(alliesCash>=2700?"КУПИТИ":"НЕ ВИСТАЧАЄ"):"НЕДОСТУПНО");
     button.disabled=!owned&&!(weapon==="akr"&&alliesCash>=2700);
   }
+}
+function toggleBuyMenu(force){
+  if(mode!=="allies"||isTrainingMode)return;
+  if(matchPhase!=="round_start"){
+    if(force!==false)showDamagePopup("МАГАЗИН ДОСТУПНИЙ ЛИШЕ ПІД ЧАС ПІДГОТОВКИ");
+    buyMenuOpen=false;updateAlliesBuyPanel();return;
+  }
+  buyMenuOpen=typeof force==="boolean"?force:!buyMenuOpen;
+  updateAlliesBuyPanel();
 }
 let activeBuyCategory="all";
 document.querySelectorAll("[data-buy-tab]").forEach(tab=>tab.addEventListener("click",()=>{
@@ -914,8 +962,68 @@ function updateBombHud(){
   }
   refreshBombToolVisual();
 }
+function nearestDroppedItem(){
+  if(!player||matchPhase!=="game")return null;
+  let nearest=null,best=3.4;
+  if(mode==="allies"&&bombState?.state==="dropped"&&bombState.position){
+    const distance=Math.hypot(player.position.x-Number(bombState.position.x),player.position.z-Number(bombState.position.z));
+    if(distance<best){best=distance;nearest={id:"bomb",type:"bomb",weapon:null,distance,position:bombState.position};}
+  }
+  for(const item of droppedItems){
+    if(!item?.position)continue;
+    const distance=Math.hypot(player.position.x-Number(item.position.x),player.position.z-Number(item.position.z));
+    if(distance<best){best=distance;nearest={...item,distance};}
+  }
+  return nearest;
+}
+function tryPickupNearbyItem(){
+  const item=nearestDroppedItem();if(!item)return false;
+  if(item.type==="bomb"&&myTeam!==attackingTeam){showDamagePopup("ЛИШЕ АТАКА МОЖЕ ПІДІБРАТИ C4");return true}
+  socket.emit("pickup_item",{matchId,itemId:item.id});
+  showDamagePopup(item.type==="bomb"?"ПІДБИРАЄШ C4…":"ПІДБИРАЄШ "+String(item.weapon||"ЗБРОЮ").toUpperCase());
+  return true;
+}
+function renderDroppedItems(){
+  for(const group of droppedItemVisuals.values()){
+    scene.remove(group);
+    group.traverse(node=>{
+      if(node.geometry)node.geometry.dispose();
+      if(Array.isArray(node.material))node.material.forEach(material=>material.dispose());
+      else if(node.material)node.material.dispose();
+    });
+  }
+  droppedItemVisuals.clear();
+  for(const item of droppedItems){
+    if(!item?.position||item.type!=="weapon")continue;
+    const group=new THREE.Group();
+    const metal=new THREE.MeshStandardMaterial({color:0x30383d,roughness:.72,metalness:.24});
+    const dark=new THREE.MeshStandardMaterial({color:0x171d21,roughness:.9,metalness:.05});
+    const wood=new THREE.MeshStandardMaterial({color:0x56493b,roughness:.98,metalness:0});
+    const body=new THREE.Mesh(new THREE.BoxGeometry(.48,.095,.105),metal);body.position.y=.17;group.add(body);
+    const barrel=new THREE.Mesh(new THREE.BoxGeometry(.36,.045,.055),dark);barrel.position.set(.38,.19,0);group.add(barrel);
+    const stock=new THREE.Mesh(new THREE.BoxGeometry(.19,.11,.12),wood);stock.position.set(-.29,.15,0);group.add(stock);
+    const grip=new THREE.Mesh(new THREE.BoxGeometry(.085,.17,.075),dark);grip.position.set(.025,.08,0);grip.rotation.z=-.22;group.add(grip);
+    group.position.set(Number(item.position.x)||0,.02,Number(item.position.z)||0);
+    group.rotation.y=Number(item.position.rotY)||.35;
+    scene.add(group);droppedItemVisuals.set(item.id,group);
+  }
+}
+function dropCurrentItem(){
+  if(!player||matchPhase!=="game"||hp<=0||isTrainingMode)return;
+  if(bombToolActive){
+    socket.emit("drop_item",{matchId,itemType:"bomb"});
+    bombToolActive=false;refreshBombToolVisual();updateBombHud();return;
+  }
+  if(selectedWeapon==="knife"){showDamagePopup("НІЖ НЕ МОЖНА ВИКИНУТИ");return}
+  socket.emit("drop_item",{matchId,itemType:"weapon",weapon:selectedWeapon});
+}
 function updateInteractButtonLabel(){
   const button=$("interactBtn");if(!button)return;
+  const pickup=nearestDroppedItem();
+  if(pickup){
+    button.textContent=pickup.type==="bomb"?"F · ПІДІБРАТИ C4":"F · ПІДІБРАТИ "+String(pickup.weapon||"ЗБРОЮ").toUpperCase();
+    updateBombHud();return;
+  }
   if(mode==="allies"&&!isTrainingMode){
     const site=nearestSandstoneSite(5.7);
     const state=bombState?.state||"carried";
@@ -1295,6 +1403,10 @@ let bombState=null;
 let bombWorldVisual=null;
 let bombToolRoot=null;
 let bombToolActive=false;
+let droppedItems=[];
+let droppedItemVisuals=new Map();
+let buyMenuOpen=false;
+let roundCinematic=null;
 let alliesCash=800;
 let alliesWeapons=["p350","knife"];
 let alliesEquippedWeapon="p350";
@@ -1643,8 +1755,9 @@ function renderBombWorldVisual(){
     });
     bombWorldVisual=null;
   }
-  if(mode!=="allies"||selectedMap!=="SANDSTONE"||!bombState||!["planting","planted"].includes(bombState.state)||!bombState.site)return;
-  const center=bombState.site==="A"?{x:37.5,z:-33.75}:{x:22.5,z:37.5};
+  if(mode!=="allies"||selectedMap!=="SANDSTONE"||!bombState||!["planting","planted","dropped"].includes(bombState.state))return;
+  if(bombState.state==="dropped"&&!bombState.position)return;
+  const center=bombState.state==="dropped"?bombState.position:(bombState.site==="A"?{x:37.5,z:-33.75}:{x:22.5,z:37.5});
   const group=new THREE.Group();
   const caseMat=new THREE.MeshStandardMaterial({color:0x292f33,roughness:.88,metalness:.16});
   const darkMat=new THREE.MeshStandardMaterial({color:0x111619,roughness:.9,metalness:.05});
@@ -2181,7 +2294,7 @@ function setFullMapOpen(open){
   if(isFullMapOpen)drawTacticalMaps();
 }
 $("mapBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();setFullMapOpen(!isFullMapOpen)});
-document.addEventListener("keydown",e=>{if(e.code==="KeyF"&&!e.repeat){e.preventDefault();setFullMapOpen(true)}});
+document.addEventListener("keydown",e=>{if(e.code==="KeyF"&&!e.repeat){if(nearestDroppedItem())return;e.preventDefault();setFullMapOpen(true)}});
 document.addEventListener("keyup",e=>{if(e.code==="KeyF")setFullMapOpen(false)});
 document.addEventListener("visibilitychange",()=>{if(document.hidden)setFullMapOpen(false)});
 function sendMove(force=false){
@@ -2412,11 +2525,17 @@ function queueJump(){if(matchPhase==="game")jumpQueued=true}
 
 addEventListener("keydown",e=>{
   if(e.repeat)return;
-  if(e.code==="Escape"){e.preventDefault();pauseToMenu();return}
+  if(e.code==="Escape"){
+    if(buyMenuOpen){e.preventDefault();toggleBuyMenu(false);return}
+    e.preventDefault();pauseToMenu();return
+  }
+  if(e.code==="KeyB"){e.preventDefault();toggleBuyMenu();return}
   if(e.code==="Digit1"){e.preventDefault();holsterBombTool();selectWeapon("akr");return}
   if(e.code==="Digit2"){e.preventDefault();holsterBombTool();selectWeapon("p350");return}
   if(e.code==="Digit3"){e.preventDefault();holsterBombTool();selectWeapon("knife");return}
-  if(e.code==="Digit5"){e.preventDefault();toggleBombTool();return}
+  if(e.code==="Digit4"||e.code==="Digit5"){e.preventDefault();toggleBombTool();return}
+  if(e.code==="KeyG"){e.preventDefault();dropCurrentItem();return}
+  if(e.code==="KeyF"&&nearestDroppedItem()){e.preventDefault();tryPickupNearbyItem();return}
   if(e.code==="KeyE"){e.preventDefault();interactWithNearestDoor();return}
   const binds=readTrainingBinds();
   if(e.code===binds.menu){e.preventDefault();pauseToMenu();return}
@@ -2431,7 +2550,7 @@ addEventListener("keydown",e=>{
   if(e.code==="KeyD"||e.code==="ArrowRight")keys.d=true;
   if(e.code==="ShiftLeft"||e.code==="ShiftRight")keys.shift=true;
   if(e.code==="Space"){e.preventDefault();queueJump()}
-  if(e.code==="KeyG"){isThird=!isThird;updateVisual()}
+  if(e.code==="KeyV"){isThird=!isThird;updateVisual()}
   if(e.code==="KeyR")startReload();
   if(e.code==="Mouse0")shoot();
 });
@@ -2461,7 +2580,7 @@ document.querySelectorAll("[data-allies-weapon]").forEach(button=>button.addEven
   if(alliesWeapons.includes(weapon))socket.emit("allies_select_weapon",{matchId,weapon});
   else socket.emit("allies_buy",{matchId,weapon});
 }));
-$("interactBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();interactWithNearestDoor()});
+$("interactBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();if(tryPickupNearbyItem())return;interactWithNearestDoor()});
 let weaponSwipeStart=null;
 let weaponSwipeConsumed=false;
 document.addEventListener("touchstart",e=>{
@@ -2612,6 +2731,8 @@ socket.on("training_state",data=>{
 
 socket.on("init_match",data=>{
   matchJoined=true;
+  droppedItems=Array.isArray(data.droppedItems)?data.droppedItems:[];
+  renderDroppedItems();
   $("trainingControls").style.display="none";
   applyMapInteractionState(data.mapState);
   try{
@@ -2645,7 +2766,7 @@ socket.on("match_phase",data=>{
   if(data.roundWins)roundWins={...roundWins,...data.roundWins};
   if(data.attackingTeam)attackingTeam=data.attackingTeam;
   if(data.defendingTeam)defendingTeam=data.defendingTeam;
-  $("overlay").style.display="flex";
+  $("overlay").style.display=(mode==="allies"&&(data.phase==="round_start"||data.phase==="round_end"))?"none":"flex";
   if(data.phase==="warmup"){
     $("overlayTitle").textContent="РОЗМИНКА";
     $("phase").textContent="РОЗМИНКА";
@@ -2700,6 +2821,7 @@ socket.on("match_start_now",()=>{
 });
 socket.on("allies_round_start",data=>{
   if(mode!=="allies")return;
+  buyMenuOpen=false;roundCinematic=null;$("roundResult").style.display="none";
   matchPhase="round_start";canControl=false;
   roundNumber=Number(data.roundNumber)||roundNumber;
   roundWins={...roundWins,...(data.roundWins||{})};
@@ -2723,7 +2845,8 @@ socket.on("allies_round_start",data=>{
   }
   updateSquadRoster(data.players||[]);
   renderBombWorldVisual();updateBombHud();updateVisual();
-  $("overlay").style.display="flex";
+  if(!isThird){camera.position.set(player.position.x,player.position.y+1.58,player.position.z);camera.rotation.set(0,player.rotationY||0,0,"YXZ")}
+  $("overlay").style.display="none";
   $("overlayTitle").textContent="РАУНД "+roundNumber;
   try{if(!isMobileDevice)controls.unlock()}catch{}
   $("phase").textContent="ЗАКУПІВЛЯ / ПІДГОТОВКА";
@@ -2735,6 +2858,7 @@ socket.on("allies_round_start",data=>{
 });
 socket.on("allies_round_live",data=>{
   if(mode!=="allies")return;
+  buyMenuOpen=false;updateAlliesBuyPanel();$("roundResult").style.display="none";roundCinematic=null;
   matchPhase="game";canControl=true;
   if(data.roundNumber)roundNumber=Number(data.roundNumber)||roundNumber;
   if(data.roundWins)roundWins={...roundWins,...data.roundWins};
@@ -2757,6 +2881,25 @@ socket.on("allies_loadout",data=>{
   updateWeaponHud();updateAlliesBuyPanel();
 });
 socket.on("allies_buy_result",data=>{if(data?.message)showDamagePopup(data.message)});
+socket.on("dropped_items_state",items=>{
+  droppedItems=Array.isArray(items)?items:[];
+  renderDroppedItems();updateInteractButtonLabel();
+});
+socket.on("drop_item_result",data=>{
+  if(!data)return;
+  if(data.message)showDamagePopup(data.message);
+  if(data.success&&data.itemType==="bomb"){bombToolActive=false;refreshBombToolVisual()}
+});
+socket.on("weapon_dropped",data=>{
+  if(String(data?.userId)===String(myId)&&mode!=="allies")selectWeapon(selectedWeapon==="akr"?"p350":"knife",true);
+  if(data?.weapon)showDamagePopup(String(data.weapon).toUpperCase()+" · ВИКИНУТО");
+});
+socket.on("item_picked_up",data=>{
+  if(String(data?.userId)===String(myId)){
+    if(data.type==="bomb"){bombToolActive=false;updateBombHud();showDamagePopup("C4 ПІДІБРАНО · НАТИСНИ 4")}
+    else if(data.weapon)showDamagePopup(String(data.weapon).toUpperCase()+" ПІДІБРАНО");
+  }
+});
 socket.on("bomb_state",data=>{
   const previous=bombState?.state;
   bombState=data||{state:"carried"};
@@ -2770,20 +2913,18 @@ socket.on("bomb_planted",data=>{
   renderBombWorldVisual();updateBombHud();
 });
 socket.on("allies_round_end",data=>{
-  matchPhase="round_end";canControl=false;
+  matchPhase="round_end";canControl=false;buyMenuOpen=false;roundCinematic=null;
   roundNumber=Number(data.roundNumber)||roundNumber;
   roundWins={...roundWins,...(data.roundWins||{})};
   bombState=data.bomb||bombState;
   keys.w=keys.a=keys.s=keys.d=keys.shift=false;fireHeld=false;
-  renderBombWorldVisual();updateBombHud();
-  $("overlay").style.display="flex";
+  renderBombWorldVisual();updateBombHud();updateAlliesBuyPanel();
+  $("overlay").style.display="none";
   try{if(!isMobileDevice)controls.unlock()}catch{}
-  updateAlliesBuyPanel();
-  $("overlayTitle").textContent=data.winningTeam===myTeam?"РАУНД ВИГРАНО":"РАУНД ПРОГРАНО";
-  $("phase").textContent="РАУНД "+roundNumber+" · "+roundWins.A+" : "+roundWins.B;
-  $("bigTimer").textContent=(Number(data.nextRoundIn)||5)+"с";
-  $("overlayText").textContent=data.reason==="bomb_exploded"?"Бомба вибухнула — атака виграла.":data.reason==="bomb_defused"?"Бомбу знешкоджено — захист виграв.":data.reason==="time"?"Час вийшов — раунд захисту.":"Команду ліквідовано.";
+  renderRoundResult(data);
+  startRoundCinematic(data);
 });
+
 socket.on("enemy_moved",applyEnemy);
 socket.on("player_position_correction",data=>{
   if(!player||!data||![data.x,data.y,data.z].every(value=>Number.isFinite(Number(value))))return;
@@ -3039,6 +3180,53 @@ window.addEventListener("blur",clearHeldInputs);
 document.addEventListener("visibilitychange",()=>{if(document.hidden)clearHeldInputs()});
 
 let previous=performance.now();
+function startRoundCinematic(data){
+  const winner=(data.players||[]).find(p=>String(p.team)===String(data.winningTeam)&&Number(p.hp)>0)||null;
+  const focus=new THREE.Vector3(Number(winner?.x)||0,1.1,Number(winner?.z)||0);
+  const from=camera.position.clone();
+  roundCinematic={startedAt:performance.now(),duration:4200,focus,points:[from,new THREE.Vector3(-48,17,-38),new THREE.Vector3(-6,24,3),new THREE.Vector3(38,18,-34),new THREE.Vector3(22,20,34),new THREE.Vector3(focus.x+7,focus.y+8,focus.z+8)]};
+}
+function updateRoundCinematic(now){
+  if(!roundCinematic)return;
+  const animation=roundCinematic,t=Math.max(0,Math.min(1,(now-animation.startedAt)/animation.duration));
+  const scaled=t*(animation.points.length-1),index=Math.min(animation.points.length-2,Math.floor(scaled));
+  const local=scaled-index,smooth=local*local*(3-2*local);
+  camera.position.lerpVectors(animation.points[index],animation.points[index+1],smooth);
+  camera.lookAt(animation.focus);
+  if(t>=1)roundCinematic=null;
+}
+function renderRoundResult(data){
+  const attack=data.attackingTeam||attackingTeam,defense=data.defendingTeam||defendingTeam;
+  $("roundResultKicker").textContent="РАУНД "+roundNumber+" · ПІДСУМОК";
+  $("roundResultTitle").textContent=data.winningTeam===myTeam?"РАУНД ВИГРАНО":"РАУНД ПРОГРАНО";
+  $("roundResultReason").textContent=data.reason==="bomb_exploded"?"C4 ВИБУХНУЛА · ПЕРЕМОГА АТАКИ":data.reason==="bomb_defused"?"C4 ЗНЕШКОДЖЕНО · ПЕРЕМОГА ЗАХИСТУ":data.reason==="time"?"ЧАС ВИЙШОВ · ПЕРЕМОГА ЗАХИСТУ":"УСІ ГРАВЦІ КОМАНДИ СУПЕРНИКА ЛІКВІДОВАНІ";
+  $("roundResultATitle").textContent="T · АТАКА";$("roundResultBTitle").textContent="CT · ЗАХИСТ";
+  $("roundTeamATitle").textContent="T · КОМАНДА "+attack;$("roundTeamBTitle").textContent="CT · КОМАНДА "+defense;
+  $("roundResultAScore").textContent=String(Number((data.roundWins||roundWins)[attack])||0);
+  $("roundResultBScore").textContent=String(Number((data.roundWins||roundWins)[defense])||0);
+  const mvp=data.mvp;$("roundResultMvp").replaceChildren();
+  const star=document.createElement("span");star.textContent="★";star.style.fontSize="18px";
+  const label=document.createElement("span");label.textContent="MVP РАУНДУ · ";
+  const name=document.createElement("strong");name.textContent=mvp?(mvp.nickname||"ГРАВЕЦЬ"):"—";
+  const kills=document.createElement("span");kills.textContent=mvp?" · "+mvp.kills+" KILLS":"";
+  $("roundResultMvp").append(star,label,name,kills);
+  const renderTeam=(team,root)=>{
+    root.replaceChildren();
+    const players=(data.players||[]).filter(p=>String(p.team)===String(team)).sort((a,b)=>(b.kills||0)-(a.kills||0)||(b.score||0)-(a.score||0));
+    for(const p of players){
+      const row=document.createElement("div");row.className="round-result-player"+(p.hp<=0?" is-dead":"")+(mvp&&String(p.userId)===String(mvp.userId)?" is-mvp":"");
+      const nick=document.createElement("span");nick.className="rr-nick";nick.textContent=p.nickname||"PLAYER";
+      if(p.isBot){const bot=document.createElement("small");bot.className="rr-bot";bot.textContent=" BOT";nick.appendChild(bot)}
+      const killsEl=document.createElement("span");killsEl.className="rr-stat";killsEl.textContent=String(Number(p.kills)||0);
+      const deathsEl=document.createElement("span");deathsEl.className="rr-stat";deathsEl.textContent=String(Number(p.deaths)||0);
+      const scoreEl=document.createElement("span");scoreEl.className="rr-stat";scoreEl.textContent=String(Number(p.score)||0);
+      row.append(nick,killsEl,deathsEl,scoreEl);root.appendChild(row);
+    }
+    if(!players.length){const empty=document.createElement("div");empty.className="round-result-player";empty.textContent="—";root.appendChild(empty)}
+  };
+  renderTeam(attack,$("roundTeamA"));renderTeam(defense,$("roundTeamB"));
+  $("roundResult").style.display="flex";
+}
 function animate(){
   requestAnimationFrame(animate);
   const now=performance.now(),dt=Math.min(.05,(now-previous)/1000);previous=now;
@@ -3079,6 +3267,7 @@ function animate(){
     heldWeaponRoot.rotation.y=Math.sin(now*.0019)*.008;
     weaponKick=Math.max(0,weaponKick-dt*.58);
   }
+  if(roundCinematic&&matchPhase==="round_end")updateRoundCinematic(now);
   drawTacticalMaps();
   renderer.render(scene,camera);
 }
