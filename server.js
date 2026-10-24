@@ -1778,7 +1778,7 @@ function inviteFriendToLobby(io, socket, targetId) {
 }
 function createLobbyMatch(io, socket, data = {}) {
   if (activeMatches.size >= MAX_CONCURRENT_MATCHES) {
-    return emitLobbyError(socket, "Сервер уже веде 100 матчів. Лобі залишилося відкритим — спробуй трохи пізніше.", "lobby_start_error");
+    return emitLobbyError(socket, "Досягнуто ліміту одночасних матчів (" + MAX_CONCURRENT_MATCHES + "). Лобі залишилося відкритим — спробуй трохи пізніше.", "lobby_start_error");
   }
   const current = lobbyMemberFromSocket(socket);
   if (!current) return emitLobbyError(socket, "Спочатку створи або приєднайся до лобі.", "lobby_start_error");
@@ -3355,7 +3355,7 @@ io.on("connection", socket => {
 
   socket.on("start_prototype_match", data => {
     if (activeMatches.size >= MAX_CONCURRENT_MATCHES) {
-      socket.emit("search_error", { message: "Сервер уже веде 100 матчів. Спробуй пізніше." });
+      socket.emit("search_error", { message: "Досягнуто ліміту одночасних матчів (" + MAX_CONCURRENT_MATCHES + "). Спробуй пізніше." });
       return;
     }
     const user = socket.user;
