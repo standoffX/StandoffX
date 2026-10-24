@@ -2529,7 +2529,7 @@ addEventListener("keydown",e=>{
     if(buyMenuOpen){e.preventDefault();toggleBuyMenu(false);return}
     e.preventDefault();pauseToMenu();return
   }
-  if(e.code==="KeyB"){e.preventDefault();toggleBuyMenu();return}
+  if(e.code==="KeyB"&&mode==="allies"&&!isTrainingMode){e.preventDefault();toggleBuyMenu();return}
   if(e.code==="Digit1"){e.preventDefault();holsterBombTool();selectWeapon("akr");return}
   if(e.code==="Digit2"){e.preventDefault();holsterBombTool();selectWeapon("p350");return}
   if(e.code==="Digit3"){e.preventDefault();holsterBombTool();selectWeapon("knife");return}
