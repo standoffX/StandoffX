@@ -762,8 +762,9 @@ app.get("/game", (req, res) => {
 });
 
 app.get("/api/health", (_req, res) => {
+  const storageHealthy = Boolean(mongoDb && mongoStatus.connected) || (JSON_FALLBACK_ENABLED && !mongoStatus.configured);
   res.json({
-    success: true,
+    success: storageHealthy,
     game: "StandoffX",
     version: "0.4.0",
     uptimeSeconds: Math.round(process.uptime()),
