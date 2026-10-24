@@ -1460,7 +1460,7 @@ function spawnRemoteTracer(data){
   if(direction.length()<.01)return;
   direction.normalize();
   scene.updateMatrixWorld(true);
-  raycaster.set(start,direction);raycaster.far=60;
+  raycaster.set(start,direction);raycaster.far=CLIENT_WEAPON_INFO[data.weapon]?.range||60;
   const hits=raycaster.intersectObjects(mapObjects.filter(o=>o?.visible),false);
   const maxRange=CLIENT_WEAPON_INFO[data.weapon]?.range||60;
   const hit=hits.find(h=>h.distance<maxRange);
@@ -1607,6 +1607,52 @@ function makeFallbackKnife(){
   fuller.position.set(.004,.021,-.12);fuller.rotation.x=-Math.PI/2;heldWeaponRoot.add(fuller);
   heldWeaponRoot.userData.realModel=false;
 }
+
+function makeFallbackCustomWeapon(weaponId){
+  if(!heldWeaponRoot)return;
+  clearHeldWeapon();
+  const dark=new THREE.MeshStandardMaterial({color:0x151c22,roughness:.56,metalness:.63});
+  const steel=new THREE.MeshStandardMaterial({color:0x3b4852,roughness:.36,metalness:.78});
+  const polymer=new THREE.MeshStandardMaterial({color:0x202a30,roughness:.82,metalness:.12});
+  const tan=new THREE.MeshStandardMaterial({color:0x75624a,roughness:.78,metalness:.08});
+  const box=(w,h,d,x,y,z,mat=steel,rx=0)=>{
+    const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);
+    mesh.position.set(x,y,z);mesh.rotation.x=rx;mesh.castShadow=false;mesh.receiveShadow=false;heldWeaponRoot.add(mesh);return mesh;
+  };
+  const tube=(radius,length,x,y,z,mat=dark)=>{
+    const mesh=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,length,8),mat);
+    mesh.rotation.x=Math.PI/2;mesh.position.set(x,y,z);mesh.castShadow=false;heldWeaponRoot.add(mesh);return mesh;
+  };
+  if(weaponId==="m4a1"){
+    box(.10,.12,.30,0,0,.015,steel);box(.085,.09,.22,0,.015,.245,tan);
+    box(.065,.08,.16,0,-.06,.13,polymer,-.18);box(.055,.15,.12,0,-.13,.035,dark,-.18);
+    box(.055,.035,.18,0,.067,-.13,polymer);box(.032,.03,.18,0,.02,-.24,dark);
+    tube(.014,.34,0,.025,-.42,steel);box(.075,.035,.075,0,.085,-.18,dark);
+  }else if(weaponId==="p90"){
+    box(.13,.13,.29,0,.005,.03,polymer);box(.10,.08,.26,0,.055,-.02,steel);
+    box(.09,.035,.25,0,.09,-.01,dark);box(.075,.18,.10,0,-.105,.09,polymer,-.15);
+    box(.09,.07,.15,0,-.035,.24,polymer);tube(.012,.18,0,.015,-.28,steel);
+    box(.025,.035,.09,0,.12,-.04,steel);
+  }else if(weaponId==="shotgun"){
+    box(.095,.10,.30,0,0,.08,steel);box(.085,.085,.23,0,.015,.29,tan);
+    box(.065,.09,.18,0,-.065,.13,tan,-.12);box(.065,.14,.11,0,-.12,.02,dark,-.17);
+    tube(.018,.47,0,.025,-.30,steel);tube(.025,.24,0,-.045,-.20,dark);
+    box(.065,.028,.12,0,.068,-.12,dark);
+  }else if(weaponId==="sniper"){
+    box(.09,.10,.37,0,0,.08,tan);box(.085,.08,.25,0,.015,.32,polymer);
+    box(.06,.07,.18,0,-.07,.13,dark,-.16);box(.055,.14,.12,0,-.12,.035,polymer,-.18);
+    tube(.012,.70,0,.03,-.43,steel);box(.15,.035,.065,0,.09,-.09,dark);
+    tube(.035,.18,0,.12,-.12,dark);tube(.025,.10,0,.12,-.12,steel);
+  }
+  heldWeaponRoot.userData.realModel=false;
+}
+function makeFallbackWeaponById(weaponId){
+  if(weaponId==="akr")return makeFallbackAK();
+  if(weaponId==="p350")return makeFallbackP350();
+  if(weaponId==="knife")return makeFallbackKnife();
+  return makeFallbackCustomWeapon(weaponId);
+}
+
 function addWeaponHands(){
   if(!heldWeaponRoot)return;
   const sleeveMat=new THREE.MeshStandardMaterial({color:0x283744,roughness:.95,metalness:.02});
@@ -1671,7 +1717,7 @@ async function loadHeldWeapon(){
     heldWeaponRoot.position.set(.29,-.29,heldWeaponBaseZ);
     camera.add(heldWeaponRoot);
   }
-  if(selectedWeapon==="knife")makeFallbackKnife();else if(selectedWeapon==="p350")makeFallbackP350();else makeFallbackAK();
+  makeFallbackWeaponById(selectedWeapon);
   addWeaponHands();
   positionHeldWeapon();
   setLoadingDetail("weaponLoadStatus","ЗАВАНТАЖЕННЯ МОДЕЛЕЙ ЗБРОЇ…","active");
@@ -1719,6 +1765,8 @@ let hitConfirmTimer=null;
 let selectedWeapon="knife";
 const weaponAmmo={akr:30,p350:13,knife:Infinity};
 const weaponReserve={akr:90,p350:52,knife:0};
+Object.assign(weaponAmmo,{m4a1:30,p90:50,shotgun:8,sniper:5});
+Object.assign(weaponReserve,{m4a1:90,p90:150,shotgun:32,sniper:15});
 let ammo=Infinity;
 let reloading=false;
 let reloadTimer=null;
@@ -1730,7 +1778,11 @@ let damagePopupTimer=null;
 const CLIENT_WEAPON_INFO={
   akr:{label:"AKR",short:"АКР",kind:"rifle",magazine:30,reloadMs:1800,fireDelay:115,range:60,ads:true,damage:{head:164,body:35,stomach:45,legs:27}},
   p350:{label:"P350",short:"P350",kind:"pistol",magazine:13,reloadMs:1350,fireDelay:260,range:29,ads:false,damage:{head:151,body:38,stomach:49,legs:30}},
-  knife:{label:"НІЖ",short:"НІЖ",kind:"melee",magazine:Infinity,reloadMs:0,fireDelay:420,range:2.8,ads:false,damage:{head:180,body:110,stomach:110,legs:110}}
+  knife:{label:"НІЖ",short:"НІЖ",kind:"melee",magazine:Infinity,reloadMs:0,fireDelay:420,range:2.8,ads:false,damage:{head:180,body:110,stomach:110,legs:110}},
+  m4a1:{label:"M4A1",short:"M4A1",kind:"rifle",magazine:30,reloadMs:1750,fireDelay:96,range:58,ads:true,damage:{head:155,body:32,stomach:39,legs:24}},
+  p90:{label:"P90",short:"P90",kind:"smg",magazine:50,reloadMs:2050,fireDelay:72,range:36,ads:false,damage:{head:132,body:22,stomach:28,legs:18}},
+  shotgun:{label:"SHOTGUN",short:"SHOTGUN",kind:"shotgun",magazine:8,reloadMs:1900,fireDelay:780,range:18,ads:false,damage:{head:145,body:76,stomach:94,legs:58}},
+  sniper:{label:"SNIPER",short:"SNIPER",kind:"sniper",magazine:5,reloadMs:2250,fireDelay:1050,range:100,ads:true,damage:{head:250,body:115,stomach:145,legs:85}}
 };
 let jumpQueued=false;
 let fireHeld=false;
@@ -2473,11 +2525,11 @@ function setSoldierDown(model,down){
   model.scale.set(1,down?0.55:1,1);
   if(down)setSoldierTint(model,0x59616b);
 }
-function animateSoldier(model,dt,now,moving=false,inAir=false,crouching=false){
+function animateSoldier(model,dt,now,moving=false,inAir=false,crouching=false,sprinting=false){
   const r=model?.userData?.rig;if(!r||model.userData.dead)return;
   model.scale.y=crouching?.72:1;
-  const phase=now*.010+r.offset;
-  const stride=moving?.62:0;
+  const phase=now*(sprinting?.014:.010)+r.offset;
+  const stride=moving?(sprinting?.92:.62):0;
   const left=Math.sin(phase)*stride;
   const right=Math.sin(phase+Math.PI)*stride;
   const kneeLeft=Math.max(0,Math.sin(phase+Math.PI))*stride*.9;
@@ -2489,9 +2541,11 @@ function animateSoldier(model,dt,now,moving=false,inAir=false,crouching=false){
   damp(r.rightKnee,"x",kneeRight);
   damp(r.leftArm,"x",-.36-right*.42+(inAir?-.12:0));
   damp(r.rightArm,"x",-.48+left*.28+(inAir?-.1:0));
-  damp(r.torso,"z",crouching?.1:(moving?Math.sin(phase*.5)*.025:Math.sin(now*.0015+r.offset)*.008));
+  damp(r.torso,"z",crouching?.1:(moving?Math.sin(phase*.5)*(sprinting?.052:.025):Math.sin(now*.0015+r.offset)*.008));
   if(r.head)damp(r.head,"y",Math.sin(now*.0012+r.offset)*.025,5);
-  damp(r.rifle,"x",-.12+(moving?Math.sin(phase*2)*.025:0)+(inAir?-.03:0));
+  const firing=model.userData.fireAnimUntil>now;
+  damp(r.rifle,"x",-.12+(moving?Math.sin(phase*2)*(sprinting?.06:.025):0)+(inAir?-.03:0)+(firing?.16:0));
+  if(firing){damp(r.rightArm,"x",-.72,24);damp(r.leftArm,"x",-.54,20)}
 }
 
 function colorFor(role,team){
@@ -2765,24 +2819,35 @@ function positionHeldWeapon(){
     heldWeaponBaseX=aimingDownSights?.045:.29;
     heldWeaponBaseY=aimingDownSights?-.245:-.29;
     heldWeaponBaseZ=aimingDownSights?-.56:-.42;
-    heldWeaponRoot.scale.setScalar(aimingDownSights?.84:1);
+    heldWeaponRoot.scale.setScalar(aimingDownSights?(selectedWeapon==="sniper"?.62:.84):1);
+  }else if(selectedWeapon==="m4a1"||selectedWeapon==="sniper"){
+    heldWeaponBaseX=aimingDownSights?.045:.29;
+    heldWeaponBaseY=aimingDownSights?-.245:-.29;
+    heldWeaponBaseZ=aimingDownSights?-.56:-.42;
+    heldWeaponRoot.scale.setScalar(aimingDownSights?(selectedWeapon==="sniper"?.62:.84):1);
   }else if(selectedWeapon==="p350"){
     heldWeaponBaseX=.29;heldWeaponBaseY=-.30;heldWeaponBaseZ=-.36;
     heldWeaponRoot.scale.setScalar(1);
+  }else if(selectedWeapon==="p90"){
+    heldWeaponBaseX=.27;heldWeaponBaseY=-.30;heldWeaponBaseZ=-.37;
+    heldWeaponRoot.scale.setScalar(1.04);
+  }else if(selectedWeapon==="shotgun"){
+    heldWeaponBaseX=.27;heldWeaponBaseY=-.30;heldWeaponBaseZ=-.40;
+    heldWeaponRoot.scale.setScalar(1.06);
   }else{
     heldWeaponBaseX=.245;heldWeaponBaseY=-.285;heldWeaponBaseZ=-.31;
     heldWeaponRoot.scale.setScalar(1.02);
   }
 }
 function setAimingDownSights(value){
-  aimingDownSights=Boolean(value)&&selectedWeapon==="akr";
-  camera.fov=aimingDownSights?48:74;
+  aimingDownSights=Boolean(value)&&Boolean(CLIENT_WEAPON_INFO[selectedWeapon]?.ads);
+  camera.fov=aimingDownSights?(selectedWeapon==="sniper"?34:48):74;
   camera.updateProjectionMatrix();
   positionHeldWeapon();
   updateWeaponHud();
 }
 function toggleAimingDownSights(){
-  if(selectedWeapon!=="akr"||matchPhase!=="game"||hp<=0)return;
+  if(!CLIENT_WEAPON_INFO[selectedWeapon]?.ads||matchPhase!=="game"||hp<=0)return;
   setAimingDownSights(!aimingDownSights);
 }
 function clearReloadMagazineVisual(){
@@ -2838,32 +2903,6 @@ function startWeaponInspect(){
   if(label){label.textContent="ОГЛЯД · "+(CLIENT_WEAPON_INFO[selectedWeapon]?.label||selectedWeapon).toUpperCase();label.style.display="block"}
   updateWeaponHud();
 }
-function positionHeldWeapon(){
-  if(!heldWeaponRoot)return;
-  if(selectedWeapon==="akr"){
-    heldWeaponBaseX=aimingDownSights?.045:.29;
-    heldWeaponBaseY=aimingDownSights?-.245:-.29;
-    heldWeaponBaseZ=aimingDownSights?-.56:-.42;
-    heldWeaponRoot.scale.setScalar(aimingDownSights?.84:1);
-  }else if(selectedWeapon==="p350"){
-    heldWeaponBaseX=.29;heldWeaponBaseY=-.30;heldWeaponBaseZ=-.36;
-    heldWeaponRoot.scale.setScalar(1);
-  }else{
-    heldWeaponBaseX=.245;heldWeaponBaseY=-.285;heldWeaponBaseZ=-.31;
-    heldWeaponRoot.scale.setScalar(1.02);
-  }
-}
-function setAimingDownSights(value){
-  aimingDownSights=Boolean(value)&&selectedWeapon==="akr";
-  camera.fov=aimingDownSights?48:74;
-  camera.updateProjectionMatrix();
-  positionHeldWeapon();
-  updateWeaponHud();
-}
-function toggleAimingDownSights(){
-  if(selectedWeapon!=="akr"||matchPhase!=="game"||hp<=0)return;
-  setAimingDownSights(!aimingDownSights);
-}
 function selectWeapon(weaponId,force=false){
   if(!CLIENT_WEAPON_INFO[weaponId])return;
   if(!force&&((matchPhase!=="game"&&!(mode==="allies"&&!isTrainingMode&&matchPhase==="round_start"))||hp<=0))return;
@@ -2896,7 +2935,7 @@ function selectWeapon(weaponId,force=false){
       heldWeaponRoot.add(model);
       heldWeaponRoot.userData.realModel=true;
     }else makeFallbackP350();
-  }else makeFallbackKnife();
+  }else makeFallbackWeaponById(selectedWeapon);
   addWeaponHands();
   positionHeldWeapon();
   if(!force&&previousWeapon!==weaponId){
@@ -2908,7 +2947,7 @@ function selectWeapon(weaponId,force=false){
   if(!force&&mode==="allies"&&!isTrainingMode&&socket?.connected)socket.emit("allies_select_weapon",{matchId,weapon:weaponId});
 }
 function cycleWeapon(){
-  const order=["akr","p350","knife"].filter(id=>mode!=="allies"||isTrainingMode||alliesWeapons.includes(id));
+  const order=Object.keys(CLIENT_WEAPON_INFO).filter(id=>mode!=="allies"||isTrainingMode||alliesWeapons.includes(id));
   selectWeapon(order[(order.indexOf(selectedWeapon)+1)%order.length]);
 }
 function showDamagePopup(message,incoming=false){
@@ -2971,7 +3010,8 @@ function shoot(){
   const now=performance.now();
   if(now-lastShot<info.fireDelay||ammo<=0){if(ammo<=0&&info.kind!=="melee")startReload();return}
   lastShot=now;
-  weaponKick=Math.min(info.kind==="melee"?.22:.09,weaponKick+(info.kind==="melee"?.11:.045));
+  weaponKick=Math.min(info.kind==="melee"?.22:(selectedWeapon==="sniper"?.18:selectedWeapon==="shotgun"?.15:.09),weaponKick+(info.kind==="melee"?.11:(selectedWeapon==="sniper"?.12:selectedWeapon==="shotgun"?.10:.045)));
+  if(playerVisual)playerVisual.userData.fireAnimUntil=now+150;
   if(info.kind!=="melee"){
     ammo=Math.max(0,ammo-1);
     weaponAmmo[selectedWeapon]=ammo;
@@ -3005,7 +3045,14 @@ addEventListener("keydown",e=>{
   if(e.code==="Digit1"){e.preventDefault();holsterBombTool();selectWeapon("akr");return}
   if(e.code==="Digit2"){e.preventDefault();holsterBombTool();selectWeapon("p350");return}
   if(e.code==="Digit3"){e.preventDefault();holsterBombTool();selectWeapon("knife");return}
-  if(e.code==="Digit4"||e.code==="Digit5"){e.preventDefault();toggleBombTool();return}
+  if(e.code==="Digit4"||e.code==="Digit5"){
+    e.preventDefault();
+    if(mode==="allies"&&!isTrainingMode)toggleBombTool();
+    else selectWeapon(e.code==="Digit4"?"m4a1":"p90");
+    return;
+  }
+  if(e.code==="Digit6"){e.preventDefault();selectWeapon("shotgun");return}
+  if(e.code==="Digit7"){e.preventDefault();selectWeapon("sniper");return}
   if(e.code==="KeyG"){e.preventDefault();dropCurrentItem();return}
   if(e.code==="KeyF"&&nearestDroppedItem()){e.preventDefault();tryPickupNearbyItem();return}
   if(e.code==="KeyE"){e.preventDefault();interactWithNearestDoor();return}
@@ -3534,7 +3581,11 @@ socket.on("disconnect",()=>{
   showReconnectPanel("Матч збережено. Натисни синю кнопку «ПІДКЛЮЧИТИСЯ», щоб повернутися, або «ВИЙТИ З МАТЧУ», щоб завершити його.");
 });
 socket.on("map_interaction_state",data=>applyMapInteractionState(data));
-socket.on("player_shot",spawnRemoteTracer);
+socket.on("player_shot",data=>{
+  spawnRemoteTracer(data);
+  const shooter=Object.values(enemies).find(enemy=>String(enemy.userId)===String(data?.shooterId));
+  if(shooter?.mesh)shooter.mesh.userData.fireAnimUntil=performance.now()+150;
+});
 socket.on("map_door_state",data=>{
   const idx=Number(data?.doorIndex);
   if(!Number.isInteger(idx)||idx<0||idx>2)return;
@@ -3747,7 +3798,7 @@ function animate(){
     else{const offset=new THREE.Vector3(0,isCrouching?1.65:2.5,5).applyQuaternion(camera.quaternion);camera.position.copy(player.position).add(offset)}
     updateVisual();updateInteractButtonLabel();sendMove();
   }
-  if(playerVisual)animateSoldier(playerVisual,dt,now,keys.w||keys.s||keys.a||keys.d,jumping,isCrouching);
+  if(playerVisual)animateSoldier(playerVisual,dt,now,keys.w||keys.s||keys.a||keys.d,jumping,isCrouching,keys.shift&&(keys.w||keys.a||keys.s||keys.d));
   Object.values(enemies).forEach(e=>{
     e.mesh.position.lerp(e.pos,.35);
     animateSoldier(e.mesh,dt,now,e.anim==="Running"||e.anim==="Walking",e.anim==="Jump",e.anim==="Crouch");
