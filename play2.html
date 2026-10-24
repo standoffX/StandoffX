@@ -237,10 +237,10 @@ body.device-mobile .interactButton{top:39%;left:70%;width:76px;height:40px}
           <span class="buy-art" aria-hidden="true"><svg viewBox="0 0 220 48" role="presentation"><path d="M33 34 73 17l74-8-40 23-43 9-10-5-14 4z" fill="currentColor"/><path d="m32 35 22-1 10 5-8 3-12-3z" fill="#66717a"/><path d="m73 17 34 15M79 16l-3-7 71 0-12 4z" fill="currentColor"/><path d="m40 34 12 2M47 32l11 2" stroke="#0a0f14" stroke-width="2"/></svg></span><span class="buy-name">НІЖ</span><small>Ближній бій</small><b>БЕЗКОШТОВНО</b><em data-status>ВИБРАТИ</em>
         </button>
         <div class="buy-info-card" data-buy-category="gear" role="note">
-          <span class="buy-art" aria-hidden="true"><svg viewBox="0 0 220 48" role="presentation"><path d="M74 9h65v32H74z" fill="#3d484f" stroke="#89949c" stroke-width="2"/><path d="M82 14h49v22H82z" fill="#151c22"/><g fill="#84919a"><rect x="88" y="19" width="7" height="4"/><rect x="98" y="19" width="7" height="4"/><rect x="108" y="19" width="7" height="4"/><rect x="88" y="26" width="7" height="4"/><rect x="98" y="26" width="7" height="4"/><rect x="108" y="26" width="7" height="4"/></g><path d="M145 14q17 2 15 15" fill="none" stroke="#9a7561" stroke-width="3"/></svg></span><b>БОМБА ВИДАЄТЬСЯ АВТОМАТИЧНО</b><small>Її не потрібно купувати. На стороні атаки носій показується в HUD; натисни 5, щоб дістати пристрій.</small>
+          <span class="buy-art" aria-hidden="true"><svg viewBox="0 0 220 48" role="presentation"><path d="M74 9h65v32H74z" fill="#3d484f" stroke="#89949c" stroke-width="2"/><path d="M82 14h49v22H82z" fill="#151c22"/><g fill="#84919a"><rect x="88" y="19" width="7" height="4"/><rect x="98" y="19" width="7" height="4"/><rect x="108" y="19" width="7" height="4"/><rect x="88" y="26" width="7" height="4"/><rect x="98" y="26" width="7" height="4"/><rect x="108" y="26" width="7" height="4"/></g><path d="M145 14q17 2 15 15" fill="none" stroke="#9a7561" stroke-width="3"/></svg></span><b>БОМБА ВИДАЄТЬСЯ АВТОМАТИЧНО</b><small>Її не потрібно купувати. На стороні атаки носій показується в HUD; натисни 4 або 5, щоб дістати пристрій.</small>
         </div>
       </div>
-      <p class="allies-buy-note">Підготовка триває <strong>10 секунд</strong>. Бомба не є товаром у магазині. На атакувальнику натисни <strong>5</strong>, дістань C4 та натисни <strong>E</strong> на сайті A або B.</p>
+      <p class="allies-buy-note">Підготовка триває <strong>10 секунд</strong>. Бомба не є товаром у магазині. На атакувальнику натисни <strong>4</strong> (або <strong>5</strong>), дістань C4 та натисни <strong>E</strong> на сайті A або B.</p>
     </div>
 </div>
 
@@ -945,14 +945,15 @@ function updateBombHud(){
     bombButton.classList.toggle("active",bombToolActive&&canCarry);
     bombButton.textContent=bombToolActive&&canCarry?"C4 · В РУКАХ":"C4 · 5";
   }
-  if(title)title.textContent=state==="planted"?(bombState?.action==="defuse"?"ЗНЕШКОДЖЕННЯ БОМБИ":"БОМБА ЗАКЛАДЕНА"):state==="planting"?"ЗАКЛАДАННЯ БОМБИ":"ЗАВДАННЯ РАУНДУ";
+  if(title)title.textContent=state==="dropped"?"C4 НА ЗЕМЛІ":state==="planted"?(bombState?.action==="defuse"?"ЗНЕШКОДЖЕННЯ БОМБИ":"БОМБА ЗАКЛАДЕНА"):state==="planting"?"ЗАКЛАДАННЯ БОМБИ":"ЗАВДАННЯ РАУНДУ";
   if(detail){
     const remaining=state==="planted"&&bombState?.explodeAt?Math.max(0,Math.ceil((Number(bombState.explodeAt)-Date.now())/1000)):0;
     const attacking=myTeam===attackingTeam;
     const carrier=squadRoster.find(p=>String(p.userId)===String(bombState?.carrierUserId));
-    if(state==="planted")detail.textContent="САЙТ "+site+" · ВИБУХ ЧЕРЕЗ "+remaining+" С";
+    if(state==="dropped")detail.textContent=attacking?"C4 НА ЗЕМЛІ · F — ПІДІБРАТИ":"C4 ВПАЛА · ЗАХИЩАЙТЕ САЙТ";
+    else if(state==="planted")detail.textContent="САЙТ "+site+" · ВИБУХ ЧЕРЕЗ "+remaining+" С";
     else if(state==="planting")detail.textContent="САЙТ "+site+" · ТРИМАЙСЯ ПОРУЧ · НЕ РУХАЙСЯ";
-    else if(isCarrier)detail.textContent=bombToolActive?"ТИ ДІСТАВ C4 · ПІДІЙДИ ДО A/B ТА НАТИСНИ E":"ТИ НЕСЕШ C4 · НАТИСНИ 5 · ДАЛІ E НА САЙТІ A/B";
+    else if(isCarrier)detail.textContent=bombToolActive?"ТИ ДІСТАВ C4 · ПІДІЙДИ ДО A/B ТА НАТИСНИ E":"ТИ НЕСЕШ C4 · НАТИСНИ 4 · ДАЛІ E НА САЙТІ A/B";
     else if(attacking)detail.textContent="C4 У "+(carrier?.nickname||"НАПАРНИКА")+" · СУПРОВОДЖУЙ ЙОГО ДО A/B";
     else detail.textContent="ЗАХИСТ · НЕ ДАЙ ЗАКЛАСТИ C4";
   }
