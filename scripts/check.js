@@ -327,7 +327,7 @@ assert.match(menu, /data-layout-control="weapon"/, "mobile HUD editor must previ
 assert.match(menu, /data-size-control="weapon"/, "mobile HUD editor must allow an independent weapon button size");
 assert.match(game, /socket\.emit\("team_shoot",\{matchId,weapon:selectedWeapon/, "the client must identify which weapon is fired");
 assert.match(game, /socket\.emit\("training_shoot",\{trainingId,weapon:selectedWeapon/, "training shots must identify the equipped weapon");
-assert.match(game, /e\.code==="Escape"\)\{e\.preventDefault\(\);pauseToMenu\(\);return\}/, "Escape must return to the lobby without ending the active match");
+assert.match(game, /if\(e\.code==="Escape"\)\{[\s\S]{0,130}pauseToMenu\(\);return\}/, "Escape closes the shop first, otherwise returns to the lobby without ending the active match");
 assert.match(game, /if\(selectedMap==="FIELD_ARENA"\)\{/, "prototype must honor the selected map rather than forcing the field arena");
 assert.doesNotMatch(game, / · UUID "\+uuid/, "the match lobby must not display UUIDs");
 
