@@ -3728,7 +3728,7 @@ io.on("connection", socket => {
 
     if (match.phase === "game") handleCatch(io, match, player);
 
-    socket.to(match.id).emit("enemy_moved", {
+    socket.to(match.id).volatile.emit("enemy_moved", {
       id: socket.id,
       userId: player.userId,
       nickname: player.nickname,
