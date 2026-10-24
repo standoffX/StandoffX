@@ -17,6 +17,7 @@ function getExecutableScripts(html, file) {
     if (/type\s*=\s*["']module["']/i.test(attrs)) {
       js = js.replace(/^\s*import\s+\*\s+as\s+THREE\s+from\s+["']three["'];?\s*$/gm, "");
       js = js.replace(/^\s*import\s+\{\s*GLTFLoader\s*\}\s+from\s+["']three\/addons\/loaders\/GLTFLoader\.js["'];?\s*$/gm, "");
+      js = js.replace(/^\s*import\s+\*\s+as\s+SkeletonUtils\s+from\s+["']three\/addons\/utils\/SkeletonUtils\.js["'];?\s*$/gm, "");
       js = js.replace(/^\s*import\s+\{\s*PointerLockControls\s*\}\s+from\s+["']three\/addons\/controls\/PointerLockControls\.js["'];?\s*$/gm, "");
     }
     out.push({ file, index: out.length + 1, js });
@@ -242,9 +243,12 @@ assert.doesNotMatch(menu, /function setPreviewWeapon\(kind\)/, "the home menu do
 assert.doesNotMatch(menu, /const previewGuns=\{\}/, "the menu skips construction of additional preview guns");
 assert.match(menu, /id="playBtn"/, "the home menu retains the primary Play action");
 assert.match(menu, /\$\("modeModal"\)\.classList\.add\("show"\)/, "Play opens the mode-selection modal");
-assert.match(menu, /#home \.home-layout\{\s*display:block!important;height:100%/, "the home menu uses one uncluttered hero instead of multiple dashboard cards");
-assert.match(menu, /#home \.home-friends,[\s\S]{0,160}#home \.passpanel,[\s\S]{0,80}display:none!important/, "friends, profile, news and pass cards stay out of the home hero");
-assert.match(menu, /#modeModal \.modecards \.modebtn\{\s*min-height:116px/, "the mode modal uses compact selection cards");
+assert.match(menu, /#home \.home-layout\{\s*display:grid!important/, "the home lobby restores its three-column tactical layout");
+assert.match(menu, /grid-template-areas:"friends hero promo" "friends hero pass"/, "friends, squad, events and pass have dedicated areas");
+assert.match(menu, /id="homeSquadRoster"/, "the main lobby shows its squad roster");
+assert.match(menu, /function renderHomeSquadRoster\(lobby=currentLobby\)/, "the lobby roster follows current party members");
+assert.match(menu, /soldier_tac\.glb/, "the menu loads the tactical agent with a procedural fallback");
+assert.match(menu, /#modeModal \.modecards \.modebtn\{\s*min-height:110px/, "the mode modal uses compact selection cards");
 assert.match(menu, /saved.prototype/, "resume preserves whether the match uses prototype bots");
 assert.match(menu, /class="home-hero panel"/, "main menu must use the redesigned integrated game hero");
 assert.match(ui, /\.home-hero h1/, "main menu hero must have dedicated responsive styling");
@@ -575,6 +579,9 @@ assert.match(server, /id: "p90", label: "P90"/, "server damage calculations incl
 assert.match(server, /id: "shotgun", label: "SHOTGUN"/, "server damage calculations include shotgun");
 assert.match(server, /id: "sniper", label: "SNIPER"/, "server damage calculations include sniper");
 assert.match(server, /socket\.on\("lobby_set_team"/, "the party leader can assign players to teams");
+assert.match(server, /socket\.on\("lobby_update_settings"/, "the party leader can change mode/map without dropping the party");
+assert.match(menu, /show\("home"\);\s*createLobby\(selectedMode,selectedMap\)/, "inviting a friend builds a lobby and stays on the home screen");
+assert.match(menu, /import \* as SkeletonUtils from "three\/addons\/utils\/SkeletonUtils\.js"/, "the tactical character uses the supported Three.js SkeletonUtils module");
 assert.match(server, /function startMatchBotAI\(io, match\)/, "lobby agents run movement and shooting AI");
 assert.match(menu, /data-lobby-team/, "the lobby UI allows changing team assignments");
 assert.match(menu, /testerSwitch\.style\.display=canTest\(\)\?"flex":"none"/, "only testers see prototype versus real-match controls");
