@@ -1461,7 +1461,7 @@ const MODE_CONFIGS = {
   }
 };
 
-const ALLIES_BUY_PRICES = Object.freeze({ akr: 2700, p350: 300, knife: 0 });
+const ALLIES_BUY_PRICES = Object.freeze({ akr: 2700, m4a1: 3100, p90: 2200, shotgun: 1900, sniper: 4600, p350: 300, knife: 0 });
 
 const TESTER_MODE_CONFIGS = {
   training: { id: "training", name: "TRAINING", map: "HILL_TOWN", kind: "bot-training" },
@@ -1587,10 +1587,10 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
       nickname: p.nickname,
       playerAvatar: p.playerAvatar || "/avatars/default.jpg",
       role: mode === "hide_seek" ? (i === hunterIndex ? "hunter" : "runner")
-        : mode === "allies" ? (i < 2 ? "teamA" : "teamB")
+        : mode === "allies" ? ((lobbyMatch && p.team) ? (p.team === "B" ? "teamB" : "teamA") : (i < 2 ? "teamA" : "teamB"))
         : (i % 2 === 0 ? "teamA" : "teamB"),
       team: mode === "allies"
-        ? ((prototypeBotMatch || lobbyMatch) ? (i < 2 ? "A" : "B") : (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i < 2 ? "A" : "B")))
+        ? (lobbyMatch ? (p.team === "B" ? "B" : "A") : (prototypeBotMatch ? (i < 2 ? "A" : "B") : (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i < 2 ? "A" : "B"))))
         : mode === "team_fight"
           ? ((prototypeBotMatch || lobbyMatch) ? ["A", "B", "C"][i % 3] : (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : ["A", "B", "C"][i % 3]) : ["A", "B", "C"][i % 3]))
           : null,
@@ -1690,6 +1690,7 @@ function publicLobby(lobby) {
     createdAt: lobby.createdAt,
     members: lobby.members.map(member => ({
       userId: member.userId,
+      team: member.team || null,
       nickname: member.nickname,
       playerAvatar: member.playerAvatar || "/avatars/default.jpg",
       isOwner: member.userId === lobby.ownerId,
@@ -1806,13 +1807,17 @@ function createLobbyMatch(io, socket, data = {}) {
       uuid: user?.uuid || "",
       isBot: false,
       lobbyMatch: true,
+      team: mode === "allies" ? (member.team === "B" ? "B" : "A") : null,
       mode, map
     };
   });
   for (let index = candidates.length; index < required; index++) {
     const userId = "lobby_bot_" + crypto.randomBytes(8).toString("hex");
+    const countA = candidates.filter(candidate => candidate.team === "A").length;
+    const countB = candidates.filter(candidate => candidate.team === "B").length;
+    const botTeam = mode === "allies" ? (countA <= countB ? "A" : "B") : null;
     candidates.push({
-      socketId: null, userId, uuid: "", isBot: true, lobbyMatch: true,
+      socketId: null, userId, uuid: "", isBot: true, lobbyMatch: true, team: botTeam,
       nickname: "BOT · " + String(index + 1).padStart(2, "0"),
       playerAvatar: "/avatars/default.jpg", mode, map, ready: true
     });
@@ -2544,9 +2549,27 @@ const WEAPON_BALANCE = Object.freeze({
   knife: Object.freeze({
     id: "knife", label: "НІЖ", type: "melee", magazine: Infinity,
     reloadMs: 0, fireDelay: 420, range: 2.8, ads: false,
-    damage: Object.freeze({
-      head: [180], body: [110], stomach: [110], legs: [110]
-    })
+    damage: Object.freeze({ head: [180], body: [110], stomach: [110], legs: [110] })
+  }),
+  m4a1: Object.freeze({
+    id: "m4a1", label: "M4A1", type: "rifle", magazine: 30,
+    reloadMs: 1750, fireDelay: 96, range: 58, ads: true,
+    damage: Object.freeze({ head: [155,153,150,145,140], body: [32,32,31,30,29], stomach: [39,38,37,36,34], legs: [24,23,23,22,21] })
+  }),
+  p90: Object.freeze({
+    id: "p90", label: "P90", type: "smg", magazine: 50,
+    reloadMs: 2050, fireDelay: 72, range: 36, ads: false,
+    damage: Object.freeze({ head: [132,125,115,102,90], body: [22,21,20,18,16], stomach: [28,27,25,23,20], legs: [18,17,16,14,12] })
+  }),
+  shotgun: Object.freeze({
+    id: "shotgun", label: "SHOTGUN", type: "shotgun", magazine: 8,
+    reloadMs: 1900, fireDelay: 780, range: 18, ads: false,
+    damage: Object.freeze({ head: [145,120,90,62,40], body: [76,62,48,34,22], stomach: [94,76,58,42,28], legs: [58,47,36,25,16] })
+  }),
+  sniper: Object.freeze({
+    id: "sniper", label: "SNIPER", type: "sniper", magazine: 5,
+    reloadMs: 2250, fireDelay: 1050, range: 100, ads: true,
+    damage: Object.freeze({ head: [250,245,235,220,205], body: [115,112,108,100,92], stomach: [145,140,133,125,116], legs: [85,82,78,72,66] })
   })
 });
 
@@ -3296,7 +3319,7 @@ io.on("connection", socket => {
       id: lobbyId, ownerId: user.id, mode, map, maxPlayers: getRequiredPlayers(mode),
       createdAt: Date.now(),
       members: [{
-        userId: user.id, uuid: user.uuid || "", socketId: socket.id,
+        userId: user.id, uuid: user.uuid || "", socketId: socket.id, team: mode === "allies" ? "A" : null,
         nickname: user.nickname, playerAvatar: user.playerAvatar || "/avatars/default.jpg"
       }]
     };
@@ -3328,8 +3351,11 @@ io.on("connection", socket => {
     if (!lobby || lobby.members.length >= lobby.maxPlayers) return emitLobbyError(socket, "Лобі вже заповнене або закрите.", "lobby_invite_response_result");
     const user = users.find(candidate => candidate.id === targetId);
     if (!user) return emitLobbyError(socket, "Акаунт не знайдено.", "lobby_invite_response_result");
+    const countA = lobby.members.filter(member => member.team === "A").length;
+    const countB = lobby.members.filter(member => member.team === "B").length;
     lobby.members.push({
       userId: user.id, uuid: user.uuid || "", socketId: socket.id,
+      team: lobby.mode === "allies" ? (countA <= countB ? "A" : "B") : null,
       nickname: user.nickname, playerAvatar: user.playerAvatar || "/avatars/default.jpg"
     });
     lobbyByUser.set(user.id, lobby.id);
@@ -3340,6 +3366,20 @@ io.on("connection", socket => {
   socket.on("lobby_leave", () => {
     removeLobbyMember(io, socket.user?.id, socket.id);
     socket.emit("lobby_left", { reason: "Ти вийшов із лобі." });
+  });
+  socket.on("lobby_set_team", data => {
+    const current = lobbyMemberFromSocket(socket);
+    if (!current || current.lobby.mode !== "allies") return emitLobbyError(socket, "Команди доступні лише в режимі «Союзники».", "lobby_team_result");
+    if (current.lobby.ownerId !== socket.user.id) return emitLobbyError(socket, "Змінювати команди може лише лідер лобі.", "lobby_team_result");
+    const targetId = normalizeId(data?.userId);
+    const team = data?.team === "B" ? "B" : data?.team === "A" ? "A" : null;
+    const target = current.lobby.members.find(member => member.userId === targetId);
+    if (!target || !team) return emitLobbyError(socket, "Не вдалося змінити команду.", "lobby_team_result");
+    const countInTeam = current.lobby.members.filter(member => member.team === team && member.userId !== targetId).length;
+    if (countInTeam >= 2) return emitLobbyError(socket, "У команді вже є двоє гравців. Перенеси когось в іншу команду.", "lobby_team_result");
+    target.team = team;
+    socket.emit("lobby_team_result", { success: true, userId: targetId, team });
+    emitLobbyState(io, current.lobby);
   });
   socket.on("lobby_kick", data => {
     const current = lobbyMemberFromSocket(socket);
