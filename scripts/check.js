@@ -590,6 +590,7 @@ assert.match(menu, /show\("home"\);\s*createLobby\(selectedMode,selectedMap\)/, 
 assert.match(menu, /import \* as SkeletonUtils from "three\/addons\/utils\/SkeletonUtils\.js"/, "the tactical character uses the supported Three.js SkeletonUtils module");
 assert.match(server, /function startMatchBotAI\(io, match\)/, "lobby agents run movement and shooting AI");
 assert.match(menu, /data-lobby-team/, "the lobby UI allows changing team assignments");
+assert.match(menu, /data-home-lobby-team/, "the home squad lets the party leader assign teams without leaving the main menu");
 assert.match(menu, /testerSwitch\.style\.display=canTest\(\)\?"flex":"none"/, "only testers see prototype versus real-match controls");
 assert.match(menu, /sx-reference-menu-remake/, "the main menu uses the reference-inspired layout");
 assert.match(menu, /#profilePageUuid\),body\.lobby-screen #copyUuid/, "UUID is hidden from the regular profile UI");
