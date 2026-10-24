@@ -237,12 +237,14 @@ assert.match(game, /textContent=mode/, "prototype uses the normal mode title and
 assert.match(game, /const isPrototypeMode=sessionStorage.getItem\("prototypeMode"\)==="true"/, "prototype UI must distinguish the bot sandbox from a real lobby match");
 assert.match(menu, /TACTICAL COMBAT/, "the main menu uses the clean tactical label rather than fake season branding");
 assert.match(menu, /standoffx-interface-overhaul/, "the menu uses the unified tactical interface system");
-assert.match(menu, /data-agent-weapon="akr"/, "the central agent preview can select the AKR");
-assert.match(menu, /data-agent-weapon="p350"/, "the central agent preview can select the P350");
-assert.match(menu, /data-agent-weapon="knife"/, "the central agent preview can select the knife");
-assert.match(menu, /function setPreviewWeapon\(kind\)/, "menu weapon buttons update the 3D agent model");
-assert.match(menu, /grid-template-columns:minmax\(200px,238px\) minmax\(390px,1fr\) minmax\(205px,238px\)/, "the menu uses friend, central-agent, and events/pass columns");
-assert.match(menu, /grid-template-areas:"friends hero promo" "profile hero pass"/, "the 3D agent is the primary center panel");
+assert.doesNotMatch(menu, /data-agent-weapon=/, "the home menu no longer shows a redundant weapon chooser");
+assert.doesNotMatch(menu, /function setPreviewWeapon\(kind\)/, "the home menu does not build unnecessary weapon preview meshes");
+assert.doesNotMatch(menu, /const previewGuns=\{\}/, "the menu skips construction of additional preview guns");
+assert.match(menu, /id="playBtn"/, "the home menu retains the primary Play action");
+assert.match(menu, /\$\("modeModal"\)\.classList\.add\("show"\)/, "Play opens the mode-selection modal");
+assert.match(menu, /#home \.home-layout\{\s*display:block!important;height:100%/, "the home menu uses one uncluttered hero instead of multiple dashboard cards");
+assert.match(menu, /#home \.home-friends,[\s\S]{0,160}#home \.passpanel,[\s\S]{0,80}display:none!important/, "friends, profile, news and pass cards stay out of the home hero");
+assert.match(menu, /#modeModal \.modecards \.modebtn\{\s*min-height:116px/, "the mode modal uses compact selection cards");
 assert.match(menu, /saved.prototype/, "resume preserves whether the match uses prototype bots");
 assert.match(menu, /class="home-hero panel"/, "main menu must use the redesigned integrated game hero");
 assert.match(ui, /\.home-hero h1/, "main menu hero must have dedicated responsive styling");
@@ -575,6 +577,7 @@ assert.match(server, /id: "sniper", label: "SNIPER"/, "server damage calculation
 assert.match(server, /socket\.on\("lobby_set_team"/, "the party leader can assign players to teams");
 assert.match(server, /function startMatchBotAI\(io, match\)/, "lobby agents run movement and shooting AI");
 assert.match(menu, /data-lobby-team/, "the lobby UI allows changing team assignments");
+assert.match(menu, /testerSwitch\.style\.display=canTest\(\)\?"flex":"none"/, "only testers see prototype versus real-match controls");
 assert.match(menu, /sx-reference-menu-remake/, "the main menu uses the reference-inspired layout");
 assert.match(menu, /#profilePageUuid\),body\.lobby-screen #copyUuid/, "UUID is hidden from the regular profile UI");
 console.log("OK project invariants, syntax, duplicate declaration regression, local maps, authoritative weapon damage, AI matches, lobby teams, UI, and routes");
