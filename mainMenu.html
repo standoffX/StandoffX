@@ -2323,7 +2323,7 @@ async function refreshAtlasIndicator(){}
 <script type="module">
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { SkeletonUtils } from "three/addons/utils/SkeletonUtils.js";
+import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 function makeVisual(color){
   const g=new THREE.Group();
   const mat={
