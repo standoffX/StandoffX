@@ -596,7 +596,8 @@ assert.match(menu, /#profilePageUuid\),body\.lobby-screen #copyUuid/, "UUID is h
 console.log("OK project invariants, syntax, duplicate declaration regression, local maps, authoritative weapon damage, AI matches, lobby teams, UI, and routes");
 
 
-assert.match(server, /const localUsersSnapshot = users\.map\(user => \(\{ \.\.\.user \}\)\)/, "MongoDB account loading must merge account.json fields instead of discarding them");
+assert.match(server, /async function loadMongoState\(name, legacySnapshot\)/, "Atlas performs a one-time import only for missing state documents");
+assert.doesNotMatch(server, /const localUsersSnapshot = users\.map/, "existing Atlas account data is not merged with stale JSON snapshots");
 assert.match(server, /app\.post\("\/api\/settings\/keybinds"/, "key bindings must be persisted through the account store and MongoDB");
 assert.match(server, /app\.post\("\/api\/clans\/avatar"/, "authorized clan leaders can upload clan avatars");
 assert.match(server, /app\.get\("\/api\/clans\/:tag"/, "clan search supports a detailed roster profile");
