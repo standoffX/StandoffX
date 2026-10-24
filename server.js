@@ -689,7 +689,13 @@ app.get("/api/health", (_req, res) => {
     uptimeSeconds: Math.round(process.uptime()),
     database: mongoDb ? "MongoDB Atlas" : "JSON fallback",
     atlas: publicMongoStatus(),
-    matchmaking: { queued: matchmakingQueue.length, activeMatches: activeMatches.size }
+    matchmaking: {
+      queued: matchmakingQueue.length,
+      activeMatches: activeMatches.size,
+      maxConcurrentMatches: MAX_CONCURRENT_MATCHES,
+      atCapacity: activeMatches.size >= MAX_CONCURRENT_MATCHES,
+      activePlayers: [...activeMatches.values()].reduce((total, match) => total + match.players.filter(player => !player.isBot && player.socketId).length, 0)
+    }
   });
 });
 
@@ -1415,6 +1421,8 @@ const GAME_SECONDS = 300;
 const WARMUP_SECONDS = 10;
 const COUNTDOWN_SECONDS = 15;
 const JOIN_TIMEOUT_SECONDS = 90;
+// Hard cap protects one Render process from runaway match creation. Keep this bounded even if env is misconfigured.
+const MAX_CONCURRENT_MATCHES = Math.max(1, Math.min(100, Number.parseInt(process.env.MAX_CONCURRENT_MATCHES || "100", 10) || 100));
 
 const PLAYABLE_MAPS = Object.freeze({
   SANDSTONE: { id: "SANDSTONE", name: "SANDSTONE", kind: "tight-defuse" },
@@ -1535,6 +1543,7 @@ function emitQueueCount(io) {
 }
 
 function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
+  if (activeMatches.size >= MAX_CONCURRENT_MATCHES) return null;
   const requestedMap = normalizeMapId(mapId);
   const safeMapId = mode === "allies" ? "SANDSTONE"
     : mode === "team_fight" ? (requestedMap === "NEON_YARD" ? "NEON_YARD" : "SMALL_YARD")
@@ -1638,6 +1647,35 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   }
 
   armMatchJoinTimeout(io, match);
+  return match;
+}
+
+function processMatchmakingQueue(io) {
+  if (!io || activeMatches.size >= MAX_CONCURRENT_MATCHES || matchmakingQueue.length < 1) {
+    emitQueueCount(io);
+    return;
+  }
+  let created = true;
+  let safety = 0;
+  while (created && activeMatches.size < MAX_CONCURRENT_MATCHES && safety++ < MAX_CONCURRENT_MATCHES) {
+    created = false;
+    const groups = [];
+    const seen = new Set();
+    for (const player of matchmakingQueue) {
+      const mode = player.mode;
+      const map = player.map;
+      const key = mode + "\u0000" + map;
+      if (!seen.has(key)) { seen.add(key); groups.push({ mode, map }); }
+    }
+    for (const group of groups) {
+      const candidates = matchmakingQueue.filter(player => player.mode === group.mode && player.map === group.map);
+      if (candidates.length < getRequiredPlayers(group.mode)) continue;
+      const before = activeMatches.size;
+      const match = createMatch(io, group.mode, group.map, candidates);
+      if (match && activeMatches.size > before) { created = true; break; }
+    }
+  }
+  emitQueueCount(io);
 }
 
 function publicLobby(lobby) {
@@ -1739,6 +1777,9 @@ function inviteFriendToLobby(io, socket, targetId) {
   socket.emit("lobby_invite_result", { success: true, message: "Запрошення надіслано: " + target.nickname });
 }
 function createLobbyMatch(io, socket, data = {}) {
+  if (activeMatches.size >= MAX_CONCURRENT_MATCHES) {
+    return emitLobbyError(socket, "Сервер уже веде 100 матчів. Лобі залишилося відкритим — спробуй трохи пізніше.", "lobby_start_error");
+  }
   const current = lobbyMemberFromSocket(socket);
   if (!current) return emitLobbyError(socket, "Спочатку створи або приєднайся до лобі.", "lobby_start_error");
   const lobby = current.lobby;
@@ -1843,6 +1884,7 @@ function cleanMatch(io, matchId, returnToMenu = true) {
     p.socketId = null;
   }
   activeMatches.delete(matchId);
+  processMatchmakingQueue(io);
 }
 
 function startMatchWhenReady(io, match) {
@@ -3312,6 +3354,10 @@ io.on("connection", socket => {
   socket.on("lobby_start_match", data => createLobbyMatch(io, socket, data || {}));
 
   socket.on("start_prototype_match", data => {
+    if (activeMatches.size >= MAX_CONCURRENT_MATCHES) {
+      socket.emit("search_error", { message: "Сервер уже веде 100 матчів. Спробуй пізніше." });
+      return;
+    }
     const user = socket.user;
     if (!user || (user.isBanned && user.id !== ADMIN_ID)) {
       socket.emit("auth_required");
@@ -3384,6 +3430,7 @@ io.on("connection", socket => {
     socket.emit("search_started", { mode, modeName: MODE_CONFIGS[mode].name, map, mapName: PLAYABLE_MAPS[map].name });
     emitQueueCount(io);
     createMatch(io, mode, map);
+    processMatchmakingQueue(io);
   });
 
   socket.on("cancel_search", () => {
@@ -3906,6 +3953,12 @@ app.get("/api/admin/overview", requireAdmin, (_req, res) => {
     testers: users.filter(u => u.isTester || u.id === ADMIN_ID).length,
     clans: Object.keys(clans).length,
     market: market.length,
+    matchCapacity: {
+      active: activeMatches.size,
+      maximum: MAX_CONCURRENT_MATCHES,
+      available: Math.max(0, MAX_CONCURRENT_MATCHES - activeMatches.size),
+      atCapacity: activeMatches.size >= MAX_CONCURRENT_MATCHES
+    },
     messages: Object.values(messages).reduce((n, x) => n + (Array.isArray(x) ? x.length : 0), 0)
   });
 });
