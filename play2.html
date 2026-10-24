@@ -3184,7 +3184,15 @@ function startRoundCinematic(data){
   const winner=(data.players||[]).find(p=>String(p.team)===String(data.winningTeam)&&Number(p.hp)>0)||null;
   const focus=new THREE.Vector3(Number(winner?.x)||0,1.1,Number(winner?.z)||0);
   const from=camera.position.clone();
-  roundCinematic={startedAt:performance.now(),duration:4200,focus,points:[from,new THREE.Vector3(-48,17,-38),new THREE.Vector3(-6,24,3),new THREE.Vector3(38,18,-34),new THREE.Vector3(22,20,34),new THREE.Vector3(focus.x+7,focus.y+8,focus.z+8)]};
+  const actorObject=winner?(String(winner.userId)===String(myId)?playerVisual:Object.values(enemies).find(enemy=>String(enemy.userId)===String(winner.userId))?.mesh):null;
+  if(heldWeaponRoot)heldWeaponRoot.visible=false;
+  if(bombToolRoot)bombToolRoot.visible=false;
+  if(actorObject===playerVisual&&actorObject)actorObject.visible=true;
+  roundCinematic={
+    startedAt:performance.now(),duration:4200,focus,
+    actor:actorObject?{object:actorObject,baseY:Number(actorObject.position.y)||0,baseRotationY:Number(actorObject.rotation.y)||0}:null,
+    points:[from,new THREE.Vector3(-48,17,-38),new THREE.Vector3(-6,24,3),new THREE.Vector3(38,18,-34),new THREE.Vector3(22,20,34),new THREE.Vector3(focus.x+7,focus.y+8,focus.z+8)]
+  };
 }
 function updateRoundCinematic(now){
   if(!roundCinematic)return;
@@ -3193,7 +3201,19 @@ function updateRoundCinematic(now){
   const local=scaled-index,smooth=local*local*(3-2*local);
   camera.position.lerpVectors(animation.points[index],animation.points[index+1],smooth);
   camera.lookAt(animation.focus);
-  if(t>=1)roundCinematic=null;
+  if(animation.actor){
+    const celebration=Math.max(0,Math.min(1,(t-.54)/.46));
+    const rhythm=(now-animation.startedAt)*.007;
+    animation.actor.object.position.y=animation.actor.baseY+Math.abs(Math.sin(rhythm))*.28*celebration;
+    animation.actor.object.rotation.y=animation.actor.baseRotationY+Math.sin(rhythm*.46)*.23*celebration;
+  }
+  if(t>=1){
+    if(animation.actor){
+      animation.actor.object.position.y=animation.actor.baseY;
+      animation.actor.object.rotation.y=animation.actor.baseRotationY;
+    }
+    roundCinematic=null;
+  }
 }
 function renderRoundResult(data){
   const attack=data.attackingTeam||attackingTeam,defense=data.defendingTeam||defendingTeam;
