@@ -1071,6 +1071,7 @@ body.lobby-screen #home .home-squad-card{min-width:0!important;min-height:48px!i
 body.lobby-screen #home .home-squad-card img{grid-row:1/span 2!important;width:24px!important;height:28px!important;object-fit:cover!important;background:#26323b!important}
 body.lobby-screen #home .home-squad-card b{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:8px!important;color:#e9f0f4!important}
 body.lobby-screen #home .home-squad-card small{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:7px!important;color:#91a6b5!important}
+body.lobby-screen #home .home-squad-team{grid-column:2!important;min-width:0!important;width:100%!important;margin-top:1px!important;padding:3px 4px!important;border:1px solid #b3cddb26!important;border-radius:2px!important;background:#16232c!important;color:#dceaf2!important;font-size:8px!important;font-weight:900!important;cursor:pointer!important}
 body.lobby-screen #home .home-squad-card.is-empty{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;color:#adc5d5!important;cursor:pointer!important;border-style:dashed!important;background:#0c141a7a!important}
 body.lobby-screen #home .home-squad-card.is-empty strong{font-size:20px!important;font-weight:400!important}
 body.lobby-screen #home .home-squad-card.is-empty small{font-size:7px!important}
@@ -1137,6 +1138,7 @@ body.lobby-screen #modeModal .tester-mode-switch{margin:0 0 12px!important;paddi
  body.lobby-screen #home .home-squad-card img{width:20px!important;height:24px!important}
  body.lobby-screen #home .home-squad-card b{font-size:7px!important}
  body.lobby-screen #home .home-squad-card small{font-size:6px!important}
+ body.lobby-screen #home .home-squad-team{font-size:7px!important;padding:2px!important}
  body.lobby-screen #home .home-hero-copy{top:18px!important;left:16px!important;max-width:75%!important}
  body.lobby-screen #home .home-hero-copy h1{font-size:29px!important}
  body.lobby-screen #home .home-hero-art{object-position:54% center!important;opacity:.2!important}
@@ -1744,6 +1746,11 @@ $("lobbyMembers").addEventListener("change",e=>{
   if(!select)return;
   socialSocket?.emit("lobby_set_team",{userId:select.dataset.lobbyTeam,team:select.value});
 });
+$("homeSquadRoster").addEventListener("change",e=>{
+  const select=e.target.closest("[data-home-lobby-team]");
+  if(!select)return;
+  socialSocket?.emit("lobby_set_team",{userId:select.dataset.homeLobbyTeam,team:select.value});
+});
 $("lobbyLeaveBtn").addEventListener("click",()=>socialSocket?.emit("lobby_leave"));
 $("lobbyRefreshFriends").addEventListener("click",()=>{loadFriends();loadLobbyFriends()});
 $("acceptLobbyInvite").addEventListener("click",()=>respondToLobbyInvite(true));
@@ -1903,7 +1910,10 @@ function renderHomeSquadRoster(lobby=currentLobby){
   if(root){
     const cards=members.slice(0,4).map(member=>{
       const label=member.isOwner?"ЛІДЕР":(lobby?.mode==="allies"&&member.team?"КОМАНДА "+member.team:(member.connected===false?"ПІДКЛЮЧЕННЯ":"У ЗАГОНІ"));
-      return "<div class='home-squad-card'><img src='"+esc(member.playerAvatar||"/avatars/default.jpg")+"' alt=''><b>"+esc(member.nickname||"ГРАВЕЦЬ")+"</b><small>"+esc(label)+"</small></div>";
+      const teamPicker=lobby?.mode==="allies"&&String(lobby.ownerId)===String(me?.id)
+        ?"<select class='home-squad-team' data-home-lobby-team='"+esc(member.userId)+"' aria-label='Команда гравця'><option value='A' "+(member.team==="A"?"selected":"")+">A</option><option value='B' "+(member.team==="B"?"selected":"")+">B</option></select>"
+        :"";
+      return "<div class='home-squad-card'><img src='"+esc(member.playerAvatar||"/avatars/default.jpg")+"' alt=''><b>"+esc(member.nickname||"ГРАВЕЦЬ")+"</b><small>"+esc(label)+"</small>"+teamPicker+"</div>";
     });
     if(lobby&&members.length<maxPlayers)cards.push("<button type='button' class='home-squad-card is-empty' data-squad-add-friend aria-label='Запросити друга'><strong>+</strong><small>ДОДАТИ</small></button>");
     root.innerHTML=cards.join("");
