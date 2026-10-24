@@ -177,7 +177,7 @@ assert.match(game, /document\.pointerLockElement===renderer\.domElement/, "camer
 assert.doesNotMatch(read("auth.html"), /DEV BUILD/i, "sign-in must not show development labels");
 assert.match(menu, /StandoffX menu remake/, "the menu must use the refreshed neon styling");
 assert.match(menu, /id="homeAgentCanvas"/, "the main screen has a dedicated transparent canvas for its central 3D agent");
-assert.match(menu, /const agent=makeVisual\(0x8e9ba6\)/, "the menu preview reuses the in-game procedural soldier and rifle");
+assert.match(menu, /agent=makeVisual\(0x8e9ba6\)/, "the menu preview reuses the in-game procedural soldier and rifle");
 assert.match(menu, /function makeVisual\(color\)[\s\S]*?function animateSoldier\(/, "the menu includes the existing game character builder and idle animation");
 assert.match(menu, /home-friends-title/, "friends and squad are visible in the main menu");
 assert.match(menu, /Battle Pass|SEASON PASS/, "pass/event content remains on the right side of the home menu");
