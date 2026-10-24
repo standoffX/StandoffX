@@ -179,7 +179,7 @@ assert.match(game, /sandstoneRoot\.scale\.setScalar\(sandstoneScale\)/, "Sandsto
 assert.doesNotMatch(game, /zoneMarker\("(?:MID|MARKET|TITANIC|ZIGA|KITCHEN|A SITE|B SITE)"/, "Sandstone must not draw floating text callouts over playable routes");
 assert.doesNotMatch(game, /new THREE\.TorusGeometry\(\.44,\.035,6,20/, "the planted C4 must not have an attention-grabbing glow ring");
 assert.match(game, /function createHeldBombVisual\(\)/, "the bomb carrier can equip a visible first-person C4 model");
-assert.match(game, /if\(e\.code==="Digit5"\)\{e\.preventDefault\(\);toggleBombTool\(\);return\}/, "key 5 equips or holsters C4");
+assert.match(game, /if\(e\.code==="Digit4"\|\|e\.code==="Digit5"\)\{e\.preventDefault\(\);toggleBombTool\(\);return\}/, "keys 4 and 5 equip or holster C4");
 assert.match(game, /\$\("bombBtn"\)\.addEventListener\("click",e=>\{e\.preventDefault\(\);e\.stopPropagation\(\);toggleBombTool\(\)\}\)/, "mobile users can equip C4 with a dedicated button");
 assert.match(game, /data-buy-tab="rifles"/, "the Allies buy menu groups equipment into categories");
 assert.match(game, /document\.querySelectorAll\("\[data-buy-tab\]"\)\.forEach\(tab=>tab\.addEventListener\("click"/, "buy categories must filter the weapon cards");
