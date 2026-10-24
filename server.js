@@ -1583,7 +1583,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
       team: mode === "allies"
         ? ((prototypeBotMatch || lobbyMatch) ? (i < 2 ? "A" : "B") : (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i < 2 ? "A" : "B")))
         : mode === "team_fight"
-          ? (prototypeBotMatch ? ["A", "B", "C"][i % 3] : (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : ["A", "B", "C"][i % 3]) : ["A", "B", "C"][i % 3]))
+          ? ((prototypeBotMatch || lobbyMatch) ? ["A", "B", "C"][i % 3] : (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : ["A", "B", "C"][i % 3]) : ["A", "B", "C"][i % 3]))
           : null,
       hp: 100,
       score: 0,
@@ -2225,7 +2225,7 @@ function startAlliesRound(io, match, initial = false) {
     current.phaseTimer = null;
     current.phase = "game";
     current.phaseRemaining = null;
-    if (current.prototypeBotMatch && current.mode === "allies" && current.bomb?.state === "carried") {
+    if ((current.prototypeBotMatch || current.lobbyMatch) && current.mode === "allies" && current.bomb?.state === "carried") {
       const carrier = current.players.find(p => p.userId === current.bomb.carrierUserId);
       current.bomb.botPlantAt = carrier?.isBot ? Date.now() + 15000 : null;
     }
