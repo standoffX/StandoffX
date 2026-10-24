@@ -574,6 +574,8 @@ assert.match(server, /socket\.on\("lobby_invite"/, "party leaders can invite fri
 assert.match(server, /socket\.on\("lobby_invite_response"/, "friends can accept or decline lobby invitations");
 assert.match(server, /socket\.on\("lobby_start_match"/, "party leaders can start a match from the lobby");
 assert.match(server, /fillBots = data\.fillWithBots !== false/, "party matches can fill empty slots with bots");
+assert.match(server, /\(current\.prototypeBotMatch \|\| current\.lobbyMatch\) && current\.mode === "allies"/, "bot-filled party matches keep bomb objectives working when sides switch");
+assert.match(server, /\(\(prototypeBotMatch \|\| lobbyMatch\) \? \["A", "B", "C"\]\[i % 3\]/, "KB lobby fillers occupy unique free-for-all teams");
 assert.match(server, /x: Number\(player\.pos\?\.x\) \|\| 0,[\s\S]{0,100}z: Number\(player\.pos\?\.z\) \|\| 0/, "the round result contains winner positions for the camera fly-through");
 assert.match(menu, /id="lobbyInviteModal"/, "lobby invitations have an accept/decline interface");
 assert.match(menu, /id="lobbyStartBtn"/, "party leader has a dedicated start-match button");
