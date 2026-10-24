@@ -18,6 +18,7 @@ if (!ADMIN_PASSWORD) console.warn("[AUTH] ADMIN_PASSWORD is not set; master acco
 
 
 const ROOT = __dirname;
+const JSON_FALLBACK_ENABLED = process.env.STANDOFFX_ALLOW_JSON_FALLBACK === "1";
 const USERS_PATH = path.join(ROOT, "account.json");
 const CLANS_PATH = path.join(ROOT, "clans.json");
 const MESSAGES_PATH = path.join(ROOT, "messages.json");
@@ -32,15 +33,12 @@ for (const dir of [AVATARS_DIR, path.join(ROOT, "ranks")]) {
 
 function readJson(file, fallback) {
   try {
-    if (!fs.existsSync(file)) {
-      fs.writeFileSync(file, JSON.stringify(fallback, null, 2) + "\n", "utf8");
-      return fallback;
-    }
+    if (!fs.existsSync(file)) return fallback;
     const raw = fs.readFileSync(file, "utf8").trim();
     if (!raw) return fallback;
     return JSON.parse(raw);
   } catch (err) {
-    console.error("[JSON]", path.basename(file), err.message);
+    console.error("[LEGACY DATA]", path.basename(file), err.message);
     return fallback;
   }
 }
@@ -96,7 +94,7 @@ const DEFAULT_SKINS = {
 
 let skins = readJson(SKINS_PATH, DEFAULT_SKINS);
 if (!skins || Array.isArray(skins) || typeof skins !== "object") skins = DEFAULT_SKINS;
-writeJson(SKINS_PATH, skins);
+// skins.json is static catalog data; player-owned state is stored in MongoDB.
 
 let users = readJson(USERS_PATH, []);
 if (!Array.isArray(users)) users = [];
@@ -109,13 +107,30 @@ if (!inventory || typeof inventory !== "object" || Array.isArray(inventory)) inv
 let market = readJson(MARKET_PATH, []);
 if (!Array.isArray(market)) market = [];
 
-function saveUsers() { writeJson(USERS_PATH, users); mongoSave("state_users", users); }
-function saveClans() { writeJson(CLANS_PATH, clans); mongoSave("state_clans", clans); }
-function saveMessages() { writeJson(MESSAGES_PATH, messages); mongoSave("state_messages", messages); }
-function saveInventory() { writeJson(INVENTORY_PATH, inventory); mongoSave("state_inventory", inventory); }
 let mongoClient = null;
 let mongoDb = null;
 let mongoConnecting = false;
+let storageReady = false;
+const mongoWriteQueues = new Map();
+const pendingMongoWrites = new Map();
+
+function persistState(name, data, legacyPath) {
+  if (mongoDb && mongoStatus.connected) return mongoSave(name, data);
+  if (storageReady && JSON_FALLBACK_ENABLED && !mongoStatus.configured) {
+    try { writeJson(legacyPath, data); return Promise.resolve(true); }
+    catch (err) { console.error("[LOCAL DEV STORAGE]", path.basename(legacyPath), err.message); return Promise.resolve(false); }
+  }
+  if (storageReady && mongoStatus.configured) {
+    try { pendingMongoWrites.set(name, JSON.parse(JSON.stringify(data))); } catch {}
+    mongoStatus.connected = false;
+    if (mongoStatus.state === "connected") mongoStatus.state = "disconnected";
+  }
+  return Promise.resolve(false);
+}
+function saveUsers() { return persistState("state_users", users, USERS_PATH); }
+function saveClans() { return persistState("state_clans", clans, CLANS_PATH); }
+function saveMessages() { return persistState("state_messages", messages, MESSAGES_PATH); }
+function saveInventory() { return persistState("state_inventory", inventory, INVENTORY_PATH); }
 const mongoStatus = {
   provider: "MongoDB Atlas",
   configured: Boolean(process.env.MONGODB_URI || process.env.MONGO_URI),
@@ -169,6 +184,34 @@ async function checkMongoConnection() {
   }
 }
 
+async function loadMongoState(name, legacySnapshot) {
+  const collection = mongoDb.collection(name);
+  const existing = await collection.findOne({ _id: "main" });
+  if (existing) {
+    if (!Object.prototype.hasOwnProperty.call(existing, "data")) {
+      throw new Error("MongoDB collection " + name + " has a state document without its data field.");
+    }
+    return existing.data;
+  }
+  const snapshot = JSON.parse(JSON.stringify(legacySnapshot));
+  try {
+    await collection.insertOne({ _id: "main", data: snapshot });
+    console.warn("[DB] One-time legacy import into MongoDB:", name);
+    return snapshot;
+  } catch (err) {
+    if (err?.code !== 11000) throw err;
+    const raced = await collection.findOne({ _id: "main" });
+    if (raced && Object.prototype.hasOwnProperty.call(raced, "data")) return raced.data;
+    throw err;
+  }
+}
+
+async function writeMongoStateNow(name, data) {
+  if (!mongoDb) throw new Error("MongoDB is not connected while saving " + name + ".");
+  const snapshot = JSON.parse(JSON.stringify(data));
+  await mongoDb.collection(name).replaceOne({ _id: "main" }, { _id: "main", data: snapshot }, { upsert: true });
+}
+
 async function initMongo() {
   if (mongoConnecting) return false;
   mongoConnecting = true;
@@ -179,19 +222,27 @@ async function initMongo() {
   if (!uri) {
     mongoStatus.connected = false;
     mongoStatus.state = "not_configured";
-    mongoStatus.lastError = "MONGODB_URI/MONGO_URI is missing; JSON fallback is active.";
-    console.warn("[DB] MongoDB Atlas is NOT configured. Set MONGODB_URI in Render Environment.");
+    mongoStatus.lastError = JSON_FALLBACK_ENABLED
+      ? "MongoDB URI is missing; explicit local development fallback is enabled."
+      : "MongoDB URI is required. Set MONGODB_URI in Render Environment.";
+    console.warn("[DB] MongoDB Atlas is not configured.");
     mongoConnecting = false;
     return false;
   }
+
   mongoStatus.state = "connecting";
   mongoStatus.lastError = null;
   try {
     const atlasTlsRequired = /^mongodb\+srv:\/\//i.test(uri) || /\.mongodb\.net(?:[:/?]|$)/i.test(uri);
-    const client = new MongoClient(uri, { ...(atlasTlsRequired ? { tls: true } : {}), serverSelectionTimeoutMS: 8000, connectTimeoutMS: 8000, maxPoolSize: 5, appName: "StandoffX" });
+    const client = new MongoClient(uri, {
+      ...(atlasTlsRequired ? { tls: true } : {}),
+      serverSelectionTimeoutMS: 8000,
+      connectTimeoutMS: 8000,
+      maxPoolSize: 5,
+      appName: "StandoffX"
+    });
     mongoClient = client;
     client.on("close", () => {
-      // Do not let an old client's close event clear a newer connection.
       if (mongoClient !== client) return;
       mongoClient = null;
       mongoDb = null;
@@ -199,6 +250,7 @@ async function initMongo() {
       if (mongoStatus.state === "connected") mongoStatus.state = "disconnected";
       console.warn("[DB] MongoDB connection closed.");
     });
+
     await client.connect();
     if (mongoClient !== client) throw new Error("MongoDB client closed during connection.");
     mongoDb = client.db(mongoStatus.database);
@@ -207,52 +259,58 @@ async function initMongo() {
     mongoStatus.state = "connected";
     mongoStatus.connectedAt = new Date().toISOString();
     mongoStatus.lastCheckAt = mongoStatus.connectedAt;
-    const load = async (name, fallback) => {
-      const doc = await mongoDb.collection(name).findOne({ _id: "main" });
-      return doc && doc.data !== undefined ? doc.data : fallback;
+
+    const legacySnapshots = {
+      state_users: users.map(user => ({ ...user })),
+      state_clans: clans,
+      state_messages: messages,
+      state_inventory: inventory,
+      state_market: market
     };
-    const localUsersSnapshot = users.map(user => ({ ...user }));
-    const atlasUsers = await load("state_users", localUsersSnapshot);
-    if (Array.isArray(atlasUsers)) {
-      const keyOf = user => String(normalizeId(user?.id || "")).toLowerCase();
-      const localById = new Map(localUsersSnapshot.map(user => [keyOf(user), user]).filter(([key]) => key));
-      const localByUuid = new Map(localUsersSnapshot.filter(user => user?.uuid).map(user => [String(user.uuid), user]));
-      const matchedLocalUsers = new Set();
-      const mergedUsers = atlasUsers.filter(user => user && typeof user === "object" && !Array.isArray(user)).map(atlasUser => {
-        const localUser = localById.get(keyOf(atlasUser)) || localByUuid.get(String(atlasUser.uuid || ""));
-        if (localUser) matchedLocalUsers.add(localUser);
-        return { ...(localUser || {}), ...atlasUser };
-      });
-      for (const localUser of localUsersSnapshot) {
-        if (!matchedLocalUsers.has(localUser) && !mergedUsers.some(user => keyOf(user) && keyOf(user) === keyOf(localUser))) mergedUsers.push(localUser);
-      }
-      users = mergedUsers;
-      for (const user of users) ensureUserShape(user);
-      migratePlayerIds();
-      saveUsers();
-    }
+    const readState = async name => {
+      const fromAtlas = await loadMongoState(name, legacySnapshots[name]);
+      // If a brief outage happened after startup, retain edits captured while Atlas was offline.
+      return pendingMongoWrites.has(name) ? pendingMongoWrites.get(name) : fromAtlas;
+    };
 
-    const atlasClans = await load("state_clans", clans);
-    if (atlasClans && typeof atlasClans === "object" && !Array.isArray(atlasClans)) {
-      clans = normalizeClanState(atlasClans);
-    }
+    const atlasUsers = await readState("state_users");
+    if (!Array.isArray(atlasUsers)) throw new Error("MongoDB state_users.data must be an array.");
+    users = atlasUsers.filter(user => user && typeof user === "object" && !Array.isArray(user)).map(user => ({ ...user }));
+    for (const user of users) ensureUserShape(user);
+    migratePlayerIds();
 
-    const atlasMessages = await load("state_messages", messages);
-    if (atlasMessages && typeof atlasMessages === "object" && !Array.isArray(atlasMessages)) messages = atlasMessages;
+    const atlasClans = await readState("state_clans");
+    if (!atlasClans || typeof atlasClans !== "object" || Array.isArray(atlasClans)) throw new Error("MongoDB state_clans.data must be an object.");
+    clans = normalizeClanState(atlasClans);
 
-    const atlasInventory = await load("state_inventory", inventory);
-    if (atlasInventory && typeof atlasInventory === "object" && !Array.isArray(atlasInventory)) inventory = atlasInventory;
+    const atlasMessages = await readState("state_messages");
+    if (!atlasMessages || typeof atlasMessages !== "object" || Array.isArray(atlasMessages)) throw new Error("MongoDB state_messages.data must be an object.");
+    messages = atlasMessages;
 
-    const atlasMarket = await load("state_market", market);
-    if (Array.isArray(atlasMarket)) market = atlasMarket.filter(lot => lot && typeof lot === "object" && !Array.isArray(lot));
+    const atlasInventory = await readState("state_inventory");
+    if (!atlasInventory || typeof atlasInventory !== "object" || Array.isArray(atlasInventory)) throw new Error("MongoDB state_inventory.data must be an object.");
+    inventory = atlasInventory;
+
+    const atlasMarket = await readState("state_market");
+    if (!Array.isArray(atlasMarket)) throw new Error("MongoDB state_market.data must be an array.");
+    market = atlasMarket.filter(lot => lot && typeof lot === "object" && !Array.isArray(lot));
 
     for (const user of users) {
       ensureUserShape(user);
       if (user.clan && !clans[user.clan]) user.clan = null;
     }
     migratePlayerIds();
-    saveUsers();
-    saveClans();
+
+    // Wait for initial normalization/migration writes before the HTTP server starts.
+    await Promise.all([
+      writeMongoStateNow("state_users", users),
+      writeMongoStateNow("state_clans", clans),
+      writeMongoStateNow("state_messages", messages),
+      writeMongoStateNow("state_inventory", inventory),
+      writeMongoStateNow("state_market", market)
+    ]);
+    pendingMongoWrites.clear();
+    storageReady = true;
     console.log("[DB] MongoDB Atlas connected:", mongoStatus.database);
     mongoConnecting = false;
     return true;
@@ -278,14 +336,37 @@ const mongoReconnectTimer = setInterval(() => {
 mongoReconnectTimer.unref?.();
 
 function mongoSave(name, data) {
-  if (!mongoDb) return;
-  mongoDb.collection(name).replaceOne(
-    { _id: "main" },
-    { _id: "main", data },
-    { upsert: true }
-  ).catch(err => {
+  if (!mongoDb || !mongoStatus.connected) {
+    if (storageReady && mongoStatus.configured) {
+      try { pendingMongoWrites.set(name, JSON.parse(JSON.stringify(data))); } catch {}
+    }
+    return Promise.resolve(false);
+  }
+  let snapshot;
+  try { snapshot = JSON.parse(JSON.stringify(data)); }
+  catch (err) {
+    console.error("[DB] Could not serialize state:", name, err.message);
+    return Promise.resolve(false);
+  }
+  const activeDb = mongoDb;
+  const previous = mongoWriteQueues.get(name) || Promise.resolve();
+  const write = previous.catch(() => {}).then(async () => {
+    if (mongoDb !== activeDb || !mongoStatus.connected) {
+      pendingMongoWrites.set(name, snapshot);
+      return false;
+    }
+    await activeDb.collection(name).replaceOne(
+      { _id: "main" },
+      { _id: "main", data: snapshot },
+      { upsert: true }
+    );
+    if (pendingMongoWrites.get(name) === snapshot) pendingMongoWrites.delete(name);
+    return true;
+  }).catch(err => {
+    pendingMongoWrites.set(name, snapshot);
     mongoStatus.lastError = cleanText(err.message, 240);
-    if (err.name === "MongoNetworkError" || err.name === "MongoServerSelectionError") {
+    console.error("[DB] Write failed:", name, mongoStatus.lastError);
+    if (err.name === "MongoNetworkError" || err.name === "MongoServerSelectionError" || err.name === "MongoTopologyClosedError") {
       const failedClient = mongoClient;
       mongoClient = null;
       mongoDb = null;
@@ -293,14 +374,13 @@ function mongoSave(name, data) {
       mongoStatus.state = "error";
       try { failedClient?.close().catch(() => {}); } catch {}
     }
-    console.error("[DB] Write failed:", mongoStatus.lastError);
+    return false;
   });
+  mongoWriteQueues.set(name, write);
+  return write;
 }
 
-function saveMarket() {
-  writeJson(MARKET_PATH, market);
-  mongoSave("state_market", market);
-}
+function saveMarket() { return persistState("state_market", market, MARKET_PATH); }
 
 function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -687,7 +767,7 @@ app.get("/api/health", (_req, res) => {
     game: "StandoffX",
     version: "0.4.0",
     uptimeSeconds: Math.round(process.uptime()),
-    database: mongoDb ? "MongoDB Atlas" : "JSON fallback",
+    database: mongoDb ? "MongoDB Atlas" : (JSON_FALLBACK_ENABLED && !mongoStatus.configured ? "JSON fallback (local dev)" : "MongoDB Atlas (disconnected)"),
     atlas: publicMongoStatus(),
     matchmaking: {
       queued: matchmakingQueue.length,
@@ -4313,7 +4393,7 @@ app.post("/api/admin/clans/delete", transactionRateLimit, requireAdmin, (req, re
 });
 
 app.get("/api/admin/database", requireAdmin, (_req, res) => {
-  res.json({ success: true, storage: mongoDb ? "MongoDB Atlas" : "JSON fallback", users: users.map(publicUser), clans, messages, inventory, market });
+  res.json({ success: true, storage: mongoDb ? "MongoDB Atlas" : (JSON_FALLBACK_ENABLED && !mongoStatus.configured ? "JSON fallback (local dev)" : "MongoDB Atlas (disconnected)"), users: users.map(publicUser), clans, messages, inventory, market });
 });
 
 app.use((err, _req, res, _next) => {
@@ -4325,13 +4405,22 @@ app.use((err, _req, res, _next) => {
 });
 
 async function bootstrap() {
-  await initMongo();
+  const connected = await initMongo();
+  if (!connected) {
+    if (JSON_FALLBACK_ENABLED && !mongoStatus.configured) {
+      storageReady = true;
+      console.warn("[DB] Explicit local-development JSON fallback enabled. Persistent accounts are not stored in Atlas.");
+      saveUsers(); saveClans(); saveMessages(); saveInventory(); saveMarket();
+    } else {
+      throw new Error("MongoDB Atlas is required but unavailable: " + (mongoStatus.lastError || "check MONGODB_URI and network access."));
+    }
+  }
   server.listen(PORT, () => {
     console.log("====================================");
     console.log(" StandoffX server");
     console.log(` HTTP : ${SServer ? "HTTPS" : "HTTP"}`);
     console.log(` PORT : ${PORT}`);
-    console.log(` DB   : ${mongoDb ? "MongoDB" : "JSON"}`);
+    console.log(` DB   : ${mongoDb ? "MongoDB Atlas" : "JSON fallback (explicit local development only)"}`);
     console.log("====================================");
   });
 }
