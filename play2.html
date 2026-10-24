@@ -1466,7 +1466,7 @@ let buyMenuOpen=false;
 let roundCinematic=null;
 let alliesCash=800;
 let alliesWeapons=["p350","knife"];
-let alliesEquippedWeapon="p350";
+let alliesEquippedWeapon="knife";
 
 const keys={w:false,s:false,a:false,d:false,shift:false};
 const DEFAULT_TRAINING_BINDS={spawnBot:"KeyN",removeBot:"KeyB",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
@@ -3016,7 +3016,7 @@ socket.on("allies_round_start",data=>{
   bombToolActive=false;refreshBombToolVisual();
   hp=100;keys.w=keys.a=keys.s=keys.d=keys.shift=false;fireHeld=false;jumpQueued=false;isCrouching=false;
   cancelWeaponAction();weaponAmmo.akr=CLIENT_WEAPON_INFO.akr.magazine;weaponAmmo.p350=CLIENT_WEAPON_INFO.p350.magazine;weaponReserve.akr=90;weaponReserve.p350=52;ammo=weaponAmmo[alliesEquippedWeapon]??weaponAmmo.knife;reloading=false;
-  setAimingDownSights(false);selectWeapon(alliesWeapons.includes(alliesEquippedWeapon)?alliesEquippedWeapon:(alliesWeapons.includes("p350")?"p350":"knife"),true);updateWeaponHud();
+  setAimingDownSights(false);selectWeapon(alliesWeapons.includes(alliesEquippedWeapon)?alliesEquippedWeapon:(alliesWeapons.includes("knife")?"knife":"p350"),true);updateWeaponHud();
   $("deathNotice").style.display="none";
   for(const p of (data.players||[])){
     if(String(p.userId)===String(myId)){
@@ -3059,7 +3059,7 @@ socket.on("allies_loadout",data=>{
   if(mode!=="allies"||isTrainingMode||!data)return;
   alliesCash=Math.max(0,Number(data.cash)||0);
   alliesWeapons=Array.isArray(data.weapons)?[...new Set(data.weapons.filter(id=>CLIENT_WEAPON_INFO[id]))]:["p350","knife"];
-  alliesEquippedWeapon=CLIENT_WEAPON_INFO[data.equippedWeapon]?data.equippedWeapon:(alliesWeapons.includes("p350")?"p350":alliesWeapons[0]||"knife");
+  alliesEquippedWeapon=CLIENT_WEAPON_INFO[data.equippedWeapon]?data.equippedWeapon:(alliesWeapons.includes("knife")?"knife":alliesWeapons[0]||"p350");
   if((matchPhase==="round_start"||matchPhase==="game")&&selectedWeapon!==alliesEquippedWeapon){
     selectWeapon(alliesWeapons.includes(alliesEquippedWeapon)?alliesEquippedWeapon:"knife",false);
   }
