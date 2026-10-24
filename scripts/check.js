@@ -90,7 +90,11 @@ assert.match(server, /client\.user\?\.id === id\) client\.disconnect\(true\)/, "
 
 assert.match(server, /user\.isAdmin = user\.id === ADMIN_ID \? true : Boolean\(user\.isAdmin\)/, "master account must remain admin");
 assert.match(server, /const changingId = !isMaster && nextIdRaw !== u\.id/, "legacy IDs must be editable without changing ID");
-assert.match(server, /const localUsersSnapshot = users\.map\(user => \(\{ \.\.\.user \}\)\)[\s\S]{0,200}const atlasUsers = await load\("state_users", localUsersSnapshot\)/, "MongoDB users must merge Atlas records with legacy account.json fields");
+assert.match(server, /async function loadMongoState\(name, legacySnapshot\)/, "MongoDB state uses an explicit one-time legacy import");
+assert.match(server, /if \(existing\) \{\s*if \(!Object\.prototype\.hasOwnProperty\.call\(existing, "data"\)\)/, "an existing Atlas state document remains canonical");
+assert.doesNotMatch(server, /for \(const localUser of localUsersSnapshot\)/, "legacy account data is not merged over an existing Atlas database");
+assert.match(server, /const JSON_FALLBACK_ENABLED = process\.env\.STANDOFFX_ALLOW_JSON_FALLBACK === "1"/, "JSON persistence is disabled unless explicitly enabled for local development");
+assert.match(server, /MongoDB Atlas is required but unavailable/, "production startup fails visibly when Atlas is unavailable");
 assert.match(server, /socket\.on\("leave_match"/, "gameplay client must be able to leave the match");
 assert.match(server, /disconnectTimer: null/, "live matches must support reconnect grace periods");
 assert.match(server, /ready < current\.players\.length/, "lobbies must time out if map loading never becomes ready");
