@@ -1598,7 +1598,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
       ready: Boolean(p.isBot),
       cash: mode === "allies" ? 800 : 0,
       weapons: mode === "allies" ? ["p350", "knife"] : ["akr", "p350", "knife"],
-      equippedWeapon: mode === "allies" ? "p350" : "akr",
+      equippedWeapon: "knife",
       joinedAt: null,
       disconnectTimer: null
     })),
@@ -2042,7 +2042,7 @@ function alliesRoundPayload(match) {
       isBot: Boolean(player.isBot),
       team: player.team, hp: player.hp, score: Number(player.score) || 0,
       kills: Number(player.kills) || 0, deaths: Number(player.deaths) || 0,
-      cash: Number(player.cash) || 0, equippedWeapon: player.equippedWeapon || "p350",
+      cash: Number(player.cash) || 0, equippedWeapon: player.equippedWeapon || "knife",
       x: player.pos.x, y: player.pos.y, z: player.pos.z,
       rotY: player.rotY, spawn: { ...player.spawn },
       alive: player.hp > 0, connected: player.isBot || Boolean(player.socketId)
@@ -2051,7 +2051,7 @@ function alliesRoundPayload(match) {
 }
 
 function alliesLoadoutPayload(player) {
-  return { cash: Math.max(0, Number(player.cash) || 0), weapons: Array.isArray(player.weapons) ? [...new Set(player.weapons)] : ["p350", "knife"], equippedWeapon: player.equippedWeapon || "p350", prices: { ...ALLIES_BUY_PRICES } };
+  return { cash: Math.max(0, Number(player.cash) || 0), weapons: Array.isArray(player.weapons) ? [...new Set(player.weapons)] : ["p350", "knife"], equippedWeapon: player.equippedWeapon || "knife", prices: { ...ALLIES_BUY_PRICES } };
 }
 function emitAlliesLoadout(io, match, player) {
   if (player?.socketId) io.to(player.socketId).emit("allies_loadout", alliesLoadoutPayload(player));
@@ -2110,7 +2110,7 @@ function finishAlliesRound(io, match, winningTeam, reason) {
     kills: Number(player.kills) || 0,
     deaths: Number(player.deaths) || 0,
     cash: Number(player.cash) || 0,
-    equippedWeapon: player.equippedWeapon || "p350"
+    equippedWeapon: player.equippedWeapon || "knife"
   }));
   const mvp = [...players].sort((a, b) => b.kills - a.kills || b.score - a.score || a.deaths - b.deaths)[0] || null;
   const payload = {
@@ -2186,9 +2186,9 @@ function startAlliesRound(io, match, initial = false) {
   };
   const teamIndices = { A: 0, B: 0 };
   for (const player of match.players) {
-    if (match.roundNumber > 1 && player.hp <= 0) { player.weapons = ["p350", "knife"]; player.equippedWeapon = "p350"; }
+    if (match.roundNumber > 1 && player.hp <= 0) { player.weapons = ["p350", "knife"]; player.equippedWeapon = "knife"; }
     if (!Array.isArray(player.weapons) || !player.weapons.length) player.weapons = ["p350", "knife"];
-    if (!player.weapons.includes(player.equippedWeapon)) player.equippedWeapon = player.weapons.includes("p350") ? "p350" : player.weapons[0];
+    if (!player.weapons.includes(player.equippedWeapon)) player.equippedWeapon = player.weapons.includes("knife") ? "knife" : (player.weapons[0] || "p350");
     player.cash = Math.max(0, Number.isFinite(Number(player.cash)) ? Number(player.cash) : 800);
     player.hp = 100;
     player.lastShotAt = 0;
