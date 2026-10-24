@@ -184,13 +184,15 @@ assert.match(game, /document\.pointerLockElement===renderer\.domElement/, "camer
 assert.doesNotMatch(read("auth.html"), /DEV BUILD/i, "sign-in must not show development labels");
 assert.match(menu, /StandoffX menu remake/, "the menu must use the refreshed neon styling");
 assert.match(menu, /id="homeAgentCanvas"/, "the main screen has a dedicated transparent canvas for its central 3D agent");
-assert.match(menu, /agent=makeVisual\(0x8e9ba6\)/, "the menu preview reuses the in-game procedural soldier and rifle");
+assert.match(menu, /soldier_tac\.glb/, "the lobby preview loads the optimized tactical agent model");
+assert.match(menu, /SkeletonUtils\.clone\(tacticalTemplate\)/, "the lobby clones the animated rig safely for every squad member");
+assert.match(menu, /function createAgent\(index\)/, "the lobby has a model-based squad agent renderer");
 assert.match(menu, /function makeVisual\(color\)[\s\S]*?function animateSoldier\(/, "the menu includes the existing game character builder and idle animation");
 assert.match(menu, /home-friends-title/, "friends and squad are visible in the main menu");
 assert.match(menu, /pendingHomeInvite=String\(userId\|\|""\)/, "quick invites create a lobby automatically when needed");
 assert.match(menu, /const disabled=!friend\.status\|\|\(Boolean\(currentLobby\)\&\&currentLobby\.members\.length>=currentLobby\.maxPlayers\)/, "online friends can be invited from the main menu before a lobby exists");
 assert.match(menu, /BATTLE PASS|SEASON PASS/i, "pass/event content remains on the right side of the home menu");
-assert.match(menu, /position:fixed!important;right:28px!important;bottom:28px!important/, "Play must be anchored to the lower-right corner");
+assert.match(menu, /home-hero \.playarea\{position:absolute!important;right:16px!important;left:auto!important;top:auto!important;bottom:16px!important/, "Play must be anchored to the lower-right corner of the central hero");
 assert.match(game, /controls\.pointerSpeed=mouseSensitivity/, "mouse look must use the saved sensitivity");
 assert.match(game, /function buildNeonYard\(\)/, "the selected neon map must be implemented");
 assert.match(game, /const sandstoneScale=1\.25/, "Sandstone must use the expanded 1.25x world scale");
