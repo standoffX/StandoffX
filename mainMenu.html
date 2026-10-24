@@ -937,6 +937,86 @@ body.lobby-screen:after{display:none!important}
 }
 </style>
 
+
+<style id="sx-reference-menu-remake">
+/* Compact tactical layout based on the supplied Standoff menu reference. */
+body.lobby-screen .shell{height:100dvh;min-height:0;display:flex;flex-direction:column;min-width:0}
+body.lobby-screen .content{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:12px!important}
+body.lobby-screen #home.active{display:block;height:100%;min-height:0}
+body.lobby-screen .home-layout{
+  display:grid!important;
+  grid-template-columns:minmax(200px,238px) minmax(390px,1fr) minmax(205px,238px)!important;
+  grid-template-rows:minmax(190px,.83fr) minmax(145px,.55fr)!important;
+  grid-template-areas:"friends hero promo" "profile hero pass";
+  gap:10px!important;align-items:stretch!important;
+  height:calc(100dvh - 94px);min-height:560px;max-height:850px;
+  grid-auto-rows:unset!important;
+}
+body.lobby-screen .home-friends{grid-area:friends!important;grid-column:auto!important;grid-row:auto!important;min-height:0!important;height:100%;display:block!important}
+body.lobby-screen .home-hero{grid-area:hero!important;grid-column:auto!important;grid-row:auto!important;min-height:0!important;height:100%;position:relative!important;overflow:hidden!important}
+body.lobby-screen .profile-col{grid-area:profile!important;grid-column:auto!important;grid-row:auto!important;min-height:0!important;overflow:hidden}
+body.lobby-screen .promo-col{grid-area:promo!important;grid-column:auto!important;grid-row:auto!important;min-height:0!important;height:100%;display:block!important;overflow:hidden}
+body.lobby-screen .passpanel{grid-area:pass!important;grid-column:auto!important;grid-row:auto!important;min-height:0!important;height:100%;overflow:hidden}
+body.lobby-screen .home-friends-body{gap:10px!important;padding:10px!important}
+body.lobby-screen .home-hero-art{opacity:.42!important;filter:saturate(.42) contrast(1.12) brightness(.7)!important;object-fit:cover!important;object-position:center 40%!important}
+body.lobby-screen .home-hero:after{background:linear-gradient(90deg,#0c151ded 0%,#111a22a8 42%,#111a2224 100%),linear-gradient(0deg,#0b1118df 0%,transparent 58%)!important}
+body.lobby-screen .home-hero-copy{left:22px!important;top:20px!important;z-index:5!important}
+body.lobby-screen .home-hero-copy h1{font-size:clamp(25px,3vw,44px)!important;letter-spacing:.8px!important}
+body.lobby-screen .home-hero-overline{font-size:8px!important;letter-spacing:1.6px!important}
+body.lobby-screen .home-agent-canvas{z-index:2!important;opacity:1!important}
+body.lobby-screen .home-agent-spec{z-index:5!important;right:12px!important;top:18px!important}
+body.lobby-screen .home-loadout{z-index:5!important;left:12px!important;right:12px!important;bottom:12px!important;width:auto!important;max-width:none!important;padding:8px!important;background:#0d151bd9!important;border:1px solid #a9cbea20!important}
+body.lobby-screen .home-loadout-heading{font-size:8px!important;margin-bottom:5px!important}
+body.lobby-screen .home-loadout-options{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important}
+body.lobby-screen .home-loadout-options button{min-width:0!important;min-height:41px!important;padding:5px 4px!important;display:grid!important;grid-template-columns:25px minmax(0,1fr)!important;grid-template-rows:auto auto!important;column-gap:5px!important;align-items:center!important;text-align:left!important}
+body.lobby-screen .home-loadout-options .loadout-icon{grid-row:1/3!important;width:25px!important;height:22px!important;margin:0!important}
+body.lobby-screen .home-loadout-options b{font-size:8px!important;line-height:1.1!important}
+body.lobby-screen .home-loadout-options small{font-size:6px!important;line-height:1.1!important}
+body.lobby-screen .home-hero .playarea{right:12px!important;bottom:115px!important;z-index:7!important}
+body.lobby-screen .home-hero .playbutton{width:174px!important;min-width:174px!important;height:45px!important;min-height:45px!important;font-size:12px!important;letter-spacing:1px!important}
+body.lobby-screen .home-hero #selectedModeText,body.lobby-screen .home-hero #selectedMapText{font-size:8px!important}
+body.lobby-screen .promo-col .promo{height:155px!important;min-height:155px!important}
+body.lobby-screen .promo-col .panelbody{padding:10px!important}
+body.lobby-screen .passpanel .passhero{height:78px!important}
+body.lobby-screen .passpanel .rewards{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:4px!important;padding:6px!important}
+body.lobby-screen .passpanel .reward{height:49px!important;min-width:0!important}
+body.lobby-screen .homefooter{margin-top:5px!important;padding:7px!important;font-size:8px!important}
+body.lobby-screen .profile-col .panelbody{padding:10px!important}
+body.lobby-screen .profile-col .profiletop{gap:9px!important;align-items:flex-start!important}
+body.lobby-screen .profile-col .avatar{width:42px!important;height:42px!important}
+body.lobby-screen .profile-col .nick{font-size:12px!important}
+body.lobby-screen .profile-col .rankline{margin:5px 0!important}
+body.lobby-screen .profile-col .ranks{gap:4px!important}
+body.lobby-screen .profile-col .rankcard{padding:7px 5px!important}
+body.lobby-screen .profile-col .rankname{font-size:7px!important}
+body.lobby-screen .profile-col .rankdesc{font-size:8px!important}
+body.lobby-screen .profiletop .playerid:has(#profilePageUuid),body.lobby-screen #copyUuid{display:none!important}
+body.lobby-screen .lobby-team-control{display:flex;align-items:center;gap:5px;color:#a9cbea;font-size:8px;font-weight:900;white-space:nowrap}
+body.lobby-screen .lobby-team-control select{min-width:48px;padding:5px 7px;background:#121b23;color:#edf3f8;border:1px solid #a9cbea50;border-radius:2px;font-size:10px;font-weight:900}
+body.lobby-screen .lobby-team-pill{padding:5px 7px;border:1px solid #a9cbea35;color:#cde6f9;font-size:8px;font-weight:900;white-space:nowrap}
+body.lobby-screen .lobby-member-row{align-items:center;flex-wrap:wrap}
+body.lobby-screen .lobby-member-main{min-width:100px;flex:1}
+body.lobby-screen .lobby-member-id{font-size:9px}
+@media(max-width:1120px){
+  body.lobby-screen .home-layout{grid-template-columns:minmax(180px,.78fr) minmax(320px,1.35fr)!important;grid-template-rows:minmax(330px,1fr) minmax(130px,.42fr) minmax(145px,.45fr)!important;grid-template-areas:"friends hero" "profile hero" "promo pass";height:auto;min-height:720px}
+  body.lobby-screen .home-hero{min-height:0!important}
+  body.lobby-screen .promo-col{min-height:0!important}
+}
+@media(max-width:700px){
+  body.lobby-screen .content{padding:8px 8px 72px!important;overflow-y:auto}
+  body.lobby-screen .home-layout{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(360px,58vh) auto auto auto auto!important;grid-template-areas:"hero" "friends" "profile" "promo" "pass";height:auto;max-height:none;min-height:0;gap:8px!important}
+  body.lobby-screen .home-hero{min-height:360px!important;height:360px!important}
+  body.lobby-screen .home-friends,body.lobby-screen .profile-col,body.lobby-screen .promo-col,body.lobby-screen .passpanel{height:auto!important;min-height:0!important}
+  body.lobby-screen .profile-col{display:block!important}
+  body.lobby-screen .promo-col{display:block!important}
+  body.lobby-screen .home-loadout{bottom:8px!important;left:8px!important;right:8px!important}
+  body.lobby-screen .home-loadout-options{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  body.lobby-screen .home-hero .playarea{right:8px!important;bottom:115px!important}
+  body.lobby-screen .home-hero .playbutton{width:152px!important;min-width:152px!important;height:42px!important;min-height:42px!important}
+  body.lobby-screen .home-agent-spec{top:65px!important;right:8px!important}
+}
+@media(prefers-reduced-motion:reduce){body.lobby-screen .home-loadout-options button,body.lobby-screen .home-hero .playbutton{transition:none!important}}
+</style>
 </head>
 <body class="lobby-screen">
 <div class="app">
@@ -989,10 +1069,14 @@ body.lobby-screen:after{display:none!important}
           <button type="button" data-agent-weapon="akr" aria-pressed="true"><span class="loadout-icon loadout-rifle"></span><b>AKR</b><small>RIFLE</small></button>
           <button type="button" data-agent-weapon="p350" aria-pressed="false"><span class="loadout-icon loadout-pistol"></span><b>P350</b><small>PISTOL</small></button>
           <button type="button" data-agent-weapon="knife" aria-pressed="false"><span class="loadout-icon loadout-knife"></span><b>НІЖ</b><small>MELEE</small></button>
+          <button type="button" data-agent-weapon="m4a1" aria-pressed="false"><span class="loadout-icon loadout-rifle"></span><b>M4A1</b><small>RIFLE</small></button>
+          <button type="button" data-agent-weapon="p90" aria-pressed="false"><span class="loadout-icon loadout-rifle"></span><b>P90</b><small>SMG</small></button>
+          <button type="button" data-agent-weapon="shotgun" aria-pressed="false"><span class="loadout-icon loadout-rifle"></span><b>SHOTGUN</b><small>SHOTGUN</small></button>
+          <button type="button" data-agent-weapon="sniper" aria-pressed="false"><span class="loadout-icon loadout-rifle"></span><b>SNIPER</b><small>SNIPER</small></button>
         </div>
       </div>
       <div class="home-hero-copy">
-        <div class="home-hero-overline"><span class="hero-live-dot"></span> STANDOFFX ONLINE <span class="hero-separator">/</span> SEASON 12 · OSIRIS</div>
+        <div class="home-hero-overline"><span class="hero-live-dot"></span> STANDOFFX <span class="hero-separator">/</span> TACTICAL COMBAT</div>
         <h1>STANDOFF<em>X</em></h1>
       </div>
       <div class="playarea">
@@ -1022,15 +1106,15 @@ body.lobby-screen:after{display:none!important}
     </div>
 
     <div class="promo-col panel">
-      <div class="panelhead"><span>НОВИНИ</span><span class="coming-soon-tag">COMING SOON</span></div>
+      <div class="panelhead"><span>НОВИНИ</span><span class="coming-soon-tag">ОНОВЛЕННЯ</span></div>
       <div class="promo" style="height:242px">
         <img src="banner.png" alt="" loading="lazy">
         <div class="promo-tag">STANDOFFX NEWS</div>
-        <div class="promo-title"><strong>НОВИНИ ТА ОНОВЛЕННЯ</strong><br><span>COMING SOON</span></div>
+        <div class="promo-title"><strong>НОВИНИ ТА ОНОВЛЕННЯ</strong><br><span>НОВИЙ КОНТЕНТ</span></div>
       </div>
       <div class="panelbody news-soon">
-        <strong>COMING SOON</strong>
-        <p>Новини, оновлення та події з’являться тут.</p>
+        <strong>STANDOFFX NEWS</strong>
+        <p>Нові режими, зброя та мапи з’являтимуться в цьому розділі.</p>
       </div>
     </div>
 
@@ -1071,7 +1155,7 @@ body.lobby-screen:after{display:none!important}
           <select id="lobbyMapSelect"><option value="SANDSTONE">SANDSTONE</option><option value="SMALL_YARD">SMALL YARD</option><option value="NEON_YARD">NEON YARD</option></select>
         </label>
         <label class="lobby-check"><input type="checkbox" id="lobbyFillBots" checked><span>Заповнити вільні місця ботами</span></label>
-        <p class="muted lobby-help">Створи кімнату, запроси друзів і натисни «Почати». Якщо людей не вистачає, гра додасть нерухомих ботів у вільні слоти.</p>
+        <p class="muted lobby-help">Створи кімнату, запроси друзів і натисни «Почати». Вільні місця можна заповнити агентами, а для режиму «Союзники» розподіляй гравців між командами.</p>
         <button class="primary" id="lobbyCreateBtn" type="button">СТВОРИТИ ЛОБІ</button>
         <div id="lobbyCurrent" style="display:none">
           <div class="lobby-code"><small>КІМНАТА</small><b id="lobbyCode">—</b><span id="lobbyModeName">—</span></div>
@@ -1398,11 +1482,11 @@ function render(){
   $("profileNick").textContent=me.nickname||"PLAYER";
   $("profileId").textContent=id;
   $("profileLevel").textContent="LEVEL "+Math.max(1,Math.floor((me.XP||0)/1000)+1);
-  $("rankText").textContent="COMING SOON";
+  $("rankText").textContent="BRONZE I";
   $("xpText").textContent=(me.XP||0)+" XP";
   $("rankProgress").style.width=((me.XP||0)%1000)/10+"%";
-  $("compMmr").textContent="COMING SOON";
-  $("alliesMmr").textContent="COMING SOON";
+  $("compMmr").textContent=String(me.MMRCompetitive||1000)+" MMR";
+  $("alliesMmr").textContent=String(me.MMRAllies||1000)+" MMR";
   $("clanName").textContent=me.clan||"НЕМАЄ";
   $("avatar").src=me.playerAvatar||"/avatars/default.jpg";
   $("homePlayerAvatar").src=me.playerAvatar||"/avatars/default.jpg";
@@ -1521,6 +1605,11 @@ $("copyUuid").addEventListener("click",async()=>{
 $("findFriend").addEventListener("click",findFriend);
 $("lobbyCreateBtn").addEventListener("click",createLobby);
 $("lobbyStartBtn").addEventListener("click",()=>socialSocket?.emit("lobby_start_match",{fillWithBots:$("lobbyFillBots").checked}));
+$("lobbyMembers").addEventListener("change",e=>{
+  const select=e.target.closest("[data-lobby-team]");
+  if(!select)return;
+  socialSocket?.emit("lobby_set_team",{userId:select.dataset.lobbyTeam,team:select.value});
+});
 $("lobbyLeaveBtn").addEventListener("click",()=>socialSocket?.emit("lobby_leave"));
 $("lobbyRefreshFriends").addEventListener("click",()=>{loadFriends();loadLobbyFriends()});
 $("acceptLobbyInvite").addEventListener("click",()=>respondToLobbyInvite(true));
@@ -1532,7 +1621,7 @@ $("lobbyModeSelect").addEventListener("change",()=>{
   for(const option of select.options)option.disabled=!allowed.includes(option.value);
   if(!allowed.includes(select.value))select.value=allowed[0];
 });
-$("lobbyFillBots").addEventListener("change",()=>{$("lobbyStartBtn").textContent=$("lobbyFillBots").checked?"▶ ПОЧАТИ З БОТАМИ":"▶ ПОЧАТИ"});
+$("lobbyFillBots").addEventListener("change",()=>{$("lobbyStartBtn").textContent=$("lobbyFillBots").checked?"▶ ПОЧАТИ З АГЕНТАМИ":"▶ ПОЧАТИ"});
 $("friendsList").addEventListener("click",e=>{
   const invite=e.target.closest("[data-lobby-invite]");if(invite){inviteToLobby(invite.dataset.lobbyInvite);return}
   if(e.target.closest("[data-open-lobby]"))show("lobby");
@@ -1684,12 +1773,18 @@ function renderLobbyState(lobby){
   if(status)status.textContent=(lobby.members?.length||0)+" / "+lobby.maxPlayers;
   $("lobbyCode").textContent=lobby.id;
   $("lobbyModeName").textContent=(lobby.modeName||lobby.mode)+" · "+(lobby.mapName||lobby.map);
-  $("lobbyMemberCount").textContent="("+lobby.members.length+" / "+lobby.maxPlayers+")";
-  $("lobbyMembers").innerHTML=(lobby.members||[]).map(member=>"<div class='row'><div><b>"+esc(member.nickname)+"</b><div class='lobby-member-tag'>"+(member.isOwner?"ЛІДЕР":"ГРАВЕЦЬ")+" · "+(member.connected?"ОНЛАЙН":"ПІДКЛЮЧЕННЯ")+"</div></div><span class='muted'>ID "+esc(cleanId(member.userId))+"</span></div>").join("");
+  $("lobbyMemberCount").textContent="("+(lobby.members?.length||0)+" / "+lobby.maxPlayers+")";
   const isHost=String(lobby.ownerId)===String(me?.id);
+  $("lobbyMembers").innerHTML=(lobby.members||[]).map(member=>{
+    const team=member.team==="B"?"B":"A";
+    const teamControl=lobby.mode==="allies"&&isHost
+      ?"<label class='lobby-team-control'>КОМАНДА <select data-lobby-team='"+esc(member.userId)+"'><option value='A' "+(team==="A"?"selected":"")+">A</option><option value='B' "+(team==="B"?"selected":"")+">B</option></select></label>"
+      :(lobby.mode==="allies"?"<span class='lobby-team-pill'>КОМАНДА "+team+"</span>":"");
+    return "<div class='row lobby-member-row'><div class='lobby-member-main'><b>"+esc(member.nickname)+"</b><div class='lobby-member-tag'>"+(member.isOwner?"ЛІДЕР":"ГРАВЕЦЬ")+" · "+(member.connected?"ОНЛАЙН":"ПІДКЛЮЧЕННЯ")+"</div></div><span class='muted lobby-member-id'>ID "+esc(cleanId(member.userId))+"</span>"+teamControl+"</div>";
+  }).join("");
   $("lobbyStartBtn").style.display=isHost?"block":"none";
-  $("lobbyStartBtn").disabled=!isHost||lobby.members.length>lobby.maxPlayers;
-  $("lobbyStartBtn").textContent=$("lobbyFillBots").checked?"▶ ПОЧАТИ З БОТАМИ":"▶ ПОЧАТИ";
+  $("lobbyStartBtn").disabled=!isHost||(lobby.members?.length||0)>lobby.maxPlayers;
+  $("lobbyStartBtn").textContent=$("lobbyFillBots").checked?"▶ ПОЧАТИ З АГЕНТАМИ":"▶ ПОЧАТИ";
   loadFriends();
 }
 function createLobby(){
@@ -2233,15 +2328,15 @@ if(hero&&canvas){
     addPreviewPart(knife,new THREE.ConeGeometry(.034,.09,4),weaponSteel,[0,.005,.355],[Math.PI/2,0,0]);
     pistol.visible=false;knife.visible=false;
     const pickerButtons=[...document.querySelectorAll("[data-agent-weapon]")];
-    const pickerNames={akr:"AKR",p350:"P350",knife:"НІЖ"};
+    const pickerNames={akr:"AKR",p350:"P350",knife:"НІЖ",m4a1:"M4A1",p90:"P90",shotgun:"SHOTGUN",sniper:"SNIPER"};
     function setPreviewWeapon(kind){
       if(!Object.prototype.hasOwnProperty.call(pickerNames,kind))kind="akr";
-      if(rig?.rifle)rig.rifle.visible=kind==="akr";
+      if(rig?.rifle)rig.rifle.visible=kind==="akr"||kind==="m4a1"||kind==="p90"||kind==="shotgun"||kind==="sniper";
       pistol.visible=kind==="p350";knife.visible=kind==="knife";
       const label=document.getElementById("homeAgentWeaponName");
       const hint=document.getElementById("homeAgentWeaponHint");
       if(label)label.textContent=pickerNames[kind];
-      if(hint)hint.textContent=kind==="akr"?"ШТУРМОВА ГВИНТІВКА":kind==="p350"?"НАПІВАВТОМАТИЧНИЙ ПІСТОЛЕТ":"ЗБРОЯ БЛИЖНЬОГО БОЮ";
+      if(hint)hint.textContent=({akr:"ШТУРМОВА ГВИНТІВКА",p350:"НАПІВАВТОМАТИЧНИЙ ПІСТОЛЕТ",knife:"ЗБРОЯ БЛИЖНЬОГО БОЮ",m4a1:"ШТУРМОВА ГВИНТІВКА",p90:"КОМПАКТНИЙ АВТОМАТ",shotgun:"ДРОБОВИК",sniper:"СНАЙПЕРСЬКА ГВИНТІВКА"})[kind]||"ЗБРОЯ";
       pickerButtons.forEach(button=>{
         const active=button.dataset.agentWeapon===kind;
         button.classList.toggle("active",active);
