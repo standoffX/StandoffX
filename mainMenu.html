@@ -1020,141 +1020,134 @@ body.lobby-screen .lobby-member-id{font-size:9px}
 </style>
 
 <style id="sx-clean-home-menu">
-/* Minimal home screen: one hero, one primary action, existing sections remain available in navigation. */
+/* Squad-first home screen: friends at left, agents at centre, events and pass at right. */
 body.lobby-screen .shell{height:100dvh;min-height:0;overflow:hidden}
-body.lobby-screen .content{flex:1;min-height:0;height:auto;padding:0!important;overflow:hidden!important}
-body.lobby-screen #home.active{display:block!important;height:100%;min-height:0!important;overflow:hidden}
+body.lobby-screen .content{flex:1;min-height:0;padding:12px!important;overflow:auto!important}
+body.lobby-screen #home.active{display:block!important;min-height:0!important}
 body.lobby-screen #home .home-layout{
-  display:block!important;height:100%!important;min-height:0!important;max-height:none!important;
-  margin:0!important;padding:0!important;overflow:hidden!important;
+ display:grid!important;
+ grid-template-columns:minmax(205px,250px) minmax(380px,1fr) minmax(220px,260px)!important;
+ grid-template-rows:minmax(185px,.9fr) minmax(185px,.8fr)!important;
+ grid-template-areas:"friends hero promo" "friends hero pass";
+ gap:12px!important;align-items:stretch!important;
+ height:calc(100dvh - 120px);min-height:590px;max-height:850px;
+ margin:0!important;padding:0!important;overflow:visible!important;
+ grid-auto-rows:unset!important;
 }
-body.lobby-screen #home .home-friends,
-body.lobby-screen #home .profile-col,
-body.lobby-screen #home .promo-col,
-body.lobby-screen #home .passpanel,
-body.lobby-screen #home>.homefooter{display:none!important}
+body.lobby-screen #home .home-friends{grid-area:friends!important;grid-column:auto!important;grid-row:1/span 2!important;display:flex!important;flex-direction:column!important;min-height:0!important;height:100%!important;overflow:hidden!important}
+body.lobby-screen #home .home-friends .panelhead{flex:0 0 auto!important;display:flex!important;align-items:center!important;justify-content:space-between!important}
+body.lobby-screen #home .home-friends-body{min-height:0!important;overflow:auto!important;display:flex!important;flex-direction:column!important;gap:12px!important;padding:10px!important}
+body.lobby-screen #home .home-self-card{grid-template-columns:40px minmax(0,1fr) 7px!important;gap:8px!important;padding:8px!important}
+body.lobby-screen #home .home-self-card img{width:40px!important;height:40px!important}
+body.lobby-screen #home .home-self-card b{font-size:11px!important}
+body.lobby-screen #home .home-self-card span{font-size:8px!important}
+body.lobby-screen #home .home-friends-title{font-size:9px!important}
+body.lobby-screen #home .home-friends-list{display:grid!important;gap:6px!important;min-height:0!important;align-content:start}
+body.lobby-screen #home .home-friend{grid-template-columns:30px minmax(0,1fr) 6px 27px!important;gap:6px!important;padding:6px!important}
+body.lobby-screen #home .home-friend img{width:30px!important;height:30px!important}
+body.lobby-screen #home .home-friend-copy b{font-size:9px!important}
+body.lobby-screen #home .home-friend-copy small{font-size:8px!important}
+body.lobby-screen #home .home-invite-btn{min-height:36px!important;padding:9px 7px!important;font-size:8px!important}
+body.lobby-screen #home .home-squad-note{font-size:9px!important;line-height:1.4!important}
 body.lobby-screen #home .home-hero{
-  position:relative!important;display:block!important;width:100%!important;height:100%!important;
-  min-height:0!important;max-height:none!important;grid-column:auto!important;grid-row:auto!important;
-  border:0!important;border-radius:0!important;box-shadow:none!important;overflow:hidden!important;
-  background:#10171d!important;
+ grid-area:hero!important;grid-column:auto!important;grid-row:1/span 2!important;
+ position:relative!important;display:block!important;min-width:0!important;min-height:0!important;
+ height:100%!important;overflow:hidden!important;border:1px solid #b6cddd20!important;
+ border-radius:3px!important;background:#10171d!important;box-shadow:0 14px 36px #0005!important;
 }
-body.lobby-screen #home .home-hero-art{
-  position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
-  object-fit:cover!important;object-position:center 42%!important;
-  opacity:.28!important;filter:saturate(.7) contrast(1.05) brightness(.72)!important;
-  mix-blend-mode:normal!important;z-index:0!important;
-}
-body.lobby-screen #home .home-hero:after{
-  z-index:1!important;border:0!important;
-  background:linear-gradient(90deg,#0b1118df 0%,#0e151c73 35%,#10171d10 68%,#10171da8 100%),
-             linear-gradient(0deg,#090e14dc 0%,transparent 42%,#090e143b 100%)!important;
-}
-body.lobby-screen #home .home-agent-canvas{
-  position:absolute!important;inset:0!important;z-index:2!important;
-  width:100%!important;height:100%!important;opacity:1!important;
-  pointer-events:none!important;filter:drop-shadow(0 16px 30px #0006);
-}
-body.lobby-screen #home .home-hero-copy{
-  top:26px!important;left:28px!important;z-index:5!important;max-width:min(50%,520px)!important;
-}
-body.lobby-screen #home .home-hero-overline{
-  display:flex!important;align-items:center!important;gap:8px!important;
-  color:#c0ced8!important;font-size:9px!important;font-weight:800!important;letter-spacing:2.2px!important;
-}
-body.lobby-screen #home .home-hero-copy h1{
-  margin-top:14px!important;font-size:clamp(28px,3vw,44px)!important;
-  line-height:.95!important;letter-spacing:1px!important;color:#f1f5f8!important;
-  text-shadow:0 5px 28px #000b!important;
-}
+body.lobby-screen #home .home-hero-art{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;object-position:center 42%!important;opacity:.24!important;filter:saturate(.72) contrast(1.08) brightness(.65)!important;mix-blend-mode:normal!important;z-index:0!important}
+body.lobby-screen #home .home-hero:after{z-index:1!important;border:0!important;background:linear-gradient(90deg,#0b1118d9 0%,#0e151c50 32%,#10171d05 63%,#10171d70 100%),linear-gradient(0deg,#090e14b5 0%,transparent 40%,#090e1438 100%)!important}
+body.lobby-screen #home .home-agent-canvas{position:absolute!important;inset:0!important;z-index:2!important;width:100%!important;height:100%!important;opacity:1!important;pointer-events:none!important;filter:drop-shadow(0 14px 26px #0006)}
+body.lobby-screen #home .home-hero-copy{top:22px!important;left:24px!important;z-index:5!important;max-width:min(60%,520px)!important;pointer-events:none!important}
+body.lobby-screen #home .home-hero-overline{display:flex!important;align-items:center!important;gap:8px!important;color:#bdccd6!important;font-size:8px!important;font-weight:850!important;letter-spacing:2px!important}
+body.lobby-screen #home .home-hero-copy h1{margin-top:10px!important;font-size:clamp(27px,2.65vw,40px)!important;line-height:.95!important;letter-spacing:.6px!important;color:#f1f5f8!important;text-shadow:0 5px 28px #000b!important}
 body.lobby-screen #home .home-hero-copy h1 em{color:#b8d4e8!important}
-body.lobby-screen #home .home-agent-spec,
-body.lobby-screen #home .home-loadout{display:none!important}
-body.lobby-screen #home .home-hero .playarea{
-  position:absolute!important;right:28px!important;left:auto!important;top:auto!important;bottom:25px!important;
-  z-index:8!important;display:flex!important;min-height:0!important;padding:0!important;
-  align-items:flex-end!important;justify-content:flex-end!important;pointer-events:none!important;
-}
-body.lobby-screen #home .home-hero .playwrap{
-  display:flex!important;flex-direction:column!important;align-items:flex-end!important;
-  gap:7px!important;pointer-events:auto!important;
-}
-body.lobby-screen #home .home-hero .playbutton{
-  display:flex!important;justify-content:center!important;align-items:center!important;
-  width:218px!important;min-width:218px!important;height:54px!important;min-height:54px!important;
-  padding:0 24px!important;border:1px solid #d2e4f1!important;border-radius:2px!important;
-  background:linear-gradient(105deg,#c1dced,#8bb7d9)!important;color:#111b23!important;
-  font-size:13px!important;font-weight:950!important;letter-spacing:1.8px!important;
-  box-shadow:0 12px 36px #0005!important;clip-path:none!important;
-  transition:filter .15s,transform .15s!important;
-}
+body.lobby-screen #home .home-agent-spec,body.lobby-screen #home .home-loadout{display:none!important}
+body.lobby-screen #home .home-squad-bar{position:absolute!important;left:14px!important;right:224px!important;bottom:14px!important;z-index:7!important;display:flex!important;flex-direction:column!important;gap:6px!important;pointer-events:auto!important}
+body.lobby-screen #home .home-squad-head{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:8px!important;color:#cbd7df!important;font-size:8px!important;font-weight:950!important;letter-spacing:1.5px!important;text-shadow:0 2px 8px #000}
+body.lobby-screen #home .home-squad-head small{font-size:8px!important;color:#a8c0d0!important;font-weight:800!important;letter-spacing:.8px!important}
+body.lobby-screen #home .home-squad-roster{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:5px!important}
+body.lobby-screen #home .home-squad-card{min-width:0!important;min-height:48px!important;display:grid!important;grid-template-columns:24px minmax(0,1fr)!important;grid-template-rows:auto auto!important;align-content:center!important;align-items:center!important;gap:3px 6px!important;padding:6px!important;border:1px solid #b4cbd51e!important;background:#0a1118d9!important;backdrop-filter:blur(8px)!important}
+body.lobby-screen #home .home-squad-card img{grid-row:1/span 2!important;width:24px!important;height:28px!important;object-fit:cover!important;background:#26323b!important}
+body.lobby-screen #home .home-squad-card b{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:8px!important;color:#e9f0f4!important}
+body.lobby-screen #home .home-squad-card small{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:7px!important;color:#91a6b5!important}
+body.lobby-screen #home .home-squad-card.is-empty{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;color:#adc5d5!important;cursor:pointer!important;border-style:dashed!important;background:#0c141a7a!important}
+body.lobby-screen #home .home-squad-card.is-empty strong{font-size:20px!important;font-weight:400!important}
+body.lobby-screen #home .home-squad-card.is-empty small{font-size:7px!important}
+body.lobby-screen #home .home-hero .playarea{position:absolute!important;right:16px!important;left:auto!important;top:auto!important;bottom:16px!important;z-index:8!important;display:flex!important;min-height:0!important;padding:0!important;align-items:flex-end!important;justify-content:flex-end!important;pointer-events:none!important}
+body.lobby-screen #home .home-hero .playwrap{display:flex!important;flex-direction:column!important;align-items:flex-end!important;gap:6px!important;pointer-events:auto!important}
+body.lobby-screen #home .home-hero .playbutton{display:flex!important;justify-content:center!important;align-items:center!important;width:196px!important;min-width:196px!important;height:50px!important;min-height:50px!important;padding:0 20px!important;border:1px solid #d2e4f1!important;border-radius:2px!important;background:linear-gradient(105deg,#c1dced,#8bb7d9)!important;color:#111b23!important;font-size:12px!important;font-weight:950!important;letter-spacing:1.7px!important;box-shadow:0 12px 36px #0005!important;clip-path:none!important;transition:filter .15s,transform .15s!important}
 body.lobby-screen #home .home-hero .playbutton:hover{transform:translateY(-2px)!important;filter:brightness(1.08)!important}
-body.lobby-screen #home .home-hero #selectedModeText{
-  font-size:9px!important;color:#e3edf4!important;font-weight:850!important;letter-spacing:1.2px!important;
-}
-body.lobby-screen #home .home-hero #selectedMapText{font-size:8px!important;color:#91a3b0!important;letter-spacing:1.5px!important}
-body.lobby-screen #home .home-hero #resumeMatchBtn{min-width:218px!important}
+body.lobby-screen #home .home-hero #selectedModeText{font-size:8px!important;color:#e3edf4!important;font-weight:850!important;letter-spacing:.9px!important;text-align:right!important}
+body.lobby-screen #home .home-hero #selectedMapText{font-size:8px!important;color:#91a3b0!important;letter-spacing:1.1px!important}
+body.lobby-screen #home .home-hero #resumeMatchBtn{min-width:196px!important}
+body.lobby-screen #home .profile-col{display:none!important}
+body.lobby-screen #home .promo-col{grid-area:promo!important;grid-column:auto!important;grid-row:1!important;display:flex!important;flex-direction:column!important;min-height:0!important;height:100%!important;overflow:hidden!important}
+body.lobby-screen #home .promo-col .panelhead{flex:0 0 auto!important;min-height:40px!important}
+body.lobby-screen #home .promo-col .promo{position:relative!important;flex:0 0 45%!important;min-height:130px!important;height:45%!important;overflow:hidden!important}
+body.lobby-screen #home .promo-col .news-soon{padding:10px!important}
+body.lobby-screen #home .promo-col .news-soon strong{font-size:10px!important;letter-spacing:.8px!important}
+body.lobby-screen #home .promo-col .news-soon p{margin-top:5px!important;font-size:9px!important;line-height:1.45!important}
+body.lobby-screen #home .passpanel{grid-area:pass!important;grid-column:auto!important;grid-row:2!important;display:flex!important;flex-direction:column!important;min-height:0!important;height:100%!important;overflow:hidden!important}
+body.lobby-screen #home .passpanel .panelhead{flex:0 0 auto!important;min-height:38px!important;font-size:9px!important}
+body.lobby-screen #home .passpanel .passhero{flex:0 0 31%!important;min-height:65px!important;height:31%!important}
+body.lobby-screen #home .passpanel .passprogress{padding:7px 9px!important}
+body.lobby-screen #home .passpanel .progresslabels{font-size:8px!important}
+body.lobby-screen #home .passpanel .rewards{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:4px!important;padding:6px!important}
+body.lobby-screen #home .passpanel .reward{height:48px!important;min-width:0!important}
+body.lobby-screen #home .homefooter{margin-top:8px!important;padding:7px 2px!important;font-size:8px!important;opacity:.85}
 body.lobby-screen #modeModal.modal{padding:18px!important;background:#070b10d9!important;backdrop-filter:blur(12px)!important}
-body.lobby-screen #modeModal .modalbox.modebox{
-  width:min(760px,94vw)!important;max-height:min(88dvh,780px)!important;overflow-y:auto!important;
-  padding:22px!important;border:1px solid #9db9cf35!important;border-radius:3px!important;
-  background:linear-gradient(145deg,#202a33f7,#11181ffb)!important;box-shadow:0 30px 100px #000b!important;
-}
-body.lobby-screen #modeModal .modalhead{
-  margin:0 0 5px!important;padding:0 0 13px!important;border-bottom:1px solid #b4c7d31c!important;
-  color:#f0f5f8!important;font-size:18px!important;letter-spacing:1.6px!important;
-}
+body.lobby-screen #modeModal .modalbox.modebox{width:min(760px,94vw)!important;max-height:min(88dvh,780px)!important;overflow-y:auto!important;padding:22px!important;border:1px solid #9db9cf35!important;border-radius:3px!important;background:linear-gradient(145deg,#202a33f7,#11181ffb)!important;box-shadow:0 30px 100px #000b!important}
+body.lobby-screen #modeModal .modalhead{margin:0 0 5px!important;padding:0 0 13px!important;border-bottom:1px solid #b4c7d31c!important;color:#f0f5f8!important;font-size:18px!important;letter-spacing:1.6px!important}
 body.lobby-screen #modeModal .mode-modal-subtitle{margin:10px 0 14px!important;color:#9eafbb!important;font-size:11px!important}
 body.lobby-screen #modeModal .modecards{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;margin:0 0 17px!important}
-body.lobby-screen #modeModal .modecards .modebtn{
-  min-height:116px!important;padding:19px!important;justify-content:flex-end!important;
-  border:1px solid #afc4d221!important;border-radius:2px!important;
-  background:linear-gradient(135deg,#18232b,#2b3944)!important;box-shadow:none!important;
-}
-body.lobby-screen #modeModal .modecards .modebtn:before{
-  background:radial-gradient(ellipse at 80% 20%,#c8d9e420,transparent 36%),
-             linear-gradient(120deg,#0c151bc9,#26394490)!important;
-}
-body.lobby-screen #modeModal .modecards .modebtn:after{top:14px!important;left:18px!important;font-size:8px!important;letter-spacing:1.5px!important}
-body.lobby-screen #modeModal .modecards .modebtn strong{font-size:18px!important;letter-spacing:1px!important}
+body.lobby-screen #modeModal .modecards .modebtn{min-height:110px!important;padding:18px!important;justify-content:flex-end!important;border:1px solid #afc4d221!important;border-radius:2px!important;background:linear-gradient(135deg,#18232b,#2b3944)!important;box-shadow:none!important}
+body.lobby-screen #modeModal .modecards .modebtn:before{background:radial-gradient(ellipse at 80% 20%,#c8d9e420,transparent 36%),linear-gradient(120deg,#0c151bc9,#26394490)!important}
+body.lobby-screen #modeModal .modecards .modebtn strong{font-size:17px!important;letter-spacing:1px!important}
 body.lobby-screen #modeModal .modecards .mode-desc{margin-top:5px!important;font-size:10px!important;line-height:1.45!important;color:#adbec9!important}
-body.lobby-screen #modeModal .modecards .modebtn.active{
-  border-color:#bfd9eb!important;background:linear-gradient(135deg,#253a47,#3d5667)!important;
-  box-shadow:inset 0 -3px #b9d9ef!important;
-}
+body.lobby-screen #modeModal .modecards .modebtn.active{border-color:#bfd9eb!important;background:linear-gradient(135deg,#253a47,#3d5667)!important;box-shadow:inset 0 -3px #b9d9ef!important}
 body.lobby-screen #modeModal h3{margin:0 0 8px!important;font-size:10px!important;letter-spacing:1.5px!important;color:#dbe6ed!important}
 body.lobby-screen #modeModal .mapcards{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important;margin:0 0 16px!important}
-body.lobby-screen #modeModal .map-option{
-  min-height:64px!important;padding:10px 11px!important;border:1px solid #aabdc51c!important;
-  background:#151e26!important;border-radius:2px!important;
-}
+body.lobby-screen #modeModal .map-option{min-height:62px!important;padding:10px!important;border:1px solid #aabdc51c!important;background:#151e26!important;border-radius:2px!important}
 body.lobby-screen #modeModal .map-option b{font-size:10px!important;letter-spacing:1px!important;margin-bottom:5px!important}
 body.lobby-screen #modeModal .map-option span{font-size:9px!important;line-height:1.4!important;color:#94a7b4!important}
 body.lobby-screen #modeModal .map-option.active{border-color:#b8d7ed!important;background:#243541!important;box-shadow:inset 0 -2px #b8d7ed!important}
-body.lobby-screen #modeModal #confirmModeBtn{
-  width:100%!important;min-height:48px!important;margin-top:0!important;padding:13px 18px!important;
-  border:1px solid #d3e5f1!important;border-radius:2px!important;background:#b6d3e8!important;
-  color:#101920!important;font-size:11px!important;font-weight:950!important;letter-spacing:1.4px!important;
+body.lobby-screen #modeModal #confirmModeBtn{width:100%!important;min-height:48px!important;margin-top:0!important;padding:13px 18px!important;border:1px solid #d3e5f1!important;border-radius:2px!important;background:#b6d3e8!important;color:#101920!important;font-size:11px!important;font-weight:950!important;letter-spacing:1.4px!important}
+body.lobby-screen #modeModal .tester-mode-switch{margin:0 0 12px!important;padding:10px 0!important}
+@media(max-width:1180px){
+ body.lobby-screen #home .home-layout{grid-template-columns:minmax(190px,.75fr) minmax(330px,1.25fr)!important;grid-template-rows:minmax(440px,1fr) minmax(230px,.5fr)!important;grid-template-areas:"friends hero" "promo pass";height:auto;min-height:740px}
+ body.lobby-screen #home .home-friends{grid-row:1!important}
+ body.lobby-screen #home .home-hero{grid-row:1!important}
+ body.lobby-screen #home .home-squad-bar{right:12px!important;bottom:78px!important}
+ body.lobby-screen #home .home-hero .playarea{left:12px!important;right:12px!important;bottom:10px!important}
+ body.lobby-screen #home .home-hero .playwrap{width:100%!important;align-items:stretch!important}
+ body.lobby-screen #home .home-hero .playbutton,body.lobby-screen #home .home-hero #resumeMatchBtn{width:100%!important;min-width:0!important;height:44px!important;min-height:44px!important}
+ body.lobby-screen #home .home-hero #selectedModeText,body.lobby-screen #home .home-hero #selectedMapText{text-align:center!important}
+ body.lobby-screen #home .home-squad-roster{grid-template-columns:repeat(4,minmax(0,1fr))!important}
 }
-body.lobby-screen #modeModal .tester-mode-switch{margin:0 0 15px!important;padding:12px 0!important}
-body.lobby-screen #searchModal .modalbox{border-radius:3px!important}
-@media(max-width:700px){
-  body.lobby-screen #home .home-hero-copy{top:20px!important;left:17px!important;max-width:70%!important}
-  body.lobby-screen #home .home-hero-copy h1{font-size:30px!important}
-  body.lobby-screen #home .home-hero-art{object-position:54% center!important;opacity:.2!important}
-  body.lobby-screen #home .home-agent-canvas{inset:18px 0 0!important;height:calc(100% - 18px)!important}
-  body.lobby-screen #home .home-hero .playarea{left:12px!important;right:12px!important;bottom:16px!important}
-  body.lobby-screen #home .home-hero .playwrap{width:100%!important;align-items:stretch!important}
-  body.lobby-screen #home .home-hero .playbutton,
-  body.lobby-screen #home .home-hero #resumeMatchBtn{width:100%!important;min-width:0!important;height:48px!important;min-height:48px!important}
-  body.lobby-screen #home .home-hero #selectedModeText,
-  body.lobby-screen #home .home-hero #selectedMapText{text-align:center!important}
-  body.lobby-screen #modeModal .modalbox.modebox{padding:15px!important;width:96vw!important;max-height:92dvh!important}
-  body.lobby-screen #modeModal .modalhead{font-size:15px!important}
-  body.lobby-screen #modeModal .modecards{grid-template-columns:1fr!important;gap:7px!important;margin-bottom:14px!important}
-  body.lobby-screen #modeModal .modecards .modebtn{min-height:90px!important;padding:15px!important}
-  body.lobby-screen #modeModal .modecards .modebtn strong{font-size:16px!important}
-  body.lobby-screen #modeModal .mapcards{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+@media(max-width:720px){
+ body.lobby-screen .content{padding:8px!important;overflow:auto!important}
+ body.lobby-screen #home .home-layout{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(470px,62vh) auto auto auto!important;grid-template-areas:"hero" "friends" "promo" "pass";height:auto!important;min-height:0!important;max-height:none!important;gap:8px!important}
+ body.lobby-screen #home .home-hero{grid-row:auto!important;height:470px!important;min-height:470px!important}
+ body.lobby-screen #home .home-friends,body.lobby-screen #home .promo-col,body.lobby-screen #home .passpanel{height:auto!important;min-height:0!important;grid-row:auto!important}
+ body.lobby-screen #home .home-friends-body{max-height:390px!important}
+ body.lobby-screen #home .home-squad-bar{left:8px!important;right:8px!important;bottom:75px!important}
+ body.lobby-screen #home .home-squad-roster{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:4px!important}
+ body.lobby-screen #home .home-squad-card{min-height:42px!important;grid-template-columns:20px minmax(0,1fr)!important;gap:3px 4px!important;padding:4px!important}
+ body.lobby-screen #home .home-squad-card img{width:20px!important;height:24px!important}
+ body.lobby-screen #home .home-squad-card b{font-size:7px!important}
+ body.lobby-screen #home .home-squad-card small{font-size:6px!important}
+ body.lobby-screen #home .home-hero-copy{top:18px!important;left:16px!important;max-width:75%!important}
+ body.lobby-screen #home .home-hero-copy h1{font-size:29px!important}
+ body.lobby-screen #home .home-hero-art{object-position:54% center!important;opacity:.2!important}
+ body.lobby-screen #home .home-agent-canvas{inset:5px 0 0!important}
+ body.lobby-screen #home .home-hero .playarea{left:8px!important;right:8px!important;bottom:8px!important}
+ body.lobby-screen #modeModal .modalbox.modebox{padding:15px!important;width:96vw!important;max-height:92dvh!important}
+ body.lobby-screen #modeModal .modalhead{font-size:15px!important}
+ body.lobby-screen #modeModal .modecards{grid-template-columns:1fr!important;gap:7px!important;margin-bottom:14px!important}
+ body.lobby-screen #modeModal .modecards .modebtn{min-height:90px!important;padding:15px!important}
+ body.lobby-screen #modeModal .modecards .modebtn strong{font-size:16px!important}
+ body.lobby-screen #modeModal .mapcards{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
 @media(prefers-reduced-motion:reduce){body.lobby-screen #home .home-hero .playbutton{transition:none!important}}
 </style>
@@ -1202,7 +1195,8 @@ body.lobby-screen #searchModal .modalbox{border-radius:3px!important}
     </aside>
     <section class="home-hero panel" aria-label="Головне ігрове меню">
       <img class="home-hero-art" src="game1.png" alt="" aria-hidden="true">
-      <canvas id="homeAgentCanvas" class="home-agent-canvas" aria-label="3D-персонаж StandoffX"></canvas>
+      <canvas id="homeAgentCanvas" class="home-agent-canvas" aria-label="3D-загін StandoffX"></canvas>
+      <div class="home-squad-bar" aria-label="Загін гравців"><div class="home-squad-head"><span>ЗАГІН</span><small id="homeSquadStatus">СОЛО</small><small id="homeSquadCount">1 / 4</small></div><div id="homeSquadRoster" class="home-squad-roster" aria-live="polite"></div></div>
       <div class="home-hero-copy">
         <div class="home-hero-overline"><span class="hero-live-dot"></span> STANDOFFX <span class="hero-separator">/</span> TACTICAL COMBAT</div>
         <h1>STANDOFF<em>X</em></h1>
@@ -1683,6 +1677,18 @@ $("playBtn").addEventListener("click",()=>{
 });
 $("resumeMatchBtn").addEventListener("click",exitSavedMatch);
 $("confirmModeBtn").addEventListener("click",()=>{
+  if(currentLobby){
+    if(!socialSocket?.connected){notifyToast("Немає з'єднання із сервером лобі.");return}
+    $("modeModal").classList.remove("show");
+    const startParty=()=>socialSocket?.emit("lobby_start_match",{fillWithBots:$("lobbyFillBots").checked});
+    if(currentLobby.mode===selectedMode&&currentLobby.map===selectedMap){startParty();return}
+    socialSocket.once("lobby_settings_result",result=>{
+      if(!result?.success){notifyToast(result?.message||"Не вдалося змінити режим лобі.");return}
+      startParty();
+    });
+    socialSocket.emit("lobby_update_settings",{mode:selectedMode,map:selectedMap});
+    return;
+  }
   $("modeModal").classList.remove("show");
   openPlay();
 });
@@ -1883,8 +1889,43 @@ function renderLobbyFriends(friends){
   const root=$("lobbyFriends");if(!root)return;
   root.innerHTML=(friends||[]).map(friend=>"<div class='row'><div><b>"+esc(friend.nickname)+"</b><div class='muted'>ID "+esc(cleanId(friend.id))+" · "+(friend.status?"ONLINE":"OFFLINE")+"</div></div><button class='primary' data-lobby-invite='"+esc(friend.id)+"' "+(!currentLobby||!friend.status||currentLobby.members.length>=currentLobby.maxPlayers?"disabled":"")+">ЗАПРОСИТИ</button></div>").join("")||"<div class='muted'>Спочатку додай друзів у розділі «Друзі».</div>";
 }
+function renderHomeSquadRoster(lobby=currentLobby){
+  const root=$("homeSquadRoster");
+  const realMembers=Array.isArray(lobby?.members)?lobby.members:[];
+  const members=realMembers.length?realMembers:[{
+    userId:me?.id||"",nickname:me?.nickname||"ГРАВЕЦЬ",
+    playerAvatar:me?.playerAvatar||"/avatars/default.jpg",isOwner:true,connected:true,team:null
+  }];
+  const maxPlayers=lobby?.maxPlayers||(selectedMode==="allies"?4:3);
+  const status=$("homeSquadStatus"),count=$("homeSquadCount");
+  if(status)status.textContent=lobby?((lobby.modeName||MODES[lobby.mode]||"МАТЧ")+" · "+(lobby.mapName||MAPS[lobby.map]||lobby.map)):"СОЛО · ЗАПРОШУЙ ДРУЗІВ";
+  if(count)count.textContent=members.length+" / "+maxPlayers;
+  if(root){
+    const cards=members.slice(0,4).map(member=>{
+      const label=member.isOwner?"ЛІДЕР":(lobby?.mode==="allies"&&member.team?"КОМАНДА "+member.team:(member.connected===false?"ПІДКЛЮЧЕННЯ":"У ЗАГОНІ"));
+      return "<div class='home-squad-card'><img src='"+esc(member.playerAvatar||"/avatars/default.jpg")+"' alt=''><b>"+esc(member.nickname||"ГРАВЕЦЬ")+"</b><small>"+esc(label)+"</small></div>";
+    });
+    if(lobby&&members.length<maxPlayers)cards.push("<button type='button' class='home-squad-card is-empty' data-squad-add-friend aria-label='Запросити друга'><strong>+</strong><small>ДОДАТИ</small></button>");
+    root.innerHTML=cards.join("");
+    root.querySelectorAll("[data-squad-add-friend]").forEach(button=>button.addEventListener("click",()=>show("friends")));
+  }
+  window.__sxHomeRoster=members.map(member=>({
+    userId:String(member.userId||member.id||""),nickname:String(member.nickname||"ГРАВЕЦЬ"),
+    playerAvatar:String(member.playerAvatar||"/avatars/default.jpg"),isOwner:Boolean(member.isOwner),
+    connected:member.connected!==false,team:member.team||null
+  }));
+  window.__sxLobbyState=lobby||null;
+  window.dispatchEvent(new CustomEvent("sx:home-squad",{detail:{members:window.__sxHomeRoster,lobby:lobby||null}}));
+}
+
 function renderLobbyState(lobby){
   currentLobby=lobby||null;
+  if(lobby){
+    selectedMode=lobby.mode||selectedMode;selectedMap=lobby.map||selectedMap;
+    localStorage.setItem("sx_mode",selectedMode);localStorage.setItem("sx_map",selectedMap);
+    renderMode();
+  }
+  renderHomeSquadRoster(currentLobby);
   if(lobby&&pendingHomeInvite){
     const targetId=pendingHomeInvite;pendingHomeInvite=null;
     setTimeout(()=>inviteToLobby(targetId),0);
@@ -1908,24 +1949,28 @@ function renderLobbyState(lobby){
     const teamControl=lobby.mode==="allies"&&isHost
       ?"<label class='lobby-team-control'>КОМАНДА <select data-lobby-team='"+esc(member.userId)+"'><option value='A' "+(team==="A"?"selected":"")+">A</option><option value='B' "+(team==="B"?"selected":"")+">B</option></select></label>"
       :(lobby.mode==="allies"?"<span class='lobby-team-pill'>КОМАНДА "+team+"</span>":"");
-    return "<div class='row lobby-member-row'><div class='lobby-member-main'><b>"+esc(member.nickname)+"</b><div class='lobby-member-tag'>"+(member.isOwner?"ЛІДЕР":"ГРАВЕЦЬ")+" · "+(member.connected?"ОНЛАЙН":"ПІДКЛЮЧЕННЯ")+"</div></div><span class='muted lobby-member-id'>ID "+esc(cleanId(member.userId))+"</span>"+teamControl+"</div>";
+    return "<div class='row lobby-member-row'><div class='lobby-member-main'><b>"+esc(member.nickname)+"</b><div class='lobby-member-tag'>"+(member.isOwner?"ЛІДЕР":"ГРАВЕЦЬ")+" · "+(member.connected?"ОНЛАЙН":"ПІДКЛЮЧЕННЯ")+"</div></div>"+teamControl+"</div>";
   }).join("");
   $("lobbyStartBtn").style.display=isHost?"block":"none";
   $("lobbyStartBtn").disabled=!isHost||(lobby.members?.length||0)>lobby.maxPlayers;
   $("lobbyStartBtn").textContent=$("lobbyFillBots").checked?"▶ ПОЧАТИ З АГЕНТАМИ":"▶ ПОЧАТИ";
   loadFriends();
 }
-function createLobby(){
+function createLobby(mode=selectedMode,map=selectedMap){
   if(currentLobby){notifyToast("Ти вже в лобі.");return}
+  const lobbyMode=["allies","team_fight"].includes(mode)?mode:"allies";
+  const lobbyMap=lobbyMode==="allies"?"SANDSTONE":(["SMALL_YARD","NEON_YARD"].includes(map)?map:"SMALL_YARD");
+  $("lobbyModeSelect").value=lobbyMode;
+  $("lobbyMapSelect").value=lobbyMap;
   initSocialSocket();
-  const send=()=>socialSocket?.emit("lobby_create",{mode:$("lobbyModeSelect").value,map:$("lobbyMapSelect").value});
+  const send=()=>socialSocket?.emit("lobby_create",{mode:lobbyMode,map:lobbyMap});
   if(socialSocket?.connected)send();else socialSocket?.once("connect",send);
 }
 function inviteToLobby(userId){
   if(!currentLobby){
     pendingHomeInvite=String(userId||"");
-    show("lobby");
-    createLobby();
+    show("home");
+    createLobby(selectedMode,selectedMap);
     notifyToast("Створюю лобі й надсилаю запрошення…");
     return;
   }
@@ -2268,7 +2313,7 @@ async function refreshAtlasIndicator(){}
       selectedMode="allies";localStorage.setItem("sx_mode",selectedMode);
     }
     if(!canTest()){testGameplayMode="real";localStorage.setItem("sx_test_gameplay","real")}
-    render();settings();initSocialSocket();loadFriends();loadClan();loadInventory();loadMarket();refreshAtlasIndicator();
+    render();renderHomeSquadRoster(currentLobby);settings();initSocialSocket();loadFriends();loadClan();loadInventory();loadMarket();refreshAtlasIndicator();
   }catch{location.href="/"}
 })();
 </script>
