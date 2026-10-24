@@ -557,7 +557,7 @@ assert.match(ui, /\.clan-search-card/, "clan search should render a visual list 
 assert.match(ui, /\.active-squad-player/, "lobby teammate portraits display nicknames, IDs and death status");
 assert.match(game, /function dropCurrentItem\(\)/, "G drops the currently equipped weapon or C4");
 assert.match(game, /if\(selectedWeapon==="knife"\)\{showDamagePopup\("НІЖ НЕ МОЖНА ВИКИНУТИ"\);return\}/, "the knife cannot be dropped");
-assert.match(game, /if\(e\.code==="KeyB"\)\{e\.preventDefault\(\);toggleBuyMenu\(\);return\}/, "B opens the buy menu");
+assert.match(game, /if\(e\.code==="KeyB"&&mode==="allies"&&!isTrainingMode\)\{e\.preventDefault\(\);toggleBuyMenu\(\);return\}/, "B opens the Allies buy menu without stealing training shortcuts");
 assert.match(game, /if\(e\.code==="KeyG"\)\{e\.preventDefault\(\);dropCurrentItem\(\);return\}/, "G is reserved for dropping an item");
 assert.match(game, /if\(e\.code==="Digit4"\|\|e\.code==="Digit5"\)\{e\.preventDefault\(\);toggleBombTool\(\);return\}/, "the bomb has a dedicated inventory slot");
 assert.match(game, /id="alliesBuyBackdrop"/, "the shop is a standalone overlay over live gameplay");
