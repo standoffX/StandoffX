@@ -2731,9 +2731,9 @@ socket.on("training_state",data=>{
 
 socket.on("init_match",data=>{
   matchJoined=true;
+  $("trainingControls").style.display="none";
   droppedItems=Array.isArray(data.droppedItems)?data.droppedItems:[];
   renderDroppedItems();
-  $("trainingControls").style.display="none";
   applyMapInteractionState(data.mapState);
   try{
     if(!isTrainingMode)localStorage.setItem("sx_active_match",JSON.stringify({matchId:data.matchId||matchId,userId:myId,uuid:myUuid,map:data.map||selectedMap,mode:data.mode||mode,prototype:Boolean(data.prototype||isPrototypeMode),updatedAt:Date.now()}));
