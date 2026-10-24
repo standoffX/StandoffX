@@ -814,7 +814,7 @@ body:before{
 const $=id=>document.getElementById(id);
 let me=null,socket=null,searching=false;
 let socialSocket=null,currentClanTag=null,clanChatHistory=[],toastTimer=null;
-let currentLobby=null,pendingLobbyInvite=null;
+let currentLobby=null,pendingLobbyInvite=null,pendingHomeInvite=null;
 let selectedMode=localStorage.getItem("sx_mode")||"allies";
 if(!["allies","team_fight"].includes(selectedMode)){selectedMode="allies";localStorage.setItem("sx_mode",selectedMode)}
 if(selectedMode==="hide_seek")selectedMode="allies";
@@ -1230,7 +1230,7 @@ function renderHomeFriendsPreview(friends){
     const nick=esc(friend.nickname||"PLAYER");
     const state=friend.status?"ONLINE":"OFFLINE";
     const onlineClass=friend.status?" is-online":"";
-    const disabled=!friend.status||!currentLobby||currentLobby.members.length>=currentLobby.maxPlayers;
+    const disabled=!friend.status||(Boolean(currentLobby)&&currentLobby.members.length>=currentLobby.maxPlayers);
     return "<div class='home-friend"+onlineClass+"'><img src='"+avatar+"' alt=''><div class='home-friend-copy'><b>"+nick+"</b><small>"+state+"</small></div><i class='home-online'></i><button class='home-friend-invite' data-home-invite='"+esc(friend.id)+"' aria-label='Запросити "+nick+"' "+(disabled?"disabled":"")+">+</button></div>";
   }).join("");
 }
@@ -1252,6 +1252,10 @@ function renderLobbyFriends(friends){
 }
 function renderLobbyState(lobby){
   currentLobby=lobby||null;
+  if(lobby&&pendingHomeInvite){
+    const targetId=pendingHomeInvite;pendingHomeInvite=null;
+    setTimeout(()=>inviteToLobby(targetId),0);
+  }
   const current=$("lobbyCurrent"),create=$("lobbyCreateBtn"),status=$("lobbyStatus");
   if(!lobby){
     if(current)current.style.display="none";
@@ -1279,7 +1283,13 @@ function createLobby(){
   if(socialSocket?.connected)send();else socialSocket?.once("connect",send);
 }
 function inviteToLobby(userId){
-  if(!currentLobby){notifyToast("Спочатку створи лобі.");show("lobby");return}
+  if(!currentLobby){
+    pendingHomeInvite=String(userId||"");
+    show("lobby");
+    createLobby();
+    notifyToast("Створюю лобі й надсилаю запрошення…");
+    return;
+  }
   if(!socialSocket?.connected){notifyToast("Немає з'єднання із сервером.");return}
   socialSocket.emit("lobby_invite",{userId});
 }
