@@ -3446,6 +3446,30 @@ io.on("connection", socket => {
     socket.emit("lobby_team_result", { success: true, userId: targetId, team });
     emitLobbyState(io, current.lobby);
   });
+  socket.on("lobby_update_settings", data => {
+    const current = lobbyMemberFromSocket(socket);
+    if (!current) return emitLobbyError(socket, "Спочатку створи або приєднайся до лобі.", "lobby_settings_result");
+    const lobby = current.lobby;
+    if (lobby.ownerId !== socket.user?.id) return emitLobbyError(socket, "Змінювати режим може лише лідер лобі.", "lobby_settings_result");
+    const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : null;
+    if (!mode) return emitLobbyError(socket, "Невідомий режим гри.", "lobby_settings_result");
+    const mapCandidate = normalizeMapId(data?.map);
+    const map = mode === "allies" ? "SANDSTONE" : (["SMALL_YARD", "NEON_YARD"].includes(mapCandidate) ? mapCandidate : null);
+    if (!map) return emitLobbyError(socket, "Для цього режиму обери доступну карту.", "lobby_settings_result");
+    const required = getRequiredPlayers(mode);
+    if (lobby.members.length > required) return emitLobbyError(socket, "У лобі забагато гравців для цього режиму. Вийди з лобі або обери інший режим.", "lobby_settings_result");
+    const modeChanged = lobby.mode !== mode;
+    lobby.mode = mode;
+    lobby.map = map;
+    lobby.maxPlayers = required;
+    if (mode === "allies" && modeChanged) {
+      lobby.members.forEach((member, index) => { member.team = index % 2 === 0 ? "A" : "B"; });
+    } else if (mode !== "allies") {
+      lobby.members.forEach(member => { member.team = null; });
+    }
+    socket.emit("lobby_settings_result", { success: true, mode, map, maxPlayers: required });
+    emitLobbyState(io, lobby);
+  });
   socket.on("lobby_kick", data => {
     const current = lobbyMemberFromSocket(socket);
     if (!current || current.lobby.ownerId !== socket.user.id) return emitLobbyError(socket, "Видаляти гравців може лише лідер лобі.");
