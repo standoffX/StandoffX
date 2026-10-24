@@ -965,14 +965,14 @@ body.lobby-screen .home-hero-copy h1{font-size:clamp(25px,3vw,44px)!important;le
 body.lobby-screen .home-hero-overline{font-size:8px!important;letter-spacing:1.6px!important}
 body.lobby-screen .home-agent-canvas{z-index:2!important;opacity:1!important}
 body.lobby-screen .home-agent-spec{z-index:5!important;right:12px!important;top:18px!important}
-body.lobby-screen .home-loadout{z-index:5!important;left:12px!important;right:12px!important;bottom:12px!important;width:auto!important;max-width:none!important;padding:8px!important;background:#0d151bd9!important;border:1px solid #a9cbea20!important}
+body.lobby-screen .home-loadout{z-index:5!important;left:12px!important;right:auto!important;bottom:12px!important;width:min(325px,52%)!important;max-width:none!important;padding:8px!important;background:#0d151bd9!important;border:1px solid #a9cbea20!important}
 body.lobby-screen .home-loadout-heading{font-size:8px!important;margin-bottom:5px!important}
 body.lobby-screen .home-loadout-options{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important}
 body.lobby-screen .home-loadout-options button{min-width:0!important;min-height:41px!important;padding:5px 4px!important;display:grid!important;grid-template-columns:25px minmax(0,1fr)!important;grid-template-rows:auto auto!important;column-gap:5px!important;align-items:center!important;text-align:left!important}
 body.lobby-screen .home-loadout-options .loadout-icon{grid-row:1/3!important;width:25px!important;height:22px!important;margin:0!important}
 body.lobby-screen .home-loadout-options b{font-size:8px!important;line-height:1.1!important}
 body.lobby-screen .home-loadout-options small{font-size:6px!important;line-height:1.1!important}
-body.lobby-screen .home-hero .playarea{right:12px!important;bottom:115px!important;z-index:7!important}
+body.lobby-screen .home-hero .playarea{right:12px!important;bottom:16px!important;z-index:7!important}
 body.lobby-screen .home-hero .playbutton{width:174px!important;min-width:174px!important;height:45px!important;min-height:45px!important;font-size:12px!important;letter-spacing:1px!important}
 body.lobby-screen .home-hero #selectedModeText,body.lobby-screen .home-hero #selectedMapText{font-size:8px!important}
 body.lobby-screen .promo-col .promo{height:155px!important;min-height:155px!important}
@@ -1011,7 +1011,8 @@ body.lobby-screen .lobby-member-id{font-size:9px}
   body.lobby-screen .promo-col{display:block!important}
   body.lobby-screen .home-loadout{bottom:8px!important;left:8px!important;right:8px!important}
   body.lobby-screen .home-loadout-options{grid-template-columns:repeat(3,minmax(0,1fr))!important}
-  body.lobby-screen .home-hero .playarea{right:8px!important;bottom:115px!important}
+  body.lobby-screen .home-loadout{left:8px!important;right:8px!important;width:auto!important;bottom:8px!important}
+  body.lobby-screen .home-hero .playarea{right:8px!important;bottom:160px!important}
   body.lobby-screen .home-hero .playbutton{width:152px!important;min-width:152px!important;height:42px!important;min-height:42px!important}
   body.lobby-screen .home-agent-spec{top:65px!important;right:8px!important}
 }
@@ -2327,12 +2328,49 @@ if(hero&&canvas){
     addPreviewPart(knife,new THREE.BoxGeometry(.046,.016,.225),weaponSteel,[0,.005,.205],[0,0,-.025]);
     addPreviewPart(knife,new THREE.ConeGeometry(.034,.09,4),weaponSteel,[0,.005,.355],[Math.PI/2,0,0]);
     pistol.visible=false;knife.visible=false;
+    const previewGuns={};
+    const previewGun=(key,parts)=>{
+      const group=new THREE.Group();group.position.set(.215,1.16,.27);group.rotation.x=-.12;agent.add(group);
+      for(const part of parts){
+        const geometry=part.kind==="tube"?new THREE.CylinderGeometry(part.r,part.r,part.length,8):new THREE.BoxGeometry(part.w,part.h,part.d);
+        const material=part.material==="wood"?weaponGrip:part.material==="dark"?weaponDark:weaponSteel;
+        const pos=part.pos;const rot=part.kind==="tube"?[Math.PI/2,0,0]:(part.rot||[0,0,0]);
+        addPreviewPart(group,geometry,material,pos,rot);
+      }
+      group.visible=false;previewGuns[key]=group;
+    };
+    previewGun("m4a1",[
+      {w:.09,h:.10,d:.30,pos:[0,0,.02]},{w:.075,h:.08,d:.22,pos:[0,.015,.25],material:"wood"},
+      {w:.06,h:.15,d:.11,pos:[0,-.12,.03],material:"dark",rot:[-.18,0,0]},
+      {w:.04,h:.035,d:.20,pos:[0,.065,-.13],material:"dark"},
+      {kind:"tube",r:.012,length:.36,pos:[0,.022,-.42]}
+    ]);
+    previewGun("p90",[
+      {w:.12,h:.12,d:.28,pos:[0,.005,.03],material:"dark"},{w:.10,h:.065,d:.25,pos:[0,.05,-.02]},
+      {w:.08,h:.03,d:.23,pos:[0,.085,-.02],material:"dark"},
+      {w:.075,h:.16,d:.10,pos:[0,-.10,.08],material:"wood",rot:[-.14,0,0]},
+      {kind:"tube",r:.011,length:.17,pos:[0,.014,-.28]}
+    ]);
+    previewGun("shotgun",[
+      {w:.09,h:.095,d:.30,pos:[0,0,.09]},{w:.075,h:.08,d:.22,pos:[0,.012,.30],material:"wood"},
+      {w:.06,h:.08,d:.16,pos:[0,-.06,.14],material:"wood",rot:[-.1,0,0]},
+      {kind:"tube",r:.017,length:.46,pos:[0,.02,-.29]},
+      {kind:"tube",r:.021,length:.20,pos:[0,-.045,-.17],material:"dark"}
+    ]);
+    previewGun("sniper",[
+      {w:.08,h:.09,d:.35,pos:[0,0,.08],material:"wood"},{w:.075,h:.07,d:.23,pos:[0,.015,.32]},
+      {w:.055,h:.14,d:.11,pos:[0,-.11,.04],material:"dark",rot:[-.18,0,0]},
+      {kind:"tube",r:.011,length:.67,pos:[0,.03,-.43]},
+      {w:.14,h:.03,d:.06,pos:[0,.085,-.10],material:"dark"},
+      {kind:"tube",r:.027,length:.16,pos:[0,.12,-.11],material:"dark"}
+    ]);
     const pickerButtons=[...document.querySelectorAll("[data-agent-weapon]")];
     const pickerNames={akr:"AKR",p350:"P350",knife:"НІЖ",m4a1:"M4A1",p90:"P90",shotgun:"SHOTGUN",sniper:"SNIPER"};
     function setPreviewWeapon(kind){
       if(!Object.prototype.hasOwnProperty.call(pickerNames,kind))kind="akr";
-      if(rig?.rifle)rig.rifle.visible=kind==="akr"||kind==="m4a1"||kind==="p90"||kind==="shotgun"||kind==="sniper";
+      if(rig?.rifle)rig.rifle.visible=kind==="akr";
       pistol.visible=kind==="p350";knife.visible=kind==="knife";
+      Object.entries(previewGuns).forEach(([name,group])=>{group.visible=kind===name});
       const label=document.getElementById("homeAgentWeaponName");
       const hint=document.getElementById("homeAgentWeaponHint");
       if(label)label.textContent=pickerNames[kind];
