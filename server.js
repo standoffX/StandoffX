@@ -1640,6 +1640,151 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   armMatchJoinTimeout(io, match);
 }
 
+function publicLobby(lobby) {
+  return {
+    id: lobby.id,
+    ownerId: lobby.ownerId,
+    mode: lobby.mode,
+    modeName: getModeConfig(lobby.mode).name,
+    map: lobby.map,
+    mapName: PLAYABLE_MAPS[lobby.map]?.name || lobby.map,
+    maxPlayers: lobby.maxPlayers,
+    createdAt: lobby.createdAt,
+    members: lobby.members.map(member => ({
+      userId: member.userId,
+      nickname: member.nickname,
+      playerAvatar: member.playerAvatar || "/avatars/default.jpg",
+      isOwner: member.userId === lobby.ownerId,
+      connected: Boolean(member.socketId && ioSocketExists(member.socketId))
+    }))
+  };
+}
+function ioSocketExists(socketId) {
+  return Boolean(globalSocketServer?.sockets?.sockets?.has(socketId));
+}
+let globalSocketServer = null;
+function emitLobbyState(io, lobby) {
+  if (!lobby || !activeLobbies.has(lobby.id)) return;
+  const payload = publicLobby(lobby);
+  for (const member of lobby.members) {
+    if (member.socketId && io.sockets.sockets.has(member.socketId)) io.to(member.socketId).emit("lobby_state", payload);
+  }
+}
+function emitLobbyError(socket, message, eventName = "lobby_error") {
+  socket.emit(eventName, { message });
+}
+function removeLobbyMember(io, userId, socketId = null, reason = "Гравець вийшов із лобі.") {
+  const lobbyId = lobbyByUser.get(String(userId));
+  if (!lobbyId) return;
+  const lobby = activeLobbies.get(lobbyId);
+  lobbyByUser.delete(String(userId));
+  lobbyInvites.delete(String(userId));
+  if (!lobby) return;
+  const existing = lobby.members.find(member => member.userId === String(userId));
+  if (socketId && existing && existing.socketId !== socketId) {
+    lobbyByUser.set(String(userId), lobbyId);
+    return;
+  }
+  lobby.members = lobby.members.filter(member => member.userId !== String(userId));
+  if (!lobby.members.length) {
+    activeLobbies.delete(lobbyId);
+    for (const [inviteeId, invite] of lobbyInvites) if (invite.lobbyId === lobbyId) lobbyInvites.delete(inviteeId);
+    return;
+  }
+  if (!lobby.members.some(member => member.userId === lobby.ownerId)) {
+    lobby.ownerId = lobby.members[0].userId;
+    const newOwner = lobby.members[0];
+    if (newOwner.socketId) io.to(newOwner.socketId).emit("lobby_notice", { message: "Ти став лідером лобі." });
+  }
+  emitLobbyState(io, lobby);
+  for (const member of lobby.members) if (member.socketId) io.to(member.socketId).emit("lobby_notice", { message: reason });
+}
+function lobbyMemberFromSocket(socket) {
+  if (!socket?.user) return null;
+  const lobbyId = lobbyByUser.get(String(socket.user.id));
+  const lobby = lobbyId ? activeLobbies.get(lobbyId) : null;
+  const member = lobby?.members.find(item => item.userId === String(socket.user.id) && item.socketId === socket.id);
+  return member ? { lobby, member } : null;
+}
+function inviteFriendToLobby(io, socket, targetId) {
+  const current = lobbyMemberFromSocket(socket);
+  const target = users.find(user => user.id === targetId);
+  if (!current) return emitLobbyError(socket, "Спочатку створи або приєднайся до лобі.", "lobby_invite_result");
+  if (!target || target.id === socket.user.id) return emitLobbyError(socket, "Гравця не знайдено.", "lobby_invite_result");
+  if (!(socket.user.friendsList || []).includes(target.id)) return emitLobbyError(socket, "Запрошувати можна лише друзів.", "lobby_invite_result");
+  if (lobbyByUser.has(target.id)) return emitLobbyError(socket, "Гравець уже перебуває в лобі.", "lobby_invite_result");
+  if (playerMatch(target.uuid || target.id)) return emitLobbyError(socket, "Гравець уже в матчі.", "lobby_invite_result");
+  if (current.lobby.members.length >= current.lobby.maxPlayers) return emitLobbyError(socket, "Лобі заповнене.", "lobby_invite_result");
+  let targetSocket = null;
+  for (const candidate of io.sockets.sockets.values()) {
+    if (candidate.user?.id === target.id) targetSocket = candidate;
+  }
+  if (!targetSocket) return emitLobbyError(socket, "Друг зараз не в мережі.", "lobby_invite_result");
+  lobbyInvites.set(target.id, {
+    lobbyId: current.lobby.id,
+    invitedBy: socket.user.id,
+    expiresAt: Date.now() + 60000
+  });
+  targetSocket.emit("lobby_invite_received", {
+    lobbyId: current.lobby.id,
+    lobbyName: socket.user.nickname + " · ЛОБІ",
+    inviterId: socket.user.id,
+    inviterNickname: socket.user.nickname,
+    mode: current.lobby.mode,
+    modeName: getModeConfig(current.lobby.mode).name,
+    map: current.lobby.map,
+    mapName: PLAYABLE_MAPS[current.lobby.map]?.name || current.lobby.map,
+    expiresIn: 60
+  });
+  socket.emit("lobby_invite_result", { success: true, message: "Запрошення надіслано: " + target.nickname });
+}
+function createLobbyMatch(io, socket, data = {}) {
+  const current = lobbyMemberFromSocket(socket);
+  if (!current) return emitLobbyError(socket, "Спочатку створи або приєднайся до лобі.", "lobby_start_error");
+  const lobby = current.lobby;
+  if (lobby.ownerId !== socket.user.id) return emitLobbyError(socket, "Почати матч може лише лідер лобі.", "lobby_start_error");
+  const mode = lobby.mode;
+  const map = mode === "allies" ? "SANDSTONE" : lobby.map;
+  const required = getRequiredPlayers(mode);
+  const members = [...lobby.members];
+  if (members.length > required) return emitLobbyError(socket, "У лобі більше гравців, ніж підтримує цей режим.", "lobby_start_error");
+  for (const member of members) {
+    if (!member.socketId || !io.sockets.sockets.has(member.socketId)) return emitLobbyError(socket, "Не всі гравці підключені до лобі.", "lobby_start_error");
+    const user = users.find(candidate => candidate.id === member.userId);
+    if (!user || playerMatch(user.uuid || user.id)) return emitLobbyError(socket, "Один із гравців уже перебуває в матчі.", "lobby_start_error");
+  }
+  const fillBots = data.fillWithBots !== false;
+  if (members.length < required && !fillBots) return emitLobbyError(socket, "Додай друзів або ввімкни заповнення ботами.", "lobby_start_error");
+  const candidates = members.map(member => {
+    const user = users.find(candidate => candidate.id === member.userId);
+    return {
+      socketId: member.socketId,
+      userId: member.userId,
+      nickname: member.nickname,
+      playerAvatar: member.playerAvatar || "/avatars/default.jpg",
+      uuid: user?.uuid || "",
+      isBot: false,
+      lobbyMatch: true,
+      mode, map
+    };
+  });
+  for (let index = candidates.length; index < required; index++) {
+    const userId = "lobby_bot_" + crypto.randomBytes(8).toString("hex");
+    candidates.push({
+      socketId: null, userId, uuid: "", isBot: true, lobbyMatch: true,
+      nickname: "BOT · " + String(index + 1).padStart(2, "0"),
+      playerAvatar: "/avatars/default.jpg", mode, map, ready: true
+    });
+  }
+  activeLobbies.delete(lobby.id);
+  for (const member of lobby.members) {
+    lobbyByUser.delete(member.userId);
+    if (member.socketId) io.to(member.socketId).emit("lobby_closed", { reason: "Матч запускається." });
+  }
+  for (const [inviteeId, invite] of lobbyInvites) if (invite.lobbyId === lobby.id) lobbyInvites.delete(inviteeId);
+  createMatch(io, mode, map, candidates);
+}
+
 function armMatchJoinTimeout(io, match) {
   if (!match || match.started || match.finished) return;
   if (match.joinTimer) clearTimeout(match.joinTimer);
@@ -2780,6 +2925,7 @@ const io = new Server(server, {
 });
 
 io.on("connection", socket => {
+  globalSocketServer = io;
   const cookies = parseCookies(socket.handshake.headers.cookie || "");
   socket.user = sessionUserFromToken(cookies.standoffx_session);
 
@@ -3087,6 +3233,77 @@ io.on("connection", socket => {
     if(session.botTimer)clearInterval(session.botTimer);
     trainingSessions.delete(socket.user.id);
   });
+
+  socket.on("lobby_state_request", () => {
+    const current = lobbyMemberFromSocket(socket);
+    if (current) emitLobbyState(io, current.lobby);
+    else socket.emit("lobby_left", { reason: "Ти не перебуваєш у лобі." });
+  });
+  socket.on("lobby_create", data => {
+    const user = socket.user;
+    if (!user || playerMatch(user.uuid || user.id)) return emitLobbyError(socket, "Ти вже перебуваєш у матчі.");
+    if (lobbyByUser.has(user.id)) return emitLobbyError(socket, "Ти вже в лобі.");
+    const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
+    const requestedMap = normalizeMapId(data?.map);
+    const map = mode === "allies" ? "SANDSTONE" : (requestedMap === "NEON_YARD" ? "NEON_YARD" : "SMALL_YARD");
+    const lobbyId = "lobby_" + crypto.randomBytes(7).toString("hex");
+    const lobby = {
+      id: lobbyId, ownerId: user.id, mode, map, maxPlayers: getRequiredPlayers(mode),
+      createdAt: Date.now(),
+      members: [{
+        userId: user.id, uuid: user.uuid || "", socketId: socket.id,
+        nickname: user.nickname, playerAvatar: user.playerAvatar || "/avatars/default.jpg"
+      }]
+    };
+    activeLobbies.set(lobbyId, lobby);
+    lobbyByUser.set(user.id, lobbyId);
+    socket.emit("lobby_created", { lobbyId });
+    emitLobbyState(io, lobby);
+  });
+  socket.on("lobby_invite", data => inviteFriendToLobby(io, socket, normalizeId(data?.userId)));
+  socket.on("lobby_invite_response", data => {
+    const targetId = socket.user?.id;
+    const invite = targetId ? lobbyInvites.get(targetId) : null;
+    if (!invite || invite.lobbyId !== cleanText(data?.lobbyId, 100) || invite.expiresAt < Date.now()) {
+      if (targetId) lobbyInvites.delete(targetId);
+      return emitLobbyError(socket, "Запрошення вже недійсне.", "lobby_invite_response_result");
+    }
+    lobbyInvites.delete(targetId);
+    if (data?.accept !== true) {
+      socket.emit("lobby_invite_response_result", { success: true, accepted: false, message: "Запрошення відхилено." });
+      const lobby = activeLobbies.get(invite.lobbyId);
+      const inviter = lobby?.members.find(member => member.userId === invite.invitedBy);
+      if (inviter?.socketId) io.to(inviter.socketId).emit("lobby_notice", { message: socket.user.nickname + " відхилив запрошення." });
+      return;
+    }
+    if (lobbyByUser.has(targetId) || playerMatch(socket.user.uuid || socket.user.id)) {
+      return emitLobbyError(socket, "Ти вже в лобі або матчі.", "lobby_invite_response_result");
+    }
+    const lobby = activeLobbies.get(invite.lobbyId);
+    if (!lobby || lobby.members.length >= lobby.maxPlayers) return emitLobbyError(socket, "Лобі вже заповнене або закрите.", "lobby_invite_response_result");
+    const user = users.find(candidate => candidate.id === targetId);
+    if (!user) return emitLobbyError(socket, "Акаунт не знайдено.", "lobby_invite_response_result");
+    lobby.members.push({
+      userId: user.id, uuid: user.uuid || "", socketId: socket.id,
+      nickname: user.nickname, playerAvatar: user.playerAvatar || "/avatars/default.jpg"
+    });
+    lobbyByUser.set(user.id, lobby.id);
+    socket.join(lobby.id);
+    socket.emit("lobby_invite_response_result", { success: true, accepted: true, message: "Ти приєднався до лобі." });
+    emitLobbyState(io, lobby);
+  });
+  socket.on("lobby_leave", () => removeLobbyMember(io, socket.user?.id, socket.id));
+  socket.on("lobby_kick", data => {
+    const current = lobbyMemberFromSocket(socket);
+    if (!current || current.lobby.ownerId !== socket.user.id) return emitLobbyError(socket, "Видаляти гравців може лише лідер лобі.");
+    const targetId = normalizeId(data?.userId);
+    if (targetId === socket.user.id) return;
+    const target = current.lobby.members.find(member => member.userId === targetId);
+    if (!target) return;
+    removeLobbyMember(io, targetId, target.socketId, "Тебе видалили з лобі.");
+    if (target.socketId) io.to(target.socketId).emit("lobby_left", { reason: "Тебе видалили з лобі." });
+  });
+  socket.on("lobby_start_match", data => createLobbyMatch(io, socket, data || {}));
 
   socket.on("start_prototype_match", data => {
     const user = socket.user;
@@ -3551,6 +3768,7 @@ io.on("connection", socket => {
   });
 
   socket.on("disconnect", () => {
+    if (socket.user?.id) removeLobbyMember(io, socket.user.id, socket.id, "Гравець відключився.");
     removeFromQueue(socket.user?.uuid || socket.user?.id, socket.id);
 
     if (socket.user) {
