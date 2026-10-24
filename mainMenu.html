@@ -140,6 +140,64 @@ button:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:1120px){.home-layout{grid-template-columns:minmax(240px,300px) minmax(150px,190px) minmax(270px,1fr)}.content{padding:12px}.promo{height:180px}}
 @media(max-width:850px){.home-layout{grid-template-columns:minmax(240px,1fr) minmax(280px,1.1fr)}.promo-col{display:none}.playarea{min-height:220px}}
 @media(max-width:600px){.rail{width:48px;flex-basis:48px}.rail button{height:50px}.topbar{padding:0 8px;gap:5px}.topbrand{font-size:10px}.content{padding:8px}.home-layout{grid-template-columns:1fr}.profile-col{display:none}.passhero{height:90px}.playarea{min-height:140px}.playbutton{width:180px;height:44px}.waitplayers{grid-template-columns:1fr}.pill{padding:6px;font-size:9px}}
+
+/* Season 11-inspired home screen: squad left, agent in the center, events on the right. */
+.home-layout{grid-template-columns:minmax(205px,.78fr) minmax(360px,1.48fr) minmax(225px,.86fr)!important;grid-auto-rows:min-content!important;gap:12px!important;align-items:stretch!important}
+.home-friends{grid-column:1!important;grid-row:1!important;min-height:420px!important;display:block!important;overflow:hidden!important}
+.home-friends .panelhead{min-height:43px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important}
+.home-all-friends{padding:6px 8px!important;font-size:8px!important;white-space:nowrap!important}
+.home-friends-body{display:flex!important;flex-direction:column!important;gap:14px!important;padding:13px!important}
+.home-self-card{display:grid;grid-template-columns:48px minmax(0,1fr) 8px;gap:10px;align-items:center;padding:10px;background:linear-gradient(135deg,#293a46,#16212a);border:1px solid #adc8dc24}
+.home-self-card img{width:48px;height:48px;object-fit:cover;border:1px solid #b9d7ed55;background:#0a131b}
+.home-self-card>div{display:grid;gap:4px;min-width:0}
+.home-self-card b{font-size:12px;color:#f3f7fa;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home-self-card small{font-size:8px;color:#9bb5c8;font-weight:900;letter-spacing:.7px}
+.home-self-card span{font-size:9px;color:#8a9aa7}.home-self-card strong{color:#d5e7f4}
+.home-self-card i{width:7px;height:7px;border-radius:50%;background:#74e0ac;box-shadow:0 0 0 4px #74e0ac17}
+.home-friends-title{display:flex;justify-content:space-between;gap:8px;padding-bottom:8px;border-bottom:1px solid #c3d1dc19;font-size:9px;font-weight:950;letter-spacing:1.3px;color:#d6e2eb}
+.home-friends-title small{font-size:8px;color:#8fa6b7;letter-spacing:.5px}
+.home-friends-list{display:grid;gap:6px;align-content:start;min-height:100px}
+.home-friend{display:grid;grid-template-columns:34px minmax(0,1fr) auto 28px;gap:8px;align-items:center;padding:7px;border:1px solid #b8c9d312;background:#10181f}
+.home-friend img{width:34px;height:34px;object-fit:cover;background:#111a22}
+.home-friend-copy{display:grid;min-width:0;gap:3px}
+.home-friend-copy b{font-size:10px;color:#e7eef4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-friend-copy small{font-size:8px;color:#8599a8}
+.home-friend .home-online{width:6px;height:6px;border-radius:50%;background:#63717b}
+.home-friend.is-online .home-online{background:#75dfad;box-shadow:0 0 0 3px #75dfad12}
+.home-friend-invite{display:grid;place-items:center;width:28px;height:28px;border:1px solid #a5c2d83d;background:#263844;color:#dceefa;font-size:17px;cursor:pointer}
+.home-friend-invite:disabled{opacity:.3;cursor:not-allowed}
+.home-invite-btn{width:100%;min-height:40px;padding:10px 8px;border:1px solid #b4d4ea55;background:#2b4558;color:#e8f5ff;font-size:9px;font-weight:950;letter-spacing:.7px;cursor:pointer}
+.home-invite-btn:hover{background:#36566c}.home-squad-note{font-size:9px;line-height:1.5;color:#7f93a1}
+.home-hero{grid-column:2!important;grid-row:1!important;min-height:420px!important;position:relative!important;overflow:hidden!important}
+.home-hero:after{background:linear-gradient(90deg,#08121dbd 0%,#10182050 45%,#1018200c 100%),linear-gradient(0deg,#081018df 0%,transparent 54%)!important;border:1px solid #c8d9e008!important}
+.home-hero-art{opacity:.82!important;filter:saturate(.72) contrast(1.1) brightness(.92)!important;object-position:center 34%!important;mix-blend-mode:normal!important}
+.home-hero-copy{left:25px!important;top:24px!important}
+.home-hero-overline{color:#c1d0da!important;font-size:9px!important;letter-spacing:2.2px!important}
+.home-hero-copy h1{font-size:clamp(28px,3.2vw,48px)!important;letter-spacing:1px!important}
+.home-hero .playarea{right:22px!important;bottom:20px!important;left:auto!important;top:auto!important;z-index:5!important}
+.home-hero .playwrap{align-items:flex-end!important}.home-hero .playbutton{min-width:190px!important;min-height:49px!important;font-size:13px!important}
+.home-hero #selectedModeText,.home-hero #selectedMapText{text-align:right!important;text-shadow:0 1px 8px #000!important}
+.profile-col{grid-column:1!important;grid-row:2!important}
+.promo-col{grid-column:3!important;grid-row:1!important;display:block!important;min-height:420px!important}
+.promo-col .promo{height:242px!important}.passpanel{grid-column:2/4!important;grid-row:2!important}
+@media(max-width:1050px){
+ .home-layout{grid-template-columns:minmax(190px,.8fr) minmax(0,1.3fr)!important}
+ .home-friends{grid-column:1!important;grid-row:1!important}.home-hero{grid-column:2!important;grid-row:1!important}
+ .profile-col{grid-column:1!important;grid-row:2!important}
+ .promo-col{grid-column:2!important;grid-row:2!important;display:block!important;min-height:0!important}
+ .passpanel{grid-column:1/3!important;grid-row:3!important}
+}
+@media(max-width:650px){
+ .home-layout{grid-template-columns:1fr!important;gap:8px!important}
+ .home-friends{grid-column:1!important;grid-row:2!important;min-height:0!important}
+ .home-hero{grid-column:1!important;grid-row:1!important;min-height:345px!important}
+ .home-hero-copy{left:17px!important;top:20px!important}.home-hero .playarea{right:12px!important;bottom:12px!important}
+ .home-hero .playbutton{min-width:160px!important;min-height:44px!important}
+ .profile-col{display:none!important}.promo-col{grid-column:1!important;grid-row:3!important;min-height:0!important}
+ .promo-col .promo{height:160px!important}.passpanel{grid-column:1!important;grid-row:4!important}
+ .home-friends-body{gap:10px!important}.home-friends-list{grid-template-columns:1fr!important}
+}
+
 </style>
 <style>
 /* StandoffX menu remake */
@@ -462,6 +520,16 @@ body:before{
 <main class="content">
 <section id="home" class="screen active">
   <div class="home-layout">
+    <aside class="home-friends panel" aria-label="Друзі та команда">
+      <div class="panelhead"><span>КОМАНДА / ДРУЗІ</span><button class="secondary home-all-friends" type="button" data-view="friends">УСІ ↗</button></div>
+      <div class="panelbody home-friends-body">
+        <div class="home-self-card"><img id="homePlayerAvatar" src="/avatars/default.jpg" alt=""><div><b id="homePlayerNick">PLAYER</b><small id="homePlayerStatus">ОНЛАЙН · У МЕНЮ</small><span>ID <strong id="homePlayerId">—</strong></span></div><i></i></div>
+        <div class="home-friends-title"><span>ДРУЗІ</span><small id="homeOnlineCount">0 ОНЛАЙН</small></div>
+        <div id="homeFriendsPreview" class="home-friends-list"><div class="muted">Завантажуємо список друзів…</div></div>
+        <button class="home-invite-btn" id="homeInviteBtn" type="button">＋ ЗНАЙТИ / ЗАПРОСИТИ ДРУЗІВ</button>
+        <div class="home-squad-note">Збери команду перед стартом матчу.</div>
+      </div>
+    </aside>
     <section class="home-hero panel" aria-label="Головне ігрове меню">
       <img class="home-hero-art" src="game1.png" alt="" aria-hidden="true">
       <div class="home-hero-copy">
@@ -878,6 +946,10 @@ function render(){
   $("alliesMmr").textContent="COMING SOON";
   $("clanName").textContent=me.clan||"НЕМАЄ";
   $("avatar").src=me.playerAvatar||"/avatars/default.jpg";
+  $("homePlayerAvatar").src=me.playerAvatar||"/avatars/default.jpg";
+  $("homePlayerNick").textContent=me.nickname||"PLAYER";
+  $("homePlayerId").textContent=id;
+  $("homePlayerStatus").textContent="ОНЛАЙН · У МЕНЮ";
   $("profileAvatar").src=me.playerAvatar||"/avatars/default.jpg";
   $("profilePageNick").textContent=me.nickname||"PLAYER";
   $("profilePageId").textContent=id;
@@ -908,6 +980,9 @@ function renderMode(){
   renderMapSelection();
 }
 document.querySelectorAll(".rail button[data-view]").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.view==="admin"){location.href="/admin";return}show(b.dataset.view)}));
+  document.querySelectorAll("[data-view='friends']").forEach(b=>b.addEventListener("click",()=>show("friends")));
+  $("homeInviteBtn").addEventListener("click",()=>show("friends"));
+  $("homeFriendsPreview").addEventListener("click",event=>{const button=event.target.closest("[data-home-invite]");if(button&&!button.disabled)inviteToLobby(button.dataset.homeInvite)});
   $("lobbyModeSelect").value=selectedMode;
   $("lobbyMapSelect").value=selectedMode==="allies"?"SANDSTONE":selectedMap;
   $("lobbyModeSelect").dispatchEvent(new Event("change"));
@@ -1097,12 +1172,32 @@ function renderWaitPlayers(players){
     return "<div class='waitplayer "+(p.connected?"online":"")+"'><div class='waitplayer-main'><img class='waitplayer-avatar' src='"+esc(p.playerAvatar||"/avatars/default.jpg")+"' alt=''><b>"+esc(p.nickname||"PLAYER")+"</b></div><small>ID "+playerId+"</small></div>";
   }).join("")||"<div class='muted'>Поки що немає гравців у черзі.</div>";
 }
+function renderHomeFriendsPreview(friends){
+  const root=$("homeFriendsPreview");if(!root)return;
+  const list=Array.isArray(friends)?friends:[];
+  const online=list.filter(friend=>Boolean(friend.status));
+  const shown=(online.length?online:list).slice(0,4);
+  const count=$("homeOnlineCount");if(count)count.textContent=online.length+" ОНЛАЙН";
+  if(!shown.length){
+    root.innerHTML="<div class='muted'>Друзів поки немає. Знайди гравців і створи команду.</div>";
+    return;
+  }
+  root.innerHTML=shown.map(friend=>{
+    const avatar=esc(friend.playerAvatar||friend.avatar||"/avatars/default.jpg");
+    const nick=esc(friend.nickname||"PLAYER");
+    const state=friend.status?"ONLINE":"OFFLINE";
+    const onlineClass=friend.status?" is-online":"";
+    const disabled=!friend.status||!currentLobby||currentLobby.members.length>=currentLobby.maxPlayers;
+    return "<div class='home-friend"+onlineClass+"'><img src='"+avatar+"' alt=''><div class='home-friend-copy'><b>"+nick+"</b><small>"+state+"</small></div><i class='home-online'></i><button class='home-friend-invite' data-home-invite='"+esc(friend.id)+"' aria-label='Запросити "+nick+"' "+(disabled?"disabled":"")+">+</button></div>";
+  }).join("");
+}
 async function loadFriends(){
   try{
     const f=await api("/api/get-my-friends"),i=await api("/api/friends/incoming",{method:"POST",body:"{}"});
     $("friendsList").innerHTML=f.friends.map(x=>"<div class='row'><div><b>"+esc(x.nickname)+"</b><div class='muted'>ID "+esc(cleanId(x.id))+"</div></div><div class='actions'><span class='muted'>"+(x.status?"ONLINE":"OFFLINE")+"</span>"+(currentLobby?"<button class='secondary' data-lobby-invite='"+esc(x.id)+"' "+(!x.status||currentLobby.members.length>=currentLobby.maxPlayers?"disabled":"")+">ЗАПРОСИТИ</button>":"<button class='secondary' data-open-lobby>ЛОБІ</button>")+"</div></div>").join("")||"<div class='muted'>Немає друзів.</div>";
     $("incoming").innerHTML=i.incoming.map(x=>"<div class='row'><div><b>"+esc(x.nickname)+"</b><div class='muted'>ID "+esc(cleanId(x.id))+"</div></div><div class='actions'><button class='primary' data-friend-action='accept' data-id='"+esc(x.id)+"'>✓</button><button class='secondary' data-friend-action='decline' data-id='"+esc(x.id)+"'>×</button></div></div>").join("")||"<div class='muted'>Немає заявок.</div>";
     renderLobbyFriends(f.friends);
+    renderHomeFriendsPreview(f.friends);
   }catch(e){$("friendsList").innerHTML="<div class='muted'>Не вдалося завантажити друзів.</div>";$("lobbyFriends").innerHTML="<div class='muted'>Не вдалося завантажити друзів.</div>"}
 }
 async function loadLobbyFriends(){
