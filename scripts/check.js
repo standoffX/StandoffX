@@ -97,6 +97,8 @@ assert.match(server, /const activeMatches = new Map\(\);[^\n]*in-memory only/);
 assert.match(server, /const MAX_CONCURRENT_MATCHES = Math\.max\(1, Math\.min\(100, Number\.parseInt\(process\.env\.MAX_CONCURRENT_MATCHES \|\| "100", 10\) \|\| 100\)\)/, "the server has a configurable but hard-capped limit of 100 live matches");
 assert.match(server, /function createMatch\(io, mode, mapId = "M3_Maze", forcedCandidates = null\) \{\s*if \(activeMatches\.size >= MAX_CONCURRENT_MATCHES\) return null;/, "match creation stops cleanly at capacity without consuming queued players");
 assert.match(server, /function processMatchmakingQueue\(io\)[\s\S]{0,1500}createMatch\(io, group\.mode, group\.map, candidates\)/, "the queued matchmaking groups are drained when match slots open");
+assert.match(game, /if\(!force&&now-lastMoveSend<80\)return/, "movement updates are throttled to reduce traffic with up to 100 matches");
+assert.match(server, /socket\.to\(match\.id\)\.volatile\.emit\("enemy_moved"/, "transient movement packets can be dropped under network backpressure");
 assert.match(server, /maxConcurrentMatches: MAX_CONCURRENT_MATCHES/, "the health endpoint exposes the configured match limit");
 assert.match(server, /available: Math\.max\(0, MAX_CONCURRENT_MATCHES - activeMatches\.size\)/, "admin status reports available match slots");
 assert.match(server, /const trainingSessions = new Map\(\);[^\n]*never written to MongoDB/);
