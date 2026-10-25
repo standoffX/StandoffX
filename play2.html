@@ -7,7 +7,7 @@
 <style>
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:Inter,Arial,sans-serif}
 #game{position:fixed;inset:0}.hud{position:fixed;inset:0;pointer-events:none;z-index:10}
-#crosshair{position:absolute;left:50%;top:50%;width:20px;height:20px;transform:translate(-50%,-50%)}#crosshair i,#crosshair:before,#crosshair:after{content:"";position:absolute;background:#fff;opacity:.95;border-radius:1px}#crosshair i{width:2px;height:20px;left:9px;top:0}#crosshair:before{width:20px;height:2px;left:0;top:9px}#crosshair.hit{transform:translate(-50%,-50%) scale(1.22)}#crosshair.hit i,#crosshair.hit:before{background:#6affbf;box-shadow:0 0 7px #6affbf;opacity:1}#deathNotice{display:none;position:absolute;left:50%;top:calc(50% + 42px);transform:translateX(-50%);padding:8px 12px;border:1px solid #ff637788;border-radius:4px;background:#2b0815d9;color:#ff8996;font-size:11px;font-weight:950;letter-spacing:2px;white-space:nowrap;text-shadow:0 1px 8px #000}
+.crosshair-display{--crosshair-size:20px;--crosshair-arm-length:7px;--crosshair-gap:3px;--crosshair-thickness:2px;--crosshair-color:#e7f3fb;position:relative;display:block;width:var(--crosshair-size);height:var(--crosshair-size);pointer-events:none}#crosshair{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:10}.crosshair-arm{position:absolute;display:block;background:var(--crosshair-color);border-radius:1px;opacity:.98;box-shadow:0 1px 3px #000a}.crosshair-arm.top{width:var(--crosshair-thickness);height:var(--crosshair-arm-length);left:50%;top:calc(50% - var(--crosshair-gap) - var(--crosshair-arm-length));transform:translateX(-50%)}.crosshair-arm.bottom{width:var(--crosshair-thickness);height:var(--crosshair-arm-length);left:50%;top:calc(50% + var(--crosshair-gap));transform:translateX(-50%)}.crosshair-arm.left{height:var(--crosshair-thickness);width:var(--crosshair-arm-length);left:calc(50% - var(--crosshair-gap) - var(--crosshair-arm-length));top:50%;transform:translateY(-50%)}.crosshair-arm.right{height:var(--crosshair-thickness);width:var(--crosshair-arm-length);left:calc(50% + var(--crosshair-gap));top:50%;transform:translateY(-50%)}.crosshair-dot{display:none;position:absolute;width:3px;height:3px;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;background:var(--crosshair-color);box-shadow:0 0 3px #000}.crosshair-display.style-dot .crosshair-arm,.crosshair-display.style-circle .crosshair-arm{display:none}.crosshair-display.style-dot .crosshair-dot,.crosshair-display.style-thin .crosshair-dot{display:block}.crosshair-display.style-circle:before{content:"";position:absolute;left:50%;top:50%;width:var(--crosshair-size);height:var(--crosshair-size);border:var(--crosshair-thickness) solid var(--crosshair-color);border-radius:50%;transform:translate(-50%,-50%);box-sizing:border-box;box-shadow:0 0 2px #000}#crosshair.hit{transform:translate(-50%,-50%) scale(1.22)}#crosshair.hit .crosshair-arm,#crosshair.hit .crosshair-dot{background:#9be7c4;box-shadow:0 0 7px #9be7c4;opacity:1}#crosshair.hit.style-circle:before{border-color:#9be7c4;box-shadow:0 0 7px #9be7c4}#deathNotice{display:none;position:absolute;left:50%;top:calc(50% + 42px);transform:translateX(-50%);padding:8px 12px;border:1px solid #ff637788;border-radius:4px;background:#2b0815d9;color:#ff8996;font-size:11px;font-weight:950;letter-spacing:2px;white-space:nowrap;text-shadow:0 1px 8px #000}
 .top{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:8px 13px;background:#080d14d9;border:1px solid #ffffff12;border-radius:7px;white-space:nowrap}.top b{font-size:12px;letter-spacing:1px}.top span{font-size:26px;font-weight:950}.status{color:#5ba0ff}
 #score{position:absolute;top:14px;left:14px;padding:9px 12px;background:#080d14c9;border:1px solid #ffffff12;border-radius:7px;font-size:12px}.teamA{color:#63a1ff}.teamB{color:#ff6f7d}
 #hint{position:absolute;left:14px;bottom:14px;padding:8px 10px;background:#080d14b8;border:1px solid #ffffff0d;border-radius:6px;color:#bac5d4;font-size:11px}
@@ -214,8 +214,8 @@ html,body{background:#05090d!important;color:var(--hud-text)!important;font-fami
 #weaponDamage{font-size:8px!important;color:#8ca8bb!important}
 #weaponActionLabel{z-index:30!important;border-radius:3px!important;background:#071018ed!important;color:#d7ebf6!important;border-color:#a9cee23a!important;box-shadow:0 8px 22px #0005!important;backdrop-filter:blur(8px)!important}
 #crosshair{filter:drop-shadow(0 1px 2px #000b)!important}
-#crosshair i,#crosshair:before,#crosshair:after{box-shadow:0 0 2px #000a!important}
-#crosshair.hit i,#crosshair.hit:before{box-shadow:0 0 8px #6affbf!important}
+#crosshair .crosshair-arm,#crosshair .crosshair-dot{box-shadow:0 0 2px #000a!important}#crosshair.style-circle:before{box-shadow:0 0 2px #000a!important}
+#crosshair.hit .crosshair-arm,#crosshair.hit .crosshair-dot{box-shadow:0 0 8px #6affbf!important}#crosshair.hit.style-circle:before{border-color:#6affbf!important;box-shadow:0 0 8px #6affbf!important}
 #damagePopup{top:calc(50% + 35px)!important;z-index:40!important;max-width:min(92vw,540px)!important;padding:8px 12px!important;border-radius:3px!important;background:#0a151feF!important;border-color:#bad6e52e!important;color:#d9edf8!important;box-shadow:0 8px 30px #0008!important;font-size:10px!important;letter-spacing:1px!important;backdrop-filter:blur(8px)!important}
 #damagePopup.incoming{background:#241115f2!important;border-color:#e99ca13d!important;color:#ffc8cb!important}
 #bombHud{top:72px!important;min-width:270px!important;gap:6px!important;padding:10px 14px!important;border-radius:3px!important;border-color:#d4be8f30!important;background:linear-gradient(105deg,#191911eF,#0a1014ee)!important;box-shadow:0 12px 28px #0006!important;backdrop-filter:blur(12px)!important}
@@ -342,8 +342,8 @@ html,body{font-family:Inter,"Nunito",system-ui,-apple-system,"Segoe UI",sans-ser
   font-size:10px!important;letter-spacing:.8px!important;box-shadow:0 9px 28px #0005!important
 }
 #damagePopup.incoming{border-color:#ef9aa742!important;background:#25141beF!important;color:#ffbac1!important}
-#crosshair i,#crosshair:before,#crosshair:after{background:#e7f3fb!important;box-shadow:0 1px 3px #000a}
-#crosshair.hit i,#crosshair.hit:before{background:#9be7c4!important;box-shadow:0 0 7px #9be7c4!important}
+#crosshair .crosshair-arm,#crosshair .crosshair-dot{background:var(--crosshair-color)!important;box-shadow:0 1px 3px #000a}#crosshair.style-circle:before{border-color:var(--crosshair-color)!important}
+#crosshair.hit .crosshair-arm,#crosshair.hit .crosshair-dot{background:#9be7c4!important;box-shadow:0 0 7px #9be7c4!important}#crosshair.hit.style-circle:before{border-color:#9be7c4!important;box-shadow:0 0 7px #9be7c4!important}
 #deathNotice{border-radius:3px!important;backdrop-filter:blur(8px)!important}
 #weaponActionLabel{
   border:1px solid #b8d9ee35!important;border-radius:3px!important;
@@ -550,7 +550,7 @@ html,body{font-family:Inter,"Nunito",system-ui,-apple-system,"Segoe UI",sans-ser
   <div class="top"><b id="modeName">MATCH</b><div class="top-right"><span id="roundInfo"></span><span id="timer">00:00</span></div></div>
   <div id="score">SCORE 0</div>
   <div id="bombHud" class="bomb-hud" style="display:none"><b id="bombHudTitle">ЗАВДАННЯ РАУНДУ</b><span id="bombHudDetail">Обери A або B</span><div class="bomb-progress"><i id="bombHudProgress"></i></div></div>
-  <div id="crosshair"><i></i></div>
+  <div id="crosshair" class="crosshair-display style-classic" aria-hidden="true"><i class="crosshair-arm top"></i><i class="crosshair-arm right"></i><i class="crosshair-arm bottom"></i><i class="crosshair-arm left"></i><i class="crosshair-dot"></i></div>
   <div id="weaponActionLabel" aria-live="polite"></div>
   <div id="deathNotice" role="status" aria-live="polite">ТЕБЕ ЛІКВІДУВАЛИ</div>
   <div id="ammo" style="display:none"><div class="ammo-name" id="weaponName">AKR</div><div class="ammo-num" id="ammoNum">30</div><div class="ammo-sub" id="ammoSub">/ 30 · R — RELOAD</div><div class="ammo-sub" id="weaponDamage">5 м · ГОЛ 164 ТІЛ 35 ЖИВ 45 НОГ 27</div></div>
@@ -609,6 +609,26 @@ import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
 import {PointerLockControls} from "three/addons/controls/PointerLockControls.js";
 
 const $=id=>document.getElementById(id);
+function applyCrosshairSettings(){
+  const node=$("crosshair");
+  if(!node)return;
+  let settings={};
+  try{settings=JSON.parse(localStorage.getItem("sx_settings")||"{}")}catch{}
+  const size=Math.max(8,Math.min(36,Number(settings.crosshairSize)||20));
+  const gap=Math.max(0,Math.min(12,Number.isFinite(Number(settings.crosshairGap))?Number(settings.crosshairGap):3));
+  const style=["classic","thin","dot","circle"].includes(settings.crosshairStyle)?settings.crosshairStyle:"classic";
+  const color=/^#[0-9a-f]{6}$/i.test(String(settings.crosshairColor||""))?settings.crosshairColor:"#e7f3fb";
+  node.classList.remove("style-classic","style-thin","style-dot","style-circle");
+  node.classList.add("style-"+style);
+  node.style.setProperty("--crosshair-size",size+"px");
+  node.style.setProperty("--crosshair-arm-length",Math.max(3,Math.round(size*(style==="thin"?.24:.34)))+"px");
+  node.style.setProperty("--crosshair-gap",gap+"px");
+  node.style.setProperty("--crosshair-thickness",style==="thin"?"1px":"2px");
+  node.style.setProperty("--crosshair-color",color);
+}
+applyCrosshairSettings();
+addEventListener("storage",event=>{if(event.key==="sx_settings")applyCrosshairSettings()});
+
 function setLoadingDetail(id,message,state="active"){
   const node=$(id);
   if(!node)return;
@@ -624,6 +644,9 @@ const MAP_LOADING_NAMES={SANDSTONE:"SANDSTONE",SMALL_YARD:"SMALL YARD",HILL_TOWN
 const isMobileDevice=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||
   (navigator.maxTouchPoints>1&&matchMedia("(pointer: coarse)").matches)||
   (innerWidth<=760&&navigator.maxTouchPoints>0);
+const reportedCores=Number(navigator.hardwareConcurrency)||0;
+const reportedMemory=Number(navigator.deviceMemory)||0;
+const isLowEndDevice=!isMobileDevice&&((reportedCores>0&&reportedCores<=4)||(reportedMemory>0&&reportedMemory<=4));
 document.body.classList.toggle("device-mobile",isMobileDevice);
 document.body.classList.toggle("device-desktop",!isMobileDevice);
 const socket=io({
@@ -659,18 +682,18 @@ const camera=new THREE.PerspectiveCamera(74,innerWidth/innerHeight,.08,700);
 scene.add(camera);
 const renderer=new THREE.WebGLRenderer({
   // Desktop gets antialiasing and soft shadows; touch devices keep a lighter profile.
-  antialias:!isMobileDevice,
+  antialias:!isMobileDevice&&!isLowEndDevice,
   powerPreference:"high-performance",
   stencil:false,
   depth:true,
   preserveDrawingBuffer:false
 });
 renderer.setSize(innerWidth,innerHeight,false);
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?1.25:1.7));
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?1.0:isLowEndDevice?1.0:1.35));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.12;
-renderer.shadowMap.enabled=!isMobileDevice;
+renderer.shadowMap.enabled=!isMobileDevice&&!isLowEndDevice;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 $("game").appendChild(renderer.domElement);
 
@@ -678,8 +701,8 @@ scene.add(new THREE.HemisphereLight(0xe7f3ff,0x4b4b43,1.35));
 scene.add(new THREE.AmbientLight(0xffffff,.22));
 const keyLight=new THREE.DirectionalLight(0xfff1dc,2.0);
 keyLight.position.set(-42,78,32);
-keyLight.castShadow=!isMobileDevice;
-keyLight.shadow.mapSize.set(isMobileDevice?512:1536,isMobileDevice?512:1536);
+keyLight.castShadow=!isMobileDevice&&!isLowEndDevice;
+keyLight.shadow.mapSize.set(isMobileDevice||isLowEndDevice?512:1024,isMobileDevice||isLowEndDevice?512:1024);
 keyLight.shadow.camera.left=-90;
 keyLight.shadow.camera.right=90;
 keyLight.shadow.camera.top=90;
@@ -3964,7 +3987,7 @@ function animate(){
 addEventListener("resize",()=>{
   camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight,false);
-  renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?1.25:1.7));
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?1.0:isLowEndDevice?1.0:1.35));
 });
 
 let connectedToGameplay=socket.connected;
