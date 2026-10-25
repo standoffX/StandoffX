@@ -743,7 +743,7 @@ assert.match(game, /ZONE_9:140/, "the local movement bounds include Zone 9");
 
 assert.match(menu, /selectedMode==="training"&&canTest\(\)\)return Object\.keys\(MAPS\)/, "only testers can browse all maps from the dedicated training mode");
 assert.match(menu, /if\(currentLobby&&selectedMode==="training"\)/, "solo training must not accidentally start a party lobby");
-assert.match(server, /if \(mode === "training" && !canUseTesterModes\(user\)\)/, "server rejects training sessions from non-testers");
+assert.match(server, /if \(!canUseTesterModes\(user\)\) \{\s*return socket\.emit\("training_error"/, "server rejects every training and field-test session from non-testers");
 assert.match(server, /bot: mode === "field_test" \? \{ id: "training_bot"/, "solo map training spawns no bot");
 assert.match(server, /p350: 0, knife: 0/, "the Allies starter pistol is free");
 assert.match(server, /equippedWeapon: mode === "allies" \? "p350" : "knife"/, "Allies starts with the free pistol equipped");
