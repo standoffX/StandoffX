@@ -1551,6 +1551,11 @@ app.post("/api/market/sell", transactionRateLimit, requireAuth, (req, res) => {
   const [entry] = entries.splice(index, 1);
   const skin = skins[entry.skinId];
   if (!skin) return res.status(400).json({ success: false, message: "Каталог цього предмета недоступний." });
+  if (skin.weaponId && req.user.equippedSkins?.[skin.weaponId] === entry.skinId &&
+      !entries.some(item => item.skinId === entry.skinId)) {
+    delete req.user.equippedSkins[skin.weaponId];
+    saveUsers();
+  }
   const lot = {
     lotId: crypto.randomBytes(8).toString("hex"),
     sellerId: req.user.id,
