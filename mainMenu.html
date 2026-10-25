@@ -2334,124 +2334,22 @@ async function refreshAtlasIndicator(){}
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
-function makeVisual(color){
-  const g=new THREE.Group();
-  const mat={
-    armor:new THREE.MeshStandardMaterial({color,roughness:.72,metalness:.16}),
-    cloth:new THREE.MeshStandardMaterial({color:0x263241,roughness:.94}),
-    pants:new THREE.MeshStandardMaterial({color:0x18222d,roughness:.96}),
-    skin:new THREE.MeshStandardMaterial({color:0xb98768,roughness:.9}),
-    helmet:new THREE.MeshStandardMaterial({color:0x354653,roughness:.63,metalness:.22}),
-    vest:new THREE.MeshStandardMaterial({color:0x17212a,roughness:.9}),
-    visor:new THREE.MeshStandardMaterial({color:0x08111c,roughness:.28,metalness:.35}),
-    metal:new THREE.MeshStandardMaterial({color:0x202932,roughness:.42,metalness:.68}),
-    boot:new THREE.MeshStandardMaterial({color:0x101820,roughness:.92}),
-    accent:new THREE.MeshStandardMaterial({color,emissive:color,emissiveIntensity:.35,roughness:.42,metalness:.22})
-  };
-  const mesh=(parent,geometry,material,pos,scale)=>{
-    const m=new THREE.Mesh(geometry,material);
-    m.position.set(pos[0],pos[1],pos[2]);
-    if(scale)m.scale.set(scale[0],scale[1],scale[2]);
-    m.castShadow=false;m.receiveShadow=false;
-    parent.add(m);
-    return m;
-  };
-  const box=(parent,material,pos,size)=>mesh(parent,new THREE.BoxGeometry(size[0],size[1],size[2]),material,pos);
-  const ellipsoid=(parent,material,pos,scale)=>mesh(parent,new THREE.SphereGeometry(1,12,9),material,pos,scale);
-  // The soldier faces +Z. Every limb is a pivot so the movement cycle works without external assets.
-  const torso=new THREE.Group();torso.position.y=1.05;g.add(torso);
-  box(torso,mat.cloth,[0,0,0],[.53,.67,.34]);
-  box(torso,mat.armor,[0,.015,.035],[.49,.57,.34]);
-  box(torso,mat.vest,[0,-.01,.198],[.43,.47,.105]);
-  box(torso,mat.accent,[0,.195,.254],[.27,.035,.018]);
-  box(torso,mat.vest,[0,-.205,.258],[.43,.075,.055]);
-  for(const x of [-.145,0,.145]){
-    box(torso,mat.helmet,[x,-.08,.265],[.09,.105,.065]);
-  }
-  box(torso,mat.vest,[0,-.31,0],[.46,.09,.33]);
-  box(torso,mat.vest,[0,.035,-.22],[.36,.45,.13]);
-  box(torso,mat.accent,[-.205,.16,-.14],[.045,.23,.035]);
-  const neck=mesh(g,new THREE.CylinderGeometry(.085,.095,.14,8),mat.skin,[0,1.43,0]);
-  ellipsoid(g,mat.skin,[0,1.63,.015],[.205,.245,.195]);
-  ellipsoid(g,mat.helmet,[0,1.805,-.005],[.235,.16,.225]);
-  box(g,mat.helmet,[0,1.765,.17],[.35,.05,.16]);
-  box(g,mat.visor,[0,1.655,.198],[.285,.072,.025]);
-  for(const side of [-1,1]){
-    box(g,mat.helmet,[side*.207,1.67,.015],[.045,.115,.08]);
-    ellipsoid(g,mat.helmet,[side*.36,1.3,0],[.15,.145,.16]);
-  }
-  const leftArm=new THREE.Group();leftArm.position.set(-.355,1.32,.025);g.add(leftArm);
-  box(leftArm,mat.cloth,[0,-.165,0],[.17,.34,.18]);
-  ellipsoid(leftArm,mat.armor,[0,-.055,.01],[.115,.12,.115]);
-  const leftForearm=new THREE.Group();leftForearm.position.set(0,-.32,.025);leftArm.add(leftForearm);
-  box(leftForearm,mat.armor,[0,-.145,.015],[.145,.29,.155]);
-  box(leftForearm,mat.vest,[0,-.295,.055],[.13,.11,.13]);
-  const rightArm=new THREE.Group();rightArm.position.set(.355,1.32,.025);g.add(rightArm);
-  box(rightArm,mat.cloth,[0,-.165,0],[.17,.34,.18]);
-  ellipsoid(rightArm,mat.armor,[0,-.055,.01],[.115,.12,.115]);
-  const rightForearm=new THREE.Group();rightForearm.position.set(0,-.32,.025);rightArm.add(rightForearm);
-  box(rightForearm,mat.armor,[0,-.145,.015],[.145,.29,.155]);
-  box(rightForearm,mat.vest,[0,-.295,.055],[.13,.11,.13]);
-  const leftLeg=new THREE.Group();leftLeg.position.set(-.15,.75,0);g.add(leftLeg);
-  box(leftLeg,mat.pants,[0,-.18,0],[.205,.39,.23]);
-  ellipsoid(leftLeg,mat.vest,[0,-.36,.01],[.105,.105,.12]);
-  const leftKnee=new THREE.Group();leftKnee.position.set(0,-.36,0);leftLeg.add(leftKnee);
-  box(leftKnee,mat.pants,[0,-.15,0],[.18,.32,.2]);
-  box(leftKnee,mat.boot,[0,-.325,.055],[.205,.115,.31]);
-  const rightLeg=new THREE.Group();rightLeg.position.set(.15,.75,0);g.add(rightLeg);
-  box(rightLeg,mat.pants,[0,-.18,0],[.205,.39,.23]);
-  ellipsoid(rightLeg,mat.vest,[0,-.36,.01],[.105,.105,.12]);
-  const rightKnee=new THREE.Group();rightKnee.position.set(0,-.36,0);rightLeg.add(rightKnee);
-  box(rightKnee,mat.pants,[0,-.15,0],[.18,.32,.2]);
-  box(rightKnee,mat.boot,[0,-.325,.055],[.205,.115,.31]);
-  const rifle=new THREE.Group();rifle.position.set(.215,1.16,.27);rifle.rotation.x=-.12;g.add(rifle);
-  box(rifle,mat.metal,[0,0,.105],[.09,.105,.38]);
-  box(rifle,mat.vest,[0,-.105,.035],[.075,.18,.12]);
-  box(rifle,mat.vest,[0,.015,-.105],[.08,.075,.13]);
-  const barrel=mesh(rifle,new THREE.CylinderGeometry(.014,.014,.34,7),mat.metal,[0,.015,.44]);
-  barrel.rotation.x=Math.PI/2;
-  box(rifle,mat.metal,[0,.078,.12],[.04,.045,.12]);
-  box(rifle,mat.vest,[0,-.055,.25],[.07,.16,.11]);
-  g.userData.tintMaterial=mat.armor;
-  g.userData.accentMaterial=mat.accent;
-  g.userData.rig={leftArm,rightArm,leftLeg,rightLeg,leftKnee,rightKnee,torso,head:g.children.find(n=>n.position?.y===1.63),rifle,offset:0.7};
-  g.userData.anim="Idle";
-  g.traverse(n=>{if(n.isMesh)n.frustumCulled=false});
-  return g;
-}
-function animateSoldier(model,dt,now,moving=false,inAir=false,crouching=false){
-  const r=model?.userData?.rig;if(!r||model.userData.dead)return;
-  model.scale.y=crouching?.72:1;
-  const phase=now*.010+r.offset;
-  const stride=moving?.62:0;
-  const left=Math.sin(phase)*stride;
-  const right=Math.sin(phase+Math.PI)*stride;
-  const kneeLeft=Math.max(0,Math.sin(phase+Math.PI))*stride*.9;
-  const kneeRight=Math.max(0,Math.sin(phase))*stride*.9;
-  const damp=(node,axis,value,rate=13)=>{node.rotation[axis]=THREE.MathUtils.damp(node.rotation[axis],value,rate,dt)};
-  damp(r.leftLeg,"x",left+(inAir?-.22:0));
-  damp(r.rightLeg,"x",right+(inAir?-.22:0));
-  damp(r.leftKnee,"x",kneeLeft);
-  damp(r.rightKnee,"x",kneeRight);
-  damp(r.leftArm,"x",-.36-right*.42+(inAir?-.12:0));
-  damp(r.rightArm,"x",-.48+left*.28+(inAir?-.1:0));
-  damp(r.torso,"z",crouching?.1:(moving?Math.sin(phase*.5)*.025:Math.sin(now*.0015+r.offset)*.008));
-  if(r.head)damp(r.head,"y",Math.sin(now*.0012+r.offset)*.025,5);
-  damp(r.rifle,"x",-.12+(moving?Math.sin(phase*2)*.025:0)+(inAir?-.03:0));
-}
-
-
 const hero=document.querySelector(".home-hero");
 const canvas=document.getElementById("homeAgentCanvas");
 if(hero&&canvas){
-  let renderer=null,scene=null,camera=null,shadow=null,last=0,mouseOffset=0,resizeObserver=null;
-  let tacticalTemplate=null,tacticalClips=[];
+  let renderer=null,scene=null,camera=null,shadow=null,last=0,resizeObserver=null;
+  let tacticalTemplate=null,hoveredAgentIndex=-1;
   const squadAgents=[];
   const agentPalette=[0x8999a5,0x8b6b51,0x637887,0x71775e];
   const modelUrl="https://raw.githubusercontent.com/cktang88/3d-fps/main/public/assets/models/characters/soldier_tac.glb";
+  const raycaster=new THREE.Raycaster();
+  const pointerNdc=new THREE.Vector2();
+  const pointerWorld=new THREE.Vector3();
+  const reducedMotion=matchMedia("(prefers-reduced-motion: reduce)");
+  const isSmallScreen=matchMedia("(max-width: 700px)").matches;
   try{
-    renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:!matchMedia("(max-width:700px)").matches,powerPreference:"low-power"});
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.35));
+    renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:!isSmallScreen,powerPreference:"low-power"});
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,isSmallScreen?1.05:1.3));
     renderer.outputColorSpace=THREE.SRGBColorSpace;
     renderer.toneMapping=THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure=1.08;
@@ -2471,184 +2369,206 @@ if(hero&&canvas){
     shadowCanvas.width=shadowCanvas.height=128;
     const ctx=shadowCanvas.getContext("2d");
     const gradient=ctx.createRadialGradient(64,64,4,64,64,62);
-    gradient.addColorStop(0,"rgba(0,0,0,.5)");
-    gradient.addColorStop(.48,"rgba(0,0,0,.18)");
+    gradient.addColorStop(0,"rgba(0,0,0,.48)");
+    gradient.addColorStop(.48,"rgba(0,0,0,.16)");
     gradient.addColorStop(1,"rgba(0,0,0,0)");
     ctx.fillStyle=gradient;ctx.fillRect(0,0,128,128);
     const shadowTexture=new THREE.CanvasTexture(shadowCanvas);
-    shadow=new THREE.Mesh(new THREE.PlaneGeometry(4.4,1.5),new THREE.MeshBasicMaterial({map:shadowTexture,transparent:true,opacity:.78,depthWrite:false,side:THREE.DoubleSide}));
+    shadow=new THREE.Mesh(new THREE.PlaneGeometry(4.4,1.5),new THREE.MeshBasicMaterial({map:shadowTexture,transparent:true,opacity:.75,depthWrite:false,side:THREE.DoubleSide}));
     shadow.rotation.x=-Math.PI/2;shadow.position.set(0,.015,.02);scene.add(shadow);
 
-    function addAgentRifle(root){
-      const group=new THREE.Group();
-      group.position.set(.24,1.13,.17);group.rotation.set(-.12,0,.055);root.add(group);
-      const dark=new THREE.MeshStandardMaterial({color:0x12191e,roughness:.72,metalness:.22});
-      const steel=new THREE.MeshStandardMaterial({color:0x35434d,roughness:.4,metalness:.72});
-      const polymer=new THREE.MeshStandardMaterial({color:0x242f35,roughness:.85,metalness:.08});
-      const box=(w,h,d,x,y,z,material)=>{
-        const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
-        mesh.position.set(x,y,z);mesh.castShadow=false;mesh.receiveShadow=false;group.add(mesh);
-      };
-      box(.09,.10,.37,0,0,.08,steel);
-      box(.07,.13,.13,0,-.10,.02,polymer);
-      box(.065,.05,.2,0,.07,-.12,dark);
-      const barrel=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.32,8),steel);
-      barrel.rotation.x=Math.PI/2;barrel.position.set(0,.02,-.26);group.add(barrel);
-      box(.06,.08,.10,0,-.02,.24,polymer);
-      return group;
+    function findAgentRoot(object){
+      let node=object;
+      while(node&&node!==scene&&node.userData?.agentIndex===undefined)node=node.parent;
+      return node&&node!==scene?node:null;
+    }
+    function setEvade(index,direction){
+      for(const actor of squadAgents){
+        if(!actor.mesh.visible)continue;
+        actor.evasionTarget=actor.index===index?direction:0;
+      }
+    }
+    function updatePointerTarget(event){
+      if(event.pointerType==="touch")return;
+      if(event.target?.closest?.(".playarea,.home-squad-bar,button,a,input,select")){hoveredAgentIndex=-1;setEvade(-1,0);return}
+      const rect=hero.getBoundingClientRect();
+      if(!rect.width||!rect.height)return;
+      pointerNdc.set(((event.clientX-rect.left)/rect.width)*2-1,-((event.clientY-rect.top)/rect.height)*2+1);
+      camera.updateMatrixWorld();
+      for(const actor of squadAgents)actor.mesh.updateMatrixWorld(true);
+      raycaster.setFromCamera(pointerNdc,camera);
+      const roots=squadAgents.filter(actor=>actor.mesh.visible).map(actor=>actor.mesh);
+      const hits=raycaster.intersectObjects(roots,true);
+      const root=hits.length?findAgentRoot(hits[0].object):null;
+      const nextIndex=root?.userData?.agentIndex??-1;
+      if(nextIndex===hoveredAgentIndex)return;
+      hoveredAgentIndex=nextIndex;
+      if(nextIndex<0){setEvade(-1,0);return}
+      const actor=squadAgents.find(item=>item.index===nextIndex);
+      if(!actor)return;
+      actor.mesh.getWorldPosition(pointerWorld);
+      pointerWorld.project(camera);
+      const screenX=rect.left+(pointerWorld.x+1)*.5*rect.width;
+      setEvade(nextIndex,event.clientX<screenX?1:-1);
+    }
+    function createAgent(index){
+      if(!tacticalTemplate)return null;
+      const mesh=SkeletonUtils.clone(tacticalTemplate);
+      const before=new THREE.Box3().setFromObject(mesh);
+      const dimensions=before.getSize(new THREE.Vector3());
+      const originalHeight=Math.max(.01,dimensions.y);
+      const baseScale=2.22/originalHeight;
+      mesh.scale.setScalar(baseScale);
+      mesh.updateMatrixWorld(true);
+      const bounds=new THREE.Box3().setFromObject(mesh);
+      const center=bounds.getCenter(new THREE.Vector3());
+      mesh.position.set(-center.x,-bounds.min.y,-center.z);
+      const tint=new THREE.Color(agentPalette[index%agentPalette.length]);
+      const bones={spine:[],head:[],leftShoulder:[],rightShoulder:[],arms:[]};
+      mesh.traverse(node=>{
+        if(node.isMesh){
+          node.frustumCulled=false;node.castShadow=false;node.receiveShadow=false;
+          if(node.material){
+            const originals=Array.isArray(node.material)?node.material:[node.material];
+            const materials=originals.map(original=>{
+              const material=original.clone();
+              if(material.color){material.color.multiply(new THREE.Color(.93,.95,.98));material.color.lerp(tint,.08)}
+              if("roughness" in material)material.roughness=Math.max(.48,material.roughness||.6);
+              return material;
+            });
+            node.material=Array.isArray(node.material)?materials:materials[0];
+          }
+        }
+        if(!node.isBone)return;
+        const name=String(node.name||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+        const entry={node,rotation:node.rotation.clone(),position:node.position.clone(),name};
+        if(/spine|chest|thorax|upperbody/.test(name))bones.spine.push(entry);
+        if(/head|neck/.test(name))bones.head.push(entry);
+        if(/left.*(shoulder|clavicle)|clavicle.*left|leftshoulder|shoulderl/.test(name))bones.leftShoulder.push(entry);
+        if(/right.*(shoulder|clavicle)|clavicle.*right|rightshoulder|shoulderr/.test(name))bones.rightShoulder.push(entry);
+        if(/upperarm|lowerarm|arm_[lr]|forearm/.test(name))bones.arms.push(entry);
+      });
+      mesh.rotation.y=Math.PI;
+      mesh.userData.agentIndex=index;
+      scene.add(mesh);
+      const actor={index,mesh,bones,baseScale,homeX:0,homeY:0,homeZ:0,homeYaw:Math.PI,phase:index*1.13,evasion:0,evasionTarget:0,evadeUntil:0,external:true};
+      return actor;
     }
     function disposeAgent(actor){
       if(!actor?.mesh)return;
       scene.remove(actor.mesh);
-      if(actor.mixer)actor.mixer.stopAllAction();
       actor.mesh.traverse(node=>{
-        if(!node.isMesh)return;
-        if(node.material){
+        if(node.isMesh&&node.material){
           if(Array.isArray(node.material))node.material.forEach(material=>material.dispose());
           else node.material.dispose();
         }
-        if(!actor.external&&node.geometry)node.geometry.dispose();
       });
     }
-    function createAgent(index){
-      const tint=new THREE.Color(agentPalette[index%agentPalette.length]);
-      let mesh,external=Boolean(tacticalTemplate),mixer=null,rig=null,baseScale=1;
-      if(external){
-        mesh=SkeletonUtils.clone(tacticalTemplate);
-        const before=new THREE.Box3().setFromObject(mesh);
-        const size=before.getSize(new THREE.Vector3());
-        const originalHeight=Math.max(.01,size.y);
-        baseScale=2.22/originalHeight;
-        mesh.scale.setScalar(baseScale);
-        mesh.updateMatrixWorld(true);
-        const bounds=new THREE.Box3().setFromObject(mesh);
-        mesh.position.y-=bounds.min.y;
-        mesh.rotation.y=Math.PI;
-        mesh.traverse(node=>{
-          if(!node.isMesh)return;
-          node.frustumCulled=false;node.castShadow=false;node.receiveShadow=false;
-          if(node.material){
-            const materials=Array.isArray(node.material)?node.material:[node.material];
-            const clones=materials.map(material=>{
-              const clone=material.clone();
-              if(clone.color){clone.color.multiply(new THREE.Color(.88,.92,.96));clone.color.lerp(tint,.18);}
-              if("roughness" in clone)clone.roughness=Math.max(.48,clone.roughness||.6);
-              return clone;
-            });
-            node.material=Array.isArray(node.material)?clones:clones[0];
-          }
-        });
-        if(tacticalClips.length){
-          mixer=new THREE.AnimationMixer(mesh);
-          const clip=tacticalClips.find(item=>/idle|stand|breath/i.test(item.name))||tacticalClips[0];
-          mixer.clipAction(clip).play();
-        }
-        addAgentRifle(mesh);
-      }else{
-        mesh=makeVisual(agentPalette[index%agentPalette.length]);
-        baseScale=1.22;
-        mesh.scale.setScalar(baseScale);
-        rig=mesh.userData.rig;
-        if(rig){
-          rig.offset=.7+index*.8;
-          rig.leftArm.rotation.x=-.68;
-          rig.rightArm.rotation.x=-.74;
-          rig.rifle.rotation.x=-.10;
-        }
-      }
-      mesh.userData.agentIndex=index;
-      mesh.position.set(0,0,0);
-      scene.add(mesh);
-      return {mesh,mixer,rig,external,baseScale,phase:index*.85};
-    }
     function relayoutAgents(){
-      const n=squadAgents.filter(actor=>actor.mesh.visible).length;
-      const layouts={
-        1:[0],2:[-.68,.68],3:[-1.12,0,1.12],4:[-1.48,-.5,.5,1.48]
-      };
-      const xs=layouts[n]||layouts[1];
-      let visible=0;
-      for(const actor of squadAgents){
-        if(!actor.mesh.visible)continue;
-        const x=xs[visible]??0;
-        const stageScale=n>=4?.86:n===3?.94:n===2?1.04:1.16;
-        actor.mesh.scale.setScalar(actor.baseScale*stageScale);
-        actor.mesh.position.x=x;
-        actor.mesh.position.z=n>=3?(Math.abs(x)>.9?-.10:.10):0;
-        actor.mesh.rotation.y=(actor.external?Math.PI:0)+(visible-(n-1)/2)*-.035;
-        visible++;
-      }
-      if(shadow)shadow.scale.x=n>=3?1.05:n===2?.75:.54;
+      const visible=squadAgents.filter(actor=>actor.mesh.visible);
+      const n=visible.length;
+      const layouts={1:[0],2:[-.72,.72],3:[-1.15,0,1.15],4:[-1.48,-.5,.5,1.48]};
+      const positions=layouts[n]||layouts[1];
+      visible.forEach((actor,index)=>{
+        const x=positions[index]??0;
+        const factor=n>=4?.84:n===3?.92:n===2?1.02:1.16;
+        actor.mesh.scale.setScalar(actor.baseScale*factor);
+        actor.homeX=x;
+        actor.homeZ=n>=3?(Math.abs(x)>.9?-.10:.12):0;
+        actor.homeY=0;
+        actor.homeYaw=Math.PI+(index-(n-1)/2)*-.035;
+        actor.mesh.position.set(actor.homeX,actor.homeY,actor.homeZ);
+        actor.mesh.rotation.y=actor.homeYaw;
+      });
+      if(shadow)shadow.scale.x=n>=3?1.1:n===2?.78:.56;
     }
     function syncSquad(members){
+      // Do not recreate the old procedural mannequin: the menu uses only the tactical GLB.
+      if(!tacticalTemplate)return;
       const safe=Array.isArray(members)&&members.length?members.slice(0,4):[{nickname:"ГРАВЕЦЬ"}];
-      while(squadAgents.length<safe.length)squadAgents.push(createAgent(squadAgents.length));
+      while(squadAgents.length<safe.length){
+        const actor=createAgent(squadAgents.length);
+        if(!actor)break;
+        squadAgents.push(actor);
+      }
       squadAgents.forEach((actor,index)=>{actor.mesh.visible=index<safe.length});
       relayoutAgents();
     }
     function loadTacticalAgent(){
       const loader=new GLTFLoader();
       loader.load(modelUrl,gltf=>{
-        if(!gltf?.scene)return;
+        if(!gltf?.scene)throw new Error("The tactical model has no scene.");
         tacticalTemplate=gltf.scene;
-        tacticalClips=Array.isArray(gltf.animations)?gltf.animations:[];
-        while(squadAgents.length){
-          const actor=squadAgents.pop();
-          disposeAgent(actor);
-        }
-        const list=Array.isArray(window.__sxHomeRoster)?window.__sxHomeRoster:[{nickname:"ГРАВЕЦЬ"}];
-        syncSquad(list);
+        syncSquad(Array.isArray(window.__sxHomeRoster)?window.__sxHomeRoster:[{nickname:"ГРАВЕЦЬ"}]);
+        resize();
       },undefined,error=>{
-        console.warn("[MENU AGENT] Tactical model not available; using built-in fallback.",error?.message||error);
+        console.warn("[MENU AGENT] Could not load the tactical model.",error?.message||error);
+        // Never fall back to the old homemade mannequin.
+        canvas.style.opacity="0";
+        hero.classList.add("agent-model-unavailable");
       });
     }
-    const resize=()=>{
+    function resize(){
       if(!renderer||!camera)return;
       const rect=hero.getBoundingClientRect();
-      const width=Math.max(1,Math.round(rect.width));
-      const height=Math.max(1,Math.round(rect.height));
+      const width=Math.max(1,Math.round(rect.width)),height=Math.max(1,Math.round(rect.height));
       renderer.setSize(width,height,false);
       camera.aspect=width/height;
       camera.updateProjectionMatrix();
       relayoutAgents();
-    };
+    }
     if("ResizeObserver" in window){resizeObserver=new ResizeObserver(resize);resizeObserver.observe(hero)}
     window.addEventListener("resize",resize,{passive:true});
-    hero.addEventListener("pointermove",event=>{
-      const rect=hero.getBoundingClientRect();
-      mouseOffset=Math.max(-1,Math.min(1,((event.clientX-rect.left)/Math.max(1,rect.width)-.5)*2));
+    hero.addEventListener("pointermove",updatePointerTarget,{passive:true});
+    hero.addEventListener("pointerleave",()=>{hoveredAgentIndex=-1;setEvade(-1,0)},{passive:true});
+    hero.addEventListener("pointerdown",event=>{
+      if(event.pointerType!=="touch"||event.target?.closest?.(".playarea,.home-squad-bar,button,a,input,select"))return;
+      updatePointerTarget({...event,pointerType:"mouse"});
+      if(hoveredAgentIndex>=0){
+        const actor=squadAgents.find(item=>item.index===hoveredAgentIndex);
+        if(actor)actor.evadeUntil=performance.now()+850;
+      }
     },{passive:true});
-    hero.addEventListener("pointerleave",()=>{mouseOffset=0},{passive:true});
     document.addEventListener("visibilitychange",()=>{if(!document.hidden)last=performance.now()});
     window.addEventListener("sx:home-squad",event=>syncSquad(event.detail?.members));
-    syncSquad(Array.isArray(window.__sxHomeRoster)?window.__sxHomeRoster:[{nickname:"ГРАВЕЦЬ"}]);
     resize();
     loadTacticalAgent();
+    function animateIdle(actor,now,dt){
+      const breath=reducedMotion.matches?0:Math.sin(now*.00155+actor.phase);
+      const sway=reducedMotion.matches?0:Math.sin(now*.00036+actor.phase)*.012;
+      if(now>actor.evadeUntil)actor.evasionTarget=actor.index===hoveredAgentIndex?actor.evasionTarget:0;
+      actor.evasion=THREE.MathUtils.damp(actor.evasion,actor.evasionTarget,6.5,dt);
+      actor.mesh.position.x=actor.homeX+actor.evasion*.52;
+      actor.mesh.position.y=actor.homeY+breath*.012;
+      actor.mesh.position.z=actor.homeZ;
+      actor.mesh.rotation.y=actor.homeYaw+sway+actor.evasion*.12;
+      actor.bones.spine.forEach((bone,index)=>{
+        const weight=index===actor.bones.spine.length-1?1:.55;
+        bone.node.rotation.x=bone.rotation.x+breath*.014*weight;
+        bone.node.rotation.z=bone.rotation.z+breath*.004*weight;
+      });
+      actor.bones.head.forEach(bone=>{
+        bone.node.rotation.x=bone.rotation.x+breath*.003;
+        bone.node.rotation.y=bone.rotation.y+(reducedMotion.matches?0:Math.sin(now*.00043+actor.phase)*.012);
+      });
+      actor.bones.leftShoulder.forEach(bone=>{bone.node.rotation.z=bone.rotation.z+breath*.008});
+      actor.bones.rightShoulder.forEach(bone=>{bone.node.rotation.z=bone.rotation.z-breath*.008});
+      actor.bones.arms.forEach((bone,index)=>{bone.node.rotation.x=bone.rotation.x+breath*.003*(index%2?-.7:1)});
+    }
     function draw(now){
       requestAnimationFrame(draw);
       if(document.hidden||!renderer||!scene||!camera)return;
       const dt=last?Math.min(.05,(now-last)/1000):0;last=now;
-      const visible=squadAgents.filter(actor=>actor.mesh.visible);
-      visible.forEach((actor,index)=>{
-        if(actor.mixer)actor.mixer.update(dt);
-        else animateSoldier(actor.mesh,dt,now,false,false,false);
-        const phase=now*.00042+actor.phase;
-        actor.mesh.rotation.y=(actor.external?Math.PI:0)+Math.sin(phase)*.055+mouseOffset*.075;
-        actor.mesh.position.y=Math.sin(now*.00115+actor.phase)*.012;
-        if(actor.rig){
-          actor.rig.torso.rotation.y=Math.sin(now*.00053+actor.phase)*.022;
-          actor.rig.leftArm.rotation.x=-.68+Math.sin(now*.0009+actor.phase)*.022;
-          actor.rig.rightArm.rotation.x=-.74+Math.sin(now*.0009+actor.phase+1)*.018;
-          actor.rig.rifle.rotation.x=-.10+Math.sin(now*.0011+actor.phase)*.012;
-        }
+      squadAgents.forEach(actor=>{
+        if(actor.mesh.visible)animateIdle(actor,now,dt);
       });
       renderer.render(scene,camera);
     }
     requestAnimationFrame(draw);
   }catch(error){
-    console.warn("[MENU AGENT] 3D preview unavailable; using the static backdrop.",error);
-    canvas.style.display="none";
-    hero.classList.add("agent-preview-unavailable");
+    console.warn("[MENU AGENT] 3D preview unavailable.",error);
+    canvas.style.opacity="0";
+    hero.classList.add("agent-model-unavailable");
     if(resizeObserver)resizeObserver.disconnect();
     if(renderer)renderer.dispose();
   }
