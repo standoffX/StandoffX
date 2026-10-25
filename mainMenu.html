@@ -1853,6 +1853,7 @@ $("playBtn").addEventListener("click",()=>{
 });
 $("resumeMatchBtn").addEventListener("click",exitSavedMatch);
 $("confirmModeBtn").addEventListener("click",()=>{
+  if(currentLobby&&selectedMode==="training"){notifyToast("Спочатку вийди з лобі, щоб запустити соло-тренування.");return}
   if(currentLobby){
     if(!socialSocket?.connected){notifyToast("Немає з'єднання із сервером лобі.");return}
     $("modeModal").classList.remove("show");
@@ -1964,9 +1965,9 @@ function openPlay(){
     searching=true;
     $("searchModal").classList.add("show");
     $("searchTitle").textContent="ЗАПУСК ТРЕНУВАННЯ";
-    $("searchMode").textContent="ZONE 9 / ВИБРАНА КАРТА · ЛИШЕ ТЕСТЕРИ";
+    $("searchMode").textContent=(MAPS[selectedMap]||selectedMap)+" · СОЛО / ЛИШЕ ТЕСТЕРИ";
     $("queue").textContent="СОЛО";
-    $("searchText").textContent="Завантажуємо вибрану карту без підбору гравців. Спавн — на стороні CT.";
+    $("searchText").textContent="Завантажуємо вибрану карту без підбору гравців, ботів або інших учасників.";
     renderWaitPlayers([{nickname:me.nickname,userId:me.id,playerAvatar:me.playerAvatar,connected:true}]);
     socket=createRealtimeSocket();
     socket.on("connect_error",err=>{$("searchText").textContent="Підключаємося до сервера…";console.warn("[Socket.IO] Tester training connection failed; retrying.",err?.message||err)});
