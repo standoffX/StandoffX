@@ -738,7 +738,8 @@ controls.pointerSpeed=mouseSensitivity;
 controls.minPolarAngle=.08;
 controls.maxPolarAngle=Math.PI-.08;
 function requestMouseLook(){
-  if(!isMobileDevice&&matchPhase==="game"&&!controls.isLocked){
+  // Warmup, shop and combat all allow camera look; movement remains phase-gated below.
+  if(!isMobileDevice&&["game","warmup","countdown","round_start"].includes(matchPhase)&&!controls.isLocked){
     try{controls.lock()}catch{}
   }
 }
@@ -748,7 +749,7 @@ document.addEventListener("pointerlockchange",()=>{
   const locked=document.pointerLockElement===renderer.domElement;
   if(locked){
     $("clickHint").textContent="Миша: огляд · ESC: у лобі · WASD: рух";
-  }else if(matchPhase==="game"){
+  }else if(["game","warmup","countdown","round_start"].includes(matchPhase)){
     $("clickHint").textContent="Клікни в ігрову область, щоб увімкнути огляд мишкою.";
   }
 });
@@ -1597,9 +1598,82 @@ function addGameplayInteractables(){
   [[-25,-28],[25,-28],[-25,0],[25,0],[-25,28],[25,28]].forEach(([x,z])=>addBreakableWood(x,z,Math.PI/2));
 }
 
+function softerSkinTexture(skin){
+  const id=String(skin?.skinId||skin?.name||"");
+  if(softerSkinTextures.has(id))return softerSkinTextures.get(id);
+  const canvas=document.createElement("canvas");canvas.width=512;canvas.height=256;
+  const ctx=canvas.getContext("2d");
+  const base=/^#[0-9a-f]{6}$/i.test(String(skin.baseColor||""))?skin.baseColor:"#14202c";
+  const accent=/^#[0-9a-f]{6}$/i.test(String(skin.accentColor||""))?skin.accentColor:"#8ddfff";
+  ctx.fillStyle=base;ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.globalAlpha=.62;ctx.strokeStyle=accent;ctx.lineWidth=7;
+  const style=String(skin.skinStyle||"pulse");
+  if(style==="cloudline"||style==="chalkwave"){
+    for(let y=-120;y<380;y+=52){ctx.beginPath();ctx.moveTo(-20,y);ctx.bezierCurveTo(110,y-45,170,y+65,280,y+5);ctx.bezierCurveTo(360,y-30,430,y+50,540,y-4);ctx.stroke()}
+  }else if(style==="gold-signal"){
+    for(let x=-260;x<700;x+=96){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+120,256);ctx.stroke();ctx.beginPath();ctx.moveTo(x+42,0);ctx.lineTo(x+162,256);ctx.stroke()}
+  }else if(style==="ultraviolet"||style==="aurora"){
+    for(let x=14;x<512;x+=38){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,256);ctx.stroke()}
+    for(let y=24;y<256;y+=48){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(512,y);ctx.stroke()}
+  }else{
+    for(let x=-220;x<700;x+=70){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+170,256);ctx.stroke()}
+    for(let y=36;y<256;y+=72){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(512,y);ctx.stroke()}
+  }
+  ctx.globalAlpha=.9;ctx.fillStyle=accent;ctx.font="900 22px Arial";ctx.fillText("SOFTER",18,226);
+  ctx.globalAlpha=.64;ctx.font="bold 10px Arial";ctx.fillText("FIRST LIGHT / 001",20,242);ctx.globalAlpha=1;
+  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.wrapS=THREE.RepeatWrapping;texture.wrapT=THREE.RepeatWrapping;
+  texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());texture.needsUpdate=true;softerSkinTextures.set(id,texture);return texture;
+}
+function markHeldWeaponParts(){
+  if(!heldWeaponRoot)return;
+  for(const child of heldWeaponRoot.children)child.traverse(node=>{if(node.isMesh)node.userData.sxWeaponPart=true});
+}
+function applyEquippedSkinToHeldWeapon(){
+  if(!heldWeaponRoot)return;
+  const skinId=equippedSkinLoadout?.[selectedWeapon],skin=skinId?weaponSkinCatalog[skinId]:null;
+  if(!skin||!skin.skinStyle)return;
+  const texture=softerSkinTexture({...skin,skinId});
+  for(const child of heldWeaponRoot.children){
+    child.traverse(node=>{
+      if(!node.isMesh||!node.userData.sxWeaponPart||!node.material)return;
+      if(!node.userData.sxOwnedSkinMaterial){
+        node.material=Array.isArray(node.material)?node.material.map(material=>material.clone()):node.material.clone();
+        node.userData.sxOwnedSkinMaterial=true;
+      }
+      const materials=Array.isArray(node.material)?node.material:[node.material];
+      for(const material of materials){
+        if("map" in material)material.map=texture;
+        if(material.color)material.color.set("#ffffff");
+        if(material.emissive){material.emissive.set(skin.accentColor);material.emissiveIntensity=.10}
+        if("roughness" in material)material.roughness=Math.max(.35,material.roughness||.5);
+        material.needsUpdate=true;
+      }
+    });
+  }
+}
+async function loadPlayerSkinLoadout(){
+  try{
+    const [profileResponse,skinsResponse]=await Promise.all([
+      fetch("/api/me",{credentials:"same-origin"}).then(response=>response.ok?response.json():null),
+      fetch("/api/skins",{credentials:"same-origin"}).then(response=>response.ok?response.json():null)
+    ]);
+    equippedSkinLoadout=profileResponse?.user?.equippedSkins||{};
+    weaponSkinCatalog=skinsResponse?.skins||{};
+    if(heldWeaponRoot)selectWeapon(selectedWeapon,true);
+  }catch(error){console.warn("[SOFTER SKINS] Could not load equipped skins.",error?.message||error)}
+}
 function clearHeldWeapon(){
   if(!heldWeaponRoot)return;
-  while(heldWeaponRoot.children.length)heldWeaponRoot.remove(heldWeaponRoot.children[0]);
+  while(heldWeaponRoot.children.length){
+    const child=heldWeaponRoot.children[0];
+    child.traverse(node=>{
+      if(!node.isMesh||!node.userData.sxOwnedSkinMaterial)return;
+      const materials=Array.isArray(node.material)?node.material:[node.material];
+      materials.forEach(material=>material?.dispose?.());
+      node.userData.sxOwnedSkinMaterial=false;
+    });
+    heldWeaponRoot.remove(child);
+  }
   heldWeaponRoot.userData.realModel=false;
 }
 function makeFallbackAK(){
@@ -1859,6 +1933,9 @@ let lastMoveSend=0;
 let lastShot=0;
 let hitConfirmTimer=null;
 let selectedWeapon="knife";
+let equippedSkinLoadout={};
+let weaponSkinCatalog={};
+const softerSkinTextures=new Map();
 const weaponAmmo={akr:30,p350:13,knife:Infinity};
 const weaponReserve={akr:90,p350:52,knife:0};
 Object.assign(weaponAmmo,{m4a1:30,p90:50,shotgun:8,sniper:5});
@@ -3251,6 +3328,8 @@ function selectWeapon(weaponId,force=false){
     heldWeaponRoot.add(weaponModelTemplates[selectedWeapon].clone(true));
     heldWeaponRoot.userData.realModel=true;
   }else makeFallbackWeaponById(selectedWeapon);
+  markHeldWeaponParts();
+  applyEquippedSkinToHeldWeapon();
   addWeaponHands();
   createMuzzleFlash();
   positionHeldWeapon();
@@ -3602,33 +3681,39 @@ socket.on("init_match",data=>{
   updateVisual();
   emitClientReadyWhenJoined();
 });
+socket.on("account_banned",data=>{
+  alert(data?.message||"Твій акаунт заблоковано. Доступ до StandoffX заборонено.");
+  location.href="/banned";
+});
 socket.on("match_waiting",data=>{
   updateWaiting(data);
   if(data.modeName)$("modeName").textContent=data.modeName;
 });
 socket.on("match_phase",data=>{
   matchPhase=data.phase||"waiting";
-  if(data.phase==="round_start")buyTimeRemaining=Math.max(0,Number(data.time)||10);
+  if(mode==="allies")canControl=data.phase==="game";
+  if(data.phase==="warmup")buyTimeRemaining=0;
+  if(data.phase==="round_start")buyTimeRemaining=Math.max(0,Number(data.time)||20);
   updateAlliesBuyButton();
   if(data.roundNumber)roundNumber=Number(data.roundNumber)||roundNumber;
   if(data.roundWins)roundWins={...roundWins,...data.roundWins};
   if(data.attackingTeam)attackingTeam=data.attackingTeam;
   if(data.defendingTeam)defendingTeam=data.defendingTeam;
-  $("overlay").style.display=(mode==="allies"&&(data.phase==="round_start"||data.phase==="round_end"))?"none":"flex";
+  $("overlay").style.display=(["warmup","countdown"].includes(data.phase)||(mode==="allies"&&(data.phase==="round_start"||data.phase==="round_end")) )?"none":"flex";
   if(data.phase==="warmup"){
     $("overlayTitle").textContent="РОЗМИНКА";
     $("phase").textContent="РОЗМИНКА";
-    $("bigTimer").textContent=data.time+"с";
+    $("bigTimer").textContent=data.time+"с";$("timer").textContent=data.time+"с";
     $("overlayText").textContent="Усі гравці готові. Розминаємось.";
   }else if(data.phase==="countdown"){
     $("overlayTitle").textContent="МАТЧ ПОЧИНАЄТЬСЯ";
     $("phase").textContent="СТАРТ ЧЕРЕЗ";
-    $("bigTimer").textContent=data.time+"с";
+    $("bigTimer").textContent=data.time+"с";$("timer").textContent=data.time+"с";
     $("overlayText").textContent="Приготуйся.";
   }else if(data.phase==="round_start"){
     $("overlayTitle").textContent="РАУНД "+(data.roundNumber||roundNumber);
     $("phase").textContent="ФАЗА ЗАКУПІВЛІ";
-    $("bigTimer").textContent=(Number(data.time)||10)+"с";
+    $("bigTimer").textContent=(Number(data.time)||20)+"с";$("timer").textContent=(Number(data.time)||20)+"с";
     $("overlayText").textContent=myTeam===attackingTeam?"Підготуй зброю та план атаки.":"Підготуй зброю та захищай сайти A і B."; 
     $("roundInfo").textContent="РАУНД "+roundNumber+" · "+roundWins.A+" : "+roundWins.B;
   }else if(data.phase==="round_end"){
@@ -3650,7 +3735,7 @@ socket.on("timer_update",data=>{
   const t=Math.max(0,Number(data.time)||0);
   if(data.phase==="round_start"){buyTimeRemaining=t;updateAlliesBuyButton();updateAlliesBuyPanel()}
   if(data.phase==="warmup"||data.phase==="countdown"||data.phase==="round_start"||data.phase==="round_end"){
-    $("bigTimer").textContent=t+"с";
+    $("bigTimer").textContent=t+"с";$("timer").textContent=t+"с";
   }else{
     matchTime=t;
     const m=Math.floor(t/60),s=t%60;
@@ -3672,8 +3757,8 @@ socket.on("match_start_now",()=>{
 });
 socket.on("allies_round_start",data=>{
   if(mode!=="allies")return;
-  buyTimeRemaining=10;buyMenuOpen=false;roundCinematic=null;$("roundResult").style.display="none";
-  matchPhase="round_start";canControl=false;
+  buyTimeRemaining=0;buyMenuOpen=false;roundCinematic=null;$("roundResult").style.display="none";
+  matchPhase="warmup";canControl=false;
   roundNumber=Number(data.roundNumber)||roundNumber;
   roundWins={...roundWins,...(data.roundWins||{})};
   attackingTeam=data.attackingTeam||attackingTeam;
@@ -3699,9 +3784,9 @@ socket.on("allies_round_start",data=>{
   if(!isThird){camera.position.set(player.position.x,player.position.y+1.58,player.position.z);camera.rotation.set(0,player.rotationY||0,0,"YXZ")}
   $("overlay").style.display="none";
   $("overlayTitle").textContent="РАУНД "+roundNumber;
-  try{if(!isMobileDevice)controls.unlock()}catch{}
-  $("phase").textContent="ЗАКУПІВЛЯ / ПІДГОТОВКА";
-  $("bigTimer").textContent="10с";
+  // Keep pointer lock available so the player can inspect the arena during prep.
+  $("phase").textContent="РОЗМИНКА";
+  $("bigTimer").textContent="10с";$("timer").textContent="10с";
   $("overlayText").textContent=myTeam===attackingTeam?"АТАКА · ПІСЛЯ СТАРТУ ЗАКЛАДИ БОМБУ НА A АБО B":"ЗАХИСТ · ПІДГОТУЙСЯ ЗАХИЩАТИ САЙТИ A ТА B";
   $("progressWrap").style.display="none";$("loadingDetails").style.display="none";$("players").style.display="none";
   $("clickHint").textContent="Після підготовки: клікни для огляду мишкою · E — взаємодія";
@@ -4246,6 +4331,7 @@ socket.on("connect",()=>{
 $("progress").style.width="4%";
 loadHeldWeapon();
 loadTacticalAgentModel();
+loadPlayerSkinLoadout();
 loadMap();
 if(isTrainingMode)socket.emit("join_training",{trainingId});
 else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
