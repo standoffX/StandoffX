@@ -2174,6 +2174,7 @@ function renderLobbyState(lobby){
   loadFriends();
 }
 function createLobby(mode=selectedMode,map=selectedMap){
+  if(mode==="training"){notifyToast("Тренування — соло режим, лобі не створюється.");return}
   if(currentLobby){notifyToast("Ти вже в лобі.");return}
   const lobbyMode=["allies","team_fight"].includes(mode)?mode:"allies";
   const lobbyMap=lobbyMode==="allies"?"SANDSTONE":(["SMALL_YARD","NEON_YARD"].includes(map)?map:"SMALL_YARD");
@@ -2184,6 +2185,7 @@ function createLobby(mode=selectedMode,map=selectedMap){
   if(socialSocket?.connected)send();else socialSocket?.once("connect",send);
 }
 function inviteToLobby(userId){
+  if(!currentLobby&&selectedMode==="training"){notifyToast("Тренування соло. Вибери КБ або Союзники, щоб запросити друзів у лобі.");return}
   if(!currentLobby){
     pendingHomeInvite=String(userId||"");
     show("home");
