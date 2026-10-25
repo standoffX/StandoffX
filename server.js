@@ -140,7 +140,7 @@ const mongoWriteQueues = new Map();
 const pendingMongoWrites = new Map();
 
 function persistState(name, data, legacyPath) {
-  if (mongoDb && mongoStatus.connected) return mongoSave(name, data);
+  if (mongoDb && mongoStatus.connected && !mongoConnecting) return mongoSave(name, data);
   if (storageReady && JSON_FALLBACK_ENABLED && !mongoStatus.configured) {
     try { writeJson(legacyPath, data); return Promise.resolve(true); }
     catch (err) { console.error("[LOCAL DEV STORAGE]", path.basename(legacyPath), err.message); return Promise.resolve(false); }
@@ -294,6 +294,7 @@ async function initMongo() {
     mongoStatus.connectedAt = new Date().toISOString();
     mongoStatus.lastCheckAt = mongoStatus.connectedAt;
 
+    const pendingAtStart = new Map(pendingMongoWrites);
     const legacySnapshots = {
       state_users: users.map(user => ({ ...user })),
       state_clans: clans,
@@ -343,7 +344,11 @@ async function initMongo() {
       writeMongoStateNow("state_inventory", inventory),
       writeMongoStateNow("state_market", market)
     ]);
-    pendingMongoWrites.clear();
+    // Preserve snapshots captured during reconnect; clearing the whole queue here could drop a purchase.
+    for (const [name, snapshot] of [...pendingMongoWrites]) {
+      if (pendingAtStart.get(name) !== snapshot) await writeMongoStateNow(name, snapshot);
+      if (pendingMongoWrites.get(name) === snapshot) pendingMongoWrites.delete(name);
+    }
     storageReady = true;
     console.log("[DB] MongoDB Atlas connected:", mongoStatus.database);
     mongoConnecting = false;
@@ -2558,7 +2563,7 @@ function startAlliesRound(io, match, initial = false) {
   };
   const teamIndices = { A: 0, B: 0 };
   for (const player of match.players) {
-    if (match.roundNumber > 1 && player.hp <= 0) { player.weapons = ["p350", "knife"]; player.equippedWeapon = "knife"; }
+    if (match.roundNumber > 1 && player.hp <= 0) { player.weapons = ["p350", "knife"]; player.equippedWeapon = "p350"; }
     if (!Array.isArray(player.weapons) || !player.weapons.length) player.weapons = ["p350", "knife"];
     if (!player.weapons.includes(player.equippedWeapon)) player.equippedWeapon = player.weapons.includes("knife") ? "knife" : (player.weapons[0] || "p350");
     player.cash = Math.max(0, Number.isFinite(Number(player.cash)) ? Number(player.cash) : 800);
