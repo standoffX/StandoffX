@@ -365,7 +365,7 @@ assert.match(server, /return !nonHillMapShotBlocked\(mapId,from,to\)/, "non-Hill
 assert.match(server, /const targetBlocked = Boolean\(best\) && !validateMapLineOfSight\(/, "server blocks target hits when wall geometry interrupts the actual shot ray");
 assert.match(server, /bestHitPoint \|\| best\.pos, match\.mapState \|\| \{\}/, "line-of-sight validation ends at the computed impact point");
 assert.match(server, /io\.to\(match\.id\)\.emit\("player_shot"/, "the server broadcasts shot directions and impacts for remote tracers");
-assert.match(server, /if \(!canUseTesterModes\(user\) && mode !== "field_test"\)/, "public Prototype is allowed while privileged training remains tester-only");
+assert.match(server, /if \(!canUseTesterModes\(user\) && \(mode !== "field_test" \|\| data\?\.prototype === true\)\)/, "prototype use is tester-only even for field_test sessions");
 assert.match(server, /socket\.on\("map_wood_destroyed"/, "server validates and broadcasts destroyed wood");
 assert.match(server, /Math\.hypot\(player\.pos\.x-x, player\.pos\.z-z\) > 7\.5/, "door changes require the player to be near the correct doorway");
 assert.match(game, /if\(e\.code==="Digit1"\)[\s\S]{0,100}selectWeapon\("akr"\)/, "1 must equip the AKR");
@@ -703,3 +703,21 @@ assert.match(game, /function attachTacticalAgent\(model,color\)/, "the match mus
 assert.match(game, /attachTacticalAgent\(g,color\)/, "newly spawned match characters must attach the shared agent model");
 assert.match(game, /side\*\.238,1\.655,\.035/, "headset ear cups must be attached at head height");
 assert.match(game, /import \* as SkeletonUtils from "three\/addons\/utils\/SkeletonUtils\.js"/, "skinned agent clones must have independent skeletons");
+
+/* Softer collection, secure prototype permission, camera warmup and timed buy-phase regressions. */
+assert.match(server, /if \(!canUseTesterModes\(user\)\) \{\s*socket\.emit\("search_error", \{ message: "Прототип доступний лише тестерам\." \}\);/, "the public prototype match event must reject non-testers on the server");
+assert.match(server, /current\.phase = "round_start";\s*current\.phaseRemaining = 20;/, "Allies preparation must include a twenty-second purchase phase after warmup");
+assert.match(server, /phase: "warmup", time: 10/, "Allies must announce a separate ten-second warmup before buying");
+assert.match(server, /app\.get\("\/banned"/, "banned accounts have a dedicated denial page");
+assert.match(server, /client\.emit\("account_banned"/, "ban updates actively notify connected banned users");
+assert.match(server, /app\.post\("\/api\/collection\/softer\/open-box"/, "the Softer box drop is resolved server-side");
+assert.match(server, /const SOFTER_RARITY_WEIGHTS=\[/, "Softer box drop rates are defined on the server");
+assert.match(server, /app\.post\("\/api\/inventory\/equip"/, "weapon cosmetics are equipped via a server-authoritative inventory route");
+assert.match(menu, /id="store" class="screen"/, "the main menu includes the Softer collection store");
+assert.match(menu, /async function loadSofterStore\(\)/, "the Softer store renders server-side collection contents");
+assert.match(menu, /socialSocket\.on\("account_banned"/, "the lobby redirects banned accounts to the denial page");
+assert.match(game, /\["game","warmup","countdown","round_start"\]\.includes\(matchPhase\)/, "mouse look can be enabled during preparation without enabling movement");
+assert.match(game, /if\(matchPhase==="game"&&player&&hp>0&&mapLoadFinished\)/, "movement remains disabled until live gameplay");
+assert.match(game, /fetch\("\/api\/skins"/, "the match loads the player's equipped Softer cosmetics");
+assert.match(game, /function applyEquippedSkinToHeldWeapon\(\)/, "selected weapon cosmetics are applied to the first-person model");
+assert.match(game, /socket\.on\("account_banned"/, "a banned player in a match is moved to the denial page");
