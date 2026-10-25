@@ -2235,12 +2235,12 @@ function holsterBombTool(){
 function buildSandstoneMap(){
   if(mapLoadFinished)return;
   scene.background=new THREE.Color(0xbba987);
-  scene.fog=new THREE.Fog(0xbba987,105,185);
+  scene.fog=new THREE.Fog(0xbba987,92,174);
   const sandstoneRoot=new THREE.Group();
   const sandstoneScale=1.25;
   const mat=(color,roughness=.92,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
-  const ground=mat(0xb8a17c,1),road=mat(0x847865,1),sandstone=mat(0xc8b590,.97);
-  const sandstoneDark=mat(0x9d8867,.98),roof=mat(0x6e6251,.94),trim=mat(0x554d42,.83,.08);
+  const ground=mat(0xb8a17c,1),road=mat(0x827561,1),sandstone=mat(0xc9b895,.98);
+  const sandstoneDark=mat(0xa48c68,.98),roof=mat(0x6e6251,.94),trim=mat(0x554d42,.83,.08);
   const wood=mat(0x76533a,.96),cloth=mat(0x986447,.97),metal=mat(0x4b5558,.72,.25);
   const windowMat=mat(0x263a41,.32,.16),blue=mat(0x294e62,.6,.1),red=mat(0x8b3930,.72,.05);
   const addGround=(x,z,w,d,material,y=-.07)=>{
@@ -2253,103 +2253,195 @@ function buildSandstoneMap(){
     mesh.position.set(x,y,z);mesh.castShadow=!isMobileDevice&&solid;mesh.receiveShadow=!isMobileDevice;
     mesh.userData.mapSolid=Boolean(solid);sandstoneRoot.add(mesh);if(solid)mapObjects.push(mesh);return mesh;
   };
+  const wall=(x,z,w,d,h=4.1,material=sandstoneDark)=>addBox(x,h/2,z,w,h,d,material,true);
+  const roofSlab=(x,z,w,d,y=4.25,material=roof)=>addBox(x,y,z,w,.24,d,material,false);
   const sign=(letter,x,z,color)=>{
-    const canvas=document.createElement("canvas");canvas.width=128;canvas.height=128;
-    const ctx=canvas.getContext("2d");ctx.fillStyle="#171b1d";ctx.fillRect(0,0,128,128);
+    const board=document.createElement("canvas");board.width=128;board.height=128;
+    const ctx=board.getContext("2d");ctx.fillStyle="#171b1d";ctx.fillRect(0,0,128,128);
     ctx.fillStyle=color;ctx.fillRect(7,7,114,114);ctx.fillStyle="#f8eedc";
     ctx.font="bold 78px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(letter,64,67);
-    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
-    const panel=new THREE.Mesh(new THREE.PlaneGeometry(1.25,1.25),new THREE.MeshStandardMaterial({map:texture,roughness:1,metalness:0,side:THREE.DoubleSide}));
-    panel.position.set(x,2.6,z);panel.lookAt(x,2.6,0);sandstoneRoot.add(panel);
+    const texture=new THREE.CanvasTexture(board);texture.colorSpace=THREE.SRGBColorSpace;
+    const panel=new THREE.Mesh(new THREE.PlaneGeometry(1.15,1.15),new THREE.MeshStandardMaterial({map:texture,roughness:1,metalness:0,side:THREE.DoubleSide}));
+    panel.position.set(x,2.55,z);panel.lookAt(x,2.55,0);sandstoneRoot.add(panel);
   };
 
+  // The two spawn zones sit on opposite ends of the map: T on the left, CT on the right.
   addGround(0,0,100,100,ground,-.09);
-  addGround(0,0,15,96,road,-.055);
-  addGround(0,0,96,15,road,-.054);
-  addGround(-20,0,9,95,sandstone,-.05);
-  addGround(20,0,9,95,sandstone,-.049);
-  for(const k of [-44,-36,-28,-20,-12,-4,4,12,20,28,36,44]){
-    addGround(k,0,.045,94,sandstoneDark,-.032);
-    addGround(0,k,94,.045,sandstoneDark,-.031);
+  // Main routes: upper A Long, central Mid, lower B Long, plus both short connectors.
+  addGround(-2,-35,76,10,road,-.055);
+  addGround(-2,0,78,18,road,-.054);
+  addGround(-5,31,75,11,road,-.053);
+  addGround(19,-18,13,30,road,-.052);
+  addGround(17,17,13,29,road,-.051);
+  addGround(-23,18,20,35,road,-.05);
+  addGround(36,0,12,78,road,-.049);
+  // Subtle paving seams, kept irregular rather than a grid of identical tiles.
+  for(const [x,z,w,d] of [[-34,-35,11,.045],[-17,-35,9,.045],[3,-35,10,.045],[20,-35,8,.045],[-28,31,10,.045],[-8,31,9,.045],[8,31,8,.045],[0,0,.045,15],[5,0,.045,13],[36,-15,.045,12],[36,14,.045,14]]){
+    addGround(x,z,w,d,sandstoneDark,-.031);
   }
 
-  // Fully enclosed perimeter; the central connector and two side routes stay open.
-  addBox(0,2.1,-49,98,4.2,2,trim,true);
-  addBox(0,2.1,49,98,4.2,2,trim,true);
-  addBox(-49,2.1,0,2,4.2,98,trim,true);
-  addBox(49,2.1,0,2,4.2,98,trim,true);
-  const buildings=[
-    {x:-30.5,z:-10.5,w:13,h:6.8,d:23,wall:sandstone,top:roof},
-    {x:28.5,z:-8.5,w:15,h:7,d:21,wall:sandstoneDark,top:roof},
-    {x:-29,z:27.5,w:16,h:6.1,d:15,wall:sandstone,top:roof},
-    {x:37,z:11,w:13,h:6.1,d:17,wall:sandstoneDark,top:roof}
-  ];
-  for(const b of buildings){
-    addBox(b.x,b.h/2,b.z,b.w,b.h,b.d,b.wall,true);
-    addBox(b.x,b.h+.12,b.z,b.w+.5,.24,b.d+.5,b.top,false);
-    addBox(b.x,b.h-.42,b.z-b.d/2-.03,b.w*.58,.12,.08,trim,false);
-    addBox(b.x,b.h-.42,b.z+b.d/2+.03,b.w*.58,.12,.08,trim,false);
-    for(const side of [-1,1]){
-      addBox(b.x+side*(b.w/2+.035),b.h*.6,b.z,.08,1.35,b.d*.48,trim,false);
-      addBox(b.x+side*(b.w/2+.085),b.h*.6,b.z,.055,1.02,b.d*.43,windowMat,false);
-    }
-    addBox(b.x,b.h*.42,b.z-b.d/2-.10,b.w*.33,1.55,.14,wood,false);
-    addBox(b.x,b.h+.55,b.z,b.w*.72,.18,b.d*.72,trim,false);
+  // Perimeter walls leave no gaps that allow the player to run off-map.
+  wall(0,-49,98,1.8,4.2,trim);wall(0,49,98,1.8,4.2,trim);
+  wall(-49,0,1.8,98,4.2,trim);wall(49,0,1.8,98,4.2,trim);
+  for(const x of [-37,-24,-11,2,15,28,41]){
+    addBox(x,4.32,-49,5.8,.16,.22,roof,false);
+    addBox(x,4.32,49,5.8,.16,.22,roof,false);
   }
 
-  // Offset corridor walls make connected lanes and short-angle fights.
-  addBox(-10.5,2.1,-17.5,3,4.2,11,sandstoneDark,true);
-  addBox(10.5,2.1,-2,3,4.2,12,sandstone,true);
-  addBox(-7.5,1.2,6,7,2.4,2,trim,true);
-  addBox(8.5,1.2,13,7,2.4,2,sandstoneDark,true);
-  addBox(-42,1.9,1.5,4,3.8,11,sandstone,true);
-  addBox(40,1.9,13.5,4,3.8,13,sandstoneDark,true);
-  // Added side passages and offset walls make the mid/market route less boxy.
-  addBox(-16,1.6,-29,10,3.2,1.1,sandstoneDark,true);
-  addBox(0,1.4,-35,1.2,2.8,8,trim,true);
-  addBox(17,1.8,-20,9,3.6,1.2,sandstone,true);
-  addBox(-24,1.4,8,11,2.8,1.1,trim,true);
-  addBox(4,1.2,21,1.1,2.4,9,sandstoneDark,true);
-  addBox(7,1.2,-7,9,2.4,.9,trim,true);
-  addBox(-5,1.2,17,8,2.4,.9,sandstoneDark,true);
-
-  // Bombsites sit on the east side of the expanded layout, like the top-down reference.
-  addGround(30,-27,11,11,road,-.018);
-  addGround(18,30,11,11,road,-.017);
-  addGround(30,-27,8,8,sandstoneDark,-.014);
-  addGround(18,30,8,8,sandstoneDark,-.013);
-  for(const [cx,cz] of [[30,-27],[18,30]]){
-    addGround(cx,cz-4.25,7,.12,trim,-.012);
-    addGround(cx,cz+4.25,7,.12,trim,-.011);
-    addGround(cx-4.25,cz,.12,7,trim,-.010);
-    addGround(cx+4.25,cz,.12,7,trim,-.009);
+  // T spawn courtyard and the western approach into Mid.
+  // Low cover stays near the perimeter; the central exit remains wide and clear.
+  for(const [x,z,w,d] of [[-43,-8,3.2,2.3],[-43,8,3.2,2.3],[-37,-12,2.5,2.2],[-37,12,2.5,2.2]]){
+    addBox(x,.62,z,w,1.24,d,wood,true);
+    addBox(x,.14,z,w+.14,.18,d+.14,trim,false);
   }
-  addBox(28.5,1.05,-32.5,7,2.1,3,wood,true);
-  addBox(31,1.05,-32.2,1.3,2.1,2.3,cloth,false);
-  addBox(16.5,1.05,35.5,7,2.1,3,wood,true);
-  addBox(19,1.05,35.2,1.3,2.1,2.3,cloth,false);
+  wall(-39,-17,13,1.1,4.2,sandstone);
+  wall(-46,-12,1.1,10,4.2,sandstoneDark);
+  wall(-46,12,1.1,10,4.2,sandstoneDark);
+  roofSlab(-39,-17,13,1.35,4.3);
+  wall(-31,-7,1.1,9,3.5,trim);
+  wall(-31,7,1.1,9,3.5,trim);
+  addBox(-27,1.35,-9,3.3,2.7,2.3,wood,true);
+  addBox(-27,1.35,9,3.3,2.7,2.3,wood,true);
+  // Sniper-nest cover and two offset pillars shape the first mid peek.
+  wall(-28,-17,7,1,3.8,sandstoneDark);
+  wall(-25,-12,1,6,3.8,trim);
+  addBox(-25,.9,-7,2.2,1.8,2,wood,true);
+  addBox(-22,.65,7,2.4,1.3,2.4,wood,true);
+
+  // A LONG: the main upper route runs west-east into the open A courtyard.
+  wall(-28,-42,18,1,4.1,sandstone);
+  wall(-6,-42,15,1,4.1,sandstoneDark);
+  wall(14,-42,13,1,4.1,sandstone);
+  roofSlab(-28,-42,18,1.3);roofSlab(-6,-42,15,1.3);roofSlab(14,-42,13,1.3);
+  wall(-29,-29,1,11,3.8,sandstoneDark);
+  wall(-20,-29,1,11,3.8,sandstoneDark);
+  wall(-29,-23,10,1,3.8,sandstone);
+  // Apartment block is hollow: doors and corridors are real gaps, not a single solid cube.
+  wall(-11,-27,1,13,4.4,sandstoneDark);
+  wall(-2,-33,17,1,4.4,sandstone);
+  wall(6,-27,1,7,4.4,sandstoneDark);
+  wall(-2,-21,17,1,4.4,sandstone);
+  wall(-2,-25,1,4,3.5,trim);
+  roofSlab(-2,-27,17,13,4.55,sandstoneDark);
+  // Interior dividers leave a side passage from Apartments toward A Short.
+  wall(-7,-28,1,5,3.8,trim);
+  wall(-7,-31,4,1,3.8,trim);
+  addBox(-12,1.0,-30,2.2,2,1.6,wood,true);
+  addBox(-3,.65,-30,2.3,1.3,1.9,wood,true);
+  // A short: offset walls create a narrow approach with a clear exit to the site.
+  wall(13,-17,1,14,3.6,sandstoneDark);
+  wall(22,-17,1,13,3.6,sandstone);
+  wall(18,-9,7,1,3.2,trim);
+  wall(18,-23,7,1,3.2,trim);
+  addBox(17,1.05,-16,2.6,2.1,1.8,wood,true);
+  addBox(24,1.25,-21,2.1,2.5,2.2,wood,true);
+
+  // A SITE: an open plant area with platform edges, boxes, a hut, and a few off-angle covers.
+  addGround(30,-27,13,13,road,-.018);
+  addGround(30,-27,9.4,9.4,sandstoneDark,-.014);
+  for(const [cx,cz] of [[30,-32],[30,-22],[25,-27],[35,-27]]){
+    addGround(cx,cz,3.8,.10,trim,-.012);
+  }
+  wall(27,-39,9,1,3.5,sandstoneDark);
+  wall(38,-34,1,7,3.5,sandstone);
+  wall(39,-24,1,7,3.5,sandstoneDark);
+  wall(31,-20,8,1,3.5,sandstone);
+  roofSlab(27,-39,9,1.25,3.7);
+  wall(22,-25,1,5,3.5,trim);
+  addBox(29,1.0,-31.5,4.1,2,2.4,wood,true);
+  addBox(34,1.0,-30.5,2.2,2,2.3,cloth,true);
+  addBox(32,1.45,-23.5,2.8,2.9,1.7,wood,true);
+  addBox(25,0.72,-23,2.1,1.44,1.4,wood,true);
+  addBox(36.4,.6,-28,1.4,1.2,1.4,metal,true);
   sign("A",34.6,-24.6,"#a33d31");
+
+  // MID: a readable open combat space with hard cover on the edges, not in the centre lane.
+  addGround(-1,0,24,23,sandstoneDark,-.046);
+  addGround(-1,0,18,17,road,-.043);
+  // Pillars and low blocks make the connector fight asymmetric.
+  wall(-9,-5,1,9,3.3,sandstoneDark);
+  wall(-9,7,1,6,3.3,sandstone);
+  wall(8,-7,1,8,3.3,sandstone);
+  wall(8,6,1,7,3.3,sandstoneDark);
+  addBox(-4,.65,-5,2.8,1.3,2.1,wood,true);
+  addBox(3,.65,5,2.8,1.3,2.1,wood,true);
+  addBox(-1,.78,10,2.2,1.56,1.6,wood,true);
+  wall(0,-14,8,1,3.4,trim);
+  wall(0,14,7,1,3.4,trim);
+
+  // MARKET and B LONG: low stalls and offset walls form a winding lower route.
+  // The market building uses separated wall sections, leaving a walk-through.
+  wall(-27,12,13,1,4.1,sandstone);
+  wall(-33,18,1,12,4.1,sandstoneDark);
+  wall(-27,24,13,1,4.1,sandstoneDark);
+  wall(-21,17,1,6,3.6,trim);
+  wall(-29,17,4,1,3.6,trim);
+  roofSlab(-27,12,13,1.25);roofSlab(-27,24,13,1.25);
+  wall(-16,20,1,10,3.8,sandstone);
+  wall(-12,26,8,1,3.8,sandstoneDark);
+  wall(-6,20,1,8,3.8,sandstoneDark);
+  // Stalls face the lane; canopy supports do not block the route.
+  for(const [x,z,color] of [[-36,27,cloth],[-30,29,red],[-23,30,blue],[-16,35,cloth]]){
+    addBox(x,2.0,z,4.6,.18,2.8,color,false);
+    addBox(x-1.55,1,z, .18,2, .18,wood,true);
+    addBox(x+1.55,1,z, .18,2, .18,wood,true);
+  }
+  // B Long's cover is mainly along its north edge, keeping a continuous run to B.
+  wall(-17,22,8,1,3.6,sandstoneDark);
+  wall(-5,22,7,1,3.6,sandstone);
+  wall(6,22,8,1,3.6,sandstoneDark);
+  addBox(-12,.72,29,2.8,1.44,2.2,wood,true);
+  addBox(-2,.72,34,2.8,1.44,2.2,wood,true);
+  addBox(8,.82,28,2.5,1.64,2.2,wood,true);
+  // B SHORT from Mid/CT connector, with offsets and cover on the outside corners.
+  wall(10,12,1,9,3.8,sandstoneDark);
+  wall(23,14,1,10,3.8,sandstone);
+  wall(16,9,7,1,3.2,trim);
+  wall(18,21,7,1,3.2,trim);
+  addBox(11,.82,17,2.6,1.64,2.1,wood,true);
+  addBox(22,1.0,20,2.8,2,2.2,wood,true);
+
+  // B SITE: compact site with stacked crates, Arches, and open approaches from Long and Short.
+  addGround(18,30,13,13,road,-.017);
+  addGround(18,30,9.4,9.4,sandstoneDark,-.013);
+  for(const [cx,cz] of [[18,25],[18,35],[13,30],[23,30]]){
+    addGround(cx,cz,3.8,.10,trim,-.011);
+  }
+  wall(11,39,12,1,3.5,sandstoneDark);
+  wall(25,35,1,8,3.5,sandstone);
+  wall(25,25,1,6,3.5,sandstoneDark);
+  wall(17,22,8,1,3.5,sandstone);
+  roofSlab(11,39,12,1.25,3.7);
+  addBox(15.5,1.05,33,4.2,2.1,2.6,wood,true);
+  addBox(20.0,1.05,34.8,3.4,2.1,2.6,cloth,true);
+  addBox(22.6,.72,28,2.2,1.44,1.6,wood,true);
+  addBox(14,.62,27,1.7,1.24,1.7,metal,true);
   sign("B",21.6,26.7,"#315a77");
 
-  // Market awnings, low pallets, barrels, sandbags and sightline breaks.
-  for(const [x,z,color] of [[-40,-25,cloth],[-40,-21,red],[40,26,blue],[41,30,cloth]]){
-    addBox(x,2,z,5.8,.22,3.2,color,false);
-    addBox(x-.8,1,z,1,2,1,wood,true);
-    addBox(x+.8,1,z,1,2,1,wood,true);
+  // CT spawn and connector. The right edge is open into Mid, with separate exits to A and B.
+  wall(42,-13,10,1,4.1,sandstoneDark);
+  wall(42,13,10,1,4.1,sandstone);
+  wall(47,-6,1,13,4.1,trim);
+  wall(47,8,1,10,4.1,trim);
+  addBox(42,.72,-7,2.8,1.44,2.2,wood,true);
+  addBox(42,.72,7,2.8,1.44,2.2,wood,true);
+  wall(32,-9,1,8,3.6,sandstone);
+  wall(32,10,1,8,3.6,sandstoneDark);
+  wall(32,-20,1,7,3.6,trim);
+  wall(32,22,1,7,3.6,trim);
+  // Brick piers, wooden lintels, and plaster details break up the boxy silhouette.
+  for(const [x,z] of [[-42,-34],[-26,-46],[-4,-46],[16,-46],[40,-43],[-42,40],[-24,44],[-1,44],[39,44]]){
+    addBox(x,2.2,z,.42,4.4,.42,trim,false);
+    addBox(x,4.42,z,.95,.2,.7,roof,false);
   }
-  for(const [x,z,w,d] of [[-17,-20,3,2.4],[17,-17,3,2.4],[-20,10,3,2.4],[19,20,3,2.4],[0,25,2.8,2.8],[0,-26,2.8,2.8]]){
-    addBox(x,.75,z,w,1.5,d,wood,true);
-    addBox(x,.15,z,w+.1,.18,d+.1,trim,false);
+  for(const [x,z,w,d] of [[-35,-35,2.6,1.9],[-21,-39,2.4,1.8],[2,-38,2.4,1.8],[17,-39,2.8,2.0],[-35,37,2.7,2],[-22,39,2.6,2],[0,40,2.5,1.8],[31,42,2.4,2]]){
+    addBox(x,.72,z,w,1.44,d,wood,true);
+    addBox(x,.13,z,w+.12,.16,d+.12,trim,false);
   }
-  for(const x of [-43,43]){
-    addBox(x,3.25,0,.25,6.5,.25,metal,true);
-    addBox(x,6.55,0,1.5,.18,.6,metal,false);
+  for(const [x,z] of [[-34,-7],[-18,4],[14,3],[28,6],[4,17],[-7,25],[32,-13],[32,13]]){
+    addBox(x,1.15,z,1.5,2.3,1.5,metal,true);
   }
-  for(const [x,z] of [[-7,-39],[7,-39],[-7,39],[7,39]]){
-    addGround(x,z,3,3,trim,-.012);
-  }
-  // No floating text overlays or glowing zone plates on the playable map.
-  // Site identity is conveyed by subdued physical A/B signs and the tactical HUD.
+  // Geometry remains collision-safe while every route stays visibly connected.
   sandstoneRoot.scale.setScalar(sandstoneScale);
   scene.add(sandstoneRoot);
   $("progress").style.width="100%";mapLoaded=true;mapLoadFinished=true;
