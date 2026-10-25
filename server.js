@@ -93,7 +93,30 @@ const DEFAULT_SKINS = {
 };
 
 let skins = readJson(SKINS_PATH, DEFAULT_SKINS);
-if (!skins || Array.isArray(skins) || typeof skins !== "object") skins = DEFAULT_SKINS;
+if (!skins || Array.isArray(skins) || typeof skins !== "object") skins = { ...DEFAULT_SKINS };
+const SOFTER_COLLECTION_ID="softer_first_light";
+const SOFTER_BOX_ID="softer_box_first_light";
+const SOFTER_BOX_PRICE=100;
+const SOFTER_COLLECTION_SKINS={
+  softer_akr_chalkwave:{name:"AKR | Chalkwave",weapon:"AKR",weaponId:"akr",rarity:"common",type:"weapon",collection:SOFTER_COLLECTION_ID,skinStyle:"chalkwave",baseColor:"#122331",accentColor:"#a5f0ff",description:"Холодний графіт із білими хвилями."},
+  softer_p350_cloudline:{name:"P350 | Cloudline",weapon:"P350",weaponId:"p350",rarity:"common",type:"weapon",collection:SOFTER_COLLECTION_ID,skinStyle:"cloudline",baseColor:"#183145",accentColor:"#b5edff",description:"Світлий слід по темно-синій сталі."},
+  softer_akr_pulse:{name:"AKR | Softer Pulse",weapon:"AKR",weaponId:"akr",rarity:"rare",type:"weapon",collection:SOFTER_COLLECTION_ID,skinStyle:"pulse",baseColor:"#07172d",accentColor:"#35d8ff",description:"Фірмовий електричний імпульс Softer."},
+  softer_m4a1_blue_shift:{name:"M4A1 | Blue Shift",weapon:"M4A1",weaponId:"m4a1",rarity:"rare",type:"weapon",collection:SOFTER_COLLECTION_ID,skinStyle:"blue-shift",baseColor:"#101e3c",accentColor:"#7c9dff",description:"Сині лінії з холодним металевим блиском."},
+  softer_p90_ultraviolet:{name:"P90 | Ultraviolet",weapon:"P90",weaponId:"p90",rarity:"epic",type:"weapon",collection:SOFTER_COLLECTION_ID,skinStyle:"ultraviolet",baseColor:"#1b1030",accentColor:"#e36dff",description:"Фіолетова сітка та неонові вузли."},
+  softer_shotgun_afterglow:{name:"SHOTGUN | Afterglow",weapon:"SHOTGUN",weaponId:"shotgun",rarity:"epic",type:"weapon",collection:SOFTER_COLLECTION_ID,skinStyle:"afterglow",baseColor:"#301822",accentColor:"#ff7f91",description:"Рожево-червоний слід на темній основі."},
+  softer_sniper_gold_signal:{name:"SNIPER | Gold Signal",weapon:"SNIPER",weaponId:"sniper",rarity:"legendary",type:"weapon",collection:SOFTER_COLLECTION_ID,skinStyle:"gold-signal",baseColor:"#25251e",accentColor:"#ffd36b",description:"Золоті сигнальні лінії для точної роботи."},
+  softer_knife_aurora:{name:"KNIFE | Aurora",weapon:"KNIFE",weaponId:"knife",rarity:"arcane",type:"weapon",collection:SOFTER_COLLECTION_ID,skinStyle:"aurora",baseColor:"#17152c",accentColor:"#a18bff",description:"Полярне сяйво на клинку."}
+};
+const SOFTER_RARITY_WEIGHTS=[
+  {rarity:"common",weight:5200,label:"52%"},
+  {rarity:"rare",weight:3000,label:"30%"},
+  {rarity:"epic",weight:1400,label:"14%"},
+  {rarity:"legendary",weight:350,label:"3.5%"},
+  {rarity:"arcane",weight:50,label:"0.5%"}
+];
+Object.assign(skins,SOFTER_COLLECTION_SKINS,{
+  [SOFTER_BOX_ID]:{name:"SOFTER BOX · FIRST LIGHT",weapon:"Container",rarity:"box",type:"box",isBox:true,collection:SOFTER_COLLECTION_ID,description:"Перший контейнер колекції Softer."}
+});
 // skins.json is static catalog data; player-owned state is stored in MongoDB.
 
 let users = readJson(USERS_PATH, []);
@@ -475,6 +498,8 @@ function ensureUserShape(user) {
   if (!Array.isArray(user.incomingRequests)) user.incomingRequests = [];
   if (!Array.isArray(user.blocked)) user.blocked = [];
   if (!Array.isArray(user.usedPromos)) user.usedPromos = [];
+  user.equippedSkins = user.equippedSkins && typeof user.equippedSkins === "object" && !Array.isArray(user.equippedSkins) ? user.equippedSkins : {};
+  user.softerIntroBoxClaimed = Boolean(user.softerIntroBoxClaimed);
   user.XP = Number(user.XP) || 0;
   user.gold = Number(user.gold) || 0;
   user.MMRCompetitive = Number(user.MMRCompetitive) || 1000;
@@ -754,10 +779,18 @@ const upload = multer({
   }
 });
 
-app.get("/", (_req, res) => res.sendFile(path.join(ROOT, "auth.html")));
+app.get("/", (req, res) => {
+  const user = requestUser(req);
+  if (user?.isBanned && user.id !== ADMIN_ID) return res.redirect("/banned");
+  res.sendFile(path.join(ROOT, "auth.html"));
+});
+app.get("/banned", (_req, res) => {
+  res.status(403).type("html").send(`<!doctype html><html lang="uk"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>StandoffX — Акаунт заблоковано</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#090d13;color:#edf4fb;font:16px Inter,system-ui,sans-serif}.card{width:min(520px,92vw);padding:32px;border:1px solid #ff697255;background:#111820;border-radius:12px;text-align:center;box-shadow:0 24px 80px #0008}.mark{margin:auto auto 18px;width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:#ff69721a;color:#ff8b93;font-size:30px;font-weight:900}.kicker{font-size:10px;letter-spacing:3px;color:#ff9299;font-weight:900}h1{margin:14px 0;font-size:28px}p{line-height:1.65;color:#aab8c7}.back{display:inline-flex;margin-top:14px;padding:11px 16px;border:1px solid #ffffff22;border-radius:5px;color:#edf4fb;text-decoration:none;background:#1b2834}</style><main class="card"><div class="mark">!</div><div class="kicker">STANDOFFX ACCOUNT SECURITY</div><h1>Акаунт заблоковано</h1><p>Доступ до StandoffX вимкнено для цього акаунта. Якщо вважаєш, що це помилка, звернися до адміністратора проєкту.</p><a class="back" href="/">ПОВЕРНУТИСЯ ДО ВХОДУ</a></main></html>`);
+});
 app.get("/game", (req, res) => {
   const user = requestUser(req);
-  if (!user || (user.isBanned && user.id !== ADMIN_ID)) return res.redirect("/");
+  if (user?.isBanned && user.id !== ADMIN_ID) return res.redirect("/banned");
+  if (!user) return res.redirect("/");
   res.sendFile(path.join(ROOT, "mainMenu.html"));
 });
 
@@ -874,7 +907,7 @@ app.post("/api/login", loginRateLimit, (req, res) => {
     return res.status(401).json({ success: false, message: "Невірний ID або пароль." });
   }
   if (user.isBanned && user.id !== ADMIN_ID) {
-    return res.status(403).json({ success: false, message: "Акаунт заблоковано." });
+    return res.status(403).json({ success: false, message: "Твій акаунт заблоковано. Доступ до StandoffX заборонено." });
   }
 
   if (!user.passwordHash) {
@@ -1370,38 +1403,165 @@ app.post("/api/clans/leave", requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
+function inventoryEntriesForUser(userId) {
+  const source = Array.isArray(inventory[userId]) ? inventory[userId] : [];
+  let changed = !Array.isArray(inventory[userId]) && Object.prototype.hasOwnProperty.call(inventory, userId);
+  const entries = [];
+  for (const raw of source) {
+    if (typeof raw === "string") {
+      const skinId = cleanText(raw, 64);
+      if (!skinId) { changed = true; continue; }
+      entries.push({ instanceId: crypto.randomUUID(), skinId, obtainedAt: Date.now() });
+      changed = true;
+      continue;
+    }
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) { changed = true; continue; }
+    const skinId = cleanText(raw.skinId || raw.id || "", 64);
+    if (!skinId) { changed = true; continue; }
+    const instanceId = cleanText(raw.instanceId || "", 80) || crypto.randomUUID();
+    if (raw.skinId !== skinId || raw.instanceId !== instanceId) changed = true;
+    entries.push({ ...raw, instanceId, skinId });
+  }
+  if (changed) {
+    inventory[userId] = entries;
+    saveInventory();
+  }
+  return entries;
+}
+function skinMarketFields(skinId) {
+  const skin = skins[skinId] || {};
+  return {
+    skinName: skin.name || skinId,
+    rarity: skin.rarity || "common",
+    weapon: skin.weapon || "ITEM",
+    weaponId: skin.weaponId || "",
+    collection: skin.collection || "",
+    skinStyle: skin.skinStyle || "",
+    baseColor: skin.baseColor || "#14202c",
+    accentColor: skin.accentColor || "#8ddfff",
+    type: skin.type || "weapon"
+  };
+}
+function randomSofterDrop() {
+  const roll = crypto.randomInt(0, SOFTER_RARITY_WEIGHTS.reduce((sum, item) => sum + item.weight, 0));
+  let cursor = 0, rarity = "common";
+  for (const item of SOFTER_RARITY_WEIGHTS) {
+    cursor += item.weight;
+    if (roll < cursor) { rarity = item.rarity; break; }
+  }
+  const choices = Object.entries(SOFTER_COLLECTION_SKINS).filter(([, skin]) => skin.rarity === rarity);
+  return choices[crypto.randomInt(0, choices.length)][0];
+}
+
 app.get("/api/skins", requireAuth, (_req, res) => res.json({ success: true, skins }));
 
-app.post("/api/inventory/my", requireAuth, (req, res) => {
-  const ids = Array.isArray(inventory[req.user.id]) ? inventory[req.user.id] : [];
+app.get("/api/collection/softer", requireAuth, (req, res) => {
+  const entries = inventoryEntriesForUser(req.user.id);
   res.json({
     success: true,
-    inventory: ids.map(skinId => ({ skinId, ...(skins[skinId] || {}) })).filter(item => item.name)
+    collection: { id: SOFTER_COLLECTION_ID, name: "SOFTER COLLECTION · FIRST LIGHT", subtitle: "DROP 001 · ONLY THE BEGINNING", description: "Перша оригінальна колекція SofterX. Візуальні скіни не змінюють баланс зброї." },
+    box: { skinId: SOFTER_BOX_ID, ...skins[SOFTER_BOX_ID], price: SOFTER_BOX_PRICE },
+    skins: Object.entries(SOFTER_COLLECTION_SKINS).map(([skinId, skin]) => ({ skinId, ...skin })),
+    dropRates: SOFTER_RARITY_WEIGHTS.map(item => ({ rarity: item.rarity, chance: item.label })),
+    canClaimStarterBox: !req.user.softerIntroBoxClaimed,
+    ownedBoxes: entries.filter(item => item.skinId === SOFTER_BOX_ID).length,
+    gold: Math.max(0, Number(req.user.gold) || 0)
+  });
+});
+
+app.post("/api/collection/softer/buy-box", transactionRateLimit, requireAuth, (req, res) => {
+  const starter = req.body?.starter === true && !req.user.softerIntroBoxClaimed;
+  if (!starter && Number(req.user.gold) < SOFTER_BOX_PRICE) {
+    return res.status(400).json({ success: false, message: "Недостатньо Gold для SOFTER BOX." });
+  }
+  if (starter) req.user.softerIntroBoxClaimed = true;
+  else req.user.gold = Math.max(0, Number(req.user.gold) - SOFTER_BOX_PRICE);
+  const entries = inventoryEntriesForUser(req.user.id);
+  const box = { instanceId: crypto.randomUUID(), skinId: SOFTER_BOX_ID, obtainedAt: Date.now() };
+  entries.push(box);
+  inventory[req.user.id] = entries;
+  saveUsers();
+  saveInventory();
+  res.json({ success: true, freeStarter: starter, gold: req.user.gold, box: { ...box, ...skins[SOFTER_BOX_ID] } });
+});
+
+app.post("/api/collection/softer/open-box", transactionRateLimit, requireAuth, (req, res) => {
+  const entries = inventoryEntriesForUser(req.user.id);
+  const requestedInstanceId = cleanText(req.body?.instanceId || "", 80);
+  const boxIndex = requestedInstanceId
+    ? entries.findIndex(item => item.instanceId === requestedInstanceId && item.skinId === SOFTER_BOX_ID)
+    : entries.findIndex(item => item.skinId === SOFTER_BOX_ID);
+  if (boxIndex < 0) return res.status(400).json({ success: false, message: "У тебе немає SOFTER BOX для відкриття." });
+  entries.splice(boxIndex, 1);
+  const skinId = randomSofterDrop();
+  const drop = { instanceId: crypto.randomUUID(), skinId, obtainedAt: Date.now() };
+  entries.push(drop);
+  inventory[req.user.id] = entries;
+  saveInventory();
+  res.json({ success: true, drop: { ...drop, ...skins[skinId] }, inventoryCount: entries.length });
+});
+
+app.post("/api/inventory/equip", requireAuth, (req, res) => {
+  const skinId = cleanText(req.body?.skinId || "", 64);
+  const instanceId = cleanText(req.body?.instanceId || "", 80);
+  const unequip = req.body?.equipped === false;
+  req.user.equippedSkins = req.user.equippedSkins && typeof req.user.equippedSkins === "object" ? req.user.equippedSkins : {};
+  if (unequip) {
+    const weaponId = cleanText(req.body?.weaponId || "", 24);
+    if (!weaponId) return res.status(400).json({ success: false, message: "Не вдалося визначити слот зброї." });
+    delete req.user.equippedSkins[weaponId];
+    saveUsers();
+    return res.json({ success: true, equippedSkins: req.user.equippedSkins });
+  }
+  const entries = inventoryEntriesForUser(req.user.id);
+  const entry = entries.find(item => (instanceId && item.instanceId === instanceId) || (!instanceId && skinId && item.skinId === skinId));
+  if (!entry) return res.status(404).json({ success: false, message: "Цього предмета немає в інвентарі." });
+  const skin = skins[entry.skinId];
+  if (!skin || skin.type === "box" || !skin.weaponId) return res.status(400).json({ success: false, message: "Цей предмет не можна екіпірувати." });
+  req.user.equippedSkins[skin.weaponId] = entry.skinId;
+  saveUsers();
+  res.json({ success: true, equippedSkins: req.user.equippedSkins, item: { ...entry, ...skin } });
+});
+
+app.post("/api/inventory/my", requireAuth, (req, res) => {
+  const entries = inventoryEntriesForUser(req.user.id);
+  res.json({
+    success: true,
+    inventory: entries.map(entry => {
+      const skin = skins[entry.skinId] || {};
+      return { ...entry, ...skin, skinId: entry.skinId, equipped: Boolean(skin.weaponId && req.user.equippedSkins?.[skin.weaponId] === entry.skinId) };
+    }).filter(item => item.name)
   });
 });
 
 app.get("/api/market/items", requireAuth, (_req, res) => res.json({ success: true, items: market }));
 
 app.post("/api/market/sell", transactionRateLimit, requireAuth, (req, res) => {
-  const skinId = cleanText(req.body.skinId, 64);
+  const requestedSkinId = cleanText(req.body?.skinId || "", 64);
+  const instanceId = cleanText(req.body?.instanceId || "", 80);
   const price = Number(req.body.price);
-  const owned = Array.isArray(inventory[req.user.id]) && inventory[req.user.id].includes(skinId);
-  if (!owned) return res.status(400).json({ success: false, message: "Цього предмета немає в інвентарі." });
   if (!Number.isFinite(price) || price <= 0 || price > 1000000) {
     return res.status(400).json({ success: false, message: "Некоректна ціна." });
   }
-
-  inventory[req.user.id] = inventory[req.user.id].filter(id => id !== skinId);
+  const entries = inventoryEntriesForUser(req.user.id);
+  const index = instanceId
+    ? entries.findIndex(item => item.instanceId === instanceId)
+    : entries.findIndex(item => item.skinId === requestedSkinId);
+  if (index < 0) return res.status(400).json({ success: false, message: "Цього предмета немає в інвентарі." });
+  const [entry] = entries.splice(index, 1);
+  const skin = skins[entry.skinId];
+  if (!skin) return res.status(400).json({ success: false, message: "Каталог цього предмета недоступний." });
   const lot = {
     lotId: crypto.randomBytes(8).toString("hex"),
     sellerId: req.user.id,
     sellerNick: req.user.nickname,
-    skinId,
-    skinName: skins[skinId]?.name || skinId,
-    rarity: skins[skinId]?.rarity || "common",
+    skinId: entry.skinId,
+    instanceId: entry.instanceId,
+    ...skinMarketFields(entry.skinId),
     price,
     date: Date.now()
   };
+  inventory[req.user.id] = entries;
   market.push(lot);
   saveInventory();
   saveMarket();
@@ -1421,8 +1581,9 @@ app.post("/api/market/buy", transactionRateLimit, requireAuth, (req, res) => {
 
   req.user.gold -= price;
   seller.gold += price;
-  inventory[req.user.id] = Array.isArray(inventory[req.user.id]) ? inventory[req.user.id] : [];
-  inventory[req.user.id].push(lot.skinId);
+  const entries = inventoryEntriesForUser(req.user.id);
+  entries.push({ instanceId: crypto.randomUUID(), skinId: lot.skinId, obtainedAt: Date.now() });
+  inventory[req.user.id] = entries;
   market.splice(lotIndex, 1);
   saveUsers();
   saveInventory();
@@ -2359,7 +2520,7 @@ function startAlliesRound(io, match, initial = false) {
     match.defendingTeam = previousAttacker;
   }
   match.roundNumber += 1;
-  match.phase = "round_start";
+  match.phase = "warmup";
   match.phaseRemaining = 10;
   match.roundRemaining = 110;
   match.bomb = {
@@ -2405,16 +2566,27 @@ function startAlliesRound(io, match, initial = false) {
   io.to(match.id).emit("allies_round_start", alliesRoundPayload(match));
   io.to(match.id).emit("bomb_state", bombPublicState(match));
   io.to(match.id).emit("match_phase", {
-    phase: "round_start", time: 10, mode: match.mode, modeName: match.modeName,
+    phase: "warmup", time: 10, mode: match.mode, modeName: match.modeName,
     roundNumber: match.roundNumber, roundWins: { ...match.roundWins },
     attackingTeam: match.attackingTeam, defendingTeam: match.defendingTeam
   });
   match.phaseTimer = setInterval(() => {
     const current = activeMatches.get(match.id);
-    if (!current || current.finished || current.phase !== "round_start") { clearInterval(match.phaseTimer); return; }
+    if (!current || current.finished || !["warmup", "round_start"].includes(current.phase)) { clearInterval(match.phaseTimer); return; }
     current.phaseRemaining = Math.max(0, (Number(current.phaseRemaining) || 0) - 1);
-    io.to(current.id).emit("timer_update", { phase: "round_start", time: current.phaseRemaining, roundNumber: current.roundNumber, roundWins: { ...current.roundWins }, attackingTeam: current.attackingTeam, defendingTeam: current.defendingTeam });
+    io.to(current.id).emit("timer_update", { phase: current.phase, time: current.phaseRemaining, roundNumber: current.roundNumber, roundWins: { ...current.roundWins }, attackingTeam: current.attackingTeam, defendingTeam: current.defendingTeam });
     if (current.phaseRemaining > 0) return;
+    if (current.phase === "warmup") {
+      current.phase = "round_start";
+      current.phaseRemaining = 20;
+      io.to(current.id).emit("match_phase", {
+        phase: "round_start", time: 20, mode: current.mode, modeName: current.modeName,
+        roundNumber: current.roundNumber, roundWins: { ...current.roundWins },
+        attackingTeam: current.attackingTeam, defendingTeam: current.defendingTeam
+      });
+      io.to(current.id).emit("timer_update", { phase: "round_start", time: 20, roundNumber: current.roundNumber, roundWins: { ...current.roundWins }, attackingTeam: current.attackingTeam, defendingTeam: current.defendingTeam });
+      return;
+    }
     clearInterval(current.phaseTimer);
     current.phaseTimer = null;
     current.phase = "game";
@@ -3256,8 +3428,8 @@ io.on("connection", socket => {
     const mode = cleanText(data?.mode, 32);
     const cfg = TESTER_MODE_CONFIGS[mode];
     if (!cfg) return socket.emit("training_error", { message: "Невідомий тестовий режим." });
-    if (!canUseTesterModes(user) && mode !== "field_test") {
-      return socket.emit("training_error", { message: "Цей режим доступний лише тестерам." });
+    if (!canUseTesterModes(user) && (mode !== "field_test" || data?.prototype === true)) {
+      return socket.emit("training_error", { message: "Прототип і тестові режими доступні лише тестерам." });
     }
 
     const prototype = mode === "field_test" && data?.prototype === true;
@@ -3332,8 +3504,8 @@ io.on("connection", socket => {
   socket.on("join_training", data => {
     const user = socket.user;
     const session = trainingSessions.get(user.id);
-    if (!session || (!canUseTesterModes(user) && session.mode !== "field_test")) {
-      return socket.emit("kick_to_menu", { reason: "Режим доступний лише для дозволених тестових сесій." });
+    if (!session || (!canUseTesterModes(user) && (session.mode !== "field_test" || session.prototype))) {
+      return socket.emit("kick_to_menu", { reason: "Прототип доступний лише тестерам." });
     }
     if (session.id !== cleanText(data?.trainingId, 100)) {
       return socket.emit("kick_to_menu", { reason: "Тренувальну сесію не знайдено." });
@@ -3679,6 +3851,10 @@ io.on("connection", socket => {
     const user = socket.user;
     if (!user || (user.isBanned && user.id !== ADMIN_ID)) {
       socket.emit("auth_required");
+      return;
+    }
+    if (!canUseTesterModes(user)) {
+      socket.emit("search_error", { message: "Прототип доступний лише тестерам." });
       return;
     }
     if (playerMatch(user.uuid || user.id)) {
@@ -4373,6 +4549,23 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
   }
 
   ensureUserShape(u);
+  if (u.isBanned && !isMaster) {
+    u.status = false;
+    u.authSessions = [];
+    for (const [token, session] of sessions.entries()) {
+      if (session?.userId === u.uuid || session?.userId === u.id || session?.userId === oldId) sessions.delete(token);
+    }
+    removeFromQueue(u.uuid || oldId);
+    removeFromQueue(u.uuid || u.id);
+    trainingSessions.delete(u.id);
+    trainingSessions.delete(oldId);
+    for (const client of io.sockets.sockets.values()) {
+      if (client.user?.uuid === u.uuid || client.user?.id === u.id || client.user?.id === oldId) {
+        client.emit("account_banned", { message: "Твій акаунт заблоковано. Доступ до StandoffX заборонено." });
+        client.disconnect(true);
+      }
+    }
+  }
   saveUsers();
   saveClans();
   saveInventory();
