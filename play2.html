@@ -528,6 +528,9 @@ html,body{font-family:Inter,"Nunito",system-ui,-apple-system,"Segoe UI",sans-ser
       <div class="allies-buy-tabs" role="tablist" aria-label="Категорії закупівлі">
         <button type="button" data-buy-tab="all" aria-selected="true">УСЕ</button>
         <button type="button" data-buy-tab="rifles" aria-selected="false">ГВИНТІВКИ</button>
+        <button type="button" data-buy-tab="smgs" aria-selected="false">АВТОМАТИ</button>
+        <button type="button" data-buy-tab="shotguns" aria-selected="false">ДРОБОВИКИ</button>
+        <button type="button" data-buy-tab="snipers" aria-selected="false">СНАЙПЕРСЬКІ</button>
         <button type="button" data-buy-tab="pistols" aria-selected="false">ПІСТОЛЕТИ</button>
         <button type="button" data-buy-tab="gear" aria-selected="false">СПОРЯДЖЕННЯ</button>
       </div>
@@ -541,13 +544,13 @@ html,body{font-family:Inter,"Nunito",system-ui,-apple-system,"Segoe UI",sans-ser
         <button class="allies-buy-card" type="button" data-allies-weapon="m4a1" data-buy-category="rifles">
           <span class="buy-art" aria-hidden="true"><svg viewBox="0 0 220 48" role="presentation"><path d="M10 19h42l9 5h21l5-6h35l9 5h25l13 5h19v-7h-23l-9-7h-29l-7-5h-24l-8 5H64l-7 6H10zM67 23h12v-9h13v9H82v7H67zM106 25h18v17h-9l-5-5h-4z" fill="currentColor"/><path d="M149 18h43v4h-43zM20 16h19v3H20z" fill="currentColor" opacity=".7"/></svg></span><span class="buy-name">M4A1</span><small>Штурмова гвинтівка · 30 набоїв</small><b>$3 100</b><em data-status>КУПИТИ</em>
         </button>
-        <button class="allies-buy-card" type="button" data-allies-weapon="p90" data-buy-category="rifles">
+        <button class="allies-buy-card" type="button" data-allies-weapon="p90" data-buy-category="smgs">
           <span class="buy-art" aria-hidden="true"><svg viewBox="0 0 220 48" role="presentation"><path d="M38 14h90l11 6h24l10 4h19v6h-28l-9-4h-31l-8-4H83v7H69v-7H54v10H43l-5-9zM85 12h39v4H85zM74 28h15v13H78l-4-5z" fill="currentColor"/><path d="M138 17h35v4h-35z" stroke="#101820" stroke-width="2"/></svg></span><span class="buy-name">P90</span><small>Компактний автомат · 50 набоїв</small><b>$2 200</b><em data-status>КУПИТИ</em>
         </button>
-        <button class="allies-buy-card" type="button" data-allies-weapon="shotgun" data-buy-category="rifles">
+        <button class="allies-buy-card" type="button" data-allies-weapon="shotgun" data-buy-category="shotguns">
           <span class="buy-art" aria-hidden="true"><svg viewBox="0 0 220 48" role="presentation"><path d="M13 20h28l13 6h26l8-5h39l8 4h48l14 4h12v-6h-17l-9-5h-45l-8-4h-45l-8 5H50l-8-5H13z" fill="currentColor"/><path d="M83 26h28v15H98l-7-5h-8zM123 16h30v3h-30zM155 18h38v2h-38z" fill="currentColor" opacity=".8"/></svg></span><span class="buy-name">SHOTGUN</span><small>Дробовик · 8 набоїв</small><b>$1 900</b><em data-status>КУПИТИ</em>
         </button>
-        <button class="allies-buy-card" type="button" data-allies-weapon="sniper" data-buy-category="rifles">
+        <button class="allies-buy-card" type="button" data-allies-weapon="sniper" data-buy-category="snipers">
           <span class="buy-art" aria-hidden="true"><svg viewBox="0 0 220 48" role="presentation"><path d="M8 20h47l8 5h28l7-6h42l12 4h24l13 4h22v-6h-20l-10-5h-38l-7-4H99l-7 5H64l-7 3H8zM92 24h12v18h-8l-4-6zM110 8h34v9h-34zM119 10h16v5h-16zM145 18h22v3h-22z" fill="currentColor"/></svg></span><span class="buy-name">SNIPER</span><small>Снайперська гвинтівка · 5 набоїв</small><b>$4 600</b><em data-status>КУПИТИ</em>
         </button>
         <button class="allies-buy-card" type="button" data-allies-weapon="knife" data-buy-category="gear">
@@ -773,6 +776,8 @@ let weaponKick=0;
 let akModelTemplate=null;
 let p350ModelTemplate=null;
 const weaponModelTemplates={m4a1:null,p90:null,shotgun:null,sniper:null};
+const knifeSkinModelTemplates={};
+const knifeSkinLoadPromises=new Map();
 let tacticalAgentTemplate=null;
 const TACTICAL_AGENT_URL="https://raw.githubusercontent.com/cktang88/3d-fps/main/public/assets/models/characters/soldier_tac.glb";
 let muzzleFlash=null;
@@ -1265,7 +1270,7 @@ function updateAlliesBuyPanel(){
   for(const button of document.querySelectorAll("[data-allies-weapon]")){
     const weapon=button.dataset.alliesWeapon,owned=alliesWeapons.includes(weapon),equipped=alliesEquippedWeapon===weapon;
     const status=button.querySelector("[data-status]");
-    const prices={akr:2700,m4a1:3100,p90:2200,shotgun:1900,sniper:4600,p350:300,knife:0};
+    const prices={akr:2700,m4a1:3100,p90:2200,shotgun:1900,sniper:4600,p350:0,knife:0};
     const price=prices[weapon];
     button.classList.toggle("is-equipped",equipped);
     if(status)status.textContent=owned?(equipped?"ОБРАНО":"ВИБРАТИ"):(price==null?"НЕДОСТУПНО":price===0?"ВИБРАТИ":alliesCash>=price?"КУПИТИ":"НЕ ВИСТАЧАЄ");
@@ -1866,6 +1871,10 @@ const WEAPON_MODEL_URLS={
   sniper:"https://raw.githubusercontent.com/petroulacl/fps-asset-kit/main/weapons/flat_guns_west/Flat%20Guns%20West/GLB/Sniper_Rifle_West.glb"
 };
 const WEAPON_MODEL_LENGTHS={akr:.9,p350:.5,m4a1:.94,p90:.72,shotgun:.98,sniper:1.08};
+const KNIFE_SKIN_MODEL_URLS={
+  softer_knife_blue_blood:"/assets/weapons/bayonet_m9_blue_blood.glb",
+  softer_knife_sparkling_gaze:"/assets/weapons/bayonet_m9_sparkling_gaze.glb"
+};
 function normalizeWeaponModel(model,targetLength){
   const originalBounds=new THREE.Box3().setFromObject(model);
   const originalSize=originalBounds.getSize(new THREE.Vector3());
@@ -1882,6 +1891,28 @@ function normalizeWeaponModel(model,targetLength){
     if(node.material&&"roughness" in node.material)node.material.roughness=Math.max(.4,node.material.roughness||.5);
   });
   return model;
+}
+function normalizeKnifeSkinModel(model,targetLength=.62){
+  let bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3());
+  // The two uploaded GLBs use different local forward axes. Align the longest blade axis with forward Z.
+  if(size.x>=size.y&&size.x>=size.z)model.rotation.y+=Math.PI/2;
+  else if(size.y>=size.x&&size.y>=size.z)model.rotation.x+=Math.PI/2;
+  model.updateMatrixWorld(true);bounds.setFromObject(model);size=bounds.getSize(new THREE.Vector3());
+  const longest=Math.max(size.x,size.y,size.z);
+  if(longest>0)model.scale.multiplyScalar(targetLength/longest);
+  model.updateMatrixWorld(true);bounds.setFromObject(model);
+  const center=bounds.getCenter(new THREE.Vector3());model.position.sub(center);
+  model.traverse(node=>{if(!node.isMesh)return;node.castShadow=false;node.receiveShadow=false;node.frustumCulled=true;const mats=Array.isArray(node.material)?node.material:[node.material];for(const mat of mats){if(mat&&"roughness" in mat)mat.roughness=Math.max(.24,mat.roughness||.38)}});
+  return model;
+}
+async function loadKnifeSkinTemplate(skinId){
+  if(knifeSkinModelTemplates[skinId])return knifeSkinModelTemplates[skinId];
+  const url=KNIFE_SKIN_MODEL_URLS[skinId];if(!url)return null;
+  if(!knifeSkinLoadPromises.has(skinId)){
+    const promise=loadGLBScene(url).then(model=>{knifeSkinModelTemplates[skinId]=normalizeKnifeSkinModel(model,.62);return knifeSkinModelTemplates[skinId]}).catch(error=>{console.warn("[KNIFE SKIN] Could not load "+skinId+".",error?.message||error);return null}).finally(()=>knifeSkinLoadPromises.delete(skinId));
+    knifeSkinLoadPromises.set(skinId,promise);
+  }
+  return knifeSkinLoadPromises.get(skinId);
 }
 async function loadRemoteWeapon(url,targetLength){
   return normalizeWeaponModel(await loadGLBScene(url),targetLength);
@@ -1988,7 +2019,7 @@ let buyTimeRemaining=10;
 let roundCinematic=null;
 let alliesCash=800;
 let alliesWeapons=["p350","knife"];
-let alliesEquippedWeapon="knife";
+let alliesEquippedWeapon="p350";
 
 const keys={w:false,s:false,a:false,d:false,shift:false};
 const DEFAULT_TRAINING_BINDS={spawnBot:"KeyN",removeBot:"KeyB",push:"KeyJ",kick:"KeyK",boost:"KeyL",resetBot:"KeyU",resetSession:"KeyI",menu:"KeyM"};
@@ -3419,6 +3450,17 @@ function selectWeapon(weaponId,force=false){
       heldWeaponRoot.add(model);
       heldWeaponRoot.userData.realModel=true;
     }else makeFallbackP350();
+  }else if(selectedWeapon==="knife"){
+    const skinId=String(equippedSkinLoadout?.knife||"");
+    const skinUrl=KNIFE_SKIN_MODEL_URLS[skinId];
+    const template=skinUrl?knifeSkinModelTemplates[skinId]:null;
+    if(template){clearHeldWeapon();heldWeaponRoot.add(template.clone(true));heldWeaponRoot.userData.realModel=true}
+    else{
+      makeFallbackKnife();
+      if(skinUrl)void loadKnifeSkinTemplate(skinId).then(model=>{
+        if(model&&selectedWeapon==="knife"&&equippedSkinLoadout?.knife===skinId)selectWeapon("knife",true);
+      });
+    }
   }else if(weaponModelTemplates[selectedWeapon]){
     clearHeldWeapon();
     heldWeaponRoot.add(weaponModelTemplates[selectedWeapon].clone(true));
@@ -3501,6 +3543,7 @@ function shoot(){
   const now=performance.now();
   if(now-lastShot<info.fireDelay||ammo<=0){if(ammo<=0&&info.kind!=="melee")startReload();return}
   lastShot=now;
+  if(info.kind==="melee")heldWeaponAction={type:"knife_attack",startedAt:now,duration:330,weaponId:selectedWeapon};
   const recoil={
     akr:{max:.13,add:.065},m4a1:{max:.095,add:.045},p350:{max:.105,add:.072},
     p90:{max:.075,add:.028},shotgun:{max:.19,add:.13},sniper:{max:.23,add:.17},knife:{max:.22,add:.11}
@@ -4345,6 +4388,11 @@ function animate(){
         actionRotX=Math.sin(cycle)*pose.pitch-wave*pose.tilt;
         actionRotY=Math.sin(cycle*1.1)*pose.yaw+reveal*.12;
         actionRotZ=wave*pose.roll+Math.sin(cycle*.75)*.045;
+      }else if(action.type==="knife_attack"){
+        // Standoff-style quick wind-up, diagonal slash, then a short recovery.
+        if(progress<.22){const t=progress/.22;actionX=-.055*t;actionY=-.025*t;actionZ=.16*t;actionRotX=-.34*t;actionRotY=-.24*t;actionRotZ=-.30*t;}
+        else if(progress<.64){const t=(progress-.22)/.42;const slash=Math.sin(t*Math.PI*.92);actionX=.06-.12*t;actionY=.025*Math.sin(t*Math.PI);actionZ=.16-.43*slash;actionRotX=-.34+1.12*slash;actionRotY=-.24+1.25*t;actionRotZ=-.30+1.08*slash;}
+        else{const t=(progress-.64)/.36;actionX=-.06*(1-t);actionY=.012*(1-t);actionZ=-.04*(1-t);actionRotX=.18*(1-t);actionRotY=1.01*(1-t);actionRotZ=.78*(1-t);}
       }else if(action.type==="reload"){
         const weapon=action.weaponId||selectedWeapon;
         const profiles={
