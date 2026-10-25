@@ -2706,6 +2706,7 @@ function makeVisual(color){
   g.userData.rig={leftArm,rightArm,leftLeg,rightLeg,leftKnee,rightKnee,torso,head:g.children.find(n=>n.position?.y===1.63),rifle,offset:Math.random()*Math.PI*2};
   g.userData.anim="Idle";
   g.traverse(n=>{if(n.isMesh)n.frustumCulled=false});
+  attachTacticalAgent(g,color);
   return g;
 }
 function attachTacticalAgent(model,color){
