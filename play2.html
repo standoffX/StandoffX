@@ -622,6 +622,7 @@ html,body{font-family:Inter,"Nunito",system-ui,-apple-system,"Segoe UI",sans-ser
 <script type="module">
 import * as THREE from "three";
 import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
+import {FBXLoader} from "three/addons/loaders/FBXLoader.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import {PointerLockControls} from "three/addons/controls/PointerLockControls.js";
 
@@ -657,7 +658,7 @@ function setLoadingDetail(id,message,state="active"){
     row.classList.toggle("is-error",state==="error");
   }
 }
-const MAP_LOADING_NAMES={SANDSTONE:"SANDSTONE",SMALL_YARD:"SMALL YARD",HILL_TOWN:"HILL TOWN",M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD"};
+const MAP_LOADING_NAMES={SANDSTONE:"SANDSTONE",SMALL_YARD:"SMALL YARD",HILL_TOWN:"HILL TOWN",M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD",ZONE_9:"ZONE 9"};
 const isMobileDevice=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||
   (navigator.maxTouchPoints>1&&matchMedia("(pointer: coarse)").matches)||
   (innerWidth<=760&&navigator.maxTouchPoints>0);
@@ -699,18 +700,18 @@ const camera=new THREE.PerspectiveCamera(74,innerWidth/innerHeight,.08,700);
 scene.add(camera);
 const renderer=new THREE.WebGLRenderer({
   // Desktop gets antialiasing and soft shadows; touch devices keep a lighter profile.
-  antialias:!isMobileDevice&&!isLowEndDevice,
+  antialias:!isMobileDevice&&!isLowEndDevice&&selectedMap!=="ZONE_9",
   powerPreference:"high-performance",
   stencil:false,
   depth:true,
   preserveDrawingBuffer:false
 });
 renderer.setSize(innerWidth,innerHeight,false);
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?1.0:isLowEndDevice?1.0:1.35));
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?1.0:isLowEndDevice?1.0:selectedMap==="ZONE_9"?1.1:1.35));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.12;
-renderer.shadowMap.enabled=!isMobileDevice&&!isLowEndDevice;
+renderer.shadowMap.enabled=!isMobileDevice&&!isLowEndDevice&&selectedMap!=="ZONE_9";
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 $("game").appendChild(renderer.domElement);
 
@@ -718,7 +719,7 @@ scene.add(new THREE.HemisphereLight(0xe7f3ff,0x4b4b43,1.35));
 scene.add(new THREE.AmbientLight(0xffffff,.22));
 const keyLight=new THREE.DirectionalLight(0xfff1dc,2.0);
 keyLight.position.set(-42,78,32);
-keyLight.castShadow=!isMobileDevice&&!isLowEndDevice;
+keyLight.castShadow=!isMobileDevice&&!isLowEndDevice&&selectedMap!=="ZONE_9";
 keyLight.shadow.mapSize.set(isMobileDevice||isLowEndDevice?512:1024,isMobileDevice||isLowEndDevice?512:1024);
 keyLight.shadow.camera.left=-90;
 keyLight.shadow.camera.right=90;
@@ -760,6 +761,8 @@ controls.addEventListener("unlock",()=>{
 
 const loader=new GLTFLoader();
 const mapObjects=[];
+let zone9Root=null;
+let zone9AssetState="not-loaded";
 const HILL_TOWN_MANIFEST_URL="https://3dassets.dev/api/v1/packs/tactical-shooter-hill-town";
 const HILL_TOWN_STARTER_URL="https://cdn.3dassets.dev/assets/27595/v1/model.glb";
 let hillTownManifestPromise=null;
@@ -2668,6 +2671,95 @@ function buildSmallYard(){
   setLoadingDetail("mapLoadStatus","SMALL YARD · ГОТОВО","done");
 }
 
+function buildZone9SpawnMarker(x,z,label,color){
+  const disk=new THREE.Mesh(new THREE.CircleGeometry(2.25,24),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.7,depthWrite:false}));
+  disk.rotation.x=-Math.PI/2;disk.position.set(x,.055,z);scene.add(disk);mapObjects.push(disk);
+  const ring=new THREE.Mesh(new THREE.RingGeometry(2.45,2.7,24),new THREE.MeshBasicMaterial({color,side:THREE.DoubleSide,transparent:true,opacity:.95,depthWrite:false}));
+  ring.rotation.x=-Math.PI/2;ring.position.set(x,.065,z);scene.add(ring);mapObjects.push(ring);
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(.1,.18,2.2,6),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.38,depthWrite:false}));
+  stem.position.set(x,1.15,z);scene.add(stem);mapObjects.push(stem);
+  const canvas=document.createElement("canvas");canvas.width=256;canvas.height=64;
+  const ctx=canvas.getContext("2d");ctx.fillStyle="#061018";ctx.fillRect(0,0,256,64);ctx.strokeStyle="#"+color.toString(16).padStart(6,"0");ctx.lineWidth=3;ctx.strokeRect(2,2,252,60);ctx.fillStyle="#eef9ff";ctx.font="900 26px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(label,128,32);
+  const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;
+  const tag=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false}));tag.position.set(x,3.2,z);tag.scale.set(6,1.5,1);scene.add(tag);mapObjects.push(tag);
+}
+function buildZone9Preview(){
+  // Visible fallback while the optimized FBX bundle is being copied into assets/maps/zone9.
+  scene.background=new THREE.Color(0x7c8d96);scene.fog=new THREE.Fog(0x7c8d96,145,280);
+  const mat=(color,roughness=.9,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
+  const floor=mat(0x8e9696,1),road=mat(0x3b464b,.98),wall=mat(0xc4c8c2,.96),dark=mat(0x424f55,.82,.14),trim=mat(0xd0aa63,.85,.06),crate=mat(0x7b664e,.96);
+  const addFloor=(x,z,w,d,material=floor,y=-.08)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),material);m.rotation.x=-Math.PI/2;m.position.set(x,y,z);m.receiveShadow=false;scene.add(m);mapObjects.push(m);return m;};
+  const addWall=(x,y,z,w,h,d,material=wall)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);m.castShadow=false;m.receiveShadow=false;scene.add(m);mapObjects.push(m);return m;};
+  addFloor(0,0,246,246);addFloor(0,0,38,236,road,-.045);addFloor(0,0,236,34,road,-.042);
+  for(const p of [[0,-122,246,8],[0,122,246,8],[-122,0,8,246],[122,0,8,246]])addWall(p[0],3.5,p[1],p[2],7,p[3],dark);
+  // Room blocks and connector walls keep this fallback navigable while the real asset is added.
+  for(const p of [[-77,-52,44,34],[73,-70,42,36],[-72,61,48,34],[57,79,52,32],[0,-84,34,24],[4,78,30,22]]){
+    addFloor(p[0],p[1],p[2],p[3],wall,-.035);
+    addWall(p[0]-p[2]/2,2.5,p[1],1.2,5,p[3],dark);addWall(p[0]+p[2]/2,2.5,p[1],1.2,5,p[3],dark);
+    addWall(p[0],2.5,p[1]-p[3]/2,p[2],5,1.2,dark);addWall(p[0],2.5,p[1]+p[3]/2,p[2],5,1.2,dark);
+  }
+  for(const p of [[-45,-5,22,2],[42,5,2,22],[-6,44,28,2],[-6,-42,28,2],[56,43,2,24],[-54,27,2,28]])addWall(p[0],2.1,p[1],p[2],4.2,p[3],wall);
+  for(const p of [[-72,-48],[68,-68],[-74,58],[58,75],[-10,0],[18,18]]){addWall(p[0],1.1,p[1],4,2.2,4,crate);addWall(p[0],2.3,p[1],4.2,.18,4.2,trim)}
+  for(const p of [[-92,92,0x49baff,"CT SPAWN"],[92,-92,0xe3b47c,"T SPAWN"],[-72,-40,0xff5c5c,"SITE B"],[48,70,0xff5c5c,"SITE A"]])buildZone9SpawnMarker(p[0],p[1],p[3],p[2]);
+  mapLoaded=true;mapLoadFinished=true;zone9AssetState="preview";
+  setLoadingDetail("mapLoadStatus","ZONE 9 · ПРЕВ’Ю (FBX НЕ ЗНАЙДЕНО)","error");
+  $("progress").style.width="100%";
+  console.warn("[ZONE 9] FBX asset unavailable. Add assets/maps/zone9/Zone9.fbx and optimized WebP textures to use the full map.");
+}
+function buildZone9Map(){
+  if(mapLoadFinished||zone9AssetState==="loading")return;
+  zone9AssetState="loading";
+  scene.background=new THREE.Color(0x8d9ba1);scene.fog=new THREE.Fog(0x8d9ba1,170,320);
+  $("phase").textContent="ЗАВАНТАЖЕННЯ ZONE 9";
+  $("overlayText").textContent="Завантажуємо локальну FBX-геометрію та стиснуті текстури. Тіні вимкнено для стабільнішого FPS.";
+  setLoadingDetail("mapLoadStatus","ZONE 9 · FBX + WEBP","active");$("progress").style.width="14%";
+  const textureNames=["Decal.png","WALL12.png","Rock_GrandCanyonRockface_2k2_d.png","WALL interior1.png","Interior.png","wall 1.png","2.png","Rock_1.png","Props.png","concrete_1.png","4.png","Ground2.png","3.png","concrete_7.png","Props2.png"];
+  const texturePath=new Map(textureNames.map(name=>[name.toLowerCase(),name.replace(/\.png$/i,".webp")]));
+  const manager=new THREE.LoadingManager();
+  manager.setURLModifier(url=>{
+    let base=String(url||"").split(/[?#]/)[0].split(/[\\/]/).pop();
+    try{base=decodeURIComponent(base)}catch{}
+    const mapped=texturePath.get(base.toLowerCase());
+    return mapped?"/assets/maps/zone9/textures/"+encodeURIComponent(mapped):url;
+  });
+  const fbxLoader=new FBXLoader(manager);
+  fbxLoader.load("/assets/maps/zone9/Zone9.fbx",root=>{
+    try{
+      root.updateMatrixWorld(true);
+      const initialBounds=new THREE.Box3().setFromObject(root),initialSize=initialBounds.getSize(new THREE.Vector3());
+      if(initialBounds.isEmpty()||initialSize.x<1||initialSize.z<1)throw Error("FBX має некоректні розміри або нечитабельну геометрію.");
+      const scale=250/Math.max(initialSize.x,initialSize.z);
+      root.scale.setScalar(scale);root.updateMatrixWorld(true);
+      const bounds=new THREE.Box3().setFromObject(root),center=bounds.getCenter(new THREE.Vector3());
+      root.position.x-=center.x;root.position.y-=bounds.min.y;root.position.z-=center.z;root.updateMatrixWorld(true);
+      root.traverse(node=>{
+        if(!node.isMesh||!node.geometry)return;
+        node.castShadow=false;node.receiveShadow=false;node.frustumCulled=true;
+        if(!node.geometry.boundingSphere)node.geometry.computeBoundingSphere();
+        const materials=Array.isArray(node.material)?node.material:[node.material];
+        for(const material of materials){
+          if(!material)continue;
+          for(const key of ["map","emissiveMap","normalMap","bumpMap","roughnessMap","metalnessMap","aoMap","alphaMap"]){
+            const tex=material[key];if(!tex?.isTexture)continue;
+            tex.generateMipmaps=true;tex.minFilter=THREE.LinearMipmapLinearFilter;tex.magFilter=THREE.LinearFilter;
+            tex.anisotropy=isLowEndDevice||isMobileDevice?1:Math.min(4,renderer.capabilities.getMaxAnisotropy());
+            if(key==="map"||key==="emissiveMap")tex.colorSpace=THREE.SRGBColorSpace;
+            tex.needsUpdate=true;
+          }
+          material.needsUpdate=true;
+        }
+        mapObjects.push(node);
+      });
+      scene.add(root);zone9Root=root;
+      buildZone9SpawnMarker(-92,92,"CT SPAWN",0x49baff);
+      setLoadingDetail("mapLoadStatus","ZONE 9 · ГОТОВО","done");$("progress").style.width="100%";
+      mapLoaded=true;mapLoadFinished=true;zone9AssetState="loaded";finishClientReady();
+    }catch(error){console.error("[ZONE 9] Could not prepare FBX map:",error);buildZone9Preview();finishClientReady()}
+  },event=>{
+    if(event.total>0){const pct=Math.max(14,Math.min(78,14+Math.round(event.loaded/event.total*64)));$("progress").style.width=pct+"%";}
+  },error=>{console.error("[ZONE 9] Map asset load failed:",error);buildZone9Preview();finishClientReady()});
+}
+
 function loadMap(){
   const mapLabel=MAP_LOADING_NAMES[selectedMap]||String(selectedMap||"КАРТА");
   setLoadingDetail("mapLoadStatus","БУДУЄМО "+mapLabel+"…","active");
@@ -2692,6 +2784,10 @@ function loadMap(){
   if(selectedMap==="FIELD_ARENA"){
     buildFieldArena();
     finishClientReady();
+    return;
+  }
+  if(selectedMap==="ZONE_9"){
+    buildZone9Map();
     return;
   }
   buildM3Maze();
@@ -2982,7 +3078,7 @@ function rebuildCollisionIndex(){
   collisionIndexReady=true;
 }
 function worldLimit(){
-  return ({SANDSTONE:60,SMALL_YARD:32,HILL_TOWN:54.2,NEON_YARD:167,FIELD_ARENA:291,M3_Maze:225})[selectedMap]||225;
+  return ({SANDSTONE:60,SMALL_YARD:32,HILL_TOWN:54.2,NEON_YARD:167,FIELD_ARENA:291,M3_Maze:225,ZONE_9:140})[selectedMap]||225;
 }
 function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
@@ -4312,7 +4408,7 @@ function animate(){
 addEventListener("resize",()=>{
   camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight,false);
-  renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?1.0:isLowEndDevice?1.0:1.35));
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?1.0:isLowEndDevice?1.0:selectedMap==="ZONE_9"?1.1:1.35));
 });
 
 let connectedToGameplay=socket.connected;
