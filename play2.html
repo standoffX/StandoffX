@@ -1320,7 +1320,7 @@ function dropCurrentItem(){
     socket.emit("drop_item",{matchId,itemType:"bomb"});
     bombToolActive=false;refreshBombToolVisual();updateBombHud();return;
   }
-  if(selectedWeapon==="knife"){showDamagePopup("НІЖ НЕ МОЖНА ВИКИНУТИ");return}
+  if(selectedWeapon==="knife")return
   socket.emit("drop_item",{matchId,itemType:"weapon",weapon:selectedWeapon});
 }
 function updateInteractButtonLabel(){
@@ -1412,7 +1412,7 @@ function interactWithBomb(){
     socket.emit("bomb_action",{matchId,action:"plant",site:site.site});
     showDamagePopup("ЗАКЛАДАННЯ · ТРИМАЙСЯ ПОРУЧ");return;
   }
-  showDamagePopup("НЕ МОЖНА ВИКОРИСТАТИ БОМБУ ЗАРАЗ");
+  return;
 }
 function interactWithNearestDoor(){
   if(mode==="allies"&&!isTrainingMode){interactWithBomb();return}
