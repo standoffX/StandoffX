@@ -724,4 +724,4 @@ assert.match(game, /socket\.on\("account_banned"/, "a banned player in a match i
 
 assert.match(server, /else if \(!isMaster && req\.body\.isTester !== undefined && !u\.isTester\)/, "revoking tester permission removes active test sessions");
 assert.match(server, /if \(match\.prototypeBotMatch && !canUseTesterModes\(socket\.user\)\)/, "non-testers cannot rejoin a prototype match");
-assert.match(auth, /toLowerCase\(\)\.includes\("заблок"\)\)\{location\.href="\/banned"\}/, "banned login is redirected to the denial page");
+assert.match(auth, /toLowerCase\(\)\.includes\("заблок"\)\)\{location\.href="\/banned";return\}/, "banned login is redirected to the denial page");
