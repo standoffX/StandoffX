@@ -1677,7 +1677,8 @@ const PLAYABLE_MAPS = Object.freeze({
   M3_Maze: { id: "M3_Maze", name: "M3 MAZE", kind: "model" },
   FIELD_ARENA: { id: "FIELD_ARENA", name: "FIELD ARENA", kind: "arena" },
   NEON_YARD: { id: "NEON_YARD", name: "NEON YARD", kind: "neon" },
-  HILL_TOWN: { id: "HILL_TOWN", name: "HILL TOWN", kind: "hill-town" }
+  HILL_TOWN: { id: "HILL_TOWN", name: "HILL TOWN", kind: "hill-town" },
+  ZONE_9: { id: "ZONE_9", name: "ZONE 9", kind: "zone9-fbx" }
 });
 function normalizeMapId(value) {
   const id = cleanText(value, 32);
@@ -1711,7 +1712,7 @@ const MODE_CONFIGS = {
 const ALLIES_BUY_PRICES = Object.freeze({ akr: 2700, m4a1: 3100, p90: 2200, shotgun: 1900, sniper: 4600, p350: 300, knife: 0 });
 
 const TESTER_MODE_CONFIGS = {
-  training: { id: "training", name: "TRAINING", map: "HILL_TOWN", kind: "bot-training" },
+  training: { id: "training", name: "TRAINING", map: "ZONE_9", kind: "bot-training" },
   field_test: { id: "field_test", name: "FIELD TEST", map: "HILL_TOWN", kind: "free-range" }
 };
 
@@ -1809,6 +1810,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
   const MATCH_SPAWNS = {
     HILL_TOWN: [{x:-42,y:0,z:-28},{x:42,y:0,z:-28},{x:-42,y:0,z:28},{x:42,y:0,z:28}],
+    ZONE_9: [{x:-92,y:0,z:92},{x:-86,y:0,z:92},{x:-92,y:0,z:86},{x:-86,y:0,z:86}],
     SANDSTONE: [{x:-50,y:0,z:-8.75},{x:-50,y:0,z:8.75},{x:50,y:0,z:-8.75},{x:50,y:0,z:8.75}],
     SMALL_YARD: [{x:-23,y:0,z:-23},{x:23,y:0,z:-23},{x:0,y:0,z:24}],
     M3_Maze: [{x:-195,y:0,z:-195},{x:195,y:0,z:-195},{x:-195,y:0,z:195},{x:195,y:0,z:195}],
@@ -3442,6 +3444,8 @@ io.on("connection", socket => {
     const previous = trainingSessions.get(user.id);
     const sessionMap = ["field_test", "training"].includes(mode) ? normalizeMapId(data?.map) : cfg.map;
     const TRAINING_SPAWNS = {
+      // Zone 9 is normalized to a 250-unit footprint in the client; CT is on the south-west entrance.
+      ZONE_9: {x:-92,y:0,z:92},
       HILL_TOWN: {x:-42,y:0,z:0},
       NEON_YARD: {x:0,y:0,z:115},
       SANDSTONE: {x:0,y:0,z:0},
