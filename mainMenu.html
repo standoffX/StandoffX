@@ -2234,6 +2234,10 @@ function initSocialSocket(){
     notifyToast("Нова заявка до клану ["+String(data.tag||"")+"]: "+String(data.nickname||"Гравець"));
     if(currentClanTag===data.tag&&document.getElementById("clan")?.classList.contains("active"))loadClan();
   });
+  socialSocket.on("account_banned",data=>{
+    notifyToast(data?.message||"Твій акаунт заблоковано. Доступ до StandoffX заборонено.");
+    setTimeout(()=>{location.href="/banned"},500);
+  });
   socialSocket.on("auth_required",()=>{socialSocket?.disconnect();socialSocket=null;});
 }
 function renderClanChat(){
