@@ -2846,7 +2846,7 @@ const SANDSTONE_COLLISION_RECTS=Object.freeze([
 
   // A plant site and surrounding cover.
   sandstoneRect(27,-39,9,1), sandstoneRect(38,-34,1,7), sandstoneRect(39,-24,1,7),
-  sandstoneRect(31,-20,8,1), sandstoneRect(22,-25,1,5),
+  sandstoneRect(31,-20,8,1), sandstoneRect(22,-26.5,1,2), sandstoneRect(22,-22,1,1),
   sandstoneRect(29,-31.5,4.1,2.4), sandstoneRect(34,-30.5,2.2,2.3),
   sandstoneRect(32,-23.5,2.8,1.7), sandstoneRect(25,-23,2.1,1.4),
   sandstoneRect(36.4,-28,1.4,1.4),
