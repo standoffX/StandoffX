@@ -1643,7 +1643,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
   const MATCH_SPAWNS = {
     HILL_TOWN: [{x:-42,y:0,z:-28},{x:42,y:0,z:-28},{x:-42,y:0,z:28},{x:42,y:0,z:28}],
-    SANDSTONE: [{x:-8.75,y:0,z:-50},{x:8.75,y:0,z:-50},{x:-8.75,y:0,z:50},{x:8.75,y:0,z:50}],
+    SANDSTONE: [{x:-50,y:0,z:-8.75},{x:-50,y:0,z:8.75},{x:50,y:0,z:-8.75},{x:50,y:0,z:8.75}],
     SMALL_YARD: [{x:-23,y:0,z:-23},{x:23,y:0,z:-23},{x:0,y:0,z:24}],
     M3_Maze: [{x:-195,y:0,z:-195},{x:195,y:0,z:-195},{x:-195,y:0,z:195},{x:195,y:0,z:195}],
     NEON_YARD: [{x:-82,y:0,z:-82},{x:82,y:0,z:-82},{x:-82,y:0,z:82},{x:82,y:0,z:82}],
@@ -2818,29 +2818,80 @@ const SERVER_MAP_LIMITS = Object.freeze({
   FIELD_ARENA: { x: 291.5, z: 291.5 },
   NEON_YARD: { x: 167.5, z: 167.5 }
 });
+const sandstoneRect=(x,z,w,d)=>({minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2});
+const SANDSTONE_COLLISION_RECTS=Object.freeze([
+  // T spawn, the market-entry approach and Sniper Nest.
+  sandstoneRect(-39,-17,13,1.1),
+  sandstoneRect(-46,-12,1.1,10), sandstoneRect(-46,12,1.1,10),
+  sandstoneRect(-31,-7,1,9), sandstoneRect(-31,7,1,9),
+  sandstoneRect(-43,-8,3.2,2.3), sandstoneRect(-43,8,3.2,2.3),
+  sandstoneRect(-37,-12,2.5,2.2), sandstoneRect(-37,12,2.5,2.2),
+  sandstoneRect(-27,-9,3.3,2.3), sandstoneRect(-27,9,3.3,2.3),
+  sandstoneRect(-28,-17,7,1), sandstoneRect(-25,-12,1,6),
+  sandstoneRect(-25,-7,2.2,2), sandstoneRect(-22,7,2.4,2.4),
+
+  // Upper A Long walls and the hollow Apartments block.
+  sandstoneRect(-28,-42,18,1), sandstoneRect(-6,-42,15,1), sandstoneRect(14,-42,13,1),
+  sandstoneRect(-29,-29,1,11), sandstoneRect(-20,-29,1,11), sandstoneRect(-29,-23,10,1),
+  sandstoneRect(-11,-24,1,12), sandstoneRect(-2,-30,17,1), sandstoneRect(6,-24,1,12),
+  sandstoneRect(-2,-18,17,1), sandstoneRect(-2,-22,1,4),
+  sandstoneRect(-7,-24,1,5), sandstoneRect(-7,-27,4,1),
+  sandstoneRect(-12,-27,2.2,1.6), sandstoneRect(-3,-27,2.3,1.9),
+
+  // A Short has split cross-walls to preserve a doorway.
+  sandstoneRect(13,-17,1,14), sandstoneRect(22,-17,1,13),
+  sandstoneRect(15,-9,2,1), sandstoneRect(22,-9,2,1),
+  sandstoneRect(15,-23,2,1), sandstoneRect(22,-23,2,1),
+  sandstoneRect(17,-16,2.6,1.8), sandstoneRect(24,-21,2.1,2.2),
+
+  // A plant site and surrounding cover.
+  sandstoneRect(27,-39,9,1), sandstoneRect(38,-34,1,7), sandstoneRect(39,-24,1,7),
+  sandstoneRect(31,-20,8,1), sandstoneRect(22,-25,1,5),
+  sandstoneRect(29,-31.5,4.1,2.4), sandstoneRect(34,-30.5,2.2,2.3),
+  sandstoneRect(32,-23.5,2.8,1.7), sandstoneRect(25,-23,2.1,1.4),
+  sandstoneRect(36.4,-28,1.4,1.4),
+
+  // Mid pillars and low cover.
+  sandstoneRect(-9,-5,1,9), sandstoneRect(-9,7,1,6),
+  sandstoneRect(8,-7,1,8), sandstoneRect(8,6,1,7),
+  sandstoneRect(-4,-5,2.8,2.1), sandstoneRect(3,5,2.8,2.1),
+  sandstoneRect(-1,10,2.2,1.6), sandstoneRect(0,-14,8,1), sandstoneRect(0,14,7,1),
+
+  // Market walls, stall supports and the northern edge of B Long.
+  sandstoneRect(-27,12,13,1), sandstoneRect(-33,18,1,12), sandstoneRect(-27,24,13,1),
+  sandstoneRect(-21,17,1,6), sandstoneRect(-29,17,4,1),
+  sandstoneRect(-16,20,1,10), sandstoneRect(-12,26,8,1), sandstoneRect(-6,20,1,8),
+  sandstoneRect(-17,22,8,1), sandstoneRect(-5,22,7,1), sandstoneRect(6,22,8,1),
+  sandstoneRect(-12,29,2.8,2.2), sandstoneRect(-2,34,2.8,2.2), sandstoneRect(8,28,2.5,2.2),
+  // Stall legs are solid, but the canopy itself is not a collision surface.
+  sandstoneRect(-37.55,27,.18,.18), sandstoneRect(-34.45,27,.18,.18),
+  sandstoneRect(-31.55,29,.18,.18), sandstoneRect(-28.45,29,.18,.18),
+  sandstoneRect(-24.55,30,.18,.18), sandstoneRect(-21.45,30,.18,.18),
+  sandstoneRect(-17.55,35,.18,.18), sandstoneRect(-14.45,35,.18,.18),
+
+  // B Short and the compact B plant area.
+  sandstoneRect(10,12,1,9), sandstoneRect(23,14,1,10),
+  sandstoneRect(13,9,2,1), sandstoneRect(22,9,2,1),
+  sandstoneRect(13,21,2,1), sandstoneRect(22,21,2,1),
+  sandstoneRect(11,17,2.6,2.1), sandstoneRect(22,20,2.8,2.2),
+  sandstoneRect(11,39,12,1), sandstoneRect(25,35,1,8), sandstoneRect(25,25,1,6),
+  sandstoneRect(17,22,8,1), sandstoneRect(15.5,33,4.2,2.6),
+  sandstoneRect(20,34.8,3.4,2.6), sandstoneRect(22.6,28,2.2,1.6),
+  sandstoneRect(14,27,1.7,1.7),
+
+  // CT spawn and the right-side connector to A, Mid, and B.
+  sandstoneRect(42,-13,10,1), sandstoneRect(42,13,10,1),
+  sandstoneRect(47,-6,1,13), sandstoneRect(47,8,1,10),
+  sandstoneRect(42,-7,2.8,2.2), sandstoneRect(42,7,2.8,2.2),
+  sandstoneRect(32,-9,1,8), sandstoneRect(32,10,1,8),
+  sandstoneRect(32,-20,1,7), sandstoneRect(32,22,1,7),
+  sandstoneRect(-34,-7,1.5,1.5), sandstoneRect(-18,4,1.5,1.5),
+  sandstoneRect(14,3,1.5,1.5), sandstoneRect(28,6,1.5,1.5),
+  sandstoneRect(4,17,1.5,1.5), sandstoneRect(-7,25,1.5,1.5),
+  sandstoneRect(32,-13,1.5,1.5), sandstoneRect(32,13,1.5,1.5)
+]);
 const SERVER_MAP_BLOCKERS = Object.freeze({
-  SANDSTONE: [
-    { minX: -37, maxX: -24, minZ: -22, maxZ: 1 },
-    { minX: 21, maxX: 36, minZ: -19, maxZ: 2 },
-    { minX: -37, maxX: -21, minZ: 20, maxZ: 35 },
-    { minX: 30.5, maxX: 43.5, minZ: 2.5, maxZ: 19.5 },
-    { minX: -12, maxX: -9, minZ: -23, maxZ: -12 },
-    { minX: 9, maxX: 12, minZ: -8, maxZ: 4 },
-    { minX: -11, maxX: -4, minZ: 5, maxZ: 7 },
-    { minX: 5, maxX: 12, minZ: 12, maxZ: 14 },
-    { minX: -44, maxX: -40, minZ: -4, maxZ: 7 },
-    { minX: 38, maxX: 42, minZ: 7, maxZ: 20 },
-    { minX: 25, maxX: 32, minZ: -34, maxZ: -31 },
-    { minX: 13, maxX: 20, minZ: 34, maxZ: 37 },
-    // Extra corridor walls on the expanded Sandstone layout.
-    { minX: -21, maxX: -11, minZ: -29.55, maxZ: -28.45 },
-    { minX: -0.6, maxX: 0.6, minZ: -39, maxZ: -31 },
-    { minX: 12.5, maxX: 21.5, minZ: -20.6, maxZ: -19.4 },
-    { minX: -29.5, maxX: -18.5, minZ: 7.45, maxZ: 8.55 },
-    { minX: 3.45, maxX: 4.55, minZ: 16.5, maxZ: 25.5 },
-    { minX: 2.5, maxX: 11.5, minZ: -7.45, maxZ: -6.55 },
-    { minX: -9, maxX: -1, minZ: 16.55, maxZ: 17.45 }
-  ].map(blocker => ({
+  SANDSTONE: SANDSTONE_COLLISION_RECTS.map(blocker => ({
     minX: blocker.minX * 1.25,
     maxX: blocker.maxX * 1.25,
     minZ: blocker.minZ * 1.25,
