@@ -3287,7 +3287,7 @@ function finishClientReady(){
     $("overlayTitle").textContent=mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":"ТРЕНУВАННЯ";
     $("phase").textContent="ГОТОВО";
     $("overlayText").textContent="Тестовий режим";
-    $("trainingControls").style.display="block";
+    $("trainingControls").style.display=mode==="field_test"?"block":"none";
     $("ammo").style.display="block";
     $("overlay").style.display="none";
     return;
@@ -3790,6 +3790,7 @@ $("leaveGameDesktop").addEventListener("click",pauseToMenu);
 $("leaveGameMobile").addEventListener("click",pauseToMenu);
 function runTrainingAction(action){
   if(!isTrainingMode||matchPhase!=="game")return;
+  if(mode==="training"&&action!=="resetSession")return;
   if(action==="resetSession"){
     player.rotationY=0;velocityY=0;jumping=false;isCrouching=false;
     socket.emit("training_reset",{trainingId});return;
@@ -3806,7 +3807,7 @@ socket.on("training_init",data=>{
   matchPhase="game";canControl=true;
   ensurePlayerVisual();
   if(data.spawn)player.position.set(data.spawn.x||0,data.spawn.y||0,data.spawn.z||0);
-  $("trainingControls").style.display="block";
+  $("trainingControls").style.display=mode==="field_test"?"block":"none";
   $("overlayTitle").textContent=data.prototype?(data.gameMode==="allies"?"СОЮЗНИКИ · ПРОТОТИП":"КБ · ПРОТОТИП"):mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":"ТРЕНУВАННЯ";
   $("overlayText").textContent=mapLoadFinished?"Готово.":"Завантажуємо карту…";
   $("overlay").style.display=mapLoadFinished?"none":"flex";
