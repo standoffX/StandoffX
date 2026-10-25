@@ -1153,6 +1153,23 @@ body.lobby-screen #modeModal .tester-mode-switch{margin:0 0 12px!important;paddi
 }
 @media(prefers-reduced-motion:reduce){body.lobby-screen #home .home-hero .playbutton{transition:none!important}}
 </style>
+<style id="crosshair-settings-style">
+.crosshair-settings-row{display:grid;grid-template-columns:112px minmax(0,1fr);gap:14px;align-items:stretch;margin-top:16px}
+.crosshair-preview-box{min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:1px solid #a8c9dc22;border-radius:9px;background:linear-gradient(145deg,#0c1823,#091019);color:#8fa5b8;font-size:9px;font-weight:800;letter-spacing:1.2px}
+.crosshair-display{--crosshair-size:20px;--crosshair-arm-length:7px;--crosshair-gap:3px;--crosshair-thickness:2px;--crosshair-color:#e7f3fb;position:relative;display:block;width:var(--crosshair-size);height:var(--crosshair-size);pointer-events:none}
+.crosshair-arm{position:absolute;display:block;background:var(--crosshair-color);border-radius:1px;opacity:.98;box-shadow:0 1px 3px #000a}
+.crosshair-arm.top{width:var(--crosshair-thickness);height:var(--crosshair-arm-length);left:50%;top:calc(50% - var(--crosshair-gap) - var(--crosshair-arm-length));transform:translateX(-50%)}
+.crosshair-arm.bottom{width:var(--crosshair-thickness);height:var(--crosshair-arm-length);left:50%;top:calc(50% + var(--crosshair-gap));transform:translateX(-50%)}
+.crosshair-arm.left{height:var(--crosshair-thickness);width:var(--crosshair-arm-length);left:calc(50% - var(--crosshair-gap) - var(--crosshair-arm-length));top:50%;transform:translateY(-50%)}
+.crosshair-arm.right{height:var(--crosshair-thickness);width:var(--crosshair-arm-length);left:calc(50% + var(--crosshair-gap));top:50%;transform:translateY(-50%)}
+.crosshair-dot{display:none;position:absolute;width:3px;height:3px;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;background:var(--crosshair-color);box-shadow:0 0 3px #000}
+.crosshair-display.style-dot .crosshair-arm,.crosshair-display.style-circle .crosshair-arm{display:none}
+.crosshair-display.style-dot .crosshair-dot,.crosshair-display.style-thin .crosshair-dot{display:block}
+.crosshair-display.style-circle:before{content:"";position:absolute;left:50%;top:50%;width:var(--crosshair-size);height:var(--crosshair-size);border:var(--crosshair-thickness) solid var(--crosshair-color);border-radius:50%;transform:translate(-50%,-50%);box-sizing:border-box;box-shadow:0 0 2px #000}
+.crosshair-settings-controls{display:flex;flex-direction:column;justify-content:center;gap:6px;min-width:0}
+.crosshair-settings-controls select{width:100%;min-height:38px;padding:8px 10px;border-radius:7px;border:1px solid #b3d4e52b;background:#0b1520;color:#e5f1f8}
+@media(max-width:600px){.crosshair-settings-row{grid-template-columns:92px minmax(0,1fr);gap:10px}.crosshair-preview-box{min-height:98px}}
+</style>
 </head>
 <body class="lobby-screen">
 <div class="app">
@@ -1304,7 +1321,7 @@ body.lobby-screen #modeModal .tester-mode-switch{margin:0 0 12px!important;paddi
 
 <section id="stats" class="screen"><div class="sectionhead"><h2>СТАТИСТИКА</h2></div><div class="cardgrid"><div class="statcard"><small>XP</small><strong id="statsXP">0</strong></div><div class="statcard"><small>GOLD</small><strong id="statsGold">0</strong></div><div class="statcard"><small>COMPETITIVE MMR</small><strong id="statsComp">1000</strong></div><div class="statcard"><small>ALLIES MMR</small><strong id="statsAllies">1000</strong></div></div></section>
 
-<section id="settings" class="screen"><div class="sectionhead"><h2>НАЛАШТУВАННЯ</h2></div><div class="panel panelbody"><h3 style="margin:0 0 8px">ТЕМА ІНТЕРФЕЙСУ</h3><div class="muted">Обери один із трьох неонових стилів. Вибір зберігається на цьому пристрої.</div><div class="theme-picker"><button class="theme-option" data-theme-choice="cyan">01 · CYBER CYAN</button><button class="theme-option" data-theme-choice="violet">02 · NEON VIOLET</button><button class="theme-option" data-theme-choice="red">03 · RED ALERT</button></div><div id="desktopControlsSettings"><h3>КЕРУВАННЯ ПК</h3><label>Чутливість миші <input id="sens" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">ADS <input id="ads" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">Crosshair <input id="crossSize" type="range" min="8" max="36" step="1" style="width:100%"></label><label style="display:block;margin-top:16px">Gap <input id="crossGap" type="range" min="0" max="12" step="1" style="width:100%"></label></div>
+<section id="settings" class="screen"><div class="sectionhead"><h2>НАЛАШТУВАННЯ</h2></div><div class="panel panelbody"><h3 style="margin:0 0 8px">ТЕМА ІНТЕРФЕЙСУ</h3><div class="muted">Обери один із трьох неонових стилів. Вибір зберігається на цьому пристрої.</div><div class="theme-picker"><button class="theme-option" data-theme-choice="cyan">01 · CYBER CYAN</button><button class="theme-option" data-theme-choice="violet">02 · NEON VIOLET</button><button class="theme-option" data-theme-choice="red">03 · RED ALERT</button></div><div id="desktopControlsSettings"><h3>КЕРУВАННЯ ПК</h3><label>Чутливість миші <input id="sens" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">ADS <input id="ads" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">Розмір прицілу <input id="crossSize" type="range" min="8" max="36" step="1" style="width:100%"></label><label style="display:block;margin-top:16px">Відстань між рисками <input id="crossGap" type="range" min="0" max="12" step="1" style="width:100%"></label><div class="crosshair-settings-row"><div class="crosshair-preview-box"><span>ПЕРЕГЛЯД</span><div id="crosshairPreview" class="crosshair-display style-classic" aria-hidden="true"><i class="crosshair-arm top"></i><i class="crosshair-arm right"></i><i class="crosshair-arm bottom"></i><i class="crosshair-arm left"></i><i class="crosshair-dot"></i></div></div><div class="crosshair-settings-controls"><label>ФОРМА <select id="crossStyle"><option value="classic">Класичний</option><option value="thin">Тонкий</option><option value="dot">Крапка</option><option value="circle">Коло</option></select></label><label style="display:block;margin-top:10px">КОЛІР <input id="crossColor" type="color" value="#e7f3fb" style="width:100%;height:38px"></label></div></div></div>
 <section class="layout-editor" id="mobileLayoutEditor">
   <div class="layout-editor-head">
     <div><h3>МОБІЛЬНЕ КЕРУВАННЯ</h3><div class="layout-help">Увімкни редагування та перетягуй кнопки на макеті. Позиції зберігаються на цьому пристрої.</div></div>
@@ -2266,17 +2283,36 @@ function updateKeybindButtons(){
     button.setAttribute("aria-label",KEYBIND_LABELS[action]+": "+keyLabel(binds[action]));
   });
 }
+function applyCrosshairPreview(settings={}){
+  const node=$("crosshairPreview");
+  if(!node)return;
+  const size=Math.max(8,Math.min(36,Number(settings.crosshairSize??$("crossSize")?.value??20)||20));
+  const gap=Math.max(0,Math.min(12,Number(settings.crosshairGap??$("crossGap")?.value??0)||0));
+  const style=["classic","thin","dot","circle"].includes(settings.crosshairStyle)?settings.crosshairStyle:"classic";
+  const color=/^#[0-9a-f]{6}$/i.test(String(settings.crosshairColor||""))?settings.crosshairColor:"#e7f3fb";
+  node.classList.remove("style-classic","style-thin","style-dot","style-circle");
+  node.classList.add("style-"+style);
+  node.style.setProperty("--crosshair-size",size+"px");
+  node.style.setProperty("--crosshair-arm-length",Math.max(3,Math.round(size*(style==="thin"?.24:.34)))+"px");
+  node.style.setProperty("--crosshair-gap",gap+"px");
+  node.style.setProperty("--crosshair-thickness",style==="thin"?"1px":"2px");
+  node.style.setProperty("--crosshair-color",color);
+}
 function settings(){
-  let d={sensitivity:1,ads:1,crosshairSize:20,crosshairGap:0};
+  let d={sensitivity:1,ads:1,crosshairSize:20,crosshairGap:3,crosshairStyle:"classic",crosshairColor:"#e7f3fb"};
   try{d=Object.assign(d,JSON.parse(localStorage.getItem("sx_settings")||"{}"))}catch{}
   ["sens","ads","crossSize","crossGap"].forEach((id,i)=>$(id).value=[d.sensitivity,d.ads,d.crosshairSize,d.crosshairGap][i]);
+  $("crossStyle").value=["classic","thin","dot","circle"].includes(d.crosshairStyle)?d.crosshairStyle:"classic";
+  $("crossColor").value=/^#[0-9a-f]{6}$/i.test(String(d.crosshairColor||""))?d.crosshairColor:"#e7f3fb";
+  applyCrosshairPreview(d);
   function saveSettings(){
     let current={};
     try{current=JSON.parse(localStorage.getItem("sx_settings")||"{}")}catch{}
-    current={...current,sensitivity:Number($("sens").value),ads:Number($("ads").value),crosshairSize:Number($("crossSize").value),crosshairGap:Number($("crossGap").value),keybinds:readKeybinds()};
+    current={...current,sensitivity:Number($("sens").value),ads:Number($("ads").value),crosshairSize:Number($("crossSize").value),crosshairGap:Number($("crossGap").value),crosshairStyle:$("crossStyle").value,crosshairColor:$("crossColor").value,keybinds:readKeybinds()};
     localStorage.setItem("sx_settings",JSON.stringify(current));
+    applyCrosshairPreview(current);
   }
-  ["sens","ads","crossSize","crossGap"].forEach(id=>$(id).addEventListener("input",saveSettings));
+  ["sens","ads","crossSize","crossGap","crossStyle","crossColor"].forEach(id=>{const input=$(id);input.addEventListener("input",saveSettings);input.addEventListener("change",saveSettings)});
   document.querySelectorAll("[data-bind-action]").forEach(button=>button.addEventListener("click",()=>{
     keybindCapture=button.dataset.bindAction;
     $("keybindStatus").textContent="Натисни клавішу для: "+KEYBIND_LABELS[keybindCapture]+" (Esc — скасувати).";
@@ -2448,10 +2484,10 @@ if(hero&&canvas){
         if(/right.*(shoulder|clavicle)|clavicle.*right|rightshoulder|shoulderr/.test(name))bones.rightShoulder.push(entry);
         if(/upperarm|lowerarm|arm_[lr]|forearm/.test(name))bones.arms.push(entry);
       });
-      mesh.rotation.y=Math.PI;
+      mesh.rotation.y=0;
       mesh.userData.agentIndex=index;
       scene.add(mesh);
-      const actor={index,mesh,bones,baseScale,homeX:0,homeY:0,homeZ:0,homeYaw:Math.PI,phase:index*1.13,evasion:0,evasionTarget:0,evadeUntil:0,external:true};
+      const actor={index,mesh,bones,baseScale,homeX:0,homeY:0,homeZ:0,homeYaw:0,phase:index*1.13,evasion:0,evasionTarget:0,evadeUntil:0,external:true};
       return actor;
     }
     function disposeAgent(actor){
@@ -2476,7 +2512,7 @@ if(hero&&canvas){
         actor.homeX=x;
         actor.homeZ=n>=3?(Math.abs(x)>.9?-.10:.12):0;
         actor.homeY=0;
-        actor.homeYaw=Math.PI+(index-(n-1)/2)*-.035;
+        actor.homeYaw=(index-(n-1)/2)*-.035;
         actor.mesh.position.set(actor.homeX,actor.homeY,actor.homeZ);
         actor.mesh.rotation.y=actor.homeYaw;
       });
