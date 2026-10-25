@@ -188,6 +188,11 @@ assert.match(menu, /StandoffX menu remake/, "the menu must use the refreshed neo
 assert.match(menu, /id="homeAgentCanvas"/, "the main screen has a dedicated transparent canvas for its central 3D agent");
 assert.match(menu, /soldier_tac\.glb/, "the lobby preview loads the optimized tactical agent model");
 assert.match(menu, /SkeletonUtils\.clone\(tacticalTemplate\)/, "the lobby clones the animated rig safely for every squad member");
+assert.match(menu, /mesh\.rotation\.y=0;/, "the lobby agent faces the camera rather than showing its back");
+assert.ok(menu.includes("homeYaw=(index-(n-1)/2)*-.035"), "squad members retain a forward-facing idle orientation");
+assert.match(menu, /id="crossStyle"/, "settings allow selecting a crosshair shape");
+assert.match(menu, /id="crossColor"/, "settings allow selecting a crosshair color");
+assert.match(menu, /applyCrosshairPreview\(current\)/, "the crosshair preview updates and saves user selections");
 assert.match(menu, /function createAgent\(index\)/, "the lobby has a model-based squad agent renderer");
 assert.match(menu, /function animateIdle\(actor,now,dt\)/, "the home agent uses a dedicated idle breathing animation");
 assert.match(menu, /SkeletonUtils\.clone\(tacticalTemplate\)/, "the home menu uses the new tactical character model only");
@@ -550,7 +555,7 @@ const weaponStart = server.indexOf("const WEAPON_BALANCE = Object.freeze(");
 const weaponEnd = server.indexOf("function handleTeamShot", weaponStart);
 assert.ok(weaponStart >= 0 && weaponEnd > weaponStart, "the authoritative weapon helper block must exist");
 const weaponHelpers = vm.runInNewContext(
-  "(()=>{" + server.slice(weaponStart, weaponEnd) + ";return {WEAPON_BALANCE,normalizeWeaponId,calculateWeaponDamage,detectWeaponHitZone}})()",
+  "(()=>{" + server.slice(weaponStart, weaponEnd) + ";return {WEAPON_BALANCE,normalizeWeaponId,calculateWeaponDamage,detectWeaponHitZone,tracePlayerHit}})()",
   { cleanText: (value, max = 200) => String(value ?? "").slice(0, max) }
 );
 assert.equal(weaponHelpers.normalizeWeaponId("unknown"), "akr", "invalid weapon IDs must fall back to AKR");
@@ -562,6 +567,10 @@ assert.equal(weaponHelpers.calculateWeaponDamage("knife", "body", 1), 110, "knif
 assert.equal(weaponHelpers.detectWeaponHitZone({x:0,y:0,z:0},{x:0,y:0,z:-10},{x:0,y:0,z:-1},10), "head", "camera-height aim should classify as a headshot");
 assert.equal(weaponHelpers.detectWeaponHitZone({x:0,y:0,z:0},{x:0,y:0,z:-10},{x:0,y:-0.08,z:-1},10), "stomach", "downward aim should classify stomach hits");
 assert.equal(weaponHelpers.detectWeaponHitZone({x:0,y:0,z:0},{x:0,y:0,z:-10},{x:0,y:-0.15,z:-1},10), "legs", "steeper downward aim should classify leg hits");
+const centeredShot = weaponHelpers.tracePlayerHit({x:0,y:1.42,z:0},{x:0,y:0,z:-1},{x:0,y:0,z:-10},60);
+assert.ok(centeredShot && Math.abs(centeredShot.distance-10)<0.001, "a ray through a standing target must register a hit");
+assert.equal(weaponHelpers.tracePlayerHit({x:0,y:1.42,z:0},{x:0,y:0,z:-1},{x:2,y:0,z:-10},60), null, "a ray far outside the target hitbox must miss");
+assert.equal(weaponHelpers.tracePlayerHit({x:0,y:1.42,z:0},{x:0,y:0.3,z:-0.954},{x:0,y:0,z:-10},60), null, "a ray above the target must not count as a hit");
 
 // Behavioral checks: the server collision proxies match the newly generated maps.
 const mapGeometryStart = server.indexOf("function segmentIntersectsRect2d");
@@ -599,7 +608,13 @@ assert.ok(mapGeometry.SERVER_MAP_BLOCKERS.M3_Maze.length >= 25, "M3 must have se
 assert.ok(mapGeometry.SERVER_MAP_BLOCKERS.FIELD_ARENA.length >= 12, "Field Arena must protect its added cover pieces");
 
 assert.match(game, /renderer\.toneMapping=THREE\.ACESFilmicToneMapping/, "the renderer must use improved color tonemapping");
-assert.match(game, /renderer\.shadowMap\.enabled=!isMobileDevice/, "shadows must be enabled on desktop without overloading mobile");
+assert.match(game, /renderer\.shadowMap\.enabled=!isMobileDevice&&!isLowEndDevice/, "shadows are disabled on mobile and low-end PCs to reduce rendering load");
+assert.match(game, /renderer\.setPixelRatio\(Math\.min\(devicePixelRatio\|\|1,isMobileDevice\?1\.0:isLowEndDevice\?1\.0:1\.35\)\)/, "low-end devices render at a reduced pixel ratio");
+assert.match(game, /function applyCrosshairSettings\(\)/, "gameplay applies saved crosshair settings");
+assert.match(game, /class="crosshair-display style-classic"/, "game HUD has a configurable crosshair component");
+assert.match(server, /function tracePlayerHit\(origin, aim, targetPos, range, options = \{\}\)/, "server uses 3D ray-to-player hit testing");
+assert.match(server, /tracePlayerHit\(shotOrigin, aim, target\.pos, weapon\.range/, "match bullets use the 3D target hitbox");
+assert.match(server, /tracePlayerHit\(shotOrigin, aim, botPosition, weapon\.range/, "training bullets use the same aim hitbox");
 assert.match(game, /makeSurfaceTexture=\(base,seed,marks=3600\)/, "Hill Town must use generated surface textures");
 assert.match(game, /function buildFieldArena\(\)[\s\S]{0,7000}const obstacles=/, "Field Arena must be built from a defined tactical cover layout");
 assert.match(game, /function buildNeonYard\(\)[\s\S]{0,7000}const structures=/, "Neon Yard must have a defined cover layout");
