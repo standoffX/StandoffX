@@ -3972,6 +3972,9 @@ io.on("connection", socket => {
     const matchId = cleanText(data?.matchId, 100);
     const match = activeMatches.get(matchId);
     if (!match) return socket.emit("kick_to_menu", { reason: "Матч не знайдено." });
+    if (match.prototypeBotMatch && !canUseTesterModes(socket.user)) {
+      return socket.emit("kick_to_menu", { reason: "Прототип доступний лише тестерам." });
+    }
 
     const player = match.players.find(p => p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id);
     if (!player) return socket.emit("kick_to_menu", { reason: "Гравця немає в цьому матчі." });
@@ -4569,6 +4572,23 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
         client.emit("account_banned", { message: "Твій акаунт заблоковано. Доступ до StandoffX заборонено." });
         client.disconnect(true);
       }
+    }
+  } else if (!isMaster && req.body.isTester !== undefined && !u.isTester) {
+    // Revoke any active prototype/free-range testing sockets immediately when tester access is removed.
+    const testingSocketIds = new Set();
+    const training = trainingSessions.get(u.id) || trainingSessions.get(oldId);
+    if (training?.socketId) testingSocketIds.add(training.socketId);
+    trainingSessions.delete(u.id);
+    trainingSessions.delete(oldId);
+    for (const match of activeMatches.values()) {
+      if (!match.prototypeBotMatch) continue;
+      const player = match.players.find(item => item.uuid === u.uuid || item.userId === u.id || item.userId === oldId);
+      if (player?.socketId) testingSocketIds.add(player.socketId);
+    }
+    for (const client of io.sockets.sockets.values()) {
+      if (!testingSocketIds.has(client.id)) continue;
+      client.emit("kick_to_menu", { reason: "Прототип доступний лише тестерам." });
+      client.disconnect(true);
     }
   }
   saveUsers();
