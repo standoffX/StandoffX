@@ -17,6 +17,7 @@ function getExecutableScripts(html, file) {
     if (/type\s*=\s*["']module["']/i.test(attrs)) {
       js = js.replace(/^\s*import\s+\*\s+as\s+THREE\s+from\s+["']three["'];?\s*$/gm, "");
       js = js.replace(/^\s*import\s+\{\s*GLTFLoader\s*\}\s+from\s+["']three\/addons\/loaders\/GLTFLoader\.js["'];?\s*$/gm, "");
+      js = js.replace(/^\s*import\s+\{\s*FBXLoader\s*\}[^\n]*$/gm, "");
       js = js.replace(/^\s*import\s+\*\s+as\s+SkeletonUtils\s+from\s+["']three\/addons\/utils\/SkeletonUtils\.js["'];?\s*$/gm, "");
       js = js.replace(/^\s*import\s+\{\s*PointerLockControls\s*\}\s+from\s+["']three\/addons\/controls\/PointerLockControls\.js["'];?\s*$/gm, "");
     }
@@ -725,3 +726,16 @@ assert.match(game, /socket\.on\("account_banned"/, "a banned player in a match i
 assert.match(server, /else if \(!isMaster && req\.body\.isTester !== undefined && !u\.isTester\)/, "revoking tester permission removes active test sessions");
 assert.match(server, /if \(match\.prototypeBotMatch && !canUseTesterModes\(socket\.user\)\)/, "non-testers cannot rejoin a prototype match");
 assert.match(auth, /toLowerCase\(\)\.includes\("заблок"\)\)\{location\.href="\/banned";return\}/, "banned login is redirected to the denial page");
+
+assert.match(server, /ZONE_9: \{ id: "ZONE_9", name: "ZONE 9", kind: "zone9-fbx" \}/, "server validates Zone 9 as a known map");
+assert.match(server, /training: \{ id: "training", name: "TRAINING", map: "ZONE_9"/, "tester training defaults to Zone 9");
+assert.match(server, /ZONE_9: \{x:-92,y:0,z:92\}/, "Zone 9 training spawn is provisionally on CT's south-west entrance");
+assert.match(server, /normalizeMapId\(data\?\.map \|\| cfg\.map\)/, "omitting a training map uses the training-mode default");
+assert.match(menu, /data-test-gameplay="training"/, "the tester menu exposes a separate map-training mode");
+assert.match(menu, /data-map="ZONE_9"/, "Zone 9 is selectable from the training map picker");
+assert.match(menu, /if\(!canTest\(\)\)\{notifyToast\("Тренування доступне лише тестерам\."/i, "the client training action checks tester permission");
+assert.match(menu, /socket\.emit\("start_training",\{mode:"training",map:selectedMap,gameMode:selectedMode\}\)/, "tester training starts a solo server session on the selected map");
+assert.match(game, /import \{FBXLoader\} from "three\/addons\/loaders\/FBXLoader\.js";/, "the game imports Three.js FBXLoader");
+assert.match(game, /fbxLoader\.load\("\/assets\/maps\/zone9\/Zone9\.fbx"/, "Zone 9 loads as a local FBX asset");
+assert.match(game, /\/assets\/maps\/zone9\/textures\//, "Zone 9 resolves optimized local WebP textures");
+assert.match(game, /ZONE_9:140/, "the local movement bounds include Zone 9");
