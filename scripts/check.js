@@ -308,7 +308,7 @@ assert.match(server, /match\.roundWins\.A >= 8 \|\| match\.roundWins\.B >= 8/, "
 assert.match(server, /match\.roundNumber >= 15/, "Allies must have a maximum of fifteen rounds");
 assert.match(server, /match\.roundNumber % 7 === 0/, "Allies teams must switch sides after seven rounds");
 assert.match(server, /match\.roundRemaining = 110/, "Allies rounds must last 110 seconds");
-assert.match(server, /match\.phaseRemaining = 10/, "Allies must have a ten-second preparation and purchase phase");
+assert.match(server, /match\.phaseRemaining = 10/, "Allies must begin with a ten-second warmup before the twenty-second purchase phase");
 assert.match(server, /socket\.on\("allies_buy"/, "Allies purchases must be server-authoritative");
 assert.match(server, /shooter\.equippedWeapon !== weaponId/, "the server must validate a player equipped weapon");
 assert.match(server, /player\.team !== match\.attackingTeam \|\| player\.userId !== bomb\.carrierUserId/, "only the bomb carrier on attack may initiate a plant");
