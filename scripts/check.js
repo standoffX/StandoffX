@@ -721,3 +721,7 @@ assert.match(game, /if\(matchPhase==="game"&&player&&hp>0&&mapLoadFinished\)/, "
 assert.match(game, /fetch\("\/api\/skins"/, "the match loads the player's equipped Softer cosmetics");
 assert.match(game, /function applyEquippedSkinToHeldWeapon\(\)/, "selected weapon cosmetics are applied to the first-person model");
 assert.match(game, /socket\.on\("account_banned"/, "a banned player in a match is moved to the denial page");
+
+assert.match(server, /else if \(!isMaster && req\.body\.isTester !== undefined && !u\.isTester\)/, "revoking tester permission removes active test sessions");
+assert.match(server, /if \(match\.prototypeBotMatch && !canUseTesterModes\(socket\.user\)\)/, "non-testers cannot rejoin a prototype match");
+assert.match(auth, /toLowerCase\(\)\.includes\("заблок"\)\)\{location\.href="\/banned"\}/, "banned login is redirected to the denial page");
