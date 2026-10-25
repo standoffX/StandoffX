@@ -574,6 +574,24 @@ const mapGeometry = vm.runInNewContext(
 assert.equal(mapGeometry.mapPathBlocked("M3_Maze", {x:-195,z:-195}, {x:-194,z:-195}), false, "M3 spawn zone must not be blocked");
 assert.equal(mapGeometry.mapPathBlocked("M3_Maze", {x:-80,z:-140}, {x:-70,z:-140}), true, "M3 vertical maze wall must block movement");
 assert.equal(mapGeometry.nonHillMapShotBlocked("M3_Maze", {x:-80,z:-140}, {x:-70,z:-140}), true, "M3 wall must block line of sight");
+
+const sandstoneRoutes = [
+  { name: "T spawn to Mid", points: [{x:-50,z:-8.75},{x:-50,z:0},{x:-38.75,z:0},{x:-30,z:0},{x:0,z:0}] },
+  { name: "T spawn to A Long", points: [{x:-50,z:-8.75},{x:-50,z:0},{x:-38.75,z:0},{x:-30,z:0},{x:-28.125,z:0},{x:-28.125,z:-43.75},{x:0,z:-43.75},{x:30,z:-43.75},{x:30,z:-35},{x:37.5,z:-33.75}] },
+  { name: "A Short to A site", points: [{x:0,z:0},{x:0,z:-10},{x:15,z:-10},{x:25,z:-10},{x:25,z:-18},{x:25,z:-30.5},{x:30,z:-30.5},{x:37.5,z:-33.75}] },
+  { name: "B Short to B site", points: [{x:0,z:0},{x:-3,z:0},{x:-3,z:10},{x:22.5,z:6.25},{x:22.5,z:22.5},{x:22.5,z:28.75},{x:15,z:28.75},{x:15,z:37.5},{x:22.5,z:37.5}] },
+  { name: "T spawn to B Long", points: [{x:-50,z:-8.75},{x:-50,z:0},{x:-38.75,z:0},{x:-50,z:0},{x:-50,z:38.75},{x:22.5,z:38.75},{x:22.5,z:37.5}] },
+  { name: "CT spawn to Mid", points: [{x:50,z:0},{x:50,z:8},{x:42,z:8},{x:42,z:0},{x:30,z:0},{x:18,z:0},{x:0,z:0}] }
+];
+for (const route of sandstoneRoutes) {
+  for (let i = 1; i < route.points.length; i++) {
+    assert.equal(
+      mapGeometry.mapPathBlocked("SANDSTONE", route.points[i - 1], route.points[i]),
+      false,
+      "Sandstone route remains connected: " + route.name + " segment " + i
+    );
+  }
+}
 assert.equal(mapGeometry.mapPathBlocked("NEON_YARD", {x:12,z:0}, {x:0,z:0}), true, "Neon Yard central divider must block movement");
 assert.equal(mapGeometry.mapPathBlocked("FIELD_ARENA", {x:-45,z:14}, {x:-31,z:14}), true, "Field Arena cover must block movement");
 assert.equal(mapGeometry.mapPathBlocked("FIELD_ARENA", {x:-210,z:0}, {x:-209,z:0}), false, "Field Arena spawn approach must remain clear");
