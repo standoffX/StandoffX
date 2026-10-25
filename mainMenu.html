@@ -1129,10 +1129,10 @@ body.lobby-screen #modeModal .tester-mode-switch{margin:0 0 12px!important;paddi
 @media(max-width:720px){
  body.lobby-screen .content{padding:8px!important;overflow:auto!important}
  body.lobby-screen #home .home-layout{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(470px,62vh) auto auto auto!important;grid-template-areas:"hero" "friends" "promo" "pass";height:auto!important;min-height:0!important;max-height:none!important;gap:8px!important}
- body.lobby-screen #home .home-hero{grid-row:auto!important;height:470px!important;min-height:470px!important}
+ body.lobby-screen #home .home-hero{grid-row:auto!important;height:clamp(390px,58dvh,450px)!important;min-height:390px!important}
  body.lobby-screen #home .home-friends,body.lobby-screen #home .promo-col,body.lobby-screen #home .passpanel{height:auto!important;min-height:0!important;grid-row:auto!important}
  body.lobby-screen #home .home-friends-body{max-height:390px!important}
- body.lobby-screen #home .home-squad-bar{left:8px!important;right:8px!important;bottom:75px!important}
+ body.lobby-screen #home .home-squad-bar{left:8px!important;right:8px!important;bottom:70px!important}
  body.lobby-screen #home .home-squad-roster{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:4px!important}
  body.lobby-screen #home .home-squad-card{min-height:42px!important;grid-template-columns:20px minmax(0,1fr)!important;gap:3px 4px!important;padding:4px!important}
  body.lobby-screen #home .home-squad-card img{width:20px!important;height:24px!important}
@@ -1142,7 +1142,7 @@ body.lobby-screen #modeModal .tester-mode-switch{margin:0 0 12px!important;paddi
  body.lobby-screen #home .home-hero-copy{top:18px!important;left:16px!important;max-width:75%!important}
  body.lobby-screen #home .home-hero-copy h1{font-size:29px!important}
  body.lobby-screen #home .home-hero-art{object-position:54% center!important;opacity:.2!important}
- body.lobby-screen #home .home-agent-canvas{inset:5px 0 0!important}
+ body.lobby-screen #home .home-agent-canvas{inset:0!important;height:100%!important;max-height:100%!important}
  body.lobby-screen #home .home-hero .playarea{left:8px!important;right:8px!important;bottom:8px!important}
  body.lobby-screen #modeModal .modalbox.modebox{padding:15px!important;width:96vw!important;max-height:92dvh!important}
  body.lobby-screen #modeModal .modalhead{font-size:15px!important}
@@ -2523,10 +2523,10 @@ if(hero&&canvas){
     hero.addEventListener("pointerleave",()=>{hoveredAgentIndex=-1;setEvade(-1,0)},{passive:true});
     hero.addEventListener("pointerdown",event=>{
       if(event.pointerType!=="touch"||event.target?.closest?.(".playarea,.home-squad-bar,button,a,input,select"))return;
-      updatePointerTarget({...event,pointerType:"mouse"});
+      updatePointerTarget({clientX:event.clientX,clientY:event.clientY,pointerType:"mouse",target:event.target});
       if(hoveredAgentIndex>=0){
         const actor=squadAgents.find(item=>item.index===hoveredAgentIndex);
-        if(actor)actor.evadeUntil=performance.now()+850;
+        if(actor){actor.evadeUntil=performance.now()+850;hoveredAgentIndex=-1;}
       }
     },{passive:true});
     document.addEventListener("visibilitychange",()=>{if(!document.hidden)last=performance.now()});
