@@ -3716,7 +3716,7 @@ io.on("connection", socket => {
   socket.on("training_shoot", data => {
     const session = trainingSessions.get(socket.user?.id);
     if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || !session.bot) return;
-    if (session.mode !== "field_test" && session.mode !== "training") return;
+    if (session.mode !== "field_test") return;
 
     const weaponId = normalizeWeaponId(data?.weapon);
     const weapon = WEAPON_BALANCE[weaponId];
