@@ -117,7 +117,7 @@ assert.match(server, /isBot: Boolean\(p\.isBot\)/, "match roster includes bot st
 assert.match(server, /isTester/);
 assert.match(menu, /data-test-gameplay="prototype"/, "testers can launch the prototype");
 assert.match(menu, /data-test-gameplay="real"[^>]*>ГРА/, "the tester's full-match option must be labelled Game, not Test");
-assert.match(menu, /ГРА · РЕАЛЬНІ ГРАВЦІ/, "the Game option must promise a match against real players");
+assert.match(menu, /ГРА · ГРАВЦІ/, "the Game option must identify real-player matchmaking");
 assert.match(menu, /COMING SOON/, "not-yet-built ranks and news must be labelled Coming Soon");
 assert.match(menu, /class="promo-col panel"/, "the main menu must include the news/updates panel");
 assert.match(menu, /sx_abandoned_match/, "the lobby must finish a queued leave request after reconnecting");
@@ -138,7 +138,7 @@ assert.doesNotMatch(game, /id="(?:createBotBtn|deleteBotBtn)"|data-training-acti
 assert.doesNotMatch(game, /data-training-action=/, "prototype HUD must not expose bot action buttons");
 assert.doesNotMatch(menu, /data-bind-action="(?:spawnBot|removeBot|push|kick|boost|resetBot)"/, "settings must not expose bot manipulation hotkeys");
 assert.match(menu, /data-bind-action="resetSession"/, "prototype reset shortcut belongs in settings rather than the HUD");
-assert.doesNotMatch(menu, /data-mode="(?:training|field_test)"/, "prototype and real gameplay are not separate public modes");
+assert.match(menu, /data-mode="training"/, "solo training is a dedicated mode card, separate from bot/player selection");
 assert.match(menu, /localStorage.getItem\("sx_test_gameplay"\)/, "the tester choice persists locally");
 assert.doesNotMatch(menu, /testerBots:/, "the Game search must not request bot slots");
 assert.match(menu, /id="modeModal"/, "Play must show a mode selection modal");
@@ -401,7 +401,7 @@ assert.match(game, /addBox\(0,3\.5,-228,456,7,4,shadowMat,true\)/, "M3 Maze must
 assert.doesNotMatch(game.slice(game.indexOf("function loadMap()"), game.indexOf("function makeVisual(")), /loader\.load\("m3\.glb"/, "M3 map loading must not depend on a remote model");
 assert.match(game, /function rebuildCollisionIndex\(\)/, "map geometry must be registered for solid collision");
 assert.match(game, /if\(size\.y<\.24\|\|bounds\.max\.y<\.16\|\|size\.y>18\|\|\(size\.x>28&&size\.z>28\)\)continue/, "collision filtering must keep long thin walls instead of deleting arena borders");
-assert.match(game, /return \(\{SANDSTONE:60,SMALL_YARD:32,HILL_TOWN:54\.2,NEON_YARD:167,FIELD_ARENA:291,M3_Maze:225\}\)/, "all client movement bounds must stay inside the matching physical map walls");
+assert.match(game, /return \(\{SANDSTONE:60,SMALL_YARD:32,HILL_TOWN:54\.2,NEON_YARD:167,FIELD_ARENA:291,M3_Maze:225,ZONE_9:140\}\)/, "all client movement bounds must include Zone 9 and match the map layout");
 assert.match(game, /function applyMapInteractionState\(state\)/, "door and destructible-cover state must be applied to reconnecting clients");
 assert.match(game, /const hits=raycaster\.intersectObjects\(mapObjects\.filter\(o=>o\?\.visible\),false\)/, "shots raycast against the actual map geometry");
 assert.match(game, /const hit=hits\.find\(h=>h\.distance<CLIENT_WEAPON_INFO\[selectedWeapon\]\.range\)/, "the nearest scenery impact is chosen before wood damage is applied");
@@ -458,7 +458,7 @@ assert.match(game, /matchPhase="finished"/, "the player must stop moving and sho
 
 assert.match(server, /const mode = \["allies", "team_fight"\]\.includes\(data\?\.mode\) \? data\.mode : "allies"/, "public matchmaking must reject obsolete/private modes");
 assert.match(server, /match\.players\.filter\(p => !p\.isBot\)\.length === 0 \|\| match\.players\.length < 2/, "voluntary leaving must still clean an empty bot match");
-assert.match(menu, /if\(!\["allies","team_fight"\]\.includes\(selectedMode\)\)\{selectedMode="allies";localStorage\.setItem\("sx_mode",selectedMode\)\}/, "obsolete local storage mode values must not break the lobby");
+assert.match(menu, /if\(!\["allies","team_fight","training"\]\.includes\(selectedMode\)\)selectedMode="allies";/, "the menu permits tester training and rejects obsolete modes");
 assert.match(game, /let lookTouchId=null/, "mobile look must use independent touch IDs");
 assert.match(game, /document\.addEventListener\("touchcancel",releaseLookTouch\)/, "cancelled look touches must clear their state");
 assert.match(game, /window\.addEventListener\("blur",clearHeldInputs\)/, "focus loss must release all held controls");
@@ -508,8 +508,8 @@ assert.match(server, /players\.some\(candidate => candidate\.isBot\) \? \(p\.isB
 
 assert.match(server, /player\.pos\.y = Math\.max\(0, Math\.min\(2\.25, y\)\)/, "match movement must reject impossible fly heights");
 assert.match(server, /previous\.y = Math\.max\(0, Math\.min\(2\.25, y\)\)/, "training movement must reject impossible fly heights");
-assert.match(server, /const sessionMap = \["field_test", "training"\]\.includes\(mode\) \? normalizeMapId\(data\?\.map\) : cfg\.map;/, "training must use whichever map the tester selected");
-assert.match(server, /bot: \["field_test", "training"\]\.includes\(mode\)/, "full training must begin with a target");
+assert.match(server, /const sessionMap = \["field_test", "training"\]\.includes\(mode\) \? normalizeMapId\(data\?\.map \|\| cfg\.map\) : cfg\.map;/, "training uses the selected map and safely falls back to the mode default");
+assert.match(server, /bot: mode === "field_test" \? \{ id: "training_bot"/, "solo map training has no target or other actors");
 assert.match(server, /const maxStep = 0\.9;/, "training movement must support the faster sprint speed");
 assert.match(server, /player\.anim = \["Idle", "Running", "Jump", "Walking", "Crouch"\]/, "the server must retain the crouch animation state");
 
@@ -611,7 +611,7 @@ assert.ok(mapGeometry.SERVER_MAP_BLOCKERS.FIELD_ARENA.length >= 12, "Field Arena
 
 assert.match(game, /renderer\.toneMapping=THREE\.ACESFilmicToneMapping/, "the renderer must use improved color tonemapping");
 assert.match(game, /renderer\.shadowMap\.enabled=!isMobileDevice&&!isLowEndDevice/, "shadows are disabled on mobile and low-end PCs to reduce rendering load");
-assert.match(game, /renderer\.setPixelRatio\(Math\.min\(devicePixelRatio\|\|1,isMobileDevice\?1\.0:isLowEndDevice\?1\.0:1\.35\)\)/, "low-end devices render at a reduced pixel ratio");
+assert.match(game, /renderer\.setPixelRatio\(Math\.min\(devicePixelRatio\|\|1,isMobileDevice\?1\.0:isLowEndDevice\?1\.0:selectedMap==="ZONE_9"\?1\.1:1\.35\)\)/, "Zone 9 and low-end devices use reduced render resolution");
 assert.match(game, /function applyCrosshairSettings\(\)/, "gameplay applies saved crosshair settings");
 assert.match(game, /class="crosshair-display style-classic"/, "game HUD has a configurable crosshair component");
 assert.match(server, /function tracePlayerHit\(origin, aim, targetPos, range, options = \{\}\)/, "server uses 3D ray-to-player hit testing");
