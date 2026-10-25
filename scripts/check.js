@@ -362,7 +362,8 @@ assert.match(server, /const SERVER_MAP_LIMITS = Object\.freeze/, "every playable
 assert.match(server, /FIELD_ARENA: \[[\s\S]{0,500}minX: -38, maxX: -26/, "Field Arena obstacles are represented in server collision data");
 assert.match(server, /NEON_YARD: \[[\s\S]{0,500}minX: -57, maxX: -39/, "Neon Yard obstacles are represented in server collision data");
 assert.match(server, /return !nonHillMapShotBlocked\(mapId,from,to\)/, "non-Hill-Town shots are checked against server map blockers");
-assert.match(server, /validateMapLineOfSight\(match\.map, shooter\.pos, best\.pos, match\.mapState \|\| \{\}\)/, "server damage checks walls before applying a weapon hit");
+assert.match(server, /const targetBlocked = Boolean\(best\) && !validateMapLineOfSight\(/, "server blocks target hits when wall geometry interrupts the actual shot ray");
+assert.match(server, /bestHitPoint \|\| best\.pos, match\.mapState \|\| \{\}/, "line-of-sight validation ends at the computed impact point");
 assert.match(server, /io\.to\(match\.id\)\.emit\("player_shot"/, "the server broadcasts shot directions and impacts for remote tracers");
 assert.match(server, /if \(!canUseTesterModes\(user\) && mode !== "field_test"\)/, "public Prototype is allowed while privileged training remains tester-only");
 assert.match(server, /socket\.on\("map_wood_destroyed"/, "server validates and broadcasts destroyed wood");
