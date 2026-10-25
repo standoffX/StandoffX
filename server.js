@@ -2853,7 +2853,7 @@ const SANDSTONE_COLLISION_RECTS=Object.freeze([
 
   // Mid pillars and low cover.
   sandstoneRect(-9,-5,1,9), sandstoneRect(-9,7,1,6),
-  sandstoneRect(8,-7,1,8), sandstoneRect(8,4,1,2),
+  sandstoneRect(8,-10,1,2), sandstoneRect(8,4,1,2),
   sandstoneRect(-4,-5,2.8,2.1), sandstoneRect(3,5,2.8,2.1),
   sandstoneRect(-1,10,2.2,1.6), sandstoneRect(0,-14,8,1), sandstoneRect(0,14,7,1),
 
