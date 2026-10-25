@@ -1605,10 +1605,10 @@ let selectedTheme=localStorage.getItem("sx_theme")||"cyan";
 const THEMES=["cyan","violet","red"];
 const MAPS={SANDSTONE:"SANDSTONE",SMALL_YARD:"SMALL YARD",HILL_TOWN:"HILL TOWN",M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD",ZONE_9:"ZONE 9"};
 const MODES={allies:"СОЮЗНИКИ · 2×2",team_fight:"КБ · 1×1×1"};
-let testGameplayMode=["prototype","real"].includes(localStorage.getItem("sx_test_gameplay"))?localStorage.getItem("sx_test_gameplay"):"prototype";
+let testGameplayMode=["prototype","real","training"].includes(localStorage.getItem("sx_test_gameplay"))?localStorage.getItem("sx_test_gameplay"):"prototype";
 {
-  const allowed=selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD","NEON_YARD"];
-  if(!allowed.includes(selectedMap))selectedMap=allowed[0];
+  const allowed=testGameplayMode==="training"?Object.keys(MAPS):(selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD","NEON_YARD"]);
+  if(!allowed.includes(selectedMap))selectedMap=testGameplayMode==="training"?"ZONE_9":allowed[0];
   localStorage.setItem("sx_map",selectedMap);
 }
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
