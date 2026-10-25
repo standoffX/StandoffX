@@ -2374,8 +2374,9 @@ function startAlliesRound(io, match, initial = false) {
   };
   // Match the 1.25x Sandstone geometry scale used by the client and bomb sites.
   const sideSpawns = {
-    attack: [{ x: -8.75, y: 0, z: -50 }, { x: 8.75, y: 0, z: -50 }],
-    defense: [{ x: -8.75, y: 0, z: 50 }, { x: 8.75, y: 0, z: 50 }]
+    // Sandstone is oriented with T spawn on the west (left) and CT spawn on the east (right).
+    attack: [{ x: -50, y: 0, z: -8.75 }, { x: -50, y: 0, z: 8.75 }],
+    defense: [{ x: 50, y: 0, z: -8.75 }, { x: 50, y: 0, z: 8.75 }]
   };
   const teamIndices = { A: 0, B: 0 };
   for (const player of match.players) {
@@ -2392,7 +2393,7 @@ function startAlliesRound(io, match, initial = false) {
     teamIndices[player.team] = spawnIndex + 1;
     player.spawn = { ...spawnList[spawnIndex] };
     player.pos = { ...player.spawn };
-    player.rotY = side === "attack" ? Math.PI : 0;
+    player.rotY = side === "attack" ? -Math.PI / 2 : Math.PI / 2;
     player.anim = "Idle";
     emitAlliesLoadout(io, match, player);
   }
