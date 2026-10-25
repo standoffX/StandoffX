@@ -3484,11 +3484,8 @@ io.on("connection", socket => {
     const mode = cleanText(data?.mode, 32);
     const cfg = TESTER_MODE_CONFIGS[mode];
     if (!cfg) return socket.emit("training_error", { message: "Невідомий тестовий режим." });
-    if (mode === "training" && !canUseTesterModes(user)) {
-      return socket.emit("training_error", { message: "Режим тренування доступний лише тестерам." });
-    }
-    if (!canUseTesterModes(user) && (mode !== "field_test" || data?.prototype === true)) {
-      return socket.emit("training_error", { message: "Прототип і тестові режими доступні лише тестерам." });
+    if (!canUseTesterModes(user)) {
+      return socket.emit("training_error", { message: "Усі тренувальні та тестові режими доступні лише тестерам." });
     }
 
     const prototype = mode === "field_test" && data?.prototype === true;
