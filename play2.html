@@ -1826,6 +1826,10 @@ let fireHeld=false;
 let lookTouch=null;
 let collisionBoxes=[];
 let collisionIndexReady=false;
+const COLLISION_CELL_SIZE=8;
+const COLLISION_PLAYER_RADIUS=.38;
+let collisionGrid=new Map();
+let lastTacticalMapDraw=0;
 let isCrouching=false;
 let isFullMapOpen=false;
 let isLeavingMatch=false;
@@ -2702,8 +2706,7 @@ function applyEnemy(data){
   const p=ensureEnemy(data);if(!p)return;
   const previousRole=p.role,previousTeam=p.team;
   p.pos.set(Number(data.x)||0,Number(data.y)||0,Number(data.z)||0);
-  p.mesh.position.lerp(p.pos,.8);
-  p.mesh.rotation.y=Number(data.rotY)||0;
+  p.rotY=Number.isFinite(Number(data.rotY))?Number(data.rotY):p.mesh.rotation.y;
   if(data.role)p.role=data.role;
   if(data.team)p.team=data.team;
   if(data.hp!=null)p.hp=data.hp;
@@ -2720,7 +2723,7 @@ function updateVisual(){
 }
 function rebuildCollisionIndex(){
   scene.updateMatrixWorld(true);
-  const seen=new Set();collisionBoxes=[];
+  const seen=new Set();collisionBoxes=[];collisionGrid=new Map();
   for(const object of mapObjects){
     if(!object?.isMesh||seen.has(object))continue;
     seen.add(object);
@@ -2731,6 +2734,23 @@ function rebuildCollisionIndex(){
     if(size.y<.24||bounds.max.y<.16||size.y>18||(size.x>28&&size.z>28))continue;
     collisionBoxes.push(bounds);
   }
+  // Spatial hash: only colliders near the player's current 8-unit cell are tested during movement.
+  const padding=COLLISION_PLAYER_RADIUS+.02;
+  for(let index=0;index<collisionBoxes.length;index++){
+    const bounds=collisionBoxes[index];
+    const minCellX=Math.floor((bounds.min.x-padding)/COLLISION_CELL_SIZE);
+    const maxCellX=Math.floor((bounds.max.x+padding)/COLLISION_CELL_SIZE);
+    const minCellZ=Math.floor((bounds.min.z-padding)/COLLISION_CELL_SIZE);
+    const maxCellZ=Math.floor((bounds.max.z+padding)/COLLISION_CELL_SIZE);
+    for(let cx=minCellX;cx<=maxCellX;cx++){
+      for(let cz=minCellZ;cz<=maxCellZ;cz++){
+        const key=cx+","+cz;
+        let bucket=collisionGrid.get(key);
+        if(!bucket){bucket=[];collisionGrid.set(key,bucket)}
+        bucket.push(index);
+      }
+    }
+  }
   collisionIndexReady=true;
 }
 function worldLimit(){
@@ -2740,11 +2760,14 @@ function collisionPenaltyAt(x,z){
   if(!collisionIndexReady)rebuildCollisionIndex();
   const limit=worldLimit(),outsideX=Math.max(0,Math.abs(x)-limit),outsideZ=Math.max(0,Math.abs(z)-limit);
   let penalty=(outsideX+outsideZ)>0?100+outsideX+outsideZ:0;
-  const radius=.38,baseY=player?.position?.y||0,bodyHeight=isCrouching?1.22:1.82;
-  for(const bounds of collisionBoxes){
+  const baseY=player?.position?.y||0,bodyHeight=isCrouching?1.22:1.82;
+  const key=Math.floor(x/COLLISION_CELL_SIZE)+","+Math.floor(z/COLLISION_CELL_SIZE);
+  const candidates=collisionGrid.get(key)||[];
+  for(const index of candidates){
+    const bounds=collisionBoxes[index];
     if(baseY>=bounds.max.y-.03||baseY+bodyHeight<=bounds.min.y+.02)continue;
-    const ox=Math.min(x+radius,bounds.max.x)-Math.max(x-radius,bounds.min.x);
-    const oz=Math.min(z+radius,bounds.max.z)-Math.max(z-radius,bounds.min.z);
+    const ox=Math.min(x+COLLISION_PLAYER_RADIUS,bounds.max.x)-Math.max(x-COLLISION_PLAYER_RADIUS,bounds.min.x);
+    const oz=Math.min(z+COLLISION_PLAYER_RADIUS,bounds.max.z)-Math.max(z-COLLISION_PLAYER_RADIUS,bounds.min.z);
     if(ox<=0||oz<=0)continue;
     penalty+=1+Math.min(ox,oz);
   }
@@ -3928,8 +3951,10 @@ function animate(){
     updateVisual();updateInteractButtonLabel();sendMove();
   }
   if(playerVisual)animateSoldier(playerVisual,dt,now,keys.w||keys.s||keys.a||keys.d,jumping,isCrouching,keys.shift&&(keys.w||keys.a||keys.s||keys.d));
+  const enemyFollow=1-Math.exp(-18*dt);
   Object.values(enemies).forEach(e=>{
-    e.mesh.position.lerp(e.pos,.35);
+    e.mesh.position.lerp(e.pos,enemyFollow);
+    e.mesh.rotation.y=THREE.MathUtils.damp(e.mesh.rotation.y,e.rotY??e.mesh.rotation.y,14,dt);
     animateSoldier(e.mesh,dt,now,e.anim==="Running"||e.anim==="Walking",e.anim==="Jump",e.anim==="Crouch");
   });
   if(heldWeaponRoot){
@@ -3980,7 +4005,7 @@ function animate(){
     weaponKick=Math.max(0,weaponKick-dt*.58);
   }
   if(roundCinematic&&matchPhase==="round_end")updateRoundCinematic(now);
-  drawTacticalMaps();
+  if(!lastTacticalMapDraw||now-lastTacticalMapDraw>=100){drawTacticalMaps();lastTacticalMapDraw=now}
   renderer.render(scene,camera);
 }
 
