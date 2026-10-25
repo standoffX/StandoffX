@@ -731,7 +731,8 @@ assert.match(server, /ZONE_9: \{ id: "ZONE_9", name: "ZONE 9", kind: "zone9-fbx"
 assert.match(server, /training: \{ id: "training", name: "TRAINING", map: "ZONE_9"/, "tester training defaults to Zone 9");
 assert.match(server, /ZONE_9: \{x:-92,y:0,z:92\}/, "Zone 9 training spawn is provisionally on CT's south-west entrance");
 assert.match(server, /normalizeMapId\(data\?\.map \|\| cfg\.map\)/, "omitting a training map uses the training-mode default");
-assert.match(menu, /data-test-gameplay="training"/, "the tester menu exposes a separate map-training mode");
+assert.match(menu, /data-mode="training"/, "solo map training is a dedicated mode card, separate from the bot/player switch");
+assert.doesNotMatch(menu, /data-test-gameplay="training"/, "training is not a third option in the bot/player switch");
 assert.match(menu, /data-map="ZONE_9"/, "Zone 9 is selectable from the training map picker");
 assert.match(menu, /if\(!canTest\(\)\)\{notifyToast\("Тренування доступне лише тестерам\."/i, "the client training action checks tester permission");
 assert.match(menu, /socket\.emit\("start_training",\{mode:"training",map:selectedMap,gameMode:selectedMode\}\)/, "tester training starts a solo server session on the selected map");
@@ -739,3 +740,24 @@ assert.match(game, /import \{FBXLoader\} from "three\/addons\/loaders\/FBXLoader
 assert.match(game, /fbxLoader\.load\("\/assets\/maps\/zone9\/Zone9\.fbx"/, "Zone 9 loads as a local FBX asset");
 assert.match(game, /\/assets\/maps\/zone9\/textures\//, "Zone 9 resolves optimized local WebP textures");
 assert.match(game, /ZONE_9:140/, "the local movement bounds include Zone 9");
+
+assert.match(menu, /selectedMode==="training"&&canTest\(\)\)return Object\.keys\(MAPS\)/, "only testers can browse all maps from the dedicated training mode");
+assert.match(menu, /if\(currentLobby&&selectedMode==="training"\)/, "solo training must not accidentally start a party lobby");
+assert.match(server, /if \(mode === "training" && !canUseTesterModes\(user\)\)/, "server rejects training sessions from non-testers");
+assert.match(server, /bot: mode === "field_test" \? \{ id: "training_bot"/, "solo map training spawns no bot");
+assert.match(server, /p350: 0, knife: 0/, "the Allies starter pistol is free");
+assert.match(server, /equippedWeapon: mode === "allies" \? "p350" : "knife"/, "Allies starts with the free pistol equipped");
+assert.match(server, /if \(match\.roundNumber > 1 && player\.hp <= 0\) \{ player\.weapons = \["p350", "knife"\]; player\.equippedWeapon = "p350"; \}/, "Allies respawn preserves the free pistol");
+assert.match(server, /const pendingAtStart = new Map\(pendingMongoWrites\)/, "Atlas reconnect preserves the initial pending-write snapshot");
+assert.match(server, /mongoDb === activeDb/, "a stale Atlas write failure cannot tear down a newer connection");
+assert.match(server, /hold JSON mutation responses until queued writes settle/, "state-changing API responses wait for their queued database writes");
+assert.match(game, /KNIFE_SKIN_MODEL_URLS=\{[\s\S]*softer_knife_blue_blood:[\s\S]*softer_knife_sparkling_gaze:/, "both uploaded M9 bayonet skins are addressable by the client");
+assert.match(game, /action\.type==="knife_attack"/, "knife attacks have a dedicated slash animation profile");
+assert.match(game, /function fixExternalHeadset\(actor\)/, "the match relocates named headset parts to head height");
+assert.match(game, /StandoffX_Headset_Fixed/, "the match supplies a head-mounted headset when the imported rig has no named accessory");
+assert.match(menu, /function fixMenuHeadset\(model\)/, "the main menu applies the same headset-placement correction");
+assert.match(menu, /StandoffX_Menu_Headset/, "the main menu has a head-height headset fallback");
+assert.match(game, /data-buy-tab="smgs"/, "the buy menu has a separate SMG category");
+assert.match(game, /data-buy-tab="shotguns"/, "the buy menu has a separate shotgun category");
+assert.match(game, /data-buy-tab="snipers"/, "the buy menu has a separate sniper category");
+assert.match(game, /data-allies-weapon="p350" data-buy-category="pistols"/, "the free Allies pistol is sorted in the pistol category");
