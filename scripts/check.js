@@ -217,7 +217,7 @@ assert.doesNotMatch(game, /function shoot\(\)\{\s*if\(bombToolActive\|\|/, "hold
 assert.match(game, /A:\{x:37\.5,z:-33\.75\},B:\{x:22\.5,z:37\.5\}/, "client bomb interactions must use scaled site positions");
 assert.match(game, /addGround\(18,30,13,13,road/, "B site must sit in the lower-right portion of Sandstone");
 assert.match(game, /addGround\(-2,-35,76,10,road/, "A Long must run along the upper route into A site");
-assert.match(game, /addGround\(-2,31,75,11,road/, "B Long must run along the lower route into B site");
+assert.match(game, /addGround\(-5,31,75,11,road/, "B Long must run along the lower route into B site");
 assert.match(game, /addGround\(-1,0,18,17,road/, "Mid must remain a central open fight area");
 assert.match(game, /wall\(15,-23,2,1,3\.2,trim\)/, "A Short must keep an actual walkable gap between its side walls");
 assert.match(game, /wall\(13,21,2,1,3\.2,trim\)/, "B Short must connect to B site through a walkable opening");
