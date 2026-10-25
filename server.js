@@ -3442,7 +3442,7 @@ io.on("connection", socket => {
     const prototype = mode === "field_test" && data?.prototype === true;
     const gameMode = ["allies", "team_fight"].includes(data?.gameMode) ? data.gameMode : "team_fight";
     const previous = trainingSessions.get(user.id);
-    const sessionMap = ["field_test", "training"].includes(mode) ? normalizeMapId(data?.map) : cfg.map;
+    const sessionMap = ["field_test", "training"].includes(mode) ? normalizeMapId(data?.map || cfg.map) : cfg.map;
     const TRAINING_SPAWNS = {
       // Zone 9 is normalized to a 250-unit footprint in the client; CT is on the south-west entrance.
       ZONE_9: {x:-92,y:0,z:92},
