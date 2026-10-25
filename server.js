@@ -405,13 +405,21 @@ function mongoSave(name, data) {
     pendingMongoWrites.set(name, snapshot);
     mongoStatus.lastError = cleanText(err.message, 240);
     console.error("[DB] Write failed:", name, mongoStatus.lastError);
-    // Any failed state write must allow the reconnect loop to retry and drain this snapshot later.
-    const failedClient = mongoClient;
-    mongoClient = null;
-    mongoDb = null;
-    mongoStatus.connected = false;
-    mongoStatus.state = "error";
-    try { failedClient?.close().catch(() => {}); } catch {}
+    // A late failure from an old client must not tear down a newer healthy connection.
+    if (mongoDb === activeDb) {
+      const failedClient = mongoClient;
+      mongoClient = null;
+      mongoDb = null;
+      mongoStatus.connected = false;
+      mongoStatus.state = "error";
+      try { failedClient?.close().catch(() => {}); } catch {}
+    } else if (mongoDb && mongoStatus.connected) {
+      // A fresh connection won the race: retry the newest snapshot through its write queue.
+      const latest = pendingMongoWrites.get(name) || snapshot;
+      queueMicrotask(() => {
+        if (mongoDb && mongoStatus.connected) void mongoSave(name, latest);
+      });
+    }
     return false;
   });
   mongoWriteQueues.set(name, write);
@@ -692,6 +700,32 @@ app.disable("x-powered-by");
 app.set("trust proxy", process.env.RENDER ? 1 : false);
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+
+// State mutations queue Atlas writes; hold JSON mutation responses until queued writes settle.
+app.use((req, res, next) => {
+  if (!["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) return next();
+  const sendJson = res.json.bind(res);
+  let responding = false;
+  res.json = payload => {
+    if (responding) return res;
+    responding = true;
+    const flushStateWrites = async () => {
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const snapshot = [...mongoWriteQueues.entries()];
+        if (!snapshot.length) break;
+        await Promise.allSettled(snapshot.map(([, pending]) => pending));
+        if (snapshot.every(([name, pending]) => mongoWriteQueues.get(name) === pending)) break;
+      }
+      sendJson(payload);
+    };
+    flushStateWrites().catch(error => {
+      console.error("[DB] Could not await queued writes before API response:", cleanText(error?.message || error, 240));
+      sendJson(payload);
+    });
+    return res;
+  };
+  next();
+});
 
 // Never expose server code, account JSON, database snapshots, or admin/menu HTML via static hosting.
 const BLOCKED_STATIC_DIRS = new Set([".git", ".github", "node_modules", "scripts", "data"]);
