@@ -1242,6 +1242,50 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 }
 </style>
 
+<style id="sx-softer-collection-ui">
+#store .softer-hero{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(250px,.8fr);gap:14px;margin-bottom:15px}
+#store .softer-brand-card,#store .softer-box-card{position:relative;overflow:hidden;border:1px solid #8acfff25;border-radius:8px;background:linear-gradient(125deg,#152638,#0a121d);padding:22px}
+#store .softer-brand-card:before{content:"";position:absolute;inset:-15%;pointer-events:none;background:radial-gradient(circle at 75% 12%,#42cfff24,transparent 32%),repeating-linear-gradient(135deg,transparent 0 25px,#a5f0ff08 26px 27px,transparent 28px 52px)}
+#store .softer-brand-card>*{position:relative}#store .softer-kicker{font-size:9px;letter-spacing:2.4px;color:#8ee2ff;font-weight:950}
+#store .softer-brand-card h2{font-size:clamp(24px,3.2vw,42px);letter-spacing:-1px;margin:11px 0 8px}#store .softer-brand-card h2 em{font-style:normal;color:#79dfff}
+#store .softer-brand-card p{max-width:570px;color:#afc0d0;line-height:1.65;font-size:12px}
+#store .softer-pills{display:flex;flex-wrap:wrap;gap:7px;margin-top:18px}#store .softer-pills span{padding:6px 8px;border:1px solid #a0dfff22;color:#bad4e4;background:#08131c9c;border-radius:3px;font-size:9px;letter-spacing:.7px}
+#store .softer-box-card{display:flex;flex-direction:column;justify-content:space-between;min-height:245px;background:radial-gradient(ellipse at 50% 38%,#2e688145,transparent 54%),linear-gradient(145deg,#16232e,#0a1018)}
+#store .softer-box-card .box-visual{height:98px;display:grid;place-items:center;position:relative}
+#store .softer-box-art{width:95px;height:78px;position:relative;transform:skewY(-5deg) rotate(-3deg);background:linear-gradient(135deg,#243a4d,#0b1622 70%);border:1px solid #8fe5ff9c;box-shadow:0 14px 25px #0008,inset 0 0 24px #45d7ff25}
+#store .softer-box-art:before{content:"SOFTER";position:absolute;left:0;right:0;top:25px;text-align:center;font-size:12px;font-weight:1000;letter-spacing:2px;color:#aaf0ff;text-shadow:0 0 12px #4bd6ff95}
+#store .softer-box-art:after{content:"FIRST LIGHT · 001";position:absolute;left:0;right:0;bottom:9px;text-align:center;font-size:6px;letter-spacing:1.3px;color:#88aabd}
+#store .softer-box-card h3{margin:2px 0 5px;font-size:17px;letter-spacing:.8px}#store .softer-box-card .muted{font-size:10px;line-height:1.55}
+#store .softer-price-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px}#store .softer-price-row strong{color:#b7eaff;font-variant-numeric:tabular-nums;font-size:14px}
+#softerBoxButton{border-radius:4px!important;background:linear-gradient(110deg,#91eaff,#c2f2ff)!important;color:#101923!important;font-weight:1000!important;letter-spacing:.6px;padding:11px 12px!important}
+#softerStoreStatus{min-height:20px;color:#a4d8ee;font-size:11px;margin:8px 0}#softerDropRates{color:#8fa4b5;font-size:10px;margin:0 0 15px}
+#softerCollectionGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.softer-item-card{min-width:0;overflow:hidden;position:relative;border:1px solid #8fb6ce22;border-radius:6px;background:linear-gradient(160deg,#131f2a,#0b1118);padding:10px;box-shadow:0 8px 24px #0002}
+.softer-item-card .softer-skin-preview{height:82px;border-radius:4px;margin-bottom:10px;position:relative;overflow:hidden;display:grid;place-items:center;background:radial-gradient(ellipse at 70% 20%,color-mix(in srgb,var(--skin-accent) 36%,transparent),transparent 43%),linear-gradient(135deg,var(--skin-base),#080d14)}
+.softer-skin-preview:before{content:"";position:absolute;inset:-30%;transform:rotate(-24deg);background:repeating-linear-gradient(90deg,transparent 0 12px,color-mix(in srgb,var(--skin-accent) 58%,transparent) 13px 15px,transparent 16px 29px);opacity:.6}
+.softer-skin-preview:after{content:"SOFTER";position:absolute;right:7px;bottom:6px;font-size:7px;letter-spacing:2px;font-weight:1000;color:var(--skin-accent);opacity:.88}
+.softer-skin-glyph{position:relative;z-index:1;width:82%;height:30px;filter:drop-shadow(0 4px 3px #0008)}
+.softer-skin-glyph:before{content:"";position:absolute;left:3%;right:10%;top:11px;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--skin-base),var(--skin-accent),var(--skin-base));border:1px solid color-mix(in srgb,var(--skin-accent) 70%,#fff);transform:skewX(-25deg);box-shadow:0 0 14px color-mix(in srgb,var(--skin-accent) 30%,transparent)}
+.softer-skin-glyph:after{content:"";position:absolute;left:29%;top:18px;width:12px;height:10px;background:var(--skin-base);border:1px solid var(--skin-accent);transform:skewY(22deg)}
+.softer-item-card .softer-rarity{font-size:8px;font-weight:900;letter-spacing:1.1px;text-transform:uppercase;color:var(--skin-accent)}
+.softer-item-card h3{font-size:11px;margin:5px 0;line-height:1.35;overflow-wrap:anywhere}.softer-item-card p{font-size:9px;line-height:1.45;color:#91a5b7;min-height:26px;margin:0}
+.softer-item-card .softer-weapon{font-size:8px;color:#8fa4b6;letter-spacing:1px;margin:8px 0 0;text-transform:uppercase}
+.softer-market-card{display:grid;grid-template-columns:80px minmax(0,1fr) auto;align-items:center;gap:12px;border:1px solid #8fb6ce1c;border-radius:6px;background:linear-gradient(110deg,#121d27,#0a1118);padding:10px;margin-bottom:8px}
+.softer-market-card .softer-skin-preview{height:48px;border-radius:3px;position:relative;overflow:hidden;display:grid;place-items:center;background:linear-gradient(135deg,var(--skin-base),#080d14)}
+.softer-market-card .softer-skin-preview:before{content:"";position:absolute;inset:-20%;transform:rotate(-24deg);background:repeating-linear-gradient(90deg,transparent 0 8px,color-mix(in srgb,var(--skin-accent) 60%,transparent) 9px 11px,transparent 12px 20px)}
+.softer-market-card .softer-skin-glyph{height:20px}.softer-market-card .softer-skin-glyph:before{top:6px;height:6px}.softer-market-card .softer-skin-glyph:after{top:12px;width:9px;height:7px}
+.softer-market-card .softer-market-meta{font-size:9px;color:#90a7b9;margin-top:4px}.softer-market-card .softer-market-price{font-size:12px;font-weight:950;color:#c5ebff;white-space:nowrap}
+.softer-item-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}.softer-item-actions button{flex:1;padding:7px 5px!important;min-width:60px;font-size:8px!important;letter-spacing:.5px!important;border-radius:3px!important}
+.softer-rarity-common{--skin-accent:#a5f0ff}.softer-rarity-rare{--skin-accent:#53c9ff}.softer-rarity-epic{--skin-accent:#d985ff}.softer-rarity-legendary{--skin-accent:#ffd36b}.softer-rarity-arcane{--skin-accent:#ff86cb}.softer-rarity-box{--skin-accent:#b5edff}
+.softer-reveal{position:fixed;inset:0;z-index:160;display:grid;place-items:center;background:#02070ce8;backdrop-filter:blur(12px);padding:16px}
+.softer-reveal-card{width:min(520px,94vw);position:relative;overflow:hidden;text-align:center;padding:30px 22px;border:1px solid #91e7ff65;border-radius:8px;background:radial-gradient(ellipse at 50% 28%,#24799b44,transparent 52%),linear-gradient(155deg,#172532,#080e15);box-shadow:0 25px 90px #000b}
+.softer-reveal-card:before{content:"";position:absolute;inset:-45%;pointer-events:none;background:repeating-linear-gradient(120deg,transparent 0 28px,#a2f0ff08 29px 30px,transparent 31px 60px);animation:softer-reveal-sweep 5s linear infinite}
+.softer-reveal-card>*{position:relative}.softer-reveal-logo{font-size:9px;letter-spacing:3px;color:#8ceaff;font-weight:950}
+.softer-reveal-art{height:130px;display:grid;place-items:center;margin:10px auto}.softer-reveal-art .softer-skin-preview{width:min(300px,80%);height:95px;border-radius:6px}
+.softer-reveal-card h2{font-size:25px;margin:8px 0}.softer-reveal-card p{color:#a9becd;font-size:11px;line-height:1.6}.softer-reveal-card .primary{min-width:180px;margin-top:12px}
+@keyframes softer-reveal-sweep{from{transform:translateX(-12%) rotate(0)}to{transform:translateX(12%) rotate(360deg)}}
+@media(max-width:900px){#softerCollectionGrid{grid-template-columns:repeat(2,minmax(0,1fr))}#store .softer-hero{grid-template-columns:1fr}.softer-market-card{grid-template-columns:60px minmax(0,1fr) auto}}
+</style>
 </head>
 <body class="lobby-screen">
 <div class="app">
@@ -1251,6 +1295,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
     <button class="active" data-view="home" title="Головна"><svg viewBox="0 0 24 24"><path d="m8 4 12 8-12 8z"/></svg></button>
     <button data-view="profile" title="Профіль"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1-4 3-6 7-6s6 2 7 6"/></svg></button>
     <button data-view="inventory" title="Інвентар"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4zM7 7V4h10v3"/></svg></button>
+    <button data-view="store" title="Магазин і колекція Softer"><svg viewBox="0 0 24 24"><path d="M4 8h16l-1.4 12H5.4zM7 8V6a5 5 0 0 1 10 0v2M8 13h8M12 10v6"/></svg></button>
     <button data-view="market" title="Ринок"><svg viewBox="0 0 24 24"><path d="M5 9h14l-1 11H6zM8 9V7a4 4 0 0 1 8 0v2"/></svg></button>
     <button data-view="clan" title="Клан"><svg viewBox="0 0 24 24"><path d="m12 3 8 3v5c0 5-3 8-8 10-5-2-8-5-8-10V6z"/></svg></button>
     <button data-view="friends" title="Друзі"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.3"/><path d="M3 20c.8-4 2.8-6 6-6s5.2 2 6 6M15 15c2.5 0 4.3 1.6 5 5"/></svg></button>
@@ -1387,6 +1432,20 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 
 <section id="clan" class="screen"><div class="sectionhead"><h2>КЛАН</h2><button class="secondary" id="refreshClan">ОНОВИТИ</button></div><div class="panel panelbody" id="clanBody"></div></section>
 
+<section id="store" class="screen">
+  <div class="sectionhead"><h2>МАГАЗИН · SOFTER</h2><span class="pill">COLLECTION 001</span></div>
+  <div class="softer-hero">
+    <div class="softer-brand-card"><div class="softer-kicker">SOFTERX ORIGINALS · DROP 001</div><h2>FIRST <em>LIGHT</em></h2>
+      <p>Перша оригінальна колекція SofterX — темний графіт, холодний блакитний неон і контрастні сигнальні лінії. Скіни змінюють лише зовнішній вигляд зброї, не її характеристики.</p>
+      <div class="softer-pills"><span>8 УНІКАЛЬНИХ ПРЕДМЕТІВ</span><span>П'ЯТЬ РІВНІВ РІДКОСТІ</span><span>Є НА РИНКУ</span></div>
+    </div>
+    <div class="softer-box-card"><div><div class="softer-kicker">CONTAINER · 001</div><h3>SOFTER BOX</h3><div class="muted">Перший бокс колекції. Відкрий його, щоб отримати один випадковий скін Softer.</div></div>
+      <div class="box-visual"><div class="softer-box-art"></div></div><div class="softer-price-row"><strong id="softerGold">0 G</strong><button class="primary" id="softerBoxButton" type="button">ОТРИМАТИ БОКС</button></div>
+    </div>
+  </div>
+  <div id="softerStoreStatus" role="status" aria-live="polite">Завантаження колекції…</div><div id="softerDropRates"></div>
+  <h3 style="margin:18px 0 10px">SOFTER COLLECTION · FIRST LIGHT</h3><div id="softerCollectionGrid"></div>
+</section>
 <section id="inventory" class="screen"><div class="sectionhead"><h2>ІНВЕНТАР</h2><span class="pill" id="invCount">0 ITEMS</span></div><div id="inventoryList" class="cardgrid"></div></section>
 
 <section id="market" class="screen"><div class="sectionhead"><h2>РИНОК</h2><button class="secondary" id="refreshMarket">ОНОВИТИ</button></div><div id="marketList" class="list"></div></section>
@@ -1462,6 +1521,13 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 <div id="avatarModal" class="modal"><div class="modalbox avatar-modalbox"><div class="modalhead"><span id="avatarModalTitle">ЗМІНА АВАТАРА</span><button class="close" data-close="avatarModal">×</button></div><div class="avatar-picker"><img id="avatarPreview" src="/avatars/default.jpg" alt="Попередній перегляд"><p id="avatarPickerHint" class="muted">Обери зображення зі свого пристрою (до 5 МБ).</p><input id="avatarFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><div class="actions"><button id="saveAvatarBtn" class="primary" type="button">ЗБЕРЕГТИ АВАТАР</button><button class="secondary" type="button" data-close="avatarModal">СКАСУВАТИ</button></div></div></div></div>
 <div id="appToast" role="status" aria-live="polite"></div>
 
+<div id="softerReveal" class="softer-reveal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="softerRevealTitle">
+  <div class="softer-reveal-card"><div class="softer-reveal-logo">SOFTERX ORIGINALS · DROP 001</div>
+    <div id="softerRevealArt" class="softer-reveal-art"><div class="softer-box-art"></div></div>
+    <div id="softerRevealRarity" class="softer-kicker">SOFTER BOX</div><h2 id="softerRevealTitle">ВІДКРИВАЄМО БОКС…</h2>
+    <p id="softerRevealDescription">Випадковий скін із колекції First Light.</p><button id="softerRevealClose" class="primary" type="button">ДО ІНВЕНТАРЯ</button>
+  </div>
+</div>
 <script src="/socket.io/socket.io.js"></script>
 <script>
 (function(){
@@ -1669,6 +1735,7 @@ function show(view){
     if(socialSocket?.connected)socialSocket.emit("lobby_state_request");
   }
   if(view==="clan")loadClan();
+  if(view==="store")loadSofterStore();
   if(view==="inventory")loadInventory();
   if(view==="market")loadMarket();
 }
@@ -1717,6 +1784,7 @@ function render(){
   $("statsComp").textContent=me.MMRCompetitive||1000;$("statsAllies").textContent=me.MMRAllies||1000;
   $("verifiedMark").textContent=me.isVerified?"✓ VERIFIED":"";
   $("adminBtn").style.display=(me.isAdmin||me.id==="Dev_01")?"grid":"none";
+  if(!canTest()&&testGameplayMode==="prototype"){testGameplayMode="real";localStorage.setItem("sx_test_gameplay","real")}
   const testerSwitch=$("testerGameplaySwitch");
   if(testerSwitch)testerSwitch.style.display=canTest()?"flex":"none";
   const testerKeybinds=$("testKeybindSettings");
@@ -2315,10 +2383,115 @@ $("clanModalBody").addEventListener("click",e=>{
   else if(a==="decline")clanDecision("decline",b.dataset.id);
   else if(a==="save-edit")saveClanEdit();
 });
-async function loadInventory(){try{const d=await api("/api/inventory/my",{method:"POST",body:"{}"});$("invCount").textContent=d.inventory.length+" ITEMS";$("inventoryList").innerHTML=d.inventory.map(x=>"<div class='listcard'><b>"+esc(x.name)+"</b><div class='muted'>"+esc(x.rarity||"common")+"</div><button class='secondary' data-sell='"+esc(x.skinId)+"' style='margin-top:10px'>ПРОДАТИ</button></div>").join("")||"<div class='muted'>Порожньо.</div>"}catch{}}
-$("inventoryList").addEventListener("click",e=>{const b=e.target.closest("[data-sell]");if(!b)return;const price=Number(prompt("Ціна в Gold"));if(!price)return;api("/api/market/sell",{method:"POST",body:JSON.stringify({skinId:b.dataset.sell,price})}).then(()=>{loadInventory();loadMarket()}).catch(err=>alert(err.message))});
-async function loadMarket(){try{const d=await api("/api/market/items");$("marketList").innerHTML=d.items.map(x=>"<div class='row'><div><b>"+esc(x.skinName)+"</b><div class='muted'>"+esc(x.sellerNick)+" · "+esc(x.rarity)+"</div></div><div class='actions'><b>"+x.price+" G</b><button class='primary' data-buy='"+esc(x.lotId)+"'>КУПИТИ</button></div></div>").join("")||"<div class='muted'>Ринок порожній.</div>"}catch{}}
-$("marketList").addEventListener("click",e=>{const b=e.target.closest("[data-buy]");if(!b)return;api("/api/market/buy",{method:"POST",body:JSON.stringify({lotId:b.dataset.buy})}).then(async()=>{me=(await api("/api/me")).user;render();loadMarket();loadInventory()}).catch(err=>alert(err.message))});
+let softerCanClaimStarterBox=false;
+function safeHexColor(value,fallback="#14202c"){return /^#[0-9a-f]{6}$/i.test(String(value||""))?String(value):fallback}
+function softerPreview(item){
+  const base=safeHexColor(item.baseColor,"#14202c"),accent=safeHexColor(item.accentColor,"#8ddfff");
+  const rarity=String(item.rarity||"common").toLowerCase().replace(/[^a-z]/g,"");
+  return "<div class='softer-skin-preview softer-rarity-"+esc(rarity)+"' style='--skin-base:"+base+";--skin-accent:"+accent+"'><span class='softer-skin-glyph'></span></div>";
+}
+function softerItemCard(item,store=false){
+  const box=item.type==="box"||item.skinId==="softer_box_first_light";
+  const rarity=String(item.rarity||"common").toLowerCase().replace(/[^a-z]/g,"");
+  let actions="";
+  if(!store){
+    if(box)actions="<div class='softer-item-actions'><button class='primary' data-open-box='"+esc(item.instanceId)+"'>ВІДКРИТИ</button><button class='secondary' data-sell-instance='"+esc(item.instanceId)+"'>НА РИНОК</button></div>";
+    else actions="<div class='softer-item-actions'>"+(item.equipped?"<button class='secondary' data-unequip-weapon='"+esc(item.weaponId||"")+"'>ЗНЯТИ</button>":"<button class='primary' data-equip-instance='"+esc(item.instanceId)+"' data-equip-skin='"+esc(item.skinId)+"'>ЕКІПІРУВАТИ</button>")+"<button class='secondary' data-sell-instance='"+esc(item.instanceId)+"'>ПРОДАТИ</button></div>";
+  }
+  return "<article class='softer-item-card softer-rarity-"+esc(rarity)+"'>"+softerPreview(item)+"<div class='softer-rarity'>"+esc(item.rarity||"common")+(item.equipped?" · ОБРАНО":"")+"</div><h3>"+esc(item.name||item.skinName||item.skinId||"SOFTER ITEM")+"</h3><p>"+esc(item.description||"Предмет колекції Softer.")+"</p><div class='softer-weapon'>"+esc(item.weapon||"CONTAINER")+"</div>"+actions+"</article>";
+}
+async function loadSofterStore(){
+  try{
+    const d=await api("/api/collection/softer");
+    softerCanClaimStarterBox=Boolean(d.canClaimStarterBox);
+    $("softerGold").textContent=(Number(d.gold)||0)+" G";
+    $("softerBoxButton").textContent=softerCanClaimStarterBox?"ОТРИМАТИ ПЕРШИЙ БОКС · БЕЗКОШТОВНО":"КУПИТИ BOX · "+(Number(d.box?.price)||100)+" G";
+    $("softerStoreStatus").textContent="У тебе в інвентарі: "+(Number(d.ownedBoxes)||0)+" SOFTER BOX · Перша коробка на акаунт безкоштовна.";
+    $("softerDropRates").textContent="Шанси випадіння: "+(d.dropRates||[]).map(x=>x.rarity+" "+x.chance).join(" · ");
+    $("softerCollectionGrid").innerHTML=(d.skins||[]).map(x=>softerItemCard(x,true)).join("");
+  }catch(error){$("softerStoreStatus").textContent=error.message||"Колекція тимчасово недоступна."}
+}
+async function loadInventory(){
+  try{
+    const d=await api("/api/inventory/my",{method:"POST",body:"{}"});
+    const items=Array.isArray(d.inventory)?d.inventory:[];
+    $("invCount").textContent=items.length+" ITEMS";
+    $("inventoryList").innerHTML=items.map(x=>softerItemCard(x,false)).join("")||"<div class='muted'>Інвентар порожній. Зайди в магазин Softer та забери перший бокс.</div>";
+  }catch(error){$("inventoryList").innerHTML="<div class='muted'>Не вдалося завантажити інвентар: "+esc(error.message)+"</div>"}
+}
+async function loadMarket(){
+  try{
+    const d=await api("/api/market/items");
+    $("marketList").innerHTML=(d.items||[]).map(x=>{
+      const item={...x,name:x.skinName,weapon:x.weapon||"ITEM"};
+      return "<article class='softer-market-card'>"+softerPreview(item)+"<div><b>"+esc(x.skinName)+"</b><div class='softer-market-meta'>"+esc(x.sellerNick)+" · "+esc(x.rarity||"common")+(x.collection?" · SOFTER":"")+"</div></div><div><div class='softer-market-price'>"+Number(x.price||0).toLocaleString("uk-UA")+" G</div><button class='primary' data-buy='"+esc(x.lotId)+"' style='margin-top:6px'>КУПИТИ</button></div></article>";
+    }).join("")||"<div class='muted'>Ринок порожній. Можеш виставити свої скіни з інвентаря.</div>";
+  }catch(error){$("marketList").innerHTML="<div class='muted'>Не вдалося завантажити ринок: "+esc(error.message)+"</div>"}
+}
+$("softerBoxButton").addEventListener("click",async()=>{
+  const button=$("softerBoxButton");button.disabled=true;
+  try{
+    const d=await api("/api/collection/softer/buy-box",{method:"POST",body:JSON.stringify({starter:softerCanClaimStarterBox})});
+    me={...me,gold:d.gold,softerIntroBoxClaimed:me.softerIntroBoxClaimed||d.freeStarter};render();
+    $("softerStoreStatus").textContent=d.freeStarter?"Перший SOFTER BOX додано до інвентаря безкоштовно.":"SOFTER BOX придбано та додано до інвентаря.";
+    await Promise.all([loadSofterStore(),loadInventory()]);
+    show("inventory");
+  }catch(error){$("softerStoreStatus").textContent=error.message||"Не вдалося отримати бокс."}
+  finally{button.disabled=false}
+});
+$("inventoryList").addEventListener("click",async event=>{
+  const open=event.target.closest("[data-open-box]");
+  const equip=event.target.closest("[data-equip-instance]");
+  const unequip=event.target.closest("[data-unequip-weapon]");
+  const sell=event.target.closest("[data-sell-instance]");
+  try{
+    if(open){
+      const modal=$("softerReveal");modal.style.display="grid";modal.classList.add("is-opening");
+      $("softerRevealRarity").textContent="SOFTER BOX · FIRST LIGHT";
+      $("softerRevealTitle").textContent="ВІДКРИВАЄМО БОКС…";
+      $("softerRevealDescription").textContent="Перевіряємо випадіння на сервері.";
+      $("softerRevealArt").innerHTML="<div class='softer-box-art'></div>";
+      const d=await api("/api/collection/softer/open-box",{method:"POST",body:JSON.stringify({instanceId:open.dataset.openBox})});
+      const item=d.drop||{};
+      $("softerRevealRarity").textContent=String(item.rarity||"common").toUpperCase()+" · SOFTER COLLECTION";
+      $("softerRevealTitle").textContent=item.name||"SOFTER DROP";
+      $("softerRevealDescription").textContent=item.description||"Скін додано до твого інвентаря.";
+      $("softerRevealArt").innerHTML=softerPreview(item);
+      modal.classList.remove("is-opening");
+      await Promise.all([loadInventory(),loadSofterStore()]);
+      return;
+    }
+    if(equip){
+      await api("/api/inventory/equip",{method:"POST",body:JSON.stringify({instanceId:equip.dataset.equipInstance,skinId:equip.dataset.equipSkin})});
+      me=(await api("/api/me")).user;render();
+      $("softerStoreStatus").textContent="Скін екіпіровано. Він буде застосований до відповідної зброї в матчі.";
+      await loadInventory();return;
+    }
+    if(unequip){
+      await api("/api/inventory/equip",{method:"POST",body:JSON.stringify({equipped:false,weaponId:unequip.dataset.unequipWeapon})});
+      me=(await api("/api/me")).user;render();await loadInventory();return;
+    }
+    if(sell){
+      const price=Number(prompt("Ціна предмета в Gold"));
+      if(!Number.isFinite(price)||price<=0)return;
+      await api("/api/market/sell",{method:"POST",body:JSON.stringify({instanceId:sell.dataset.sellInstance,price})});
+      await Promise.all([loadInventory(),loadMarket(),loadSofterStore()]);return;
+    }
+  }catch(error){
+    $("softerStoreStatus").textContent=error.message||"Дію не вдалося виконати.";
+    $("softerReveal").style.display="none";
+  }
+});
+$("softerRevealClose").addEventListener("click",()=>{$("softerReveal").style.display="none";show("inventory")});
+$("marketList").addEventListener("click",async event=>{
+  const buy=event.target.closest("[data-buy]");if(!buy)return;buy.disabled=true;
+  try{
+    await api("/api/market/buy",{method:"POST",body:JSON.stringify({lotId:buy.dataset.buy})});
+    me=(await api("/api/me")).user;render();
+    await Promise.all([loadMarket(),loadInventory(),loadSofterStore()]);
+  }catch(error){$("softerStoreStatus").textContent=error.message||"Не вдалося купити лот."}
+  finally{buy.disabled=false}
+});
 
 const DEFAULT_KEYBINDS={resetSession:"KeyI",menu:"KeyM"};
 const KEYBIND_LABELS={resetSession:"Скинути прототип",menu:"Меню в грі"};
