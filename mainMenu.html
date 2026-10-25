@@ -2338,7 +2338,7 @@ const hero=document.querySelector(".home-hero");
 const canvas=document.getElementById("homeAgentCanvas");
 if(hero&&canvas){
   let renderer=null,scene=null,camera=null,shadow=null,last=0,resizeObserver=null;
-  let tacticalTemplate=null,hoveredAgentIndex=-1;
+  let tacticalTemplate=null,hoveredAgentIndex=-1,touchEvasionIndex=-1;
   const squadAgents=[];
   const agentPalette=[0x8999a5,0x8b6b51,0x637887,0x71775e];
   const modelUrl="https://raw.githubusercontent.com/cktang88/3d-fps/main/public/assets/models/characters/soldier_tac.glb";
@@ -2520,13 +2520,17 @@ if(hero&&canvas){
     if("ResizeObserver" in window){resizeObserver=new ResizeObserver(resize);resizeObserver.observe(hero)}
     window.addEventListener("resize",resize,{passive:true});
     hero.addEventListener("pointermove",updatePointerTarget,{passive:true});
-    hero.addEventListener("pointerleave",()=>{hoveredAgentIndex=-1;setEvade(-1,0)},{passive:true});
+    hero.addEventListener("pointerleave",()=>{
+      const touchActor=squadAgents.find(actor=>actor.index===touchEvasionIndex);
+      if(touchActor&&touchActor.evadeUntil>performance.now()){hoveredAgentIndex=-1;return}
+      hoveredAgentIndex=-1;touchEvasionIndex=-1;setEvade(-1,0);
+    },{passive:true});
     hero.addEventListener("pointerdown",event=>{
       if(event.pointerType!=="touch"||event.target?.closest?.(".playarea,.home-squad-bar,button,a,input,select"))return;
       updatePointerTarget({clientX:event.clientX,clientY:event.clientY,pointerType:"mouse",target:event.target});
       if(hoveredAgentIndex>=0){
         const actor=squadAgents.find(item=>item.index===hoveredAgentIndex);
-        if(actor){actor.evadeUntil=performance.now()+850;hoveredAgentIndex=-1;}
+        if(actor){actor.evadeUntil=performance.now()+850;touchEvasionIndex=actor.index;hoveredAgentIndex=-1;}
       }
     },{passive:true});
     document.addEventListener("visibilitychange",()=>{if(!document.hidden)last=performance.now()});
@@ -2536,7 +2540,10 @@ if(hero&&canvas){
     function animateIdle(actor,now,dt){
       const breath=reducedMotion.matches?0:Math.sin(now*.00155+actor.phase);
       const sway=reducedMotion.matches?0:Math.sin(now*.00036+actor.phase)*.012;
-      if(now>actor.evadeUntil)actor.evasionTarget=actor.index===hoveredAgentIndex?actor.evasionTarget:0;
+      if(now>actor.evadeUntil){
+        if(actor.index===touchEvasionIndex)touchEvasionIndex=-1;
+        if(actor.index!==hoveredAgentIndex)actor.evasionTarget=0;
+      }
       actor.evasion=THREE.MathUtils.damp(actor.evasion,actor.evasionTarget,6.5,dt);
       actor.mesh.position.x=actor.homeX+actor.evasion*.52;
       actor.mesh.position.y=actor.homeY+breath*.012;
