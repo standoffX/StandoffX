@@ -366,7 +366,7 @@ assert.match(server, /return !nonHillMapShotBlocked\(mapId,from,to\)/, "non-Hill
 assert.match(server, /const targetBlocked = Boolean\(best\) && !validateMapLineOfSight\(/, "server blocks target hits when wall geometry interrupts the actual shot ray");
 assert.match(server, /bestHitPoint \|\| best\.pos, match\.mapState \|\| \{\}/, "line-of-sight validation ends at the computed impact point");
 assert.match(server, /io\.to\(match\.id\)\.emit\("player_shot"/, "the server broadcasts shot directions and impacts for remote tracers");
-assert.match(server, /if \(!canUseTesterModes\(user\) && \(mode !== "field_test" \|\| data\?\.prototype === true\)\)/, "prototype use is tester-only even for field_test sessions");
+assert.match(server, /if \(!canUseTesterModes\(user\)\) \{\s*return socket\.emit\("training_error"/, "all field-test and training sessions are tester-only");
 assert.match(server, /socket\.on\("map_wood_destroyed"/, "server validates and broadcasts destroyed wood");
 assert.match(server, /Math\.hypot\(player\.pos\.x-x, player\.pos\.z-z\) > 7\.5/, "door changes require the player to be near the correct doorway");
 assert.match(game, /if\(e\.code==="Digit1"\)[\s\S]{0,100}selectWeapon\("akr"\)/, "1 must equip the AKR");
