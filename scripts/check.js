@@ -689,3 +689,17 @@ assert.match(server, /\(\(prototypeBotMatch \|\| lobbyMatch\) \? \["A", "B", "C"
 assert.match(server, /x: Number\(player\.pos\?\.x\) \|\| 0,[\s\S]{0,100}z: Number\(player\.pos\?\.z\) \|\| 0/, "the round result contains winner positions for the camera fly-through");
 assert.match(menu, /id="lobbyInviteModal"/, "lobby invitations have an accept/decline interface");
 assert.match(menu, /id="lobbyStartBtn"/, "party leader has a dedicated start-match button");
+
+/* Regression checks for the shared agent, weapon presentation, and timed Allies store. */
+assert.match(game, /id="alliesBuyButton"/, "the Allies shop must have a dedicated timed HUD button");
+assert.match(game, /function updateAlliesBuyButton\(\)/, "the shop button must have a single visibility/countdown controller");
+assert.match(game, /const canBuy=mode==="allies"&&!isTrainingMode&&matchPhase==="round_start"/, "the shop button may only appear during Allies preparation");
+assert.match(game, /buyTimeRemaining=t;updateAlliesBuyButton\(\)/, "the purchase countdown must follow the authoritative round timer");
+assert.match(game, /duration:5000,weaponId:selectedWeapon/, "weapon inspection animation lasts five seconds");
+assert.match(game, /const pose=profiles\[weapon\]\|\|profiles\.akr/, "reload animation must use the selected weapon's profile");
+assert.match(game, /function createMuzzleFlash\(\)/, "weapon fire must use a visible muzzle flash");
+assert.match(game, /Flat%20Guns%20West\/GLB\//, "external weapon URLs must use the real asset-kit folder path");
+assert.match(game, /function attachTacticalAgent\(model,color\)/, "the match must support the same skinned tactical model as the menu");
+assert.match(game, /attachTacticalAgent\(g,color\)/, "newly spawned match characters must attach the shared agent model");
+assert.match(game, /side\*\.238,1\.655,\.035/, "headset ear cups must be attached at head height");
+assert.match(game, /import \* as SkeletonUtils from "three\/addons\/utils\/SkeletonUtils\.js"/, "skinned agent clones must have independent skeletons");
