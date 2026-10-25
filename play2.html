@@ -2913,6 +2913,62 @@ function makeVisual(color){
   attachTacticalAgent(g,color);
   return g;
 }
+function fixExternalHeadset(actor){
+  if(!actor)return;
+  actor.updateMatrixWorld(true);
+  const accessoryPattern=/(headset|headphone|earmuff|earcup|earpad|earpiece|earphone|headphones)/i;
+  const matches=[];
+  actor.traverse(node=>{
+    if(node===actor||node.isBone||node.isSkinnedMesh||!accessoryPattern.test(String(node.name||"")))return;
+    matches.push(node);
+  });
+  const matchSet=new Set(matches);
+  const topLevel=matches.filter(node=>{
+    let parent=node.parent;
+    while(parent&&parent!==actor){if(matchSet.has(parent))return false;parent=parent.parent}
+    return true;
+  });
+  for(const node of topLevel){
+    if(!node.parent)continue;
+    node.updateWorldMatrix(true,true);
+    const bounds=new THREE.Box3().setFromObject(node);
+    if(bounds.isEmpty())continue;
+    const center=bounds.getCenter(new THREE.Vector3());
+    // If named headset hardware landed around the chest/shoulder, lift that whole accessory to the helmet.
+    if(center.y>.72&&center.y<1.47){
+      const targetOrigin=node.getWorldPosition(new THREE.Vector3());
+      targetOrigin.y+=Math.min(.84,1.64-center.y);
+      node.parent.worldToLocal(targetOrigin);
+      node.position.copy(targetOrigin);
+      node.updateWorldMatrix(true,true);
+    }
+  }
+  // A low-poly headset overlay guarantees the ear cups sit on both sides of the head
+  // even when the source GLB has unnamed or badly placed accessory meshes.
+  const bandMat=new THREE.MeshStandardMaterial({color:0x18232c,roughness:.48,metalness:.35});
+  const cupMat=new THREE.MeshStandardMaterial({color:0x293b49,roughness:.4,metalness:.52});
+  const padMat=new THREE.MeshStandardMaterial({color:0x0b1218,roughness:.9,metalness:.04});
+  const headset=new THREE.Group();headset.name="StandoffX_Headset_Fixed";
+  const curve=new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-.225,1.64,-.01),
+    new THREE.Vector3(-.205,1.80,-.015),
+    new THREE.Vector3(-.12,1.91,-.02),
+    new THREE.Vector3(0,1.94,-.02),
+    new THREE.Vector3(.12,1.91,-.02),
+    new THREE.Vector3(.205,1.80,-.015),
+    new THREE.Vector3(.225,1.64,-.01)
+  ]);
+  const band=new THREE.Mesh(new THREE.TubeGeometry(curve,20,.016,6,false),bandMat);band.castShadow=false;headset.add(band);
+  for(const side of [-1,1]){
+    const shell=new THREE.Mesh(new THREE.CylinderGeometry(.073,.073,.052,12),cupMat);
+    shell.rotation.z=Math.PI/2;shell.position.set(side*.214,1.655,.015);shell.castShadow=false;headset.add(shell);
+    const pad=new THREE.Mesh(new THREE.CylinderGeometry(.052,.052,.058,12),padMat);
+    pad.rotation.z=Math.PI/2;pad.position.set(side*.23,1.655,.018);pad.castShadow=false;headset.add(pad);
+    const hinge=new THREE.Mesh(new THREE.BoxGeometry(.025,.065,.045),bandMat);
+    hinge.position.set(side*.188,1.72,.005);headset.add(hinge);
+  }
+  actor.add(headset);
+}
 function attachTacticalAgent(model,color){
   if(!model||!tacticalAgentTemplate||model.userData.tacticalAgent)return;
   const actor=SkeletonUtils.clone(tacticalAgentTemplate);
@@ -2925,6 +2981,8 @@ function attachTacticalAgent(model,color){
   const center=bounds.getCenter(new THREE.Vector3());
   actor.position.set(-center.x,-bounds.min.y,-center.z);
   actor.rotation.y=0;
+  actor.updateMatrixWorld(true);
+  fixExternalHeadset(actor);
   const bones={spine:[],head:[],leftShoulder:[],rightShoulder:[],arms:[],leftLeg:[],rightLeg:[],leftKnee:[],rightKnee:[]};
   const tintMaterials=[];
   actor.traverse(node=>{
