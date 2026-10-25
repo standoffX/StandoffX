@@ -761,3 +761,12 @@ assert.match(game, /data-buy-tab="smgs"/, "the buy menu has a separate SMG categ
 assert.match(game, /data-buy-tab="shotguns"/, "the buy menu has a separate shotgun category");
 assert.match(game, /data-buy-tab="snipers"/, "the buy menu has a separate sniper category");
 assert.match(game, /data-allies-weapon="p350" data-buy-category="pistols"/, "the free Allies pistol is sorted in the pistol category");
+
+assert.match(server, /if \(!session \|\| session\.mode === "training" \|\| session\.prototype/, "solo training rejects bot-spawn commands");
+assert.match(server, /session\.bot = session\.mode === "field_test" \? \{[\s\S]*?\} : null;/, "resetting solo training leaves its bot field empty");
+assert.match(server, /if \(session\.mode !== "field_test"\) return;/, "only Field Test can run bot-target shooting logic");
+assert.match(game, /trainingControls"\)\.style\.display=mode==="field_test"\?"block":"none"/, "solo map training hides bot/action controls");
+assert.match(game, /if\(mode==="training"&&action!=="resetSession"\)return/, "client keyboard actions cannot spawn or manipulate bots in solo training");
+assert.match(menu, /if\(mode==="training"\)\{notifyToast\("Тренування — соло режим, лобі не створюється\."\);return\}/, "solo training cannot create a party lobby");
+assert.match(server, /if \(!canUseTesterModes\(user\)\) \{\s*return socket\.emit\("training_error", \{ message: "Усі тренувальні та тестові режими доступні лише тестерам\."/ , "all training and field-test modes are server-gated to testers");
+assert.match(server, /function persistState\(name, data, legacyPath\)[\s\S]*?if \(mongoDb && mongoStatus\.connected && !mongoConnecting\) return mongoSave/, "database persistence queues data while a connection is being restored");
