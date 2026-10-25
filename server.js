@@ -105,7 +105,9 @@ const SOFTER_COLLECTION_SKINS={
   softer_p90_ultraviolet:{name:"P90 | Ultraviolet",weapon:"P90",weaponId:"p90",rarity:"epic",type:"weapon",collection:SOFTER_COLLECTION_ID,skinStyle:"ultraviolet",baseColor:"#1b1030",accentColor:"#e36dff",description:"Фіолетова сітка та неонові вузли."},
   softer_shotgun_afterglow:{name:"SHOTGUN | Afterglow",weapon:"SHOTGUN",weaponId:"shotgun",rarity:"epic",type:"weapon",collection:SOFTER_COLLECTION_ID,skinStyle:"afterglow",baseColor:"#301822",accentColor:"#ff7f91",description:"Рожево-червоний слід на темній основі."},
   softer_sniper_gold_signal:{name:"SNIPER | Gold Signal",weapon:"SNIPER",weaponId:"sniper",rarity:"legendary",type:"weapon",collection:SOFTER_COLLECTION_ID,skinStyle:"gold-signal",baseColor:"#25251e",accentColor:"#ffd36b",description:"Золоті сигнальні лінії для точної роботи."},
-  softer_knife_aurora:{name:"KNIFE | Aurora",weapon:"KNIFE",weaponId:"knife",rarity:"arcane",type:"weapon",collection:SOFTER_COLLECTION_ID,skinStyle:"aurora",baseColor:"#17152c",accentColor:"#a18bff",description:"Полярне сяйво на клинку."}
+  softer_knife_aurora:{name:"KNIFE | Aurora",weapon:"KNIFE",weaponId:"knife",rarity:"arcane",type:"weapon",collection:SOFTER_COLLECTION_ID,skinStyle:"aurora",baseColor:"#17152c",accentColor:"#a18bff",description:"Полярне сяйво на клинку."},
+  softer_knife_blue_blood:{name:"M9 Bayonet | Blue Blood",weapon:"M9 Bayonet",weaponId:"knife",rarity:"legendary",type:"weapon",collection:SOFTER_COLLECTION_ID,modelUrl:"/assets/weapons/bayonet_m9_blue_blood.glb",baseColor:"#142e52",accentColor:"#55a8ff",description:"M9-багнет з холодним синім візерунком."},
+  softer_knife_sparkling_gaze:{name:"M9 Bayonet | Sparkling Gaze",weapon:"M9 Bayonet",weaponId:"knife",rarity:"arcane",type:"weapon",collection:SOFTER_COLLECTION_ID,modelUrl:"/assets/weapons/bayonet_m9_sparkling_gaze.glb",baseColor:"#362044",accentColor:"#e6c2ff",description:"M9-багнет з яскравим переливчастим покриттям."}
 };
 const SOFTER_RARITY_WEIGHTS=[
   {rarity:"common",weight:5200,label:"52%"},
@@ -145,6 +147,13 @@ function persistState(name, data, legacyPath) {
   }
   if (storageReady && mongoStatus.configured) {
     try { pendingMongoWrites.set(name, JSON.parse(JSON.stringify(data))); } catch {}
+    // Clear a stale disconnected Db handle; otherwise the reconnect timer sees mongoDb and never retries.
+    if (!mongoStatus.connected && mongoDb) {
+      const staleClient = mongoClient;
+      mongoClient = null;
+      mongoDb = null;
+      try { staleClient?.close().catch(() => {}); } catch {}
+    }
     mongoStatus.connected = false;
     if (mongoStatus.state === "connected") mongoStatus.state = "disconnected";
   }
@@ -262,6 +271,8 @@ async function initMongo() {
       serverSelectionTimeoutMS: 8000,
       connectTimeoutMS: 8000,
       maxPoolSize: 5,
+      retryWrites: true,
+      writeConcern: { w: "majority", wtimeoutMS: 8000 },
       appName: "StandoffX"
     });
     mongoClient = client;
@@ -389,14 +400,13 @@ function mongoSave(name, data) {
     pendingMongoWrites.set(name, snapshot);
     mongoStatus.lastError = cleanText(err.message, 240);
     console.error("[DB] Write failed:", name, mongoStatus.lastError);
-    if (err.name === "MongoNetworkError" || err.name === "MongoServerSelectionError" || err.name === "MongoTopologyClosedError") {
-      const failedClient = mongoClient;
-      mongoClient = null;
-      mongoDb = null;
-      mongoStatus.connected = false;
-      mongoStatus.state = "error";
-      try { failedClient?.close().catch(() => {}); } catch {}
-    }
+    // Any failed state write must allow the reconnect loop to retry and drain this snapshot later.
+    const failedClient = mongoClient;
+    mongoClient = null;
+    mongoDb = null;
+    mongoStatus.connected = false;
+    mongoStatus.state = "error";
+    try { failedClient?.close().catch(() => {}); } catch {}
     return false;
   });
   mongoWriteQueues.set(name, write);
@@ -1709,10 +1719,10 @@ const MODE_CONFIGS = {
   }
 };
 
-const ALLIES_BUY_PRICES = Object.freeze({ akr: 2700, m4a1: 3100, p90: 2200, shotgun: 1900, sniper: 4600, p350: 300, knife: 0 });
+const ALLIES_BUY_PRICES = Object.freeze({ akr: 2700, m4a1: 3100, p90: 2200, shotgun: 1900, sniper: 4600, p350: 0, knife: 0 });
 
 const TESTER_MODE_CONFIGS = {
-  training: { id: "training", name: "TRAINING", map: "ZONE_9", kind: "bot-training" },
+  training: { id: "training", name: "TRAINING", map: "ZONE_9", kind: "solo-map-inspection" },
   field_test: { id: "field_test", name: "FIELD TEST", map: "HILL_TOWN", kind: "free-range" }
 };
 
@@ -1856,7 +1866,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
       ready: Boolean(p.isBot),
       cash: mode === "allies" ? 800 : 0,
       weapons: mode === "allies" ? ["p350", "knife"] : ["akr", "p350", "knife"],
-      equippedWeapon: "knife",
+      equippedWeapon: mode === "allies" ? "p350" : "knife",
       joinedAt: null,
       disconnectTimer: null
     })),
@@ -3435,6 +3445,9 @@ io.on("connection", socket => {
     const mode = cleanText(data?.mode, 32);
     const cfg = TESTER_MODE_CONFIGS[mode];
     if (!cfg) return socket.emit("training_error", { message: "Невідомий тестовий режим." });
+    if (mode === "training" && !canUseTesterModes(user)) {
+      return socket.emit("training_error", { message: "Режим тренування доступний лише тестерам." });
+    }
     if (!canUseTesterModes(user) && (mode !== "field_test" || data?.prototype === true)) {
       return socket.emit("training_error", { message: "Прототип і тестові режими доступні лише тестерам." });
     }
@@ -3467,7 +3480,8 @@ io.on("connection", socket => {
       socketId: socket.id,
       playerPos: spawnPosition,
       playerRotY: 0,
-      bot: ["field_test", "training"].includes(mode) ? { id: "training_bot", nickname: "ТРЕНУВАЛЬНА МІШЕНЬ", role: "runner", team: "B", hp: 100, maxHp: 100, hits: 0, x: spawnPosition.x, y: 0, z: spawnPosition.z - 8, rotY: Math.PI, action: "idle", updatedAt: Date.now() } : null,
+      // Map inspection is strictly solo; the optional moving target exists only in FIELD TEST.
+      bot: mode === "field_test" ? { id: "training_bot", nickname: "ТРЕНУВАЛЬНА МІШЕНЬ", role: "runner", team: "B", hp: 100, maxHp: 100, hits: 0, x: spawnPosition.x, y: 0, z: spawnPosition.z - 8, rotY: Math.PI, action: "idle", updatedAt: Date.now() } : null,
       spawnPosition: { ...spawnPosition },
       lastMoveAt: 0,
       lastActionAt: 0,
