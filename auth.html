@@ -141,6 +141,7 @@ $("form").onsubmit=async e=>{
       location.href=d.redirect||"/game";
     }
   }catch(err){
+    if(String(err.message||"").toLowerCase().includes("заблок")){location.href="/banned";return}
     $("msg").textContent=err.message;
   }finally{
     btn.disabled=false;
