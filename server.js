@@ -3616,7 +3616,7 @@ io.on("connection", socket => {
 
   socket.on("training_spawn_bot", data => {
     const session = trainingSessions.get(socket.user?.id);
-    if (!session || session.prototype || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
+    if (!session || session.mode === "training" || session.prototype || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
     if (session.bot) {
       socket.emit("training_state", { bot: session.bot, message: "Бот уже створений." });
       return;
@@ -3647,7 +3647,7 @@ io.on("connection", socket => {
 
   socket.on("training_remove_bot", data => {
     const session = trainingSessions.get(socket.user?.id);
-    if (!session || session.prototype || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
+    if (!session || session.mode === "training" || session.prototype || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
     const now = Date.now();
     if (now - session.lastActionAt < 180) return;
     session.lastActionAt = now;
@@ -3657,7 +3657,7 @@ io.on("connection", socket => {
 
   socket.on("training_bot_action", data => {
     const session = trainingSessions.get(socket.user?.id);
-    if (!session || session.prototype || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || !session.bot) return;
+    if (!session || session.mode === "training" || session.prototype || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100) || !session.bot) return;
     const now = Date.now();
     if (now - session.lastActionAt < 180) return;
     session.lastActionAt = now;
@@ -3770,12 +3770,12 @@ io.on("connection", socket => {
     if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
     session.playerPos = { ...(session.spawnPosition || (session.mode === "training" ? { x: 5, y: 0, z: 5 } : { x: 0, y: 0, z: 0 })) };
     session.playerRotY = 0;
-    session.bot = {
+    session.bot = session.mode === "field_test" ? {
       id: "training_bot", nickname: "ТРЕНУВАЛЬНА МІШЕНЬ", role: "runner", team: "B",
       hp: 100, maxHp: 100, hits: 0,
       x: session.playerPos.x, y: 0, z: session.playerPos.z - 8,
       rotY: Math.PI, action: "idle", updatedAt: Date.now()
-    };
+    } : null;
     io.to(session.id).emit("training_state", { bot: session.bot, spawn: { ...session.playerPos }, reset: true, message: "Тренування скинуто." });
   });
 
