@@ -1170,6 +1170,78 @@ body.lobby-screen #modeModal .tester-mode-switch{margin:0 0 12px!important;paddi
 .crosshair-settings-controls select{width:100%;min-height:38px;padding:8px 10px;border-radius:7px;border:1px solid #b3d4e52b;background:#0b1520;color:#e5f1f8}
 @media(max-width:600px){.crosshair-settings-row{grid-template-columns:92px minmax(0,1fr);gap:10px}.crosshair-preview-box{min-height:98px}}
 </style>
+
+<style id="sx-home-redesign-v2">
+/* StandoffX home refresh: cleaner tactical layout with a clear 3D hero. */
+body{background:#070c12!important;color:#eaf2f8!important}
+.shell{width:100%!important;max-width:1800px!important;margin-inline:auto!important;padding-inline:clamp(10px,1.5vw,24px)!important}
+.topbar{border:1px solid #a8c7db20!important;border-radius:8px!important;background:linear-gradient(110deg,#101923f5,#0b121bf2)!important;box-shadow:0 12px 40px #0003!important;backdrop-filter:blur(14px)}
+.topbrand{letter-spacing:2px!important}
+.pill{border-radius:4px!important;background:#0a1119!important;border-color:#8cb1ca2c!important}
+.home-layout{display:grid!important;grid-template-columns:minmax(235px,.78fr) minmax(390px,1.48fr) minmax(255px,.84fr)!important;grid-auto-flow:row!important;align-items:stretch!important;gap:13px!important}
+.home-layout>.home-friends{grid-column:1!important;grid-row:1!important;min-width:0}
+.home-layout>.home-hero{grid-column:2!important;grid-row:1 / span 2!important;min-height:620px!important;height:100%!important;isolation:isolate!important;border:1px solid #a5c9df3d!important;border-radius:8px!important;background:radial-gradient(ellipse at 68% 44%,#28536d65 0%,transparent 39%),linear-gradient(145deg,#121f2a 0%,#0b131b 55%,#101821 100%)!important;box-shadow:0 20px 55px #0004!important}
+.home-layout>.profile-col{grid-column:3!important;grid-row:1!important;min-width:0;border:1px solid #a5c9df24!important;border-radius:8px!important;background:linear-gradient(150deg,#111b25f5,#0b121af5)!important}
+.home-layout>.promo-col{grid-column:1!important;grid-row:2!important;display:block!important;min-height:0!important;border:1px solid #a5c9df24!important;border-radius:8px!important;overflow:hidden!important}
+.home-layout>.passpanel{grid-column:3!important;grid-row:2!important;min-width:0;border:1px solid #a5c9df24!important;border-radius:8px!important;overflow:hidden!important}
+.home-friends,.profile-col,.promo-col,.passpanel{box-shadow:0 12px 34px #0002!important}
+.home-friends .panelhead,.profile-col .panelhead{background:#ffffff04!important;border-bottom-color:#a8c7db1c!important}
+.home-self-card{border-radius:6px!important;background:linear-gradient(115deg,#162936,#101921)!important;border-color:#8fc3dd29!important}
+.home-friend,.home-squad-card,.rankcard,.statcard,.listcard{border-radius:5px!important}
+.home-hero:before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.4;background:linear-gradient(115deg,transparent 0 38%,#b5e4ff08 38.2%,transparent 38.5% 62%,#b5e4ff07 62.2%,transparent 62.5%),linear-gradient(0deg,#091018dd 0%,transparent 56%),repeating-linear-gradient(0deg,transparent 0 43px,#8bb9d00b 44px)}
+.home-hero:after{z-index:2!important;pointer-events:none!important;background:linear-gradient(90deg,#09121bdd 0%,#101a2447 44%,#101a2400 76%),linear-gradient(0deg,#080f17d9 0%,transparent 46%)!important;border:0!important}
+.home-hero-art{z-index:0!important;opacity:.25!important;filter:saturate(.65) contrast(1.08) brightness(.78)!important;object-fit:cover!important;object-position:center 35%!important}
+.home-agent-canvas{z-index:3!important;opacity:1!important;pointer-events:none!important}
+.home-hero-copy{left:clamp(20px,2.5vw,34px)!important;top:clamp(22px,2.5vw,34px)!important;z-index:5!important;max-width:70%!important}
+.home-hero-overline{font-size:10px!important;letter-spacing:2.6px!important;color:#d6e5ed!important}
+.home-hero-copy h1{font-size:clamp(34px,4.5vw,64px)!important;line-height:.94!important;letter-spacing:-1px!important;text-shadow:0 5px 26px #0009!important}
+.home-hero-copy h1 em{color:#9bdfff!important;text-shadow:0 0 26px #59bcfa48!important}
+.home-squad-bar{z-index:5!important;left:20px!important;right:auto!important;bottom:20px!important;width:min(48%,360px)!important;max-width:360px!important;border:1px solid #a7c9df26!important;border-radius:6px!important;background:#08121bd9!important;backdrop-filter:blur(12px)!important}
+.home-hero .playarea{right:22px!important;bottom:22px!important;left:auto!important;top:auto!important;z-index:7!important}
+.home-hero .playwrap{align-items:flex-end!important;gap:9px!important}
+.home-hero .playbutton{min-width:190px!important;min-height:54px!important;border:1px solid #ffb28b!important;border-radius:4px!important;background:linear-gradient(110deg,#ff8753,#e95c37)!important;color:#130d0a!important;font-size:13px!important;font-weight:1000!important;letter-spacing:1.4px!important;box-shadow:0 7px 25px #ff6e3933,inset 0 1px #ffffff65!important;transition:transform .16s ease,filter .16s ease,box-shadow .16s ease!important}
+.home-hero .playbutton:hover{transform:translateY(-2px)!important;filter:brightness(1.08)!important;box-shadow:0 12px 30px #ff6e3942!important}
+.home-hero #selectedModeText,.home-hero #selectedMapText{color:#e0edf5!important;text-align:right!important;text-shadow:0 2px 8px #000!important}
+.home-hero #selectedModeText{color:#ffb28b!important;letter-spacing:1.4px!important}
+.home-hero #resumeMatchBtn{border-radius:4px!important}
+.home-hero .home-squad-head{color:#c9dce7!important}
+.home-hero .home-squad-roster{gap:6px!important}
+.home-hero .active-match-squad{background:#08121be8!important;border:1px solid #a7c9df2a!important;border-radius:5px!important}
+.panel,.modalbox,.popmenu{border-radius:7px!important}
+.panelhead{letter-spacing:1.2px!important}
+.secondary{border-radius:4px!important}
+button{transition:background-color .14s ease,border-color .14s ease,transform .14s ease}
+.agent-model-unavailable .home-hero-art{opacity:.7!important;filter:saturate(.82) contrast(1.08) brightness(.8)!important}
+.agent-model-unavailable .home-agent-canvas{opacity:0!important}
+@media(max-width:1180px){
+ .home-layout{grid-template-columns:minmax(210px,.8fr) minmax(0,1.35fr)!important;gap:11px!important}
+ .home-layout>.home-friends{grid-column:1!important;grid-row:1!important}
+ .home-layout>.home-hero{grid-column:2!important;grid-row:1 / span 2!important;min-height:590px!important}
+ .home-layout>.profile-col{grid-column:1!important;grid-row:2!important;display:block!important}
+ .home-layout>.promo-col{grid-column:1!important;grid-row:3!important}
+ .home-layout>.passpanel{grid-column:2!important;grid-row:3!important}
+ .home-squad-bar{width:min(44%,300px)!important}
+}
+@media(max-width:720px){
+ .shell{padding-inline:8px!important}
+ .topbar{gap:7px!important;padding:9px!important}
+ .home-layout{grid-template-columns:minmax(0,1fr)!important;gap:9px!important}
+ .home-layout>.home-hero{grid-column:1!important;grid-row:1!important;min-height:500px!important;height:500px!important}
+ .home-layout>.home-friends{grid-column:1!important;grid-row:2!important}
+ .home-layout>.profile-col{grid-column:1!important;grid-row:3!important;display:block!important}
+ .home-layout>.promo-col{grid-column:1!important;grid-row:4!important}
+ .home-layout>.passpanel{grid-column:1!important;grid-row:5!important}
+ .home-hero-copy{left:16px!important;top:18px!important;max-width:80%!important}
+ .home-hero-copy h1{font-size:clamp(30px,9vw,46px)!important}
+ .home-squad-bar{left:12px!important;bottom:75px!important;width:calc(100% - 24px)!important;max-width:none!important}
+ .home-hero .playarea{right:12px!important;bottom:12px!important}
+ .home-hero .playbutton{min-width:155px!important;min-height:46px!important}
+}
+@media(prefers-reduced-motion:reduce){
+ .home-hero .playbutton,button{transition:none!important}
+}
+</style>
+
 </head>
 <body class="lobby-screen">
 <div class="app">
@@ -2574,29 +2646,39 @@ if(hero&&canvas){
     resize();
     loadTacticalAgent();
     function animateIdle(actor,now,dt){
-      const breath=reducedMotion.matches?0:Math.sin(now*.00155+actor.phase);
-      const sway=reducedMotion.matches?0:Math.sin(now*.00036+actor.phase)*.012;
+      const motionEnabled=!reducedMotion.matches;
+      const breath=motionEnabled?Math.sin(now*.00155+actor.phase):0;
+      const sway=motionEnabled?Math.sin(now*.00036+actor.phase)*.016:0;
+      const scan=motionEnabled?Math.sin(now*.00048+actor.phase*1.7)*.045:0;
+      const cycle=((now*.001+actor.phase*1.7)%9+9)%9;
+      const inspectProgress=motionEnabled?THREE.MathUtils.clamp((cycle-5.55)/1.7,0,1):0;
+      const inspect=Math.sin(inspectProgress*Math.PI);
+      const weightShift=motionEnabled?Math.sin(now*.00072+actor.phase)*.018:0;
       if(now>actor.evadeUntil){
         if(actor.index===touchEvasionIndex)touchEvasionIndex=-1;
         if(actor.index!==hoveredAgentIndex)actor.evasionTarget=0;
       }
       actor.evasion=THREE.MathUtils.damp(actor.evasion,actor.evasionTarget,6.5,dt);
-      actor.mesh.position.x=actor.homeX+actor.evasion*.52;
-      actor.mesh.position.y=actor.homeY+breath*.012;
-      actor.mesh.position.z=actor.homeZ;
-      actor.mesh.rotation.y=actor.homeYaw+sway+actor.evasion*.12;
+      actor.mesh.position.x=actor.homeX+actor.evasion*.52+weightShift;
+      actor.mesh.position.y=actor.homeY+breath*.019+inspect*.005;
+      actor.mesh.position.z=actor.homeZ+(motionEnabled?Math.sin(now*.00055+actor.phase)*.012:0);
+      actor.mesh.rotation.y=actor.homeYaw+sway+actor.evasion*.12+scan+inspect*.075;
       actor.bones.spine.forEach((bone,index)=>{
         const weight=index===actor.bones.spine.length-1?1:.55;
-        bone.node.rotation.x=bone.rotation.x+breath*.014*weight;
-        bone.node.rotation.z=bone.rotation.z+breath*.004*weight;
+        bone.node.rotation.x=bone.rotation.x+breath*.022*weight-inspect*.035*weight;
+        bone.node.rotation.z=bone.rotation.z+breath*.008*weight+weightShift*.5;
       });
       actor.bones.head.forEach(bone=>{
-        bone.node.rotation.x=bone.rotation.x+breath*.003;
-        bone.node.rotation.y=bone.rotation.y+(reducedMotion.matches?0:Math.sin(now*.00043+actor.phase)*.012);
+        bone.node.rotation.x=bone.rotation.x+breath*.006-inspect*.055;
+        bone.node.rotation.y=bone.rotation.y+(motionEnabled?Math.sin(now*.00043+actor.phase)*.026:0)+scan*.7;
       });
-      actor.bones.leftShoulder.forEach(bone=>{bone.node.rotation.z=bone.rotation.z+breath*.008});
-      actor.bones.rightShoulder.forEach(bone=>{bone.node.rotation.z=bone.rotation.z-breath*.008});
-      actor.bones.arms.forEach((bone,index)=>{bone.node.rotation.x=bone.rotation.x+breath*.003*(index%2?-.7:1)});
+      actor.bones.leftShoulder.forEach(bone=>{bone.node.rotation.z=bone.rotation.z+breath*.012+inspect*.045});
+      actor.bones.rightShoulder.forEach(bone=>{bone.node.rotation.z=bone.rotation.z-breath*.012-inspect*.055});
+      actor.bones.arms.forEach((bone,index)=>{
+        const side=index%2?-1:1;
+        bone.node.rotation.x=bone.rotation.x+breath*.006*(side*.7)+inspect*.045*side;
+        bone.node.rotation.z=bone.rotation.z+inspect*.035*side;
+      });
     }
     function draw(now){
       requestAnimationFrame(draw);
