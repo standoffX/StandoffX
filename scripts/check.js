@@ -189,8 +189,8 @@ assert.match(menu, /StandoffX menu remake/, "the menu must use the refreshed neo
 assert.match(menu, /id="homeAgentCanvas"/, "the main screen has a dedicated transparent canvas for its central 3D agent");
 assert.match(menu, /soldier_tac\.glb/, "the lobby preview loads the optimized tactical agent model");
 assert.match(menu, /SkeletonUtils\.clone\(tacticalTemplate\)/, "the lobby clones the animated rig safely for every squad member");
-assert.match(menu, /mesh\.rotation\.y=0;/, "the lobby agent faces the camera rather than showing its back");
-assert.ok(menu.includes("homeYaw=(index-(n-1)/2)*-.035"), "squad members retain a forward-facing idle orientation");
+assert.match(menu, /mesh\.rotation\.y=Math\.PI;/, "the lobby agent faces the camera rather than showing its back");
+assert.ok(menu.includes("actor.homeYaw=Math.PI+(index-(n-1)/2)*-.035"), "squad members retain a forward-facing idle orientation");
 assert.match(menu, /id="crossStyle"/, "settings allow selecting a crosshair shape");
 assert.match(menu, /id="crossColor"/, "settings allow selecting a crosshair color");
 assert.match(menu, /applyCrosshairPreview\(current\)/, "the crosshair preview updates and saves user selections");
