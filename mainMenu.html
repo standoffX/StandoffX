@@ -2776,51 +2776,79 @@ if(hero&&canvas){
       if(!model)return;
       model.updateMatrixWorld(true);
       const pattern=/(headset|headphone|earmuff|earcup|earpad|earpiece|earphone|headphones)/i;
-      const found=[];
+      const named=[];
       model.traverse(node=>{
         if(node===model||node.isBone||node.isSkinnedMesh||!pattern.test(String(node.name||"")))return;
-        found.push(node);
+        named.push(node);
       });
-      const foundSet=new Set(found);
-      const roots=found.filter(node=>{
+      const namedSet=new Set(named);
+      const roots=named.filter(node=>{
         let parent=node.parent;
-        while(parent&&parent!==model){if(foundSet.has(parent))return false;parent=parent.parent}
+        while(parent&&parent!==model){if(namedSet.has(parent))return false;parent=parent.parent}
         return true;
       });
+      const bodyBounds=new THREE.Box3().setFromObject(model);
+      const bodySize=bodyBounds.getSize(new THREE.Vector3());
+      if(bodyBounds.isEmpty()||bodySize.y<.5)return;
+      const headBounds=new THREE.Box3().makeEmpty();
+      model.traverse(node=>{
+        if(!node.isMesh||!/(head|helmet|skull|face|headgear)/i.test(String(node.name||"")))return;
+        const bounds=new THREE.Box3().setFromObject(node),size=bounds.getSize(new THREE.Vector3());
+        if(!bounds.isEmpty()&&size.y>bodySize.y*.025&&size.y<bodySize.y*.38)headBounds.union(bounds);
+      });
+      const hasHead=!headBounds.isEmpty();
+      const headSize=hasHead?headBounds.getSize(new THREE.Vector3()):new THREE.Vector3(bodySize.x*.34,bodySize.y*.15,bodySize.z*.22);
+      const center=hasHead?headBounds.getCenter(new THREE.Vector3()):new THREE.Vector3(
+        (bodyBounds.min.x+bodyBounds.max.x)*.5,
+        bodyBounds.min.y+bodySize.y*.865,
+        bodyBounds.min.z+bodySize.z*.02
+      );
+      const headTop=hasHead?headBounds.max.y:bodyBounds.min.y+bodySize.y*.945;
       for(const node of roots){
         if(!node.parent)continue;
         node.updateWorldMatrix(true,true);
         const bounds=new THREE.Box3().setFromObject(node);
         if(bounds.isEmpty())continue;
-        const center=bounds.getCenter(new THREE.Vector3());
-        if(center.y>.78&&center.y<1.82){
+        const accessoryCenter=bounds.getCenter(new THREE.Vector3());
+        if(Math.abs(center.y-accessoryCenter.y)>.035){
           const worldOrigin=node.getWorldPosition(new THREE.Vector3());
-          worldOrigin.y+=Math.min(.95,1.98-center.y);
+          worldOrigin.y+=center.y-accessoryCenter.y;
           node.parent.worldToLocal(worldOrigin);
           node.position.copy(worldOrigin);
           node.updateWorldMatrix(true,true);
         }
       }
       if(roots.length)return;
-      // Some exports do not name their headset nodes; add correctly positioned ear cups and a band.
+      const worldScale=model.getWorldScale(new THREE.Vector3());
+      const sx=Math.max(.001,Math.abs(worldScale.x)),sy=Math.max(.001,Math.abs(worldScale.y)),sz=Math.max(.001,Math.abs(worldScale.z));
+      const localCenter=model.worldToLocal(center.clone());
+      const localTop=model.worldToLocal(new THREE.Vector3(center.x,headTop,center.z));
+      const halfWidth=Math.max(.10,Math.min(.205,Math.max(headSize.x*.56,bodySize.x*.15)))/sx;
+      const earRadius=Math.max(.035,Math.min(.068,headSize.y*.27))/sy;
+      const cupDepth=Math.max(.028,Math.min(.05,headSize.z*.22))/sz;
+      const bandY=localTop.y+.018/sy,bandZ=localCenter.z-headSize.z*.12/sz,earY=localCenter.y;
       const headset=new THREE.Group();headset.name="StandoffX_Menu_Headset";
       const bandMat=new THREE.MeshStandardMaterial({color:0x18232c,roughness:.48,metalness:.34});
       const cupMat=new THREE.MeshStandardMaterial({color:0x293b49,roughness:.4,metalness:.5});
       const padMat=new THREE.MeshStandardMaterial({color:0x0b1218,roughness:.9,metalness:.03});
       const curve=new THREE.CatmullRomCurve3([
-        new THREE.Vector3(-.25,1.95,-.015),new THREE.Vector3(-.23,2.12,-.025),
-        new THREE.Vector3(-.13,2.23,-.03),new THREE.Vector3(0,2.26,-.03),
-        new THREE.Vector3(.13,2.23,-.03),new THREE.Vector3(.23,2.12,-.025),
-        new THREE.Vector3(.25,1.95,-.015)
+        new THREE.Vector3(localCenter.x-halfWidth,earY+.01/sy,bandZ),
+        new THREE.Vector3(localCenter.x-halfWidth*.91,bandY-.11/sy,bandZ),
+        new THREE.Vector3(localCenter.x-halfWidth*.56,bandY-.025/sy,bandZ),
+        new THREE.Vector3(localCenter.x,bandY,bandZ),
+        new THREE.Vector3(localCenter.x+halfWidth*.56,bandY-.025/sy,bandZ),
+        new THREE.Vector3(localCenter.x+halfWidth*.91,bandY-.11/sy,bandZ),
+        new THREE.Vector3(localCenter.x+halfWidth,earY+.01/sy,bandZ)
       ]);
-      headset.add(new THREE.Mesh(new THREE.TubeGeometry(curve,20,.016,6,false),bandMat));
+      headset.add(new THREE.Mesh(new THREE.TubeGeometry(curve,20,.012/sy,6,false),bandMat));
       for(const side of [-1,1]){
-        const cup=new THREE.Mesh(new THREE.CylinderGeometry(.074,.074,.052,12),cupMat);
-        cup.rotation.z=Math.PI/2;cup.position.set(side*.238,1.97,.018);headset.add(cup);
-        const pad=new THREE.Mesh(new THREE.CylinderGeometry(.052,.052,.058,12),padMat);
-        pad.rotation.z=Math.PI/2;pad.position.set(side*.254,1.97,.02);headset.add(pad);
+        const cup=new THREE.Mesh(new THREE.CylinderGeometry(earRadius,earRadius,cupDepth,12),cupMat);
+        cup.rotation.z=Math.PI/2;cup.position.set(localCenter.x+side*halfWidth*.91,earY,localCenter.z);headset.add(cup);
+        const pad=new THREE.Mesh(new THREE.CylinderGeometry(earRadius*.72,earRadius*.72,cupDepth*1.08,12),padMat);
+        pad.rotation.z=Math.PI/2;pad.position.set(localCenter.x+side*(halfWidth*.91+cupDepth*.12),earY,localCenter.z);headset.add(pad);
       }
       model.add(headset);
+      model.updateMatrixWorld(true);
     }
     function createAgent(index){
       if(!tacticalTemplate)return null;
