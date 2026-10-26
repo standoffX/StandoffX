@@ -1800,9 +1800,8 @@ function render(){
   $("statsComp").textContent=me.MMRCompetitive||1000;$("statsAllies").textContent=me.MMRAllies||1000;
   $("verifiedMark").textContent=me.isVerified?"✓ VERIFIED":"";
   $("adminBtn").style.display=(me.isAdmin||me.id==="Dev_01")?"grid":"none";
-  if(!canTest()&&testGameplayMode==="prototype"){testGameplayMode="real";localStorage.setItem("sx_test_gameplay","real")}
   const testerSwitch=$("testerGameplaySwitch");
-  if(testerSwitch)testerSwitch.style.display=canTest()?"flex":"none";
+  if(testerSwitch)testerSwitch.style.display=selectedMode==="training"?"none":"flex";
   const testerKeybinds=$("testKeybindSettings");
   if(testerKeybinds)testerKeybinds.style.display=canTest()?"block":"none";
   $("passXp").textContent=(me.XP||0)%1000+" / 1000 XP";
@@ -1812,9 +1811,8 @@ function render(){
 }
 function renderMode(){
   if(selectedMode==="training"&&!canTest()){selectedMode="allies";selectedMap="SANDSTONE";localStorage.setItem("sx_mode",selectedMode);localStorage.setItem("sx_map",selectedMap)}
-  if(!canTest()&&testGameplayMode!=="real")testGameplayMode="real";
   const testerSwitch=document.querySelector(".tester-mode-switch");
-  if(testerSwitch)testerSwitch.style.display=canTest()&&selectedMode!=="training"?"":"none";
+  if(testerSwitch)testerSwitch.style.display=selectedMode!=="training"?"":"none";
   document.querySelectorAll(".modebtn[data-mode]").forEach(b=>{
     b.classList.toggle("active",b.dataset.mode===selectedMode);
     b.style.display=b.dataset.mode==="training"&&!canTest()?"none":"";
@@ -1850,7 +1848,7 @@ document.querySelectorAll(".modebtn[data-mode]").forEach(b=>b.addEventListener("
   renderMode();renderMapSelection();
 }));
 document.querySelectorAll("[data-test-gameplay]").forEach(b=>b.addEventListener("click",()=>{
-  if(!canTest()||selectedMode==="training")return;
+  if(selectedMode==="training")return;
   testGameplayMode=b.dataset.testGameplay==="real"?"real":"prototype";
   localStorage.setItem("sx_test_gameplay",testGameplayMode);
   renderMode();
