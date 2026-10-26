@@ -635,10 +635,10 @@ function applyCrosshairSettings(){
   if(!node)return;
   let settings={};
   try{settings=JSON.parse(localStorage.getItem("sx_settings")||"{}")}catch{}
-  const size=Math.max(8,Math.min(36,Number(settings.crosshairSize)||20));
-  const gap=Math.max(0,Math.min(12,Number.isFinite(Number(settings.crosshairGap))?Number(settings.crosshairGap):3));
-  const style=["classic","thin","dot","circle"].includes(settings.crosshairStyle)?settings.crosshairStyle:"classic";
-  const color=/^#[0-9a-f]{6}$/i.test(String(settings.crosshairColor||""))?settings.crosshairColor:"#e7f3fb";
+  const size=Math.max(8,Math.min(36,Number(settings.crosshairSize)||18));
+  const gap=Math.max(0,Math.min(12,Number.isFinite(Number(settings.crosshairGap))?Number(settings.crosshairGap):2));
+  const style=["classic","thin","dot","circle"].includes(settings.crosshairStyle)?settings.crosshairStyle:"thin";
+  const color=/^#[0-9a-f]{6}$/i.test(String(settings.crosshairColor||""))?settings.crosshairColor:"#63ff91";
   node.classList.remove("style-classic","style-thin","style-dot","style-circle");
   node.classList.add("style-"+style);
   node.style.setProperty("--crosshair-size",size+"px");
@@ -710,7 +710,7 @@ const renderer=new THREE.WebGLRenderer({
   preserveDrawingBuffer:false
 });
 renderer.setSize(innerWidth,innerHeight,false);
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?1.0:isLowEndDevice?1.0:selectedMap==="ZONE_9"?1.1:1.35));
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?0.9:isLowEndDevice?0.82:selectedMap==="ZONE_9"?1.05:1.3));
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.12;
@@ -1024,8 +1024,8 @@ function buildHillTownMap(){
   const addBox=(x,y,z,w,h,d,material,rotationY=0,collidable=true)=>{
     const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);
     mesh.position.set(x,y,z);mesh.rotation.y=rotationY;
-    mesh.castShadow=!isMobileDevice&&Boolean(collidable);
-    mesh.receiveShadow=!isMobileDevice;
+    mesh.castShadow=!isMobileDevice&&!isLowEndDevice&&Boolean(collidable);
+    mesh.receiveShadow=!isMobileDevice&&!isLowEndDevice;
     mesh.userData.mapSolid=Boolean(collidable);
     scene.add(mesh);
     if(collidable)mapObjects.push(mesh);
@@ -1034,7 +1034,7 @@ function buildHillTownMap(){
   const addGround=(x,z,w,d,material,y=-.045)=>{
     const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,d),material);
     mesh.rotation.x=-Math.PI/2;mesh.position.set(x,y,z);
-    mesh.castShadow=false;mesh.receiveShadow=!isMobileDevice;scene.add(mesh);mapObjects.push(mesh);
+    mesh.castShadow=false;mesh.receiveShadow=!isMobileDevice&&!isLowEndDevice;scene.add(mesh);mapObjects.push(mesh);
     return mesh;
   };
   const wallAlongZ=(x,start,end,material,thickness=.9,height=5.8)=>{
@@ -3588,6 +3588,29 @@ function startReload(){
     }
   },info.reloadMs);
 }
+function getLocalShotEndpoint(direction,range,preferredImpact=null){
+  const origin=camera.position.clone();
+  const maxRange=Math.max(.1,Number(range)||60);
+  const endpoint=origin.clone().addScaledVector(direction,maxRange);
+  let nearestDistance=maxRange;
+  scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);
+  raycaster.set(origin,direction);raycaster.near=.02;raycaster.far=maxRange;
+  const mapHits=raycaster.intersectObjects(mapObjects.filter(object=>object?.visible),false);
+  const mapHit=mapHits.find(hit=>hit.distance>.03);
+  if(mapHit&&mapHit.distance<nearestDistance){nearestDistance=mapHit.distance;endpoint.copy(mapHit.point)}
+  const targetMeshes=Object.values(enemies).filter(enemy=>enemy?.mesh?.visible&&Number(enemy.hp)>0).map(enemy=>enemy.mesh);
+  if(targetMeshes.length){
+    const targetHits=raycaster.intersectObjects(targetMeshes,true);
+    const targetHit=targetHits.find(hit=>hit.distance>.03&&hit.distance<nearestDistance);
+    if(targetHit){nearestDistance=targetHit.distance;endpoint.copy(targetHit.point)}
+  }
+  if(preferredImpact?.isVector3){
+    const distance=origin.distanceTo(preferredImpact);
+    if(distance>.03&&distance<nearestDistance+.02){nearestDistance=distance;endpoint.copy(preferredImpact)}
+  }
+  raycaster.near=0;raycaster.far=Infinity;
+  return endpoint;
+}
 function shoot(){
   if(!isTeamCombat&&!isTrainingMode)return;
   if(matchPhase!=="game"||hp<=0||!mapLoadFinished)return;
@@ -3621,15 +3644,21 @@ function shoot(){
   const dir=new THREE.Vector3();
   camera.getWorldDirection(dir);dir.normalize();
   const impact=damageBreakableWood(dir);
+  const aimPoint=getLocalShotEndpoint(dir,info.range,impact);
+  const shotOriginY=player.position.y+(isCrouching?1.05:1.58);
+  const serverOrigin=new THREE.Vector3(player.position.x,shotOriginY,player.position.z);
+  const serverAim=aimPoint.clone().sub(serverOrigin);
+  if(serverAim.lengthSq()<.0001)serverAim.copy(dir);
+  serverAim.normalize();
   if(info.kind!=="melee"){
     const start=camera.position.clone().addScaledVector(dir,.38);
-    const end=impact||camera.position.clone().addScaledVector(dir,info.range);
+    const end=aimPoint;
     spawnMuzzleFlash(start,dir,selectedWeapon==="p350"?0xc8efff:0xffc56d);
     spawnTracer(start,end,selectedWeapon==="p350"?0xbceaff:0xffdf9a,110);
   }
-  const impactPayload=impact?{x:impact.x,y:impact.y,z:impact.z}:null;
-  if(isTrainingMode)socket.emit("training_shoot",{trainingId,weapon:selectedWeapon,dx:dir.x,dy:dir.y,dz:dir.z});
-  else socket.emit("team_shoot",{matchId,weapon:selectedWeapon,dx:dir.x,dy:dir.y,dz:dir.z,impact:impactPayload});
+  const impactPayload=impact&&!isThird?{x:impact.x,y:impact.y,z:impact.z}:null;
+  if(isTrainingMode)socket.emit("training_shoot",{trainingId,weapon:selectedWeapon,oy:shotOriginY,dx:serverAim.x,dy:serverAim.y,dz:serverAim.z});
+  else socket.emit("team_shoot",{matchId,weapon:selectedWeapon,oy:shotOriginY,dx:serverAim.x,dy:serverAim.y,dz:serverAim.z,impact:impactPayload});
 }
 function fireLoop(){
   if(fireHeld){shoot();requestAnimationFrame(fireLoop)}
@@ -4387,7 +4416,10 @@ function renderRoundResult(data){
 }
 function animate(){
   requestAnimationFrame(animate);
-  const now=performance.now(),dt=Math.min(.05,(now-previous)/1000);previous=now;
+  const now=performance.now();
+  // Cap weak PCs at a steady 45 FPS instead of oscillating between very short and long frames.
+  if(isLowEndDevice&&now-previous<1000/45)return;
+  const dt=Math.min(.05,(now-previous)/1000);previous=now;
   const mv=window.sxMove||{x:0,y:0};
 
   if(matchPhase==="game"&&player&&hp>0&&mapLoadFinished){
@@ -4515,7 +4547,7 @@ function animate(){
 addEventListener("resize",()=>{
   camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight,false);
-  renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?1.0:isLowEndDevice?1.0:selectedMap==="ZONE_9"?1.1:1.35));
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?0.9:isLowEndDevice?0.82:selectedMap==="ZONE_9"?1.05:1.3));
 });
 
 let connectedToGameplay=socket.connected;
