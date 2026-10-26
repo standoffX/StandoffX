@@ -40,6 +40,7 @@ for (const file of htmlFiles) {
 
 const server = read("server.js");
 const menu = read("mainMenu.html");
+const auth = read("auth.html");
 const admin = read("admin.html");
 const game = read("play2.html");
 const ui = read("ui.css");
