@@ -1172,7 +1172,10 @@ body.lobby-screen #modeModal .tester-mode-switch{margin:0 0 12px!important;paddi
 .crosshair-display.style-circle:before{content:"";position:absolute;left:50%;top:50%;width:var(--crosshair-size);height:var(--crosshair-size);border:var(--crosshair-thickness) solid var(--crosshair-color);border-radius:50%;transform:translate(-50%,-50%);box-sizing:border-box;box-shadow:0 0 2px #000}
 .crosshair-settings-controls{display:flex;flex-direction:column;justify-content:center;gap:6px;min-width:0}
 .crosshair-settings-controls select{width:100%;min-height:38px;padding:8px 10px;border-radius:7px;border:1px solid #b3d4e52b;background:#0b1520;color:#e5f1f8}
-@media(max-width:600px){.crosshair-settings-row{grid-template-columns:92px minmax(0,1fr);gap:10px}.crosshair-preview-box{min-height:98px}}
+.crosshair-presets{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.crosshair-presets button{flex:1 1 100px;min-height:34px;padding:7px 9px;border:1px solid #7faec72b;border-radius:6px;background:#0b1520;color:#cbdce8;font:900 9px Inter,Arial,sans-serif;letter-spacing:.7px;cursor:pointer;touch-action:manipulation}
+.crosshair-presets button:hover,.crosshair-presets button:focus-visible{border-color:#63ff91;background:#10271d;color:#e7ffef;outline:none}
+@media(max-width:600px){.crosshair-settings-row{grid-template-columns:92px minmax(0,1fr);gap:10px}.crosshair-preview-box{min-height:98px}.crosshair-presets button{flex-basis:calc(50% - 7px)}}
 </style>
 
 <style id="sx-home-redesign-v2">
@@ -1456,7 +1459,13 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 
 <section id="stats" class="screen"><div class="sectionhead"><h2>СТАТИСТИКА</h2></div><div class="cardgrid"><div class="statcard"><small>XP</small><strong id="statsXP">0</strong></div><div class="statcard"><small>GOLD</small><strong id="statsGold">0</strong></div><div class="statcard"><small>COMPETITIVE MMR</small><strong id="statsComp">1000</strong></div><div class="statcard"><small>ALLIES MMR</small><strong id="statsAllies">1000</strong></div></div></section>
 
-<section id="settings" class="screen"><div class="sectionhead"><h2>НАЛАШТУВАННЯ</h2></div><div class="panel panelbody"><h3 style="margin:0 0 8px">ТЕМА ІНТЕРФЕЙСУ</h3><div class="muted">Обери один із трьох неонових стилів. Вибір зберігається на цьому пристрої.</div><div class="theme-picker"><button class="theme-option" data-theme-choice="cyan">01 · CYBER CYAN</button><button class="theme-option" data-theme-choice="violet">02 · NEON VIOLET</button><button class="theme-option" data-theme-choice="red">03 · RED ALERT</button></div><div id="desktopControlsSettings"><h3>КЕРУВАННЯ ПК</h3><label>Чутливість миші <input id="sens" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">ADS <input id="ads" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">Розмір прицілу <input id="crossSize" type="range" min="8" max="36" step="1" style="width:100%"></label><label style="display:block;margin-top:16px">Відстань між рисками <input id="crossGap" type="range" min="0" max="12" step="1" style="width:100%"></label><div class="crosshair-settings-row"><div class="crosshair-preview-box"><span>ПЕРЕГЛЯД</span><div id="crosshairPreview" class="crosshair-display style-classic" aria-hidden="true"><i class="crosshair-arm top"></i><i class="crosshair-arm right"></i><i class="crosshair-arm bottom"></i><i class="crosshair-arm left"></i><i class="crosshair-dot"></i></div></div><div class="crosshair-settings-controls"><label>ФОРМА <select id="crossStyle"><option value="classic">Класичний</option><option value="thin">Тонкий</option><option value="dot">Крапка</option><option value="circle">Коло</option></select></label><label style="display:block;margin-top:10px">КОЛІР <input id="crossColor" type="color" value="#e7f3fb" style="width:100%;height:38px"></label></div></div></div>
+<section id="settings" class="screen"><div class="sectionhead"><h2>НАЛАШТУВАННЯ</h2></div><div class="panel panelbody"><h3 style="margin:0 0 8px">ТЕМА ІНТЕРФЕЙСУ</h3><div class="muted">Обери один із трьох неонових стилів. Вибір зберігається на цьому пристрої.</div><div class="theme-picker"><button class="theme-option" data-theme-choice="cyan">01 · CYBER CYAN</button><button class="theme-option" data-theme-choice="violet">02 · NEON VIOLET</button><button class="theme-option" data-theme-choice="red">03 · RED ALERT</button></div><div id="desktopControlsSettings"><h3>КЕРУВАННЯ ПК</h3><label>Чутливість миші <input id="sens" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">ADS <input id="ads" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">Розмір прицілу <input id="crossSize" type="range" min="8" max="36" step="1" style="width:100%"></label><label style="display:block;margin-top:16px">Відстань між рисками <input id="crossGap" type="range" min="0" max="12" step="1" style="width:100%"></label><div class="crosshair-settings-row"><div class="crosshair-preview-box"><span>ПЕРЕГЛЯД</span><div id="crosshairPreview" class="crosshair-display style-classic" aria-hidden="true"><i class="crosshair-arm top"></i><i class="crosshair-arm right"></i><i class="crosshair-arm bottom"></i><i class="crosshair-arm left"></i><i class="crosshair-dot"></i></div></div><div class="crosshair-settings-controls"><label>ФОРМА <select id="crossStyle"><option value="classic">Класичний</option><option value="thin">Тонкий</option><option value="dot">Крапка</option><option value="circle">Коло</option></select></label><label style="display:block;margin-top:10px">КОЛІР <input id="crossColor" type="color" value="#63ff91" style="width:100%;height:38px"></label></div></div>
+<div class="crosshair-presets" aria-label="Швидкі пресети прицілу">
+  <button type="button" data-crosshair-preset="precision">ТОЧНИЙ ЗЕЛЕНИЙ</button>
+  <button type="button" data-crosshair-preset="cyan">ЦИАНОВИЙ</button>
+  <button type="button" data-crosshair-preset="dot">КРАПКА</button>
+  <button type="button" data-crosshair-preset="circle">КОЛО</button>
+</div></div>
 <section class="layout-editor" id="mobileLayoutEditor">
   <div class="layout-editor-head">
     <div><h3>МОБІЛЬНЕ КЕРУВАННЯ</h3><div class="layout-help">Увімкни редагування та перетягуй кнопки на макеті. Позиції зберігаються на цьому пристрої.</div></div>
@@ -2600,7 +2609,7 @@ function applyCrosshairPreview(settings={}){
   node.style.setProperty("--crosshair-color",color);
 }
 function settings(){
-  let d={sensitivity:1,ads:1,crosshairSize:20,crosshairGap:3,crosshairStyle:"classic",crosshairColor:"#e7f3fb"};
+  let d={sensitivity:1,ads:1,crosshairSize:18,crosshairGap:2,crosshairStyle:"thin",crosshairColor:"#63ff91"};
   try{d=Object.assign(d,JSON.parse(localStorage.getItem("sx_settings")||"{}"))}catch{}
   ["sens","ads","crossSize","crossGap"].forEach((id,i)=>$(id).value=[d.sensitivity,d.ads,d.crosshairSize,d.crosshairGap][i]);
   $("crossStyle").value=["classic","thin","dot","circle"].includes(d.crosshairStyle)?d.crosshairStyle:"classic";
@@ -2614,6 +2623,21 @@ function settings(){
     applyCrosshairPreview(current);
   }
   ["sens","ads","crossSize","crossGap","crossStyle","crossColor"].forEach(id=>{const input=$(id);input.addEventListener("input",saveSettings);input.addEventListener("change",saveSettings)});
+  const crosshairPresets={
+    precision:{crosshairSize:18,crosshairGap:2,crosshairStyle:"thin",crosshairColor:"#63ff91"},
+    cyan:{crosshairSize:20,crosshairGap:3,crosshairStyle:"classic",crosshairColor:"#55e7ff"},
+    dot:{crosshairSize:12,crosshairGap:0,crosshairStyle:"dot",crosshairColor:"#ffffff"},
+    circle:{crosshairSize:22,crosshairGap:0,crosshairStyle:"circle",crosshairColor:"#ffd45e"}
+  };
+  document.querySelectorAll("[data-crosshair-preset]").forEach(button=>button.addEventListener("click",()=>{
+    const preset=crosshairPresets[button.dataset.crosshairPreset];
+    if(!preset)return;
+    $("crossSize").value=preset.crosshairSize;
+    $("crossGap").value=preset.crosshairGap;
+    $("crossStyle").value=preset.crosshairStyle;
+    $("crossColor").value=preset.crosshairColor;
+    saveSettings();
+  }));
   document.querySelectorAll("[data-bind-action]").forEach(button=>button.addEventListener("click",()=>{
     keybindCapture=button.dataset.bindAction;
     $("keybindStatus").textContent="Натисни клавішу для: "+KEYBIND_LABELS[keybindCapture]+" (Esc — скасувати).";
@@ -2837,10 +2861,10 @@ if(hero&&canvas){
         if(/right.*(shoulder|clavicle)|clavicle.*right|rightshoulder|shoulderr/.test(name))bones.rightShoulder.push(entry);
         if(/upperarm|lowerarm|arm_[lr]|forearm/.test(name))bones.arms.push(entry);
       });
-      mesh.rotation.y=0;
+      mesh.rotation.y=Math.PI;
       mesh.userData.agentIndex=index;
       scene.add(mesh);
-      const actor={index,mesh,bones,baseScale,homeX:0,homeY:0,homeZ:0,homeYaw:0,phase:index*1.13,evasion:0,evasionTarget:0,evadeUntil:0,external:true};
+      const actor={index,mesh,bones,baseScale,homeX:0,homeY:0,homeZ:0,homeYaw:Math.PI,phase:index*1.13,evasion:0,evasionTarget:0,evadeUntil:0,external:true};
       return actor;
     }
     function disposeAgent(actor){
@@ -2865,7 +2889,7 @@ if(hero&&canvas){
         actor.homeX=x;
         actor.homeZ=n>=3?(Math.abs(x)>.9?-.10:.12):0;
         actor.homeY=0;
-        actor.homeYaw=(index-(n-1)/2)*-.035;
+        actor.homeYaw=Math.PI+(index-(n-1)/2)*-.035;
         actor.mesh.position.set(actor.homeX,actor.homeY,actor.homeZ);
         actor.mesh.rotation.y=actor.homeYaw;
       });
