@@ -611,7 +611,7 @@ assert.ok(mapGeometry.SERVER_MAP_BLOCKERS.FIELD_ARENA.length >= 12, "Field Arena
 
 assert.match(game, /renderer\.toneMapping=THREE\.ACESFilmicToneMapping/, "the renderer must use improved color tonemapping");
 assert.match(game, /renderer\.shadowMap\.enabled=!isMobileDevice&&!isLowEndDevice/, "shadows are disabled on mobile and low-end PCs to reduce rendering load");
-assert.match(game, /renderer\.setPixelRatio\(Math\.min\(devicePixelRatio\|\|1,isMobileDevice\?1\.0:isLowEndDevice\?1\.0:selectedMap==="ZONE_9"\?1\.1:1\.35\)\)/, "Zone 9 and low-end devices use reduced render resolution");
+assert.match(game, /renderer\.setPixelRatio\(Math\.min\(devicePixelRatio\|\|1,isMobileDevice\?0\.9:isLowEndDevice\?0\.82:selectedMap==="ZONE_9"\?1\.05:1\.3\)\)/, "Zone 9 and low-end devices use reduced render resolution");
 assert.match(game, /function applyCrosshairSettings\(\)/, "gameplay applies saved crosshair settings");
 assert.match(game, /class="crosshair-display style-classic"/, "game HUD has a configurable crosshair component");
 assert.match(server, /function tracePlayerHit\(origin, aim, targetPos, range, options = \{\}\)/, "server uses 3D ray-to-player hit testing");
