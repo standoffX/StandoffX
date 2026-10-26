@@ -639,7 +639,7 @@ assert.match(menu, /import \* as SkeletonUtils from "three\/addons\/utils\/Skele
 assert.match(server, /function startMatchBotAI\(io, match\)/, "lobby agents run movement and shooting AI");
 assert.match(menu, /data-lobby-team/, "the lobby UI allows changing team assignments");
 assert.match(menu, /data-home-lobby-team/, "the home squad lets the party leader assign teams without leaving the main menu");
-assert.match(menu, /testerSwitch\.style\.display=canTest\(\)\?"flex":"none"/, "only testers see prototype versus real-match controls");
+assert.match(menu, /testerSwitch\.style\.display=selectedMode!=="training"\?"":"none"/, "KB and Allies expose the bot/player toggle while solo training hides it");
 assert.match(menu, /sx-reference-menu-remake/, "the main menu uses the reference-inspired layout");
 assert.match(menu, /#profilePageUuid\),body\.lobby-screen #copyUuid/, "UUID is hidden from the regular profile UI");
 console.log("OK project invariants, syntax, duplicate declaration regression, local maps, authoritative weapon damage, AI matches, lobby teams, UI, and routes");
