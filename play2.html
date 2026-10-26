@@ -1270,7 +1270,7 @@ function updateAlliesBuyPanel(){
   for(const button of document.querySelectorAll("[data-allies-weapon]")){
     const weapon=button.dataset.alliesWeapon,owned=alliesWeapons.includes(weapon),equipped=alliesEquippedWeapon===weapon;
     const status=button.querySelector("[data-status]");
-    const prices={akr:2700,m4a1:3100,p90:2200,shotgun:1900,sniper:4600,p350:0,knife:0};
+    const prices={p350:0,deagle:700,akr:2700,m4a1:3100,p90:2200,shotgun:1900,sniper:4600,knife:0};
     const price=prices[weapon];
     button.classList.toggle("is-equipped",equipped);
     if(status)status.textContent=owned?(equipped?"ОБРАНО":"ВИБРАТИ"):(price==null?"НЕДОСТУПНО":price===0?"ВИБРАТИ":alliesCash>=price?"КУПИТИ":"НЕ ВИСТАЧАЄ");
@@ -1777,7 +1777,18 @@ function makeFallbackCustomWeapon(weaponId){
     const mesh=new THREE.Mesh(new THREE.CylinderGeometry(radius,radius,length,8),mat);
     mesh.rotation.x=Math.PI/2;mesh.position.set(x,y,z);mesh.castShadow=false;heldWeaponRoot.add(mesh);return mesh;
   };
-  if(weaponId==="m4a1"){
+  if(weaponId==="deagle"){
+    // Heavy pistol silhouette: squared slide, longer barrel, deep grip, trigger guard and hammer.
+    box(.115,.065,.265,0,.018,-.085,steel);
+    box(.104,.049,.235,0,.044,-.095,polymer);
+    box(.11,.022,.205,0,.061,-.104,dark);
+    box(.105,.042,.04,0,.009,-.225,steel);
+    tube(.014,.095,0,.015,-.255,steel);
+    box(.08,.11,.095,0,-.059,.035,polymer,-.18);
+    box(.073,.07,.06,0,-.082,.086,dark,-.12);
+    box(.038,.035,.06,0,-.007,.043,steel);
+    box(.024,.018,.045,.044,.045,.015,dark);
+  }else if(weaponId==="m4a1"){
     box(.10,.12,.30,0,0,.015,steel);box(.085,.09,.22,0,.015,.245,tan);
     box(.065,.08,.16,0,-.06,.13,polymer,-.18);box(.055,.15,.12,0,-.13,.035,dark,-.18);
     box(.055,.035,.18,0,.067,-.13,polymer);box(.032,.03,.18,0,.02,-.24,dark);
@@ -1970,8 +1981,8 @@ let selectedWeapon="knife";
 let equippedSkinLoadout={};
 let weaponSkinCatalog={};
 const softerSkinTextures=new Map();
-const weaponAmmo={akr:30,p350:13,knife:Infinity};
-const weaponReserve={akr:90,p350:52,knife:0};
+const weaponAmmo={akr:30,p350:13,deagle:7,knife:Infinity};
+const weaponReserve={akr:90,p350:52,deagle:28,knife:0};
 Object.assign(weaponAmmo,{m4a1:30,p90:50,shotgun:8,sniper:5});
 Object.assign(weaponReserve,{m4a1:90,p90:150,shotgun:32,sniper:15});
 let ammo=Infinity;
@@ -1985,6 +1996,7 @@ let damagePopupTimer=null;
 const CLIENT_WEAPON_INFO={
   akr:{label:"AKR",short:"АКР",kind:"rifle",magazine:30,reloadMs:1800,fireDelay:115,range:60,ads:true,damage:{head:164,body:35,stomach:45,legs:27}},
   p350:{label:"P350",short:"P350",kind:"pistol",magazine:13,reloadMs:1350,fireDelay:260,range:29,ads:false,damage:{head:151,body:38,stomach:49,legs:30}},
+  deagle:{label:"DESERT EAGLE",short:"DEAGLE",kind:"pistol",magazine:7,reloadMs:1850,fireDelay:480,range:36,ads:false,damage:{head:220,body:58,stomach:74,legs:34}},
   knife:{label:"НІЖ",short:"НІЖ",kind:"melee",magazine:Infinity,reloadMs:0,fireDelay:420,range:2.8,ads:false,damage:{head:180,body:110,stomach:110,legs:110}},
   m4a1:{label:"M4A1",short:"M4A1",kind:"rifle",magazine:30,reloadMs:1750,fireDelay:96,range:58,ads:true,damage:{head:155,body:32,stomach:39,legs:24}},
   p90:{label:"P90",short:"P90",kind:"smg",magazine:50,reloadMs:2050,fireDelay:72,range:36,ads:false,damage:{head:132,body:22,stomach:28,legs:18}},
@@ -3530,7 +3542,7 @@ function selectWeapon(weaponId,force=false){
   createMuzzleFlash();
   positionHeldWeapon();
   if(!force&&previousWeapon!==weaponId){
-    heldWeaponAction={type:"equip",startedAt:performance.now(),duration:selectedWeapon==="knife"?300:410,weaponId};
+    heldWeaponAction={type:"equip",startedAt:performance.now(),duration:selectedWeapon==="knife"?680:selectedWeapon==="deagle"?470:410,weaponId};
     const label=$("weaponActionLabel");
     if(label){label.textContent="ЗМІНА ЗБРОЇ";label.style.display="block"}
   }
@@ -3611,7 +3623,7 @@ function getLocalShotEndpoint(direction,range,preferredImpact=null){
   raycaster.near=0;raycaster.far=Infinity;
   return endpoint;
 }
-function shoot(){
+function shoot(attackStyle="primary"){
   if(!isTeamCombat&&!isTrainingMode)return;
   if(matchPhase!=="game"||hp<=0||!mapLoadFinished)return;
   cancelBombPlantForCombat();
@@ -3624,9 +3636,9 @@ function shoot(){
   const now=performance.now();
   if(now-lastShot<info.fireDelay||ammo<=0){if(ammo<=0&&info.kind!=="melee")startReload();return}
   lastShot=now;
-  if(info.kind==="melee")heldWeaponAction={type:"knife_attack",startedAt:now,duration:330,weaponId:selectedWeapon};
+  if(info.kind==="melee")heldWeaponAction={type:attackStyle==="alternate"?"knife_alt_attack":"knife_attack",startedAt:now,duration:attackStyle==="alternate"?540:440,weaponId:selectedWeapon};
   const recoil={
-    akr:{max:.13,add:.065},m4a1:{max:.095,add:.045},p350:{max:.105,add:.072},
+    akr:{max:.13,add:.065},m4a1:{max:.095,add:.045},p350:{max:.105,add:.072},deagle:{max:.28,add:.18},
     p90:{max:.075,add:.028},shotgun:{max:.19,add:.13},sniper:{max:.23,add:.17},knife:{max:.22,add:.11}
   }[selectedWeapon]||{max:.1,add:.05};
   weaponKick=Math.min(recoil.max,weaponKick+recoil.add);
@@ -3683,6 +3695,7 @@ addEventListener("keydown",e=>{
   }
   if(e.code==="Digit6"){e.preventDefault();selectWeapon("shotgun");return}
   if(e.code==="Digit7"){e.preventDefault();selectWeapon("sniper");return}
+  if(e.code==="Digit8"){e.preventDefault();selectWeapon("deagle");return}
   if(e.code==="KeyG"){e.preventDefault();dropCurrentItem();return}
   if(e.code==="KeyF"&&nearestDroppedItem()){e.preventDefault();tryPickupNearbyItem();return}
   if(e.code==="KeyE"){e.preventDefault();interactWithNearestDoor();return}
@@ -3714,7 +3727,7 @@ addEventListener("keyup",e=>{
 addEventListener("contextmenu",e=>{if(!isMobileDevice)e.preventDefault()});
 addEventListener("mousedown",e=>{
   if(isMobileDevice)return;
-  if(e.button===2){e.preventDefault();toggleAimingDownSights();return}
+  if(e.button===2){e.preventDefault();if(selectedWeapon==="knife")shoot("alternate");else toggleAimingDownSights();return}
   if(e.button===0){
     fireHeld=true;shoot();fireLoop();
   }
@@ -4459,6 +4472,13 @@ function animate(){
         const eased=1-Math.pow(1-progress,3);
         actionX=(1-eased)*.055;actionY=-(1-eased)*.23;actionZ=(1-eased)*.34;
         actionRotX=(1-eased)*.55;actionRotY=(1-eased)*-.12;actionRotZ=(1-eased)*-.24;
+      }else if(action.type==="inspect"&&action.weaponId==="knife"){
+        // M9-style inspect: draw, turn the patterned blade into view, hold briefly, then return to ready.
+        if(progress<.16){const t=progress/.16,e=t*t*(3-2*t);actionX=-.04*e;actionY=.10*e;actionZ=.12*e;actionRotX=-.42*e;actionRotY=-.38*e;actionRotZ=-.24*e;}
+        else if(progress<.34){const t=(progress-.16)/.18,e=t*t*(3-2*t);actionX=-.04+.09*e;actionY=.10+.035*Math.sin(t*Math.PI);actionZ=.12-.055*e;actionRotX=-.42+.30*e;actionRotY=-.38+1.28*e;actionRotZ=-.24+.78*e;}
+        else if(progress<.73){const t=(progress-.34)/.39;actionX=.05+Math.sin(t*Math.PI*1.2)*.012;actionY=.10+Math.sin(t*Math.PI*2)*.012;actionZ=.065;actionRotX=-.12+Math.sin(t*Math.PI*1.1)*.045;actionRotY=.90+Math.sin(t*Math.PI*1.4)*.08;actionRotZ=.54+Math.sin(t*Math.PI)*.05;}
+        else if(progress<.90){const t=(progress-.73)/.17,e=t*t*(3-2*t);actionX=.05*(1-e);actionY=.10*(1-e);actionZ=.065*(1-e);actionRotX=-.12*(1-e);actionRotY=.9*(1-e);actionRotZ=.54*(1-e);}
+        else{const t=(progress-.90)/.10,e=1-t;actionX=-.025*e;actionY=.018*e;actionRotX=-.05*e;actionRotY=.08*e;actionRotZ=-.06*e;}
       }else if(action.type==="inspect"){
         const wave=Math.sin(progress*Math.PI),cycle=progress*Math.PI*2;
         const profiles={
@@ -4480,10 +4500,15 @@ function animate(){
         actionRotY=Math.sin(cycle*1.1)*pose.yaw+reveal*.12;
         actionRotZ=wave*pose.roll+Math.sin(cycle*.75)*.045;
       }else if(action.type==="knife_attack"){
-        // Standoff-style quick wind-up, diagonal slash, then a short recovery.
-        if(progress<.22){const t=progress/.22;actionX=-.055*t;actionY=-.025*t;actionZ=.16*t;actionRotX=-.34*t;actionRotY=-.24*t;actionRotZ=-.30*t;}
-        else if(progress<.64){const t=(progress-.22)/.42;const slash=Math.sin(t*Math.PI*.92);actionX=.06-.12*t;actionY=.025*Math.sin(t*Math.PI);actionZ=.16-.43*slash;actionRotX=-.34+1.12*slash;actionRotY=-.24+1.25*t;actionRotZ=-.30+1.08*slash;}
-        else{const t=(progress-.64)/.36;actionX=-.06*(1-t);actionY=.012*(1-t);actionZ=-.04*(1-t);actionRotX=.18*(1-t);actionRotY=1.01*(1-t);actionRotZ=.78*(1-t);}
+        // M9 primary slash: compact wind-up, fast diagonal cut and smooth recovery.
+        if(progress<.20){const t=progress/.20,e=t*t;actionX=-.05*e;actionY=-.018*e;actionZ=.13*e;actionRotX=-.28*e;actionRotY=-.22*e;actionRotZ=-.27*e;}
+        else if(progress<.62){const t=(progress-.20)/.42;const slash=Math.sin(t*Math.PI*.96);actionX=.045-.105*t;actionY=.024*Math.sin(t*Math.PI);actionZ=.13-.40*slash;actionRotX=-.28+1.06*slash;actionRotY=-.22+1.12*t;actionRotZ=-.27+.98*slash;}
+        else{const t=(progress-.62)/.38,e=1-t;actionX=-.055*e;actionY=.01*e;actionZ=-.03*e;actionRotX=.14*e;actionRotY=.90*e;actionRotZ=.70*e;}
+      }else if(action.type==="knife_alt_attack"){
+        // Right-click quick reverse-grip jab, similar cadence to the M9 secondary strike.
+        if(progress<.30){const t=progress/.30,e=t*t;actionX=.025*e;actionY=-.025*e;actionZ=.20*e;actionRotX=-.24*e;actionRotY=.48*e;actionRotZ=.42*e;}
+        else if(progress<.56){const t=(progress-.30)/.26,thrust=Math.sin(t*Math.PI/2);actionX=.025-.02*thrust;actionY=-.025+.018*thrust;actionZ=.20-.49*thrust;actionRotX=-.24+.72*thrust;actionRotY=.48-.22*t;actionRotZ=.42-.64*thrust;}
+        else{const t=(progress-.56)/.44,e=1-t;actionX=.005*e;actionY=-.008*e;actionZ=-.02*e;actionRotX=.08*e;actionRotY=.24*e;actionRotZ=-.22*e;}
       }else if(action.type==="reload"){
         const weapon=action.weaponId||selectedWeapon;
         const profiles={
