@@ -772,18 +772,18 @@ assert.match(server, /if \(!canUseTesterModes\(user\)\) \{\s*return socket\.emit
 assert.match(server, /function persistState\(name, data, legacyPath\)[\s\S]*?if \(mongoDb && mongoStatus\.connected && !mongoConnecting\) return mongoSave/, "database persistence queues data while a connection is being restored");
 
 /* Regression checks for aim alignment, clear crosshair presets, forward-facing menu agent, and low-end PCs. */
-assert.match(menu, /mesh\\.rotation\\.y=Math\\.PI;/, "menu soldier faces the camera instead of showing its back");
-assert.match(menu, /actor\\.homeYaw=Math\\.PI\\+/, "the agent keeps facing forward after squad relayout");
+assert.match(menu, /mesh\.rotation\.y=Math\.PI;/, "menu soldier faces the camera instead of showing its back");
+assert.match(menu, /actor\.homeYaw=Math\.PI\+/, "the agent keeps facing forward after squad relayout");
 assert.match(menu, /data-crosshair-preset="precision"/, "settings include a precision crosshair preset");
-assert.match(menu, /crosshairPresets\\[button\\.dataset\\.crosshairPreset\\]/, "crosshair presets update and save the real settings");
+assert.match(menu, /crosshairPresets\[button\.dataset\.crosshairPreset\]/, "crosshair presets update and save the real settings");
 assert.match(menu, /crosshairColor:"#63ff91"/, "the default crosshair uses a high-contrast green");
-assert.match(game, /function getLocalShotEndpoint\\(/, "the shot tracer raycasts from the crosshair center to a valid endpoint");
-assert.match(game, /const aimPoint=getLocalShotEndpoint\\(dir,info\\.range,impact\\)/, "client aim uses the center-screen target point");
-assert.match(game, /shotOriginY=player\\.position\\.y\\+\\(isCrouching\\?1\\.05:1\\.58\\)/, "client sends the actual eye height for crouching and standing");
-assert.match(game, /oy:shotOriginY,dx:serverAim\\.x,dy:serverAim\\.y,dz:serverAim\\.z/, "client sends a ray matching the visible crosshair target");
-assert.match(game, /isLowEndDevice\\?0\\.82/, "weak PCs render at a lower pixel ratio");
-assert.match(game, /now-previous<1000\\/45/, "weak PCs use a steady frame cap");
-assert.match(server, /function resolveShotOriginY\\(/, "server clamps the eye height sent by the client");
-assert.match(server, /resolveShotOriginY\\(shooter\\.pos, data\\?\\.oy\\)/, "match hitscan origin follows current player eye height");
-assert.match(server, /resolveShotOriginY\\(session\\.playerPos, data\\?\\.oy\\)/, "training hitscan origin follows current player eye height");
-assert.match(server, /detectWeaponHitZone\\(shooter\\.pos, best\\.pos, aim, bestHorizontalDistance, shotOrigin\\.y\\)/, "damage hit zone follows the same ray origin as hit detection");
+assert.match(game, /function getLocalShotEndpoint\(/, "the shot tracer raycasts from the crosshair center to a valid endpoint");
+assert.match(game, /const aimPoint=getLocalShotEndpoint\(dir,info\.range,impact\)/, "client aim uses the center-screen target point");
+assert.match(game, /shotOriginY=player\.position\.y\+\(isCrouching\?1\.05:1\.58\)/, "client sends the actual eye height for crouching and standing");
+assert.match(game, /oy:shotOriginY,dx:serverAim\.x,dy:serverAim\.y,dz:serverAim\.z/, "client sends a ray matching the visible crosshair target");
+assert.match(game, /isLowEndDevice\?0\.82/, "weak PCs render at a lower pixel ratio");
+assert.match(game, /now-previous<1000\/45/, "weak PCs use a steady frame cap");
+assert.match(server, /function resolveShotOriginY\(/, "server clamps the eye height sent by the client");
+assert.match(server, /resolveShotOriginY\(shooter\.pos, data\?\.oy\)/, "match hitscan origin follows current player eye height");
+assert.match(server, /resolveShotOriginY\(session\.playerPos, data\?\.oy\)/, "training hitscan origin follows current player eye height");
+assert.match(server, /detectWeaponHitZone\(shooter\.pos, best\.pos, aim, bestHorizontalDistance, shotOrigin\.y\)/, "damage hit zone follows the same ray origin as hit detection");
