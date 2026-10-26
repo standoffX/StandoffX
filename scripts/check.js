@@ -707,7 +707,8 @@ assert.match(game, /side\*\.238,1\.655,\.035/, "headset ear cups must be attache
 assert.match(game, /import \* as SkeletonUtils from "three\/addons\/utils\/SkeletonUtils\.js"/, "skinned agent clones must have independent skeletons");
 
 /* Softer collection, secure prototype permission, camera warmup and timed buy-phase regressions. */
-assert.match(server, /if \(!canUseTesterModes\(user\)\) \{\s*socket\.emit\("search_error", \{ message: "Прототип доступний лише тестерам\." \}\);/, "the public prototype match event must reject non-testers on the server");
+assert.match(server, /socket\.on\("start_prototype_match", data => \{[\s\S]{0,500}const user = socket\.user;/, "the bot-match flow is reachable by authenticated players");
+assert.match(server, /if \(!canUseTesterModes\(user\)\) \{\s*return socket\.emit\("training_error", \{ message: "Усі тренувальні та тестові режими доступні лише тестерам\." \}\);/, "solo training and field tests remain tester-only");
 assert.match(server, /current\.phase = "round_start";\s*current\.phaseRemaining = 20;/, "Allies preparation must include a twenty-second purchase phase after warmup");
 assert.match(server, /phase: "warmup", time: 10/, "Allies must announce a separate ten-second warmup before buying");
 assert.match(server, /app\.get\("\/banned"/, "banned accounts have a dedicated denial page");
@@ -725,7 +726,7 @@ assert.match(game, /function applyEquippedSkinToHeldWeapon\(\)/, "selected weapo
 assert.match(game, /socket\.on\("account_banned"/, "a banned player in a match is moved to the denial page");
 
 assert.match(server, /else if \(!isMaster && req\.body\.isTester !== undefined && !u\.isTester\)/, "revoking tester permission removes active test sessions");
-assert.match(server, /if \(match\.prototypeBotMatch && !canUseTesterModes\(socket\.user\)\)/, "non-testers cannot rejoin a prototype match");
+assert.doesNotMatch(server, /if \(match\.prototypeBotMatch && !canUseTesterModes\(socket\.user\)\)/, "a player can rejoin their public bot match regardless of tester status");
 assert.match(auth, /toLowerCase\(\)\.includes\("заблок"\)\)\{location\.href="\/banned";return\}/, "banned login is redirected to the denial page");
 
 assert.match(server, /ZONE_9: \{ id: "ZONE_9", name: "ZONE 9", kind: "zone9-fbx" \}/, "server validates Zone 9 as a known map");
@@ -788,3 +789,15 @@ assert.match(server, /function resolveShotOriginY\(/, "server clamps the eye hei
 assert.match(server, /resolveShotOriginY\(shooter\.pos, data\?\.oy\)/, "match hitscan origin follows current player eye height");
 assert.match(server, /resolveShotOriginY\(session\.playerPos, data\?\.oy\)/, "training hitscan origin follows current player eye height");
 assert.match(server, /detectWeaponHitZone\(shooter\.pos, best\.pos, aim, bestHorizontalDistance, shotOrigin\.y\)/, "damage hit zone follows the same ray origin as hit detection");
+
+assert.match(server, /deagle: Object\.freeze\(\{\s*id: "deagle", label: "DESERT EAGLE", type: "pistol", magazine: 7/, "the server includes the Desert Eagle pistol balance");
+assert.match(server, /p350: 0, deagle: 700/, "the P350 is free and the Desert Eagle costs 700 in Allies");
+assert.match(game, /deagle:\{label:"DESERT EAGLE",short:"DEAGLE",kind:"pistol",magazine:7/, "the client has Desert Eagle ammo and weapon metadata");
+assert.match(game, /data-allies-weapon="deagle" data-buy-category="pistols"/, "Desert Eagle appears in the Allies pistol category");
+assert.match(game, /action\.type==="inspect"&&action\.weaponId==="knife"/, "the knife has a dedicated inspect pose");
+assert.match(game, /action\.type==="knife_alt_attack"/, "the knife has a separate alternate strike animation");
+assert.match(game, /if\(selectedWeapon==="knife"\)shoot\("alternate"\)/, "right-click uses the knife alternate attack rather than ADS");
+assert.match(game, /const headBounds=new THREE\.Box3\(\)\.makeEmpty\(\)/, "the game anchors headset placement to measured head geometry");
+assert.match(menu, /const headBounds=new THREE\.Box3\(\)\.makeEmpty\(\)/, "the main-menu agent uses measured head bounds for its headset");
+assert.match(menu, /testerSwitch\.style\.display=selectedMode!=="training"\?"":"none"/, "bots/players switch is visible for KB and Allies but hidden during training");
+assert.match(server, /bot: mode === "field_test" \? \{ id: "training_bot"/, "solo map training does not spawn bots");
