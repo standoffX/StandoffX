@@ -2964,9 +2964,12 @@ function calculateWeaponDamage(weaponId, zone, distance) {
   return Math.max(1, Math.round(points[low] + (points[high] - points[low]) * (position - low)));
 }
 
-function detectWeaponHitZone(shooterPos, targetPos, aim, horizontalDistance) {
+function detectWeaponHitZone(shooterPos, targetPos, aim, horizontalDistance, originY = null) {
   const horizontalAim = Math.max(0.01, Math.hypot(aim.x, aim.z));
-  const targetHeight = (Number(shooterPos.y) || 0) + 1.55
+  const baseShotY = originY == null || !Number.isFinite(Number(originY))
+    ? (Number(shooterPos.y) || 0) + 1.58
+    : Number(originY);
+  const targetHeight = baseShotY
     + (aim.y / horizontalAim) * horizontalDistance
     - (Number(targetPos.y) || 0);
   if (targetHeight >= 1.35) return "head";
@@ -3248,6 +3251,16 @@ function validateMapLineOfSight(mapId,from,to,mapState){
 }
 
 
+function resolveShotOriginY(position, suppliedY) {
+  const baseY = Number(position?.y) || 0;
+  const candidate = suppliedY == null ? NaN : Number(suppliedY);
+  // Accept the client's current eye height (standing, crouched or jumping),
+  // but keep the value inside a small server-authoritative range.
+  return Number.isFinite(candidate)
+    ? Math.min(baseY + 1.72, Math.max(baseY + 0.9, candidate))
+    : baseY + 1.58;
+}
+
 function tracePlayerHit(origin, aim, targetPos, range, options = {}) {
   const horizontalAimSq = aim.x * aim.x + aim.z * aim.z;
   if (!Number.isFinite(horizontalAimSq) || horizontalAimSq < 0.0001) return null;
@@ -3293,7 +3306,7 @@ function handleTeamShot(io, match, shooter, data) {
   if (now - (shooter.lastShotAt || 0) < weapon.fireDelay) return;
   shooter.lastShotAt = now;
 
-  const shotOrigin = { x: shooter.pos.x, y: (Number(shooter.pos.y) || 0) + 1.42, z: shooter.pos.z };
+  const shotOrigin = { x: shooter.pos.x, y: resolveShotOriginY(shooter.pos, data?.oy), z: shooter.pos.z };
   let best = null, bestDistance = Infinity, bestHorizontalDistance = Infinity, bestHitPoint = null;
   for (const target of match.players) {
     if (target.userId === shooter.userId || target.team === shooter.team || target.hp <= 0) continue;
@@ -3326,7 +3339,7 @@ function handleTeamShot(io, match, shooter, data) {
   if (weapon.type !== "melee") {
     const supplied = data?.impact;
     const suppliedDistance = supplied && [supplied.x, supplied.y, supplied.z].every(value => Number.isFinite(Number(value)))
-      ? Math.hypot(Number(supplied.x) - shooter.pos.x, Number(supplied.y) - (shooter.pos.y + 1.42), Number(supplied.z) - shooter.pos.z)
+      ? Math.hypot(Number(supplied.x) - shotOrigin.x, Number(supplied.y) - shotOrigin.y, Number(supplied.z) - shotOrigin.z)
       : Infinity;
     let impact = suppliedDistance <= weapon.range + 1
       ? { x: Number(supplied.x), y: Number(supplied.y), z: Number(supplied.z) }
@@ -3335,13 +3348,13 @@ function handleTeamShot(io, match, shooter, data) {
     if (best && !targetBlocked) impact = bestHitPoint || { x: best.pos.x, y: best.pos.y + 1.05, z: best.pos.z };
     io.to(match.id).emit("player_shot", {
       shooterId: shooter.userId,
-      x: shooter.pos.x, y: shooter.pos.y + 1.42, z: shooter.pos.z,
+      x: shotOrigin.x, y: shotOrigin.y, z: shotOrigin.z,
       dx: aim.x, dy: aim.y, dz: aim.z, weapon: weaponId, impact
     });
   }
 
   if (!best || targetBlocked) return;
-  const hitZone = detectWeaponHitZone(shooter.pos, best.pos, aim, bestHorizontalDistance);
+  const hitZone = detectWeaponHitZone(shooter.pos, best.pos, aim, bestHorizontalDistance, shotOrigin.y);
   const damage = calculateWeaponDamage(weaponId, hitZone, bestDistance);
   best.hp = Math.max(0, best.hp - damage);
   const killed = best.hp <= 0;
@@ -3734,19 +3747,19 @@ io.on("connection", socket => {
     const vx = botPosition.x - session.playerPos.x;
     const vz = botPosition.z - session.playerPos.z;
     const dist = Math.hypot(vx, vz);
+    const shotOrigin = { x: session.playerPos.x, y: resolveShotOriginY(session.playerPos, data?.oy), z: session.playerPos.z };
     let horizontalHitDistance = dist;
     if (weapon.type === "melee") {
       if (dist > weapon.range || dist < 0.25) return;
       const dot = (aim.x * vx + aim.z * vz) / (Math.max(0.01, Math.hypot(aim.x, aim.z)) * dist);
       if (dot < 0.72) return;
     } else {
-      const shotOrigin = { x: session.playerPos.x, y: (Number(session.playerPos.y) || 0) + 1.42, z: session.playerPos.z };
       const trace = tracePlayerHit(shotOrigin, aim, botPosition, weapon.range, { radius: 0.66, maxHeight: 1.95 });
       if (!trace) return;
       horizontalHitDistance = trace.horizontalDistance;
     }
 
-    const hitZone = detectWeaponHitZone(session.playerPos, botPosition, aim, horizontalHitDistance);
+    const hitZone = detectWeaponHitZone(session.playerPos, botPosition, aim, horizontalHitDistance, shotOrigin.y);
     const damage = calculateWeaponDamage(weaponId, hitZone, dist);
     bot.hp = Math.max(0, bot.hp - damage);
     bot.hits += 1;
