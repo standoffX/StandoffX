@@ -3935,10 +3935,6 @@ io.on("connection", socket => {
       socket.emit("auth_required");
       return;
     }
-    if (!canUseTesterModes(user)) {
-      socket.emit("search_error", { message: "Прототип доступний лише тестерам." });
-      return;
-    }
     if (playerMatch(user.uuid || user.id)) {
       socket.emit("search_error", { message: "Ти вже перебуваєш у матчі." });
       return;
@@ -4049,10 +4045,6 @@ io.on("connection", socket => {
     const matchId = cleanText(data?.matchId, 100);
     const match = activeMatches.get(matchId);
     if (!match) return socket.emit("kick_to_menu", { reason: "Матч не знайдено." });
-    if (match.prototypeBotMatch && !canUseTesterModes(socket.user)) {
-      return socket.emit("kick_to_menu", { reason: "Прототип доступний лише тестерам." });
-    }
-
     const player = match.players.find(p => p.uuid ? p.uuid === socket.user.uuid : p.userId === socket.user.id);
     if (!player) return socket.emit("kick_to_menu", { reason: "Гравця немає в цьому матчі." });
 
