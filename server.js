@@ -1758,7 +1758,7 @@ const MODE_CONFIGS = {
   }
 };
 
-const ALLIES_BUY_PRICES = Object.freeze({ akr: 2700, m4a1: 3100, p90: 2200, shotgun: 1900, sniper: 4600, p350: 0, knife: 0 });
+const ALLIES_BUY_PRICES = Object.freeze({ p350: 0, deagle: 700, akr: 2700, m4a1: 3100, p90: 2200, shotgun: 1900, sniper: 4600, knife: 0 });
 
 const TESTER_MODE_CONFIGS = {
   training: { id: "training", name: "TRAINING", map: "ZONE_9", kind: "solo-map-inspection" },
@@ -2919,6 +2919,16 @@ const WEAPON_BALANCE = Object.freeze({
       body: [38, 35, 30, 21, 13],
       stomach: [49, 43, 38, 26, 16],
       legs: [30, 26, 22, 16, 10]
+    })
+  }),
+  deagle: Object.freeze({
+    id: "deagle", label: "DESERT EAGLE", type: "pistol", magazine: 7,
+    reloadMs: 1850, fireDelay: 480, range: 36, ads: false,
+    damage: Object.freeze({
+      head: [220, 205, 187, 166, 145],
+      body: [58, 54, 49, 44, 38],
+      stomach: [74, 68, 62, 55, 48],
+      legs: [34, 32, 29, 26, 23]
     })
   }),
   knife: Object.freeze({
