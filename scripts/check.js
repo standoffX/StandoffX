@@ -219,7 +219,7 @@ assert.match(game, /\$\("bombBtn"\)\.addEventListener\("click",e=>\{e\.preventDe
 assert.match(game, /data-buy-tab="rifles"/, "the Allies buy menu groups equipment into categories");
 assert.match(game, /document\.querySelectorAll\("\[data-buy-tab\]"\)\.forEach\(tab=>tab\.addEventListener\("click"/, "buy categories must filter the weapon cards");
 assert.match(game, /function cancelBombPlantForCombat\(\)[\s\S]{0,400}socket\.emit\("bomb_action",\{matchId,action:"cancel"/, "shooting or weapon changes can interrupt bomb planting");
-assert.match(game, /function shoot\(\)\{[\s\S]{0,220}cancelBombPlantForCombat\(\);/, "firing cancels your own C4 planting action instead of locking the gun");
+assert.match(game, /function shoot\(attackStyle="primary"\)\{[\s\S]{0,220}cancelBombPlantForCombat\(\);/, "firing cancels your own C4 planting action instead of locking the gun");
 assert.doesNotMatch(game, /function shoot\(\)\{\s*if\(bombToolActive\|\|/, "holding C4 no longer blocks firing");
 assert.match(game, /A:\{x:37\.5,z:-33\.75\},B:\{x:22\.5,z:37\.5\}/, "client bomb interactions must use scaled site positions");
 assert.match(game, /addGround\(18,30,13,13,road/, "B site must sit in the lower-right portion of Sandstone");
