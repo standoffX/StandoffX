@@ -476,7 +476,7 @@ assert.match(server, /Пошук перенесено в інше вікно/, "
 assert.match(server, /if \(!player \|\| player\.hp <= 0\) return;\s*handleTeamShot/, "dead players must not be able to shoot on the server");
 assert.match(server, /if \(!player \|\| player\.socketId !== socket\.id \|\| player\.hp <= 0\) return;\s*if \(match\.mode === "allies" && match\.phase !== "game"\) return;\s*if \(!validateMove/, "dead players and players outside a live round must not move on the server");
 assert.match(game, /id="deathNotice"/, "players must receive clear feedback when eliminated");
-assert.match(game, /function shoot\(\)[\s\S]{0,240}matchPhase!=="game"\|\|hp<=0\|\|!mapLoadFinished/, "shooting is blocked outside live gameplay and until the map loads");
+assert.match(game, /function shoot\(attackStyle="primary"\)[\s\S]{0,240}matchPhase!=="game"\|\|hp<=0\|\|!mapLoadFinished/, "shooting is blocked outside live gameplay and until the map loads");
 assert.match(game, /function startReload\(\)[\s\S]{0,280}hp<=0\|\|!mapLoadFinished/, "reloading is blocked for dead players and before the map loads");
 assert.match(game, /if\(reloading\|\|heldWeaponAction\?\.type==="equip"\)return/, "players cannot shoot while changing weapons or reloading");
 assert.match(game, /matchPhase==="game"&&player&&hp>0/, "local movement must freeze until respawn");
@@ -484,7 +484,7 @@ assert.match(game, /matchPhase==="game"&&player&&hp>0/, "local movement must fre
 assert.match(game, /mapLoadFinished\?"none":"flex"/, "the prototype must keep its loading screen until the map is ready");
 assert.match(game, /matchPhase==="game"&&player&&hp>0&&mapLoadFinished/, "movement must wait until the selected map has finished loading");
 assert.match(game, /function startReload\(\)[\s\S]{0,280}!mapLoadFinished/, "reload cannot begin before the map loads");
-assert.match(game, /function shoot\(\)[\s\S]{0,240}!mapLoadFinished/, "shoot cannot begin before the map loads");
+assert.match(game, /function shoot\(attackStyle="primary"\)[\s\S]{0,240}!mapLoadFinished/, "shoot cannot begin before the map loads");
 
 assert.match(game, /function setSoldierDown\(model,down\)/, "eliminated soldiers must visibly drop until respawn");
 assert.match(game, /victim\.hp=Math\.max\(0,Number\(data\.hp\)\|\|0\);[\s\S]{0,100}setSoldierDown\(victim\.mesh,true\)/, "the victim HP is updated and lethal hits visibly eliminate the model");
