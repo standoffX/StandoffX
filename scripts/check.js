@@ -373,7 +373,7 @@ assert.match(server, /Math\.hypot\(player\.pos\.x-x, player\.pos\.z-z\) > 7\.5/,
 assert.match(game, /if\(e\.code==="Digit1"\)[\s\S]{0,100}selectWeapon\("akr"\)/, "1 must equip the AKR");
 assert.match(game, /if\(e\.code==="Digit2"\)[\s\S]{0,100}selectWeapon\("p350"\)/, "2 must equip the P350");
 assert.match(game, /if\(e\.code==="Digit3"\)[\s\S]{0,100}selectWeapon\("knife"\)/, "3 must equip the knife");
-assert.match(game, /e\.button===2\)\{e\.preventDefault\(\);toggleAimingDownSights\(\)/, "right mouse must toggle AKR aiming on/off");
+assert.match(game, /e\.button===2\)\{e\.preventDefault\(\);if\(selectedWeapon==="knife"\)shoot\("alternate"\);else toggleAimingDownSights\(\)/, "right mouse uses the knife alternate attack or toggles aiming for guns");
 assert.match(game, /camera\.fov=aimingDownSights\?\(selectedWeapon==="sniper"\?34:48\):74/, "rifle and sniper aiming must change camera FOV and restore normal view on a second click");
 assert.match(game, /id="weaponBtn"/, "mobile HUD must include weapon switching");
 assert.match(game, /weapon:"weaponBtn"/, "mobile weapon switch must use saved HUD position and size");
