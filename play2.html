@@ -2769,7 +2769,30 @@ function buildZone9Map(){
     return mapped?"/assets/maps/zone9/textures/"+encodeURIComponent(mapped):url;
   });
   const fbxLoader=new FBXLoader(manager);
+  let zone9LoadSettled=false;
+  const disposeLateZone9Model=root=>{
+    if(!root?.traverse)return;
+    root.traverse(node=>{
+      if(node.geometry)node.geometry.dispose();
+      const materials=Array.isArray(node.material)?node.material:[node.material];
+      for(const material of materials){
+        if(!material)continue;
+        for(const value of Object.values(material))if(value?.isTexture)value.dispose();
+        material.dispose();
+      }
+    });
+  };
+  const zone9LoadTimeout=setTimeout(()=>{
+    if(zone9LoadSettled||mapLoadFinished)return;
+    zone9LoadSettled=true;
+    console.warn("[ZONE 9] FBX load timed out. Opening the lightweight preview instead.");
+    buildZone9Preview();
+    finishClientReady();
+  },15000);
   fbxLoader.load("/assets/maps/zone9/Zone9.fbx",root=>{
+    if(zone9LoadSettled||mapLoadFinished){disposeLateZone9Model(root);return}
+    zone9LoadSettled=true;
+    clearTimeout(zone9LoadTimeout);
     try{
       root.updateMatrixWorld(true);
       const initialBounds=new THREE.Box3().setFromObject(root),initialSize=initialBounds.getSize(new THREE.Vector3());
@@ -2802,8 +2825,15 @@ function buildZone9Map(){
       mapLoaded=true;mapLoadFinished=true;zone9AssetState="loaded";finishClientReady();
     }catch(error){console.error("[ZONE 9] Could not prepare FBX map:",error);buildZone9Preview();finishClientReady()}
   },event=>{
-    if(event.total>0){const pct=Math.max(14,Math.min(78,14+Math.round(event.loaded/event.total*64)));$("progress").style.width=pct+"%";}
-  },error=>{console.error("[ZONE 9] Map asset load failed:",error);buildZone9Preview();finishClientReady()});
+    if(!zone9LoadSettled&&!mapLoadFinished&&event.total>0){const pct=Math.max(14,Math.min(78,14+Math.round(event.loaded/event.total*64)));$("progress").style.width=pct+"%";}
+  },error=>{
+    if(zone9LoadSettled||mapLoadFinished)return;
+    zone9LoadSettled=true;
+    clearTimeout(zone9LoadTimeout);
+    console.error("[ZONE 9] Map asset load failed:",error);
+    buildZone9Preview();
+    finishClientReady();
+  });
 }
 
 function loadMap(){
