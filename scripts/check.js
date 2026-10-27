@@ -747,7 +747,7 @@ assert.match(menu, /selectedMode==="training"&&canTest\(\)\)return Object\.keys\
 assert.match(menu, /if\(currentLobby&&selectedMode==="training"\)/, "solo training must not accidentally start a party lobby");
 assert.match(server, /if \(!canUseTesterModes\(user\)\) \{\s*return socket\.emit\("training_error"/, "server rejects every training and field-test session from non-testers");
 assert.match(server, /bot: mode === "field_test" \? \{ id: "training_bot"/, "solo map training spawns no bot");
-assert.match(server, /p350: 0, knife: 0/, "the Allies starter pistol is free");
+assert.match(server, /p350: 0, deagle: 700,[\s\S]{0,120}knife: 0/, "the Allies starter pistol is free and the Desert Eagle has a separate price");
 assert.match(server, /equippedWeapon: mode === "allies" \? "p350" : "knife"/, "Allies starts with the free pistol equipped");
 assert.match(server, /if \(match\.roundNumber > 1 && player\.hp <= 0\) \{ player\.weapons = \["p350", "knife"\]; player\.equippedWeapon = "p350"; \}/, "Allies respawn preserves the free pistol");
 assert.match(server, /const pendingAtStart = new Map\(pendingMongoWrites\)/, "Atlas reconnect preserves the initial pending-write snapshot");
