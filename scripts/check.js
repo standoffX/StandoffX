@@ -740,6 +740,10 @@ assert.match(menu, /if\(!canTest\(\)\)\{notifyToast\("Тренування до�
 assert.match(menu, /socket\.emit\("start_training",\{mode:"training",map:selectedMap,gameMode:selectedMode\}\)/, "tester training starts a solo server session on the selected map");
 assert.match(game, /import \{FBXLoader\} from "three\/addons\/loaders\/FBXLoader\.js";/, "the game imports Three.js FBXLoader");
 assert.match(game, /fbxLoader\.load\("\/assets\/maps\/zone9\/Zone9\.fbx"/, "Zone 9 loads as a local FBX asset");
+assert.match(game, /const zone9LoadTimeout=setTimeout\(\(\)=>\{[\s\S]{0,240}buildZone9Preview\(\);\s*finishClientReady\(\);\s*\},15000\)/, "a stalled Zone 9 asset request falls back and releases the loading screen");
+assert.match(game, /if\(zone9LoadSettled\|\|mapLoadFinished\)\{disposeLateZone9Model\(root\);return\}/, "a late FBX response cannot add a second map after the fallback is shown");
+assert.match(game, /if\(zone9LoadSettled\|\|mapLoadFinished\)return;\s*zone9LoadSettled=true;\s*clearTimeout\(zone9LoadTimeout\)/, "Zone 9 errors and timeouts settle only once and cancel the pending timer");
+
 assert.match(game, /\/assets\/maps\/zone9\/textures\//, "Zone 9 resolves optimized local WebP textures");
 assert.match(game, /ZONE_9:140/, "the local movement bounds include Zone 9");
 
