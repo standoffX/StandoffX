@@ -664,7 +664,7 @@ assert.match(game, /function dropCurrentItem\(\)/, "G drops the currently equipp
 assert.match(game, /if\(selectedWeapon==="knife"\)return/, "trying to drop a knife is ignored without an unnecessary popup");
 assert.doesNotMatch(game, /НІЖ НЕ МОЖНА ВИКИНУТИ|НЕ МОЖНА ВИКОРИСТАТИ БОМБУ ЗАРАЗ/, "the game does not show noisy impossible-action warnings");
 assert.match(game, /let selectedWeapon="knife"/, "the knife is equipped by default");
-assert.match(game, /const weaponReserve=\{akr:90,p350:52,knife:0\}/, "firearms track finite reserve ammunition");
+assert.match(game, /const weaponReserve=\{akr:90,p350:52,deagle:28,knife:0\}/, "firearms including the Desert Eagle track finite reserve ammunition");
 assert.match(game, /if\(ammo>=info\.magazine\)\{startWeaponInspect\(\);return\}/, "R inspects a weapon when its magazine is already full");
 assert.match(game, /function createReloadMagazineVisual\(weaponId\)/, "reload uses a visible magazine model");
 assert.match(game, /action\.type==="inspect"/, "weapon inspection has a dedicated animation state");
