@@ -1866,7 +1866,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     prototypeBotMatch,
     lobbyMatch,
     map: safeMapId,
-    mapName: PLAYABLE_MAPS[safeMapId]?.name || PLAYABLE_MAPS.M3_Maze.name,
+    mapName: PLAYABLE_MAPS[safeMapId]?.name || PLAYABLE_MAPS.ZONE_9.name,
     mapState: safeMapId === "HILL_TOWN" ? createMapInteractionState() : null,
     players: players.map((p, i) => ({
       socketId: p.socketId || null,
@@ -3943,7 +3943,7 @@ io.on("connection", socket => {
       return;
     }
 
-    const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
+    const mode = ["allies", "team_fight", "team_fight_3v3"].includes(data?.mode) ? data.mode : "allies";
     const requestedMap = normalizeMapId(data?.map);
     const map = "ZONE_9";
     removeFromQueue(user.uuid || user.id);
@@ -3991,7 +3991,7 @@ io.on("connection", socket => {
 
     const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
     const requestedMap = normalizeMapId(data?.map);
-    const map = mode === "allies" ? "SANDSTONE" : (requestedMap === "NEON_YARD" ? "NEON_YARD" : "SMALL_YARD");
+    const map = "ZONE_9";
     removeFromQueue(user.uuid || user.id);
 
     matchmakingQueue.push({
