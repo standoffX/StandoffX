@@ -1295,6 +1295,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 </style>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="/mobile-game.css">
+<link rel="stylesheet" href="/lobby-remaster.css">
 </head>
 <body class="lobby-screen">
 <div class="app">
@@ -1341,6 +1342,22 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
     <section class="home-hero panel" aria-label="Головне ігрове меню">
       <img class="home-hero-art" src="game1.png" alt="" aria-hidden="true">
       <canvas id="homeAgentCanvas" class="home-agent-canvas" aria-label="3D-загін StandoffX"></canvas>
+       <button type="button" class="home-agent-toggle" id="homeAgentToggle" aria-expanded="false" aria-controls="homeAgentPanel">
+         <span class="home-agent-toggle-mark">A</span><span>АГЕНТ</span><span class="home-agent-toggle-arrow">⌄</span>
+       </button>
+       <div class="home-agent-panel" id="homeAgentPanel" aria-hidden="true">
+         <div class="home-agent-panel-head"><b>АГЕНТ</b><span>ЗОВНІШНІЙ ВИГЛЯД</span></div>
+         <div class="home-agent-side" role="group" aria-label="Сторона">
+           <button type="button" data-home-agent-side="T">T · АТАКА</button>
+           <button type="button" data-home-agent-side="CT">CT · ЗАХИСТ</button>
+         </div>
+         <div class="home-agent-panel-label">ПОЗА / АНІМАЦІЯ</div>
+         <div class="home-agent-poses" role="group" aria-label="Анімація агента">
+           <button type="button" data-home-agent-animation="Excited"><span>01</span><b>ГОТОВНІСТЬ</b></button>
+           <button type="button" data-home-agent-animation="Talking On Phone"><span>02</span><b>ПО ТЕЛЕФОНУ</b></button>
+           <button type="button" data-home-agent-animation="Illegal Elbow Punch"><span>03</span><b>УДАР ЛІКТЕМ</b></button>
+         </div>
+       </div>
       <div class="home-squad-bar" aria-label="Загін гравців"><div class="home-squad-head"><span>ЗАГІН</span><small id="homeSquadStatus">СОЛО</small><small id="homeSquadCount">1 / 4</small></div><div id="homeSquadRoster" class="home-squad-roster" aria-live="polite"></div></div>
       <div class="home-hero-copy">
         <div class="home-hero-overline"><span class="hero-live-dot"></span> STANDOFFX <span class="hero-separator">/</span> TACTICAL COMBAT</div>
@@ -2135,6 +2152,7 @@ function renderHomeSquadRoster(lobby=currentLobby){
     root.innerHTML=cards.join("");
     root.querySelectorAll("[data-squad-add-friend]").forEach(button=>button.addEventListener("click",()=>show("friends")));
   }
+  window.__sxHomePlayerId=String(me?.id||"");
   window.__sxHomeRoster=members.map(member=>({
     userId:String(member.userId||member.id||""),nickname:String(member.nickname||"ГРАВЕЦЬ"),
     playerAvatar:String(member.playerAvatar||"/avatars/default.jpg"),isOwner:Boolean(member.isOwner),
@@ -2185,7 +2203,7 @@ function renderLobbyState(lobby){
 function createLobby(mode=selectedMode,map=selectedMap){
   if(mode==="training"){notifyToast("Тренування — соло режим, лобі не створюється.");return}
   if(currentLobby){notifyToast("Ти вже в лобі.");return}
-  const lobbyMode=["allies","team_fight"].includes(mode)?mode:"allies";
+  const lobbyMode=["allies","team_fight","team_fight_3v3"].includes(mode)?mode:"allies";
   const lobbyMap="ZONE_9";
   $("lobbyModeSelect").value=lobbyMode;
   $("lobbyMapSelect").value=lobbyMap;
@@ -2680,7 +2698,7 @@ async function refreshAtlasIndicator(){}
 (async()=>{
   try{
     me=(await api("/api/me")).user;
-    if(!canTest()&&selectedMode!=="allies"&&selectedMode!=="team_fight"){
+    if(!canTest()&&selectedMode!=="allies"&&selectedMode!=="team_fight"&&selectedMode!=="team_fight_3v3"){
       selectedMode="allies";localStorage.setItem("sx_mode",selectedMode);
     }
     if(!canTest()){testGameplayMode="real";localStorage.setItem("sx_test_gameplay","real")}
@@ -2754,13 +2772,48 @@ if(canvas&&hero){
   loadSideTexture("T","OTCChA_D.tga");
   loadSideTexture("CT","FSB_A_D.tga");
 
-  function sideFor(person,index){
-    if(person.team==="A")return "CT";
-    if(person.team==="B")return "T";
-    if(person.side==="T"||person.side==="CT")return person.side;
-    return localStorage.getItem("sx-agent-side")==="T"?"T":"CT";
-  }
-  function clearActor(actor){
+     const AGENT_ANIMATIONS=Object.freeze({
+     "Excited":{T:"Excited.fbx",CT:"Excited_CT.fbx"},
+     "Talking On Phone":{T:"Talking On Phone.fbx",CT:"Talking On Phone _CT.fbx"},
+     "Illegal Elbow Punch":{T:"Illegal Elbow Punch.fbx",CT:"Illegal Elbow Punch_CT.fbx"}
+   });
+   const storedAgentSide=()=>localStorage.getItem("sx-agent-side")==="CT"?"CT":"T";
+   const storedAgentAnimation=()=>Object.prototype.hasOwnProperty.call(AGENT_ANIMATIONS,localStorage.getItem("sx-agent-animation"))?localStorage.getItem("sx-agent-animation"):"Excited";
+   function isLocalPerson(person,index){
+     const playerId=String(window.__sxHomePlayerId||"");
+     const personId=String(person.userId||person.id||"");
+     return Boolean(person.isOwner||person.isLocal||(playerId&&personId===playerId)||(!playerId&&index===0));
+   }
+   function sideFor(person,index){
+     if(isLocalPerson(person,index))return storedAgentSide();
+     if(person.team==="A")return "CT";
+     if(person.team==="B")return "T";
+     if(person.side==="T"||person.side==="CT")return person.side;
+     return storedAgentSide();
+   }
+   function animationFor(person,index){
+     const requested=person.agentAnimation||person.selectedAnimation||(isLocalPerson(person,index)?storedAgentAnimation():"Excited");
+     return Object.prototype.hasOwnProperty.call(AGENT_ANIMATIONS,requested)?requested:"Excited";
+   }
+   const agentToggle=document.getElementById("homeAgentToggle");
+   const agentPanel=document.getElementById("homeAgentPanel");
+   function updateAgentPanel(){
+     if(!agentPanel)return;
+     const side=storedAgentSide(),animation=storedAgentAnimation();
+     agentPanel.querySelectorAll("[data-home-agent-side]").forEach(b=>b.classList.toggle("active",b.dataset.homeAgentSide===side));
+     agentPanel.querySelectorAll("[data-home-agent-animation]").forEach(b=>b.classList.toggle("active",b.dataset.homeAgentAnimation===animation));
+     if(agentToggle)agentToggle.setAttribute("aria-expanded",String(agentPanel.classList.contains("open")));
+     agentPanel.setAttribute("aria-hidden",String(!agentPanel.classList.contains("open")));
+   }
+   agentToggle?.addEventListener("click",()=>{const open=!agentPanel.classList.contains("open");agentPanel.classList.toggle("open",open);updateAgentPanel()});
+   agentPanel?.addEventListener("click",event=>{
+     const sideButton=event.target.closest("[data-home-agent-side]");
+     const animationButton=event.target.closest("[data-home-agent-animation]");
+     if(sideButton){localStorage.setItem("sx-agent-side",sideButton.dataset.homeAgentSide);updateAgentPanel();updateLayout()}
+     if(animationButton){localStorage.setItem("sx-agent-animation",animationButton.dataset.homeAgentAnimation);updateAgentPanel();updateLayout()}
+   });
+   document.addEventListener("pointerdown",event=>{if(agentPanel?.classList.contains("open")&&!agentPanel.contains(event.target)&&!agentToggle?.contains(event.target)){agentPanel.classList.remove("open");updateAgentPanel()}});
+function clearActor(actor){
     if(actor.mixer)actor.mixer.stopAllAction();
     actor.group.traverse(node=>{
       if(node.geometry)node.geometry.dispose();
@@ -2771,7 +2824,8 @@ if(canvas&&hero){
   }
   function createActor(person,index,side){
     const id=String(person.userId||person.id||("local-"+index));
-    const file=side==="CT"?"Excited_CT.fbx":"Excited.fbx";
+    const animation=animationFor(person,index);
+     const file=AGENT_ANIMATIONS[animation][side];
     if(actors.has(id)){
       const old=actors.get(id);
       if(old.file===file)return;
@@ -2781,7 +2835,7 @@ if(canvas&&hero){
     group.position.x=(index-1.5)*1.68;
     group.rotation.y=0;
     scene.add(group);
-    const actor={id,file,side,group,model:null,mixer:null,phase:index*1.83};
+    const actor={id,file,side,animation,group,model:null,mixer:null,phase:index*1.83};
     actors.set(id,actor);
     loader.load(base+encodeURIComponent(file),model=>{
       const current=actors.get(id);
