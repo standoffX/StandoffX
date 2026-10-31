@@ -1930,7 +1930,9 @@ async function loadKnifeSkinTemplate(skinId){
   return knifeSkinLoadPromises.get(skinId);
 }
 async function loadRemoteWeapon(url,targetLength){
-  const loader=new FBXLoader();
+  const manager=new THREE.LoadingManager();
+  manager.addHandler(/\\.tga$/i,new TGALoader(manager));
+  const loader=new FBXLoader(manager);
   const model=await loader.loadAsync(url);
   return normalizeWeaponModel(model,targetLength);
 }
