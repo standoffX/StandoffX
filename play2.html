@@ -4113,7 +4113,8 @@ socket.on("training_init",data=>{
   $("modeName").textContent=data.modeName||mode.toUpperCase();
   matchPhase="game";canControl=true;
   ensurePlayerVisual();
-  if(data.spawn)player.position.set(data.spawn.x||0,data.spawn.y||0,data.spawn.z||0);\n   if(mapLoadFinished)snapPlayerToZone9Floor(true);
+  if(data.spawn)player.position.set(data.spawn.x||0,data.spawn.y||0,data.spawn.z||0);
+   if(mapLoadFinished)snapPlayerToZone9Floor(true);
   $("trainingControls").style.display=mode==="field_test"?"block":"none";
   $("overlayTitle").textContent=data.prototype?(data.gameMode==="allies"?"СОЮЗНИКИ · ПРОТОТИП":"КБ · ПРОТОТИП"):mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":"ТРЕНУВАННЯ";
   $("overlayText").textContent=mapLoadFinished?"Готово.":"Завантажуємо карту…";
