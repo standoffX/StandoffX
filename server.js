@@ -3945,7 +3945,7 @@ io.on("connection", socket => {
 
     const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
     const requestedMap = normalizeMapId(data?.map);
-    const map = mode === "allies" ? "SANDSTONE" : (requestedMap === "NEON_YARD" ? "NEON_YARD" : "SMALL_YARD");
+    const map = "ZONE_9";
     removeFromQueue(user.uuid || user.id);
 
     const botCandidate = (nickname, suffix) => ({
