@@ -3830,14 +3830,14 @@ io.on("connection", socket => {
     const session = trainingSessions.get(socket.user?.id);
     if (!session || session.socketId !== socket.id || session.id !== cleanText(data?.trainingId, 100)) return;
     session.playerPos = { ...(session.spawnPosition || (session.mode === "training" ? { x: 5, y: 0, z: 5 } : { x: 0, y: 0, z: 0 })) };
-    session.playerRotY = 0;
+    session.playerRotY = Math.atan2(-session.playerPos.x,-session.playerPos.z);
     session.bot = session.mode === "field_test" ? {
       id: "training_bot", nickname: "ТРЕНУВАЛЬНА МІШЕНЬ", role: "runner", team: "B",
       hp: 100, maxHp: 100, hits: 0,
       x: session.playerPos.x, y: 0, z: session.playerPos.z - 8,
       rotY: Math.PI, action: "idle", updatedAt: Date.now()
     } : null;
-    io.to(session.id).emit("training_state", { bot: session.bot, spawn: { ...session.playerPos }, reset: true, message: "Тренування скинуто." });
+    io.to(session.id).emit("training_state", { bot: session.bot, spawn: { ...session.playerPos }, rotY: session.playerRotY, reset: true, message: "Тренування скинуто." });
   });
 
   socket.on("end_training", data => {
