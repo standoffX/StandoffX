@@ -145,3 +145,26 @@ body:not(.auth-mode) .topbrand,
  body:not(.auth-mode) .home-layout{grid-template-columns:minmax(170px,.7fr) minmax(0,1.55fr)!important}
  body:not(.auth-mode) #home .profile-col{display:none!important}
 }
+
+/* Temporarily hide the retired Softer skin shop and its old inventory pages. */
+body:not(.auth-mode) .rail button[data-view="store"],
+body:not(.auth-mode) .rail button[data-view="inventory"],
+body:not(.auth-mode) .rail button[data-view="market"],
+body:not(.auth-mode) #store,
+body:not(.auth-mode) #inventory,
+body:not(.auth-mode) #market,
+body:not(.auth-mode) #softerReveal{display:none!important}
+body:not(.auth-mode) #home .profile-col .rankrow,
+body:not(.auth-mode) #home .profile-col .ranks{display:none!important}
+@media (pointer:coarse) and (orientation:portrait) and (max-width:700px){
+  body:not(.auth-mode) #home .home-layout{grid-template-columns:1fr!important;grid-template-rows:auto 1fr!important;height:auto!important;min-height:calc(100dvh - 90px)!important;overflow:auto!important}
+  body:not(.auth-mode) #home .home-friends{grid-column:1!important;grid-row:1!important;min-height:116px!important;height:116px!important}
+  body:not(.auth-mode) #home .home-hero{grid-column:1!important;grid-row:2!important;min-height:280px!important;height:calc(100dvh - 245px)!important}
+  body:not(.auth-mode) #home .home-friends-body{padding:7px!important;gap:6px!important}
+  body:not(.auth-mode) #home .home-friends-title,
+  body:not(.auth-mode) #home .home-friends-list,
+  body:not(.auth-mode) #home .home-invite-btn,
+  body:not(.auth-mode) #home .home-squad-note{display:none!important}
+  body:not(.auth-mode) #home .home-self-card{padding:6px!important}
+  body:not(.auth-mode) #home .playarea{position:absolute!important;right:9px!important;bottom:8px!important;top:auto!important}
+}
