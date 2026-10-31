@@ -1680,7 +1680,7 @@ function resumeSavedMatch(saved){
   sessionStorage.setItem("myPlayerId",String(saved.userId||me?.id||""));
   sessionStorage.setItem("myPlayerUUID",String(saved.uuid||me?.uuid||""));
   sessionStorage.setItem("currentMatchId",String(saved.matchId));
-  sessionStorage.setItem("selectedMap",String(saved.map||"SANDSTONE"));
+  sessionStorage.setItem("selectedMap","ZONE_9");
   sessionStorage.setItem("selectedMode",String(saved.mode||"allies"));
   sessionStorage.setItem("prototypeMode",saved.prototype?"true":"false");
   if(saved.prototype)sessionStorage.setItem("prototypeGameMode",String(saved.mode||"allies"));
@@ -1693,7 +1693,7 @@ function exitSavedMatch(){
   try{
     localStorage.setItem("sx_abandoned_match",JSON.stringify({
       kind:"match",matchId:String(saved.matchId),userId:String(saved.userId||me?.id||""),
-      uuid:String(saved.uuid||me?.uuid||""),map:String(saved.map||"HILL_TOWN"),mode:String(saved.mode||"allies")
+      uuid:String(saved.uuid||me?.uuid||""),map:"ZONE_9",mode:String(saved.mode||"allies")
     }));
     localStorage.removeItem("sx_active_match");
     sessionStorage.removeItem("currentMatchId");
