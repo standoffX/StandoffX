@@ -1820,7 +1820,7 @@ function emitQueueCount(io) {
       required: getRequiredPlayers(entry.mode),
       mode: entry.mode,
       map: entry.map,
-      mapName: PLAYABLE_MAPS[entry.map]?.name || PLAYABLE_MAPS.M3_Maze.name,
+      mapName: PLAYABLE_MAPS[entry.map]?.name || PLAYABLE_MAPS.ZONE_9.name,
       players: modePlayers.map(p => ({
         userId: p.userId,
         nickname: p.nickname,
@@ -2080,7 +2080,7 @@ function createLobbyMatch(io, socket, data = {}) {
   const lobby = current.lobby;
   if (lobby.ownerId !== socket.user.id) return emitLobbyError(socket, "Почати матч може лише лідер лобі.", "lobby_start_error");
   const mode = lobby.mode;
-  const map = mode === "allies" ? "SANDSTONE" : lobby.map;
+  const map = "ZONE_9";
   const required = getRequiredPlayers(mode);
   const members = [...lobby.members];
   if (members.length > required) return emitLobbyError(socket, "У лобі більше гравців, ніж підтримує цей режим.", "lobby_start_error");
@@ -2091,7 +2091,7 @@ function createLobbyMatch(io, socket, data = {}) {
   }
   const fillBots = data.fillWithBots !== false;
   if (members.length < required && !fillBots) return emitLobbyError(socket, "Додай друзів або ввімкни заповнення ботами.", "lobby_start_error");
-  const candidates = members.map(member => {
+  const candidates = members.map((member, index) => {
     const user = users.find(candidate => candidate.id === member.userId);
     return {
       socketId: member.socketId,
@@ -3303,7 +3303,7 @@ function tracePlayerHit(origin, aim, targetPos, range, options = {}) {
 }
 
 function handleTeamShot(io, match, shooter, data) {
-  if (!["team_fight", "allies"].includes(match.mode) || match.phase !== "game") return;
+  if (!["team_fight", "allies", "team_fight_3v3"].includes(match.mode) || match.phase !== "game") return;
 
   const weaponId = normalizeWeaponId(data?.weapon);
   if (match.mode === "allies" && (!Array.isArray(shooter.weapons) || !shooter.weapons.includes(weaponId) || shooter.equippedWeapon !== weaponId)) return;
@@ -3515,7 +3515,7 @@ io.on("connection", socket => {
     }
 
     const prototype = mode === "field_test" && data?.prototype === true;
-    const gameMode = ["allies", "team_fight"].includes(data?.gameMode) ? data.gameMode : "team_fight";
+    const gameMode = ["allies", "team_fight", "team_fight_3v3"].includes(data?.gameMode) ? data.gameMode : "team_fight";
     const previous = trainingSessions.get(user.id);
     const sessionMap = ["field_test", "training"].includes(mode) ? normalizeMapId(data?.map || cfg.map) : cfg.map;
     const TRAINING_SPAWNS = {
@@ -3822,15 +3822,15 @@ io.on("connection", socket => {
     const user = socket.user;
     if (!user || playerMatch(user.uuid || user.id)) return emitLobbyError(socket, "Ти вже перебуваєш у матчі.");
     if (lobbyByUser.has(user.id)) return emitLobbyError(socket, "Ти вже в лобі.");
-    const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
+    const mode = ["allies", "team_fight", "team_fight_3v3"].includes(data?.mode) ? data.mode : "allies";
     const requestedMap = normalizeMapId(data?.map);
-    const map = mode === "allies" ? "SANDSTONE" : (requestedMap === "NEON_YARD" ? "NEON_YARD" : "SMALL_YARD");
+    const map = "ZONE_9";
     const lobbyId = "lobby_" + crypto.randomBytes(7).toString("hex");
     const lobby = {
       id: lobbyId, ownerId: user.id, mode, map, maxPlayers: getRequiredPlayers(mode),
       createdAt: Date.now(),
       members: [{
-        userId: user.id, uuid: user.uuid || "", socketId: socket.id, team: mode === "allies" ? "A" : null,
+        userId: user.id, uuid: user.uuid || "", socketId: socket.id, team: mode === "allies" || mode === "team_fight_3v3" ? "A" : null,
         nickname: user.nickname, playerAvatar: user.playerAvatar || "/avatars/default.jpg"
       }]
     };
@@ -3866,7 +3866,7 @@ io.on("connection", socket => {
     const countB = lobby.members.filter(member => member.team === "B").length;
     lobby.members.push({
       userId: user.id, uuid: user.uuid || "", socketId: socket.id,
-      team: lobby.mode === "allies" ? (countA <= countB ? "A" : "B") : null,
+      team: lobby.mode === "allies" || lobby.mode === "team_fight_3v3" ? (countA <= countB ? "A" : "B") : null,
       nickname: user.nickname, playerAvatar: user.playerAvatar || "/avatars/default.jpg"
     });
     lobbyByUser.set(user.id, lobby.id);
@@ -3880,14 +3880,14 @@ io.on("connection", socket => {
   });
   socket.on("lobby_set_team", data => {
     const current = lobbyMemberFromSocket(socket);
-    if (!current || current.lobby.mode !== "allies") return emitLobbyError(socket, "Команди доступні лише в режимі «Союзники».", "lobby_team_result");
+    if (!current || !["allies","team_fight_3v3"].includes(current.lobby.mode)) return emitLobbyError(socket, "Команди доступні лише в командних режимах.", "lobby_team_result");
     if (current.lobby.ownerId !== socket.user.id) return emitLobbyError(socket, "Змінювати команди може лише лідер лобі.", "lobby_team_result");
     const targetId = normalizeId(data?.userId);
     const team = data?.team === "B" ? "B" : data?.team === "A" ? "A" : null;
     const target = current.lobby.members.find(member => member.userId === targetId);
     if (!target || !team) return emitLobbyError(socket, "Не вдалося змінити команду.", "lobby_team_result");
     const countInTeam = current.lobby.members.filter(member => member.team === team && member.userId !== targetId).length;
-    if (countInTeam >= 2) return emitLobbyError(socket, "У команді вже є двоє гравців. Перенеси когось в іншу команду.", "lobby_team_result");
+    if (countInTeam >= (current.lobby.mode === "team_fight_3v3" ? 3 : 2)) return emitLobbyError(socket, "У команді вже немає вільних місць.", "lobby_team_result");
     target.team = team;
     socket.emit("lobby_team_result", { success: true, userId: targetId, team });
     emitLobbyState(io, current.lobby);
@@ -3897,10 +3897,10 @@ io.on("connection", socket => {
     if (!current) return emitLobbyError(socket, "Спочатку створи або приєднайся до лобі.", "lobby_settings_result");
     const lobby = current.lobby;
     if (lobby.ownerId !== socket.user?.id) return emitLobbyError(socket, "Змінювати режим може лише лідер лобі.", "lobby_settings_result");
-    const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : null;
+    const mode = ["allies", "team_fight", "team_fight_3v3"].includes(data?.mode) ? data.mode : null;
     if (!mode) return emitLobbyError(socket, "Невідомий режим гри.", "lobby_settings_result");
     const mapCandidate = normalizeMapId(data?.map);
-    const map = mode === "allies" ? "SANDSTONE" : (["SMALL_YARD", "NEON_YARD"].includes(mapCandidate) ? mapCandidate : null);
+    const map = "ZONE_9";
     if (!map) return emitLobbyError(socket, "Для цього режиму обери доступну карту.", "lobby_settings_result");
     const required = getRequiredPlayers(mode);
     if (lobby.members.length > required) return emitLobbyError(socket, "У лобі забагато гравців для цього режиму. Вийди з лобі або обери інший режим.", "lobby_settings_result");
@@ -3908,9 +3908,9 @@ io.on("connection", socket => {
     lobby.mode = mode;
     lobby.map = map;
     lobby.maxPlayers = required;
-    if (mode === "allies" && modeChanged) {
+    if ((mode === "allies" || mode === "team_fight_3v3") && modeChanged) {
       lobby.members.forEach((member, index) => { member.team = index % 2 === 0 ? "A" : "B"; });
-    } else if (mode !== "allies") {
+    } else if (mode !== "allies" && mode !== "team_fight_3v3") {
       lobby.members.forEach(member => { member.team = null; });
     }
     socket.emit("lobby_settings_result", { success: true, mode, map, maxPlayers: required });
@@ -3972,7 +3972,9 @@ io.on("connection", socket => {
     };
     const bots = mode === "allies"
       ? [botCandidate("BOT · СОЮЗНИК", "ally"), botCandidate("BOT · ПРОТИВНИК 1", "enemy1"), botCandidate("BOT · ПРОТИВНИК 2", "enemy2")]
-      : [botCandidate("BOT · ПРОТИВНИК 1", "enemy1"), botCandidate("BOT · ПРОТИВНИК 2", "enemy2")];
+      : mode === "team_fight_3v3"
+        ? [botCandidate("BOT · СОЮЗНИК 1", "ally1"), botCandidate("BOT · СОЮЗНИК 2", "ally2"), botCandidate("BOT · ПРОТИВНИК 1", "enemy1"), botCandidate("BOT · ПРОТИВНИК 2", "enemy2"), botCandidate("BOT · ПРОТИВНИК 3", "enemy3")]
+        : [botCandidate("BOT · ПРОТИВНИК 1", "enemy1"), botCandidate("BOT · ПРОТИВНИК 2", "enemy2")];
     createMatch(io, mode, map, [humanCandidate, ...bots]);
   });
 
