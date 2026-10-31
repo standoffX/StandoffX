@@ -1293,6 +1293,8 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 @keyframes softer-reveal-sweep{from{transform:translateX(-12%) rotate(0)}to{transform:translateX(12%) rotate(360deg)}}
 @media(max-width:900px){#softerCollectionGrid{grid-template-columns:repeat(2,minmax(0,1fr))}#store .softer-hero{grid-template-columns:1fr}.softer-market-card{grid-template-columns:60px minmax(0,1fr) auto}}
 </style>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="/mobile-game.css">
 </head>
 <body class="lobby-screen">
 <div class="app">
@@ -3029,5 +3031,6 @@ if(hero&&canvas){
     if(renderer)renderer.dispose();
   }
 }</script>
+<script src="/mobile-game.js" defer></script>
 </body>
 </html>
