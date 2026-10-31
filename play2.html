@@ -666,7 +666,7 @@ function setLoadingDetail(id,message,state="active"){
     row.classList.toggle("is-error",state==="error");
   }
 }
-const MAP_LOADING_NAMES={SANDSTONE:"SANDSTONE",SMALL_YARD:"SMALL YARD",HILL_TOWN:"HILL TOWN",M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD",ZONE_9:"ZONE 9"};
+const MAP_LOADING_NAMES={ZONE_9:"ZONE 9"};
 const isMobileDevice=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||
   (navigator.maxTouchPoints>1&&matchMedia("(pointer: coarse)").matches)||
   (innerWidth<=760&&navigator.maxTouchPoints>0);
@@ -689,11 +689,11 @@ const myId=sessionStorage.getItem("myPlayerId");
 const myUuid=sessionStorage.getItem("myPlayerUUID")||"";
 const matchId=sessionStorage.getItem("currentMatchId");
 const mode=sessionStorage.getItem("selectedMode")||"allies";
-const selectedMap=sessionStorage.getItem("selectedMap")||"HILL_TOWN";
+const selectedMap=sessionStorage.getItem("selectedMap")||"ZONE_9";
 const isTrainingMode=mode==="training"||mode==="field_test";
 const isPrototypeMode=sessionStorage.getItem("prototypeMode")==="true";
 const prototypeGameMode=sessionStorage.getItem("prototypeGameMode")==="allies"?"allies":"team_fight";
-const isTeamCombat=mode==="allies"||mode==="team_fight";
+const isTeamCombat=mode==="allies"||mode==="team_fight"||mode==="team_fight_3v3";
 const trainingId=sessionStorage.getItem("trainingId")||matchId;
 if(!myId||(!matchId&&!isTrainingMode)){location.href="/game";throw new Error("No active match")}
 
@@ -780,7 +780,7 @@ let heldWeaponBaseX=.29,heldWeaponBaseY=-.29,heldWeaponBaseZ=-.42;
 let weaponKick=0;
 let akModelTemplate=null;
 let p350ModelTemplate=null;
-const weaponModelTemplates={m4a1:null,p90:null,shotgun:null,sniper:null};
+const weaponModelTemplates={m4a1:null,p90:null,shotgun:null,sniper:null,deagle:null,knife:null};
 const knifeSkinModelTemplates={};
 const knifeSkinLoadPromises=new Map();
 let tacticalAgentTemplate=null;
@@ -1878,15 +1878,18 @@ function addWeaponHands(){
   hand(leftWrist.clone().add(new THREE.Vector3(0,0,-.008)),-.3);
   hand(rightWrist.clone().add(new THREE.Vector3(0,0,-.008)),.35);
 }
+const MODEL_REPO_BASE="https://raw.githubusercontent.com/standoffX/3d-models/main/";
 const WEAPON_MODEL_URLS={
-  akr:"https://raw.githubusercontent.com/petroulacl/fps-asset-kit/main/weapons/flat_guns_west/Flat%20Guns%20West/GLB/Rifle_Assault_West.glb",
-  p350:"https://raw.githubusercontent.com/petroulacl/fps-asset-kit/main/weapons/flat_guns_west/Flat%20Guns%20West/GLB/Pistol_Compact_West.glb",
-  m4a1:"https://raw.githubusercontent.com/petroulacl/fps-asset-kit/main/weapons/flat_guns_west/Flat%20Guns%20West/GLB/Rifle_Battle_West.glb",
-  p90:"https://raw.githubusercontent.com/petroulacl/fps-asset-kit/main/weapons/flat_guns_west/Flat%20Guns%20West/GLB/SMG_Compact_West.glb",
-  shotgun:"https://raw.githubusercontent.com/petroulacl/fps-asset-kit/main/weapons/flat_guns_west/Flat%20Guns%20West/GLB/Shotgun_Pump_West.glb",
-  sniper:"https://raw.githubusercontent.com/petroulacl/fps-asset-kit/main/weapons/flat_guns_west/Flat%20Guns%20West/GLB/Sniper_Rifle_West.glb"
+  akr:MODEL_REPO_BASE+"Rifles/Akr.fbx",
+  p350:MODEL_REPO_BASE+"Pistols/P350.fbx",
+  deagle:MODEL_REPO_BASE+"Pistols/Deagle.fbx",
+  m4a1:MODEL_REPO_BASE+"Rifles/M4a1.fbx",
+  p90:MODEL_REPO_BASE+"Submachine%20Guns/P90.fbx",
+  shotgun:MODEL_REPO_BASE+"Heavy%20weapons/Sm1014.fbx",
+  sniper:MODEL_REPO_BASE+"Sniper%20Rifles/Awm.fbx",
+  knife:MODEL_REPO_BASE+"Knifes/Karambit.fbx"
 };
-const WEAPON_MODEL_LENGTHS={akr:.9,p350:.5,m4a1:.94,p90:.72,shotgun:.98,sniper:1.08};
+const WEAPON_MODEL_LENGTHS={akr:.9,p350:.5,deagle:.52,m4a1:.94,p90:.72,shotgun:.98,sniper:1.08,knife:.62};
 const KNIFE_SKIN_MODEL_URLS={
   softer_knife_blue_blood:"/assets/weapons/bayonet_m9_blue_blood.glb",
   softer_knife_sparkling_gaze:"/assets/weapons/bayonet_m9_sparkling_gaze.glb"
@@ -1931,7 +1934,9 @@ async function loadKnifeSkinTemplate(skinId){
   return knifeSkinLoadPromises.get(skinId);
 }
 async function loadRemoteWeapon(url,targetLength){
-  return normalizeWeaponModel(await loadGLBScene(url),targetLength);
+  const loader=new FBXLoader();
+  const model=await loader.loadAsync(url);
+  return normalizeWeaponModel(model,targetLength);
 }
 async function loadHeldWeapon(){
   if(!heldWeaponRoot){
@@ -1940,7 +1945,6 @@ async function loadHeldWeapon(){
     camera.add(heldWeaponRoot);
   }
   makeFallbackWeaponById(selectedWeapon);
-  addWeaponHands();
   positionHeldWeapon();
   setLoadingDetail("weaponLoadStatus","ЗАВАНТАЖЕННЯ МОДЕЛЕЙ ЗБРОЇ…","active");
   const modelKeys=Object.keys(WEAPON_MODEL_URLS);
@@ -2757,87 +2761,84 @@ function buildZone9Preview(){
 function buildZone9Map(){
   if(mapLoadFinished||zone9AssetState==="loading")return;
   zone9AssetState="loading";
-  scene.background=new THREE.Color(0x8d9ba1);scene.fog=new THREE.Fog(0x8d9ba1,170,320);
+  scene.background=new THREE.Color(0x8d9ba1);
+  scene.fog=new THREE.Fog(0x8d9ba1,170,320);
   $("phase").textContent="ЗАВАНТАЖЕННЯ ZONE 9";
-  $("overlayText").textContent="Завантажуємо локальну FBX-геометрію та стиснуті текстури. Тіні вимкнено для стабільнішого FPS.";
-  setLoadingDetail("mapLoadStatus","ZONE 9 · FBX + WEBP","active");$("progress").style.width="14%";
-  const textureNames=["Decal.png","WALL12.png","Rock_GrandCanyonRockface_2k2_d.png","WALL interior1.png","Interior.png","wall 1.png","2.png","Rock_1.png","Props.png","concrete_1.png","4.png","Ground2.png","3.png","concrete_7.png","Props2.png"];
-  const texturePath=new Map(textureNames.map(name=>[name.toLowerCase(),name.replace(/\.png$/i,".webp")]));
-  const manager=new THREE.LoadingManager();
-  manager.setURLModifier(url=>{
-    let base=String(url||"").split(/[?#]/)[0].split(/[\\/]/).pop();
-    try{base=decodeURIComponent(base)}catch{}
-    const mapped=texturePath.get(base.toLowerCase());
-    return mapped?"/assets/maps/zone9/textures/"+encodeURIComponent(mapped):url;
-  });
-  const fbxLoader=new FBXLoader(manager);
-  let zone9LoadSettled=false;
-  const disposeLateZone9Model=root=>{
-    if(!root?.traverse)return;
-    root.traverse(node=>{
-      if(node.geometry)node.geometry.dispose();
-      const materials=Array.isArray(node.material)?node.material:[node.material];
-      for(const material of materials){
-        if(!material)continue;
-        for(const value of Object.values(material))if(value?.isTexture)value.dispose();
-        material.dispose();
-      }
-    });
+  $("overlayText").textContent="Завантажується єдина карта матчу.";
+  setLoadingDetail("mapLoadStatus","ZONE 9 · GLB","active");
+  $("progress").style.width="8%";
+  const url="https://raw.githubusercontent.com/standoffX/zone9prototype/main/zone9.glb";
+  const gltfLoader=new GLTFLoader();
+  let settled=false;
+  const fail=(error)=>{
+    if(settled||mapLoadFinished)return;
+    settled=true;
+    zone9AssetState="error";
+    console.error("[ZONE 9] GLB load failed:",error);
+    setLoadingDetail("mapLoadStatus","ZONE 9 · ПОМИЛКА ЗАВАНТАЖЕННЯ","error");
+    $("phase").textContent="КАРТА НЕ ЗАВАНТАЖИЛАСЯ";
+    $("overlayText").textContent="Не вдалося завантажити Zone 9. Перевір з’єднання та перезапусти матч.";
+    $("progress").style.width="100%";
   };
-  const zone9LoadTimeout=setTimeout(()=>{
-    if(zone9LoadSettled||mapLoadFinished)return;
-    zone9LoadSettled=true;
-    console.warn("[ZONE 9] FBX load timed out. Opening the lightweight preview instead.");
-    buildZone9Preview();
-    finishClientReady();
-  },15000);
-  fbxLoader.load("/assets/maps/zone9/Zone9.fbx",root=>{
-    if(zone9LoadSettled||mapLoadFinished){disposeLateZone9Model(root);return}
-    zone9LoadSettled=true;
-    clearTimeout(zone9LoadTimeout);
+  const timeout=setTimeout(()=>fail(new Error("Zone 9 load timeout")),60000);
+  gltfLoader.load(url,gltf=>{
+    if(settled||mapLoadFinished)return;
+    settled=true;clearTimeout(timeout);
     try{
+      const root=gltf.scene;
+      if(!root)throw new Error("GLB не містить сцени.");
+      root.name="Zone9Map";
       root.updateMatrixWorld(true);
-      const initialBounds=new THREE.Box3().setFromObject(root),initialSize=initialBounds.getSize(new THREE.Vector3());
-      if(initialBounds.isEmpty()||initialSize.x<1||initialSize.z<1)throw Error("FBX має некоректні розміри або нечитабельну геометрію.");
-      const scale=250/Math.max(initialSize.x,initialSize.z);
-      root.scale.setScalar(scale);root.updateMatrixWorld(true);
-      const bounds=new THREE.Box3().setFromObject(root),center=bounds.getCenter(new THREE.Vector3());
-      root.position.x-=center.x;root.position.y-=bounds.min.y;root.position.z-=center.z;root.updateMatrixWorld(true);
+      const originalBounds=new THREE.Box3().setFromObject(root);
+      const originalSize=originalBounds.getSize(new THREE.Vector3());
+      const longest=Math.max(originalSize.x,originalSize.y,originalSize.z);
+      if(originalBounds.isEmpty()||!Number.isFinite(longest)||longest<=0)throw new Error("Zone 9 не містить геометрії.");
+      const exportScale=longest<10?100:1;
+      root.scale.setScalar(exportScale);
+      root.updateMatrixWorld(true);
+      const bounds=new THREE.Box3().setFromObject(root);
+      const center=bounds.getCenter(new THREE.Vector3());
+      root.position.x-=center.x;
+      root.position.y-=bounds.min.y;
+      root.position.z-=center.z;
+      root.updateMatrixWorld(true);
+      let meshCount=0;
       root.traverse(node=>{
         if(!node.isMesh||!node.geometry)return;
+        meshCount++;
         node.castShadow=false;node.receiveShadow=false;node.frustumCulled=true;
         if(!node.geometry.boundingSphere)node.geometry.computeBoundingSphere();
         const materials=Array.isArray(node.material)?node.material:[node.material];
         for(const material of materials){
           if(!material)continue;
-          for(const key of ["map","emissiveMap","normalMap","bumpMap","roughnessMap","metalnessMap","aoMap","alphaMap"]){
-            const tex=material[key];if(!tex?.isTexture)continue;
-            tex.generateMipmaps=true;tex.minFilter=THREE.LinearMipmapLinearFilter;tex.magFilter=THREE.LinearFilter;
-            tex.anisotropy=isLowEndDevice||isMobileDevice?1:Math.min(4,renderer.capabilities.getMaxAnisotropy());
-            if(key==="map"||key==="emissiveMap")tex.colorSpace=THREE.SRGBColorSpace;
-            tex.needsUpdate=true;
+          material.side=THREE.DoubleSide;
+          if(material.map){
+            material.map.colorSpace=THREE.SRGBColorSpace;
+            material.map.anisotropy=isLowEndDevice||isMobileDevice?1:Math.min(4,renderer.capabilities.getMaxAnisotropy());
+            material.map.needsUpdate=true;
           }
           material.needsUpdate=true;
         }
         mapObjects.push(node);
       });
+      if(!meshCount)throw new Error("У Zone 9 немає видимих mesh-об’єктів.");
       scene.add(root);zone9Root=root;
-      buildZone9SpawnMarker(-92,92,"CT SPAWN",0x49baff);
-      setLoadingDetail("mapLoadStatus","ZONE 9 · ГОТОВО","done");$("progress").style.width="100%";
-      mapLoaded=true;mapLoadFinished=true;zone9AssetState="loaded";finishClientReady();
-    }catch(error){console.error("[ZONE 9] Could not prepare FBX map:",error);buildZone9Preview();finishClientReady()}
+      zone9AssetState="loaded";mapLoaded=true;mapLoadFinished=true;
+      $("progress").style.width="100%";
+      setLoadingDetail("mapLoadStatus","ZONE 9 · ГОТОВО","done");
+      console.info("[ZONE 9] GLB ready",bounds.min.toArray(),bounds.max.toArray(),"scale",exportScale,"meshes",meshCount);
+      finishClientReady();
+    }catch(error){
+      fail(error);
+      clearTimeout(timeout);
+    }
   },event=>{
-    if(!zone9LoadSettled&&!mapLoadFinished&&event.total>0){const pct=Math.max(14,Math.min(78,14+Math.round(event.loaded/event.total*64)));$("progress").style.width=pct+"%";}
-  },error=>{
-    if(zone9LoadSettled||mapLoadFinished)return;
-    zone9LoadSettled=true;
-    clearTimeout(zone9LoadTimeout);
-    console.error("[ZONE 9] Map asset load failed:",error);
-    buildZone9Preview();
-    finishClientReady();
-  });
+    if(settled||!event.total)return;
+    const pct=Math.min(90,8+Math.round(event.loaded/event.total*82));
+    $("progress").style.width=pct+"%";
+    $("overlayText").textContent="Завантаження Zone 9 · "+Math.round(event.loaded/event.total*100)+"%";
+  },error=>{clearTimeout(timeout);fail(error)});
 }
-
 function loadMap(){
   const mapLabel=MAP_LOADING_NAMES[selectedMap]||String(selectedMap||"КАРТА");
   setLoadingDetail("mapLoadStatus","БУДУЄМО "+mapLabel+"…","active");
@@ -3592,7 +3593,7 @@ function selectWeapon(weaponId,force=false){
   }else if(selectedWeapon==="knife"){
     const skinId=String(equippedSkinLoadout?.knife||"");
     const skinUrl=KNIFE_SKIN_MODEL_URLS[skinId];
-    const template=skinUrl?knifeSkinModelTemplates[skinId]:null;
+    const template=skinUrl?knifeSkinModelTemplates[skinId]:weaponModelTemplates.knife;
     if(template){clearHeldWeapon();heldWeaponRoot.add(template.clone(true));heldWeaponRoot.userData.realModel=true}
     else{
       makeFallbackKnife();
@@ -3607,7 +3608,6 @@ function selectWeapon(weaponId,force=false){
   }else makeFallbackWeaponById(selectedWeapon);
   markHeldWeaponParts();
   applyEquippedSkinToHeldWeapon();
-  addWeaponHands();
   createMuzzleFlash();
   positionHeldWeapon();
   if(!force&&previousWeapon!==weaponId){
