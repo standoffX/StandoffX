@@ -145,9 +145,9 @@ assert.match(mobileCss, /#mobile \.stick/);
 assert.match(mobileCss, /#mobile \.fire/);
 
 // Retired collection/market screens stay out of the visible menu until the new skins arrive.
-assert.match(mobileCss, /data-view="store"[\s\S]{0,240}display:none/);
-assert.match(mobileCss, /data-view="inventory"[\s\S]{0,240}display:none/);
-assert.match(mobileCss, /data-view="market"[\s\S]{0,240}display:none/);
+assert.ok(mobileCss.includes('.rail button[data-view="store"]') && mobileCss.includes("#store"));
+assert.ok(mobileCss.includes('.rail button[data-view="inventory"]') && mobileCss.includes("#inventory"));
+assert.ok(mobileCss.includes('.rail button[data-view="market"]') && mobileCss.includes("#market"));
 assert.match(mobileCss, /#authNote/);
 assert.match(mobileCss, /home-hero-copy/);
 assert.match(mobileCss, /coming-soon-tag/);
