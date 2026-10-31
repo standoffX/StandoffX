@@ -496,6 +496,8 @@ html,body{font-family:Inter,"Nunito",system-ui,-apple-system,"Segoe UI",sans-ser
 @media(max-width:800px),(pointer:coarse){.allies-buy-cta{top:66px;right:10px;min-height:45px;gap:7px;padding:6px 9px}.allies-buy-cta-mark{width:24px;height:24px}.allies-buy-cta-copy b{font-size:10px}.allies-buy-cta-copy small{font-size:7px}}
 @media(prefers-reduced-motion:reduce){.allies-buy-cta{animation:none;transition:none}}
 </style>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="/mobile-game.css">
 </head>
 <body>
 <div id="game"></div>
@@ -4664,5 +4666,6 @@ if(isTrainingMode)socket.emit("join_training",{trainingId});
 else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
 animate();
 </script>
+<script src="/mobile-game.js" defer></script>
 </body>
 </html>
