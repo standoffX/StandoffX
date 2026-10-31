@@ -202,12 +202,6 @@ body.lobby-screen:not(.auth-mode) #home .home-layout{
   min-width:0!important;min-height:0!important;max-height:100%!important;
   grid-template-rows:minmax(0,1fr)!important;align-items:stretch!important;
 }
-body.lobby-screen:not(.auth-mode) #home .home-squad-card.is-preview-friend{
-  border-color:#70df6945!important;background:#1c2922!important;
-}
-body.lobby-screen:not(.auth-mode) #home .home-squad-card.is-preview-friend small{
-  color:#9ed99a!important;
-}
 @media(max-width:760px){
   body.lobby-screen:not(.auth-mode) #home.screen.active{height:auto!important;min-height:100%!important;overflow:visible!important}
   body.lobby-screen:not(.auth-mode) #home .home-layout{height:auto!important;flex:0 0 auto!important}
@@ -231,5 +225,4 @@ body.lobby-screen:not(.auth-mode) #home .home-squad-card.is-preview-friend small
    height:100%!important;min-height:0!important;max-height:none!important;align-self:stretch!important
  }
  body.lobby-screen:not(.auth-mode) #home .home-hero{grid-row:1!important;min-height:0!important}
- body.lobby-screen:not(.auth-mode) #home .home-squad-card.is-preview-friend{display:none!important}
 }
