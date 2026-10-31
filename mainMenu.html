@@ -1416,10 +1416,10 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
       <div class="panelhead"><span>СТВОРИТИ ЛОБІ</span><span>PARTY</span></div>
       <div class="panelbody">
         <label class="lobby-field">РЕЖИМ
-          <select id="lobbyModeSelect"><option value="allies">СОЮЗНИКИ · 2×2</option><option value="team_fight">КБ · 1×1×1</option></select>
+          <select id="lobbyModeSelect"><option value="allies">СОЮЗНИКИ · 2×2</option><option value="team_fight">КБ · 1×1×1</option><option value="team_fight_3v3">КОМАНДНИЙ БІЙ · 3×3</option></select>
         </label>
         <label class="lobby-field">КАРТА
-          <select id="lobbyMapSelect"><option value="SANDSTONE">SANDSTONE</option><option value="SMALL_YARD">SMALL YARD</option><option value="NEON_YARD">NEON YARD</option></select>
+          <select id="lobbyMapSelect"><option value="ZONE_9">ZONE 9</option></select>
         </label>
         <label class="lobby-check"><input type="checkbox" id="lobbyFillBots" checked><span>Заповнити вільні місця ботами</span></label>
         <p class="muted lobby-help">Створи кімнату, запроси друзів і натисни «Почати». Вільні місця можна заповнити агентами, а для режиму «Союзники» розподіляй гравців між командами.</p>
@@ -1521,16 +1521,17 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 </div>
 
 <div id="modeModal" class="modal"><div class="modalbox modebox"><div class="modalhead"><span>ОБЕРИ РЕЖИМ</span><button class="close" data-close="modeModal" aria-label="Закрити">×</button></div><div class="muted mode-modal-subtitle">Обери режим і карту. Налаштування зброї — вже в грі.</div><div class="modecards" id="modeBar">
-  <button class="modebtn active" data-mode="allies"><strong>СОЮЗНИКИ · 2 НА 2</strong><span class="mode-desc">Раунди · закладка та знешкодження бомби</span></button>
-  <button class="modebtn" data-mode="team_fight"><strong>КБ · 1 НА 1 НА 1</strong><span class="mode-desc">Кожен сам за себе · різні точки респавну</span></button>
-  <button class="modebtn" data-mode="training"><strong>ТРЕНУВАННЯ</strong><span class="mode-desc">Соло · огляд карти без інших гравців · лише тестери</span></button>
+  <button class="modebtn active" data-mode="allies"><strong>СОЮЗНИКИ · 2 НА 2</strong><span class="mode-desc">Раунди · атака / захист · бомба</span></button>
+  <button class="modebtn" data-mode="team_fight"><strong>КБ · 1 НА 1 НА 1</strong><span class="mode-desc">Кожен сам за себе · три гравці</span></button>
+  <button class="modebtn" data-mode="team_fight_3v3"><strong>КОМАНДНИЙ БІЙ · 3 НА 3</strong><span class="mode-desc">Дві команди · шість гравців</span></button>
+  <button class="modebtn" data-mode="training"><strong>ТРЕНУВАННЯ</strong><span class="mode-desc">Соло · тільки тестери</span></button>
 </div><div id="testerGameplaySwitch" class="tester-mode-switch" role="group" aria-label="Тип гри">
   <span class="tester-mode-label">ТИП ГРИ</span>
   <div class="tester-mode-segment">
     <button type="button" class="tester-mode-option active" data-test-gameplay="prototype" aria-pressed="true" title="Той самий режим і ті самі правила; місця інших гравців займають нерухомі боти">ПРОТОТИП · БОТИ</button>
     <button type="button" class="tester-mode-option" data-test-gameplay="real" aria-pressed="false" title="Звичайний пошук матчу з реальними гравцями">ГРА · ГРАВЦІ</button>
   </div>
-</div><h3 style="margin:10px 0 4px">ВИБІР КАРТИ</h3><div class="mapcards" id="mapBar"><button class="map-option active" data-map="SANDSTONE"><b>SANDSTONE</b><span>Закриті провулки · центральний Mid · бомбсайти A/B</span></button><button class="map-option" data-map="SMALL_YARD"><b>SMALL YARD</b><span>Мала закрита арена для КБ 1 на 1 на 1</span></button><button class="map-option" data-map="NEON_YARD"><b>NEON YARD</b><span>Компактна промислова арена з трьома проходами</span></button><button class="map-option" data-map="HILL_TOWN"><b>HILL TOWN</b><span>Тестова модульна карта з будівлями й арками</span></button><button class="map-option" data-map="M3_Maze"><b>M3 MAZE</b><span>Лабіринт для тестування</span></button><button class="map-option" data-map="FIELD_ARENA"><b>FIELD ARENA</b><span>Відкрита тренувальна арена</span></button><button class="map-option" data-map="ZONE_9"><b>ZONE 9</b><span>Стара індустріальна карта · CT Spawn · A/B</span></button></div><button class="primary" id="confirmModeBtn">ПОЧАТИ ПОШУК МАТЧУ</button></div></div>
+</div><h3 style="margin:10px 0 4px">ВИБІР КАРТИ</h3><div class="mapcards" id="mapBar"><button class="map-option active" data-map="ZONE_9"><b>ZONE 9</b><span>Єдина карта всіх режимів</span></button></div><button class="primary" id="confirmModeBtn">ПОЧАТИ ПОШУК МАТЧУ</button></div></div>
 <div id="searchModal" class="modal"><div class="modalbox"><div class="modalhead"><span id="searchTitle">ПОШУК МАТЧУ</span><button class="close" data-close="searchModal">×</button></div><div id="searchMode" class="muted">HIDE &amp; SEEK</div><div id="queue" class="queuecount">1 / 3</div><div id="searchText" class="muted">Очікування гравців...</div><div id="searchPlayers" class="waitplayers"></div><button class="danger" id="cancelSearch">СКАСУВАТИ</button></div></div>
 <div id="clanModal" class="modal"><div class="modalbox"><div class="modalhead"><span id="clanModalTitle">КЛАН</span><button class="close" data-close="clanModal">×</button></div><div id="clanModalBody"></div></div></div>
 <div id="lobbyInviteModal" class="modal"><div class="modalbox"><div class="modalhead"><span>ЗАПРОШЕННЯ ДО ЛОБІ</span><button class="close" id="declineLobbyInviteTop" type="button">×</button></div><div id="lobbyInviteText" class="muted">Друг запросив тебе до лобі.</div><div class="actions" style="margin-top:16px"><button class="primary" id="acceptLobbyInvite" type="button">ПРИЄДНАТИСЯ</button><button class="secondary" id="declineLobbyInvite" type="button">ВІДХИЛИТИ</button></div></div></div>
@@ -1612,18 +1613,18 @@ let socialSocket=null,currentClanTag=null,clanChatHistory=[],toastTimer=null;
 let currentLobby=null,pendingLobbyInvite=null,pendingHomeInvite=null;
 const savedGameplayMode=localStorage.getItem("sx_test_gameplay");
 let selectedMode=savedGameplayMode==="training"?"training":(localStorage.getItem("sx_mode")||"allies");
-if(!["allies","team_fight","training"].includes(selectedMode))selectedMode="allies";
+if(!["allies","team_fight","team_fight_3v3","training"].includes(selectedMode))selectedMode="allies";
 localStorage.setItem("sx_mode",selectedMode);
-let selectedMap=localStorage.getItem("sx_map")||(selectedMode==="training"?"ZONE_9":selectedMode==="allies"?"SANDSTONE":"SMALL_YARD");
-if(!Object.prototype.hasOwnProperty.call({SANDSTONE:1,SMALL_YARD:1,HILL_TOWN:1,M3_Maze:1,FIELD_ARENA:1,NEON_YARD:1,ZONE_9:1},selectedMap))selectedMap=selectedMode==="training"?"ZONE_9":selectedMode==="allies"?"SANDSTONE":"SMALL_YARD";
+let selectedMap="ZONE_9";
+localStorage.setItem("sx_map",selectedMap);
 let selectedTheme=localStorage.getItem("sx_theme")||"cyan";
 const THEMES=["cyan","violet","red"];
-const MAPS={SANDSTONE:"SANDSTONE",SMALL_YARD:"SMALL YARD",HILL_TOWN:"HILL TOWN",M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD",ZONE_9:"ZONE 9"};
-const MODES={allies:"СОЮЗНИКИ · 2×2",team_fight:"КБ · 1×1×1",training:"ТРЕНУВАННЯ · СОЛО"};
+const MAPS={ZONE_9:"ZONE 9"};
+const MODES={allies:"СОЮЗНИКИ · 2×2",team_fight:"КБ · 1×1×1",team_fight_3v3:"КОМАНДНИЙ БІЙ · 3×3",training:"ТРЕНУВАННЯ · СОЛО"};
 let testGameplayMode=["prototype","real"].includes(savedGameplayMode)?savedGameplayMode:"prototype";
 if(savedGameplayMode==="training")localStorage.setItem("sx_test_gameplay","prototype");
 {
-  const allowed=selectedMode==="training"?Object.keys(MAPS):(selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD","NEON_YARD"]);
+  const allowed=["ZONE_9"];
   if(!allowed.includes(selectedMap))selectedMap=selectedMode==="training"?"ZONE_9":allowed[0];
   localStorage.setItem("sx_map",selectedMap);
 }
@@ -1726,10 +1727,7 @@ function applyTheme(theme){
   localStorage.setItem("sx_theme",selectedTheme);
   document.querySelectorAll("[data-theme-choice]").forEach(button=>button.classList.toggle("active",button.dataset.themeChoice===selectedTheme));
 }
-function allowedMapsForMode(){
-  if(selectedMode==="training"&&canTest())return Object.keys(MAPS);
-  return selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD","NEON_YARD"];
-}
+function allowedMapsForMode(){return ["ZONE_9"];}
 function renderMapSelection(){
   const allowed=allowedMapsForMode();
   if(!allowed.includes(selectedMap))selectedMap=allowed[0];
@@ -1812,7 +1810,7 @@ function render(){
   updateReconnectButton();
 }
 function renderMode(){
-  if(selectedMode==="training"&&!canTest()){selectedMode="allies";selectedMap="SANDSTONE";localStorage.setItem("sx_mode",selectedMode);localStorage.setItem("sx_map",selectedMap)}
+  if(selectedMode==="training"&&!canTest()){selectedMode="allies";selectedMap="ZONE_9";localStorage.setItem("sx_mode",selectedMode);localStorage.setItem("sx_map",selectedMap)}
   const testerSwitch=document.querySelector(".tester-mode-switch");
   if(testerSwitch)testerSwitch.style.display=selectedMode!=="training"?"":"none";
   document.querySelectorAll(".modebtn[data-mode]").forEach(b=>{
@@ -1831,7 +1829,7 @@ document.querySelectorAll(".rail button[data-view]").forEach(b=>b.addEventListen
   $("homeInviteBtn").addEventListener("click",()=>show("friends"));
   $("homeFriendsPreview").addEventListener("click",event=>{const button=event.target.closest("[data-home-invite]");if(button&&!button.disabled)inviteToLobby(button.dataset.homeInvite)});
   $("lobbyModeSelect").value=selectedMode;
-  $("lobbyMapSelect").value=selectedMode==="allies"?"SANDSTONE":selectedMap;
+  $("lobbyMapSelect").value="ZONE_9";
   $("lobbyModeSelect").dispatchEvent(new Event("change"));
 document.querySelectorAll("[data-theme-choice]").forEach(button=>button.addEventListener("click",()=>applyTheme(button.dataset.themeChoice)));
 document.querySelectorAll("[data-map]").forEach(button=>button.addEventListener("click",()=>{
@@ -1843,9 +1841,9 @@ document.querySelectorAll("[data-map]").forEach(button=>button.addEventListener(
 document.querySelectorAll(".modebtn[data-mode]").forEach(b=>b.addEventListener("click",()=>{
   const next=b.dataset.mode;
   if(next==="training"&&!canTest()){notifyToast("Тренування доступне лише тестерам.");return}
-  if(!["allies","team_fight","training"].includes(next))return;
+  if(!["allies","team_fight","team_fight_3v3","training"].includes(next))return;
   selectedMode=next;localStorage.setItem("sx_mode",selectedMode);
-  selectedMap=selectedMode==="training"?"ZONE_9":selectedMode==="allies"?"SANDSTONE":"SMALL_YARD";
+  selectedMap="ZONE_9";
   localStorage.setItem("sx_map",selectedMap);
   renderMode();renderMapSelection();
 }));
@@ -1942,7 +1940,7 @@ $("declineLobbyInvite").addEventListener("click",()=>respondToLobbyInvite(false)
 $("declineLobbyInviteTop").addEventListener("click",()=>respondToLobbyInvite(false));
 $("lobbyModeSelect").addEventListener("change",()=>{
   const mode=$("lobbyModeSelect").value,select=$("lobbyMapSelect");
-  const allowed=mode==="allies"?["SANDSTONE"]:["SMALL_YARD","NEON_YARD"];
+  const allowed=["ZONE_9"];
   for(const option of select.options)option.disabled=!allowed.includes(option.value);
   if(!allowed.includes(select.value))select.value=allowed[0];
 });
@@ -2006,14 +2004,16 @@ function openPlay(){
     $("searchModal").classList.add("show");
     $("searchTitle").textContent="ЗАПУСК ПРОТОТИПУ";
     $("searchMode").textContent=(MODES[selectedMode]||MODES.allies)+" · СТАТИЧНІ БОТИ";
-    const requiredPlayers=selectedMode==="allies"?4:3;
+    const requiredPlayers=selectedMode==="allies"?4:selectedMode==="team_fight_3v3"?6:3;
     $("queue").textContent=requiredPlayers+" / "+requiredPlayers;
     $("searchText").textContent=selectedMode==="allies"
       ?"Завантажуємо повноцінний матч із бомбою, закупівлею та раундами. Замість трьох гравців будуть нерухомі боти."
       :"Завантажуємо звичайний КБ-матч. Два місця суперників займуть нерухомі боти.";
     const botNames=selectedMode==="allies"
       ?["BOT · СОЮЗНИК","BOT · ПРОТИВНИК 1","BOT · ПРОТИВНИК 2"]
-      :["BOT · ПРОТИВНИК 1","BOT · ПРОТИВНИК 2"];
+      :selectedMode==="team_fight_3v3"
+        ?["BOT · СОЮЗНИК 1","BOT · СОЮЗНИК 2","BOT · ПРОТИВНИК 1","BOT · ПРОТИВНИК 2","BOT · ПРОТИВНИК 3"]
+        :["BOT · ПРОТИВНИК 1","BOT · ПРОТИВНИК 2"];
     renderWaitPlayers([
       {nickname:me.nickname,userId:me.id,playerAvatar:me.playerAvatar,connected:true},
       ...botNames.map((nickname,index)=>({nickname,userId:"BOT"+(index+1),playerAvatar:"/avatars/default.jpg",connected:true}))
@@ -2044,11 +2044,11 @@ function openPlay(){
   if(searching)return;
   sessionStorage.removeItem("prototypeMode");
   sessionStorage.removeItem("prototypeGameMode");
-  const requiredPlayers=selectedMode==="allies"?4:3;
-  const searchMap=selectedMode==="allies"?"SANDSTONE":(["SMALL_YARD","NEON_YARD"].includes(selectedMap)?selectedMap:"SMALL_YARD");
+  const requiredPlayers=selectedMode==="allies"?4:selectedMode==="team_fight_3v3"?6:3;
+  const searchMap="ZONE_9";
   selectedMap=searchMap;localStorage.setItem("sx_map",selectedMap);
   $("searchModal").classList.add("show");$("searchTitle").textContent="ПОШУК РЕАЛЬНИХ ГРАВЦІВ";$("searchMode").textContent=(MODES[selectedMode]||MODES.allies)+" · ЛИШЕ ЛЮДИ";$("queue").textContent="1 / "+requiredPlayers;
-  $("searchText").textContent=selectedMode==="allies"?"2 на 2 · раунди · закладка та знешкодження бомби. Чекаємо 4 гравців.":"1 на 1 на 1 · кожен сам за себе. Чекаємо 3 гравців.";
+  $("searchText").textContent=selectedMode==="allies"?"2 на 2 · раунди · атака та захист на Zone 9. Чекаємо 4 гравців.":selectedMode==="team_fight_3v3"?"3 на 3 · дві команди на Zone 9. Чекаємо 6 гравців.":"1 на 1 на 1 · кожен сам за себе на Zone 9. Чекаємо 3 гравців.";
   renderWaitPlayers([{nickname:me.nickname,userId:me.id,playerAvatar:me.playerAvatar,connected:true}]);searching=true;
   socket=createRealtimeSocket();
   socket.on("connect_error",err=>{$("searchText").textContent="З’єднання із сервером… повторна спроба підключення";console.warn("[Socket.IO] Matchmaking connection failed; retrying.",err?.message||err)});
@@ -2119,14 +2119,14 @@ function renderHomeSquadRoster(lobby=currentLobby){
     userId:me?.id||"",nickname:me?.nickname||"ГРАВЕЦЬ",
     playerAvatar:me?.playerAvatar||"/avatars/default.jpg",isOwner:true,connected:true,team:null
   }];
-  const maxPlayers=lobby?.maxPlayers||(selectedMode==="allies"?4:3);
+  const maxPlayers=lobby?.maxPlayers||(selectedMode==="allies"?4:selectedMode==="team_fight_3v3"?6:3);
   const status=$("homeSquadStatus"),count=$("homeSquadCount");
   if(status)status.textContent=lobby?((lobby.modeName||MODES[lobby.mode]||"МАТЧ")+" · "+(lobby.mapName||MAPS[lobby.map]||lobby.map)):"СОЛО · ЗАПРОШУЙ ДРУЗІВ";
   if(count)count.textContent=members.length+" / "+maxPlayers;
   if(root){
-    const cards=members.slice(0,4).map(member=>{
-      const label=member.isOwner?"ЛІДЕР":(lobby?.mode==="allies"&&member.team?"КОМАНДА "+member.team:(member.connected===false?"ПІДКЛЮЧЕННЯ":"У ЗАГОНІ"));
-      const teamPicker=lobby?.mode==="allies"&&String(lobby.ownerId)===String(me?.id)
+    const cards=members.slice(0,6).map(member=>{
+      const label=member.isOwner?"ЛІДЕР":((lobby?.mode==="allies"||lobby?.mode==="team_fight_3v3")&&member.team?"КОМАНДА "+member.team:(member.connected===false?"ПІДКЛЮЧЕННЯ":"У ЗАГОНІ"));
+      const teamPicker=(lobby?.mode==="allies"||lobby?.mode==="team_fight_3v3")&&String(lobby.ownerId)===String(me?.id)
         ?"<select class='home-squad-team' data-home-lobby-team='"+esc(member.userId)+"' aria-label='Команда гравця'><option value='A' "+(member.team==="A"?"selected":"")+">A</option><option value='B' "+(member.team==="B"?"selected":"")+">B</option></select>"
         :"";
       return "<div class='home-squad-card'><img src='"+esc(member.playerAvatar||"/avatars/default.jpg")+"' alt=''><b>"+esc(member.nickname||"ГРАВЕЦЬ")+"</b><small>"+esc(label)+"</small>"+teamPicker+"</div>";
@@ -2186,7 +2186,7 @@ function createLobby(mode=selectedMode,map=selectedMap){
   if(mode==="training"){notifyToast("Тренування — соло режим, лобі не створюється.");return}
   if(currentLobby){notifyToast("Ти вже в лобі.");return}
   const lobbyMode=["allies","team_fight"].includes(mode)?mode:"allies";
-  const lobbyMap=lobbyMode==="allies"?"SANDSTONE":(["SMALL_YARD","NEON_YARD"].includes(map)?map:"SMALL_YARD");
+  const lobbyMap="ZONE_9";
   $("lobbyModeSelect").value=lobbyMode;
   $("lobbyMapSelect").value=lobbyMap;
   initSocialSocket();
