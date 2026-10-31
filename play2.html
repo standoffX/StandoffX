@@ -687,7 +687,7 @@ const socket=io({
   timeout:20000
 });
 const myId=sessionStorage.getItem("myPlayerId");
-const myUuid=sessionStorage.getItem("myPlayerUUID")||"";
+const myUuid="";
 const matchId=sessionStorage.getItem("currentMatchId");
 const mode=sessionStorage.getItem("selectedMode")||"allies";
 const selectedMap=sessionStorage.getItem("selectedMap")||"ZONE_9";
@@ -771,7 +771,11 @@ controls.addEventListener("unlock",()=>{
 const loader=new GLTFLoader();
 const mapObjects=[];
 let zone9Root=null;
+let zone9Bounds=null;
 let zone9AssetState="not-loaded";
+const zone9GroundRaycaster=new THREE.Raycaster();
+const zone9GroundDown=new THREE.Vector3(0,-1,0);
+const zone9GroundCache=new Map();
 const HILL_TOWN_MANIFEST_URL="https://3dassets.dev/api/v1/packs/tactical-shooter-hill-town";
 const HILL_TOWN_STARTER_URL="https://cdn.3dassets.dev/assets/27595/v1/model.glb";
 let hillTownManifestPromise=null;
@@ -2756,6 +2760,66 @@ function buildZone9Preview(){
   $("progress").style.width="100%";
   console.warn("[ZONE 9] FBX asset unavailable. Add assets/maps/zone9/Zone9.fbx and optimized WebP textures to use the full map.");
 }
+
+function zone9FloorAt(x,z,referenceY=0,maxDelta=4){
+  if(!zone9Root||!zone9Bounds||!Number.isFinite(x)||!Number.isFinite(z))return null;
+  const key=Math.round(x*1.25)+","+Math.round(z*1.25);
+  const cached=zone9GroundCache.get(key);
+  if(Number.isFinite(cached)&&Math.abs(cached-referenceY)<=maxDelta)return cached;
+  const top=Math.max(zone9Bounds.max.y+8,referenceY+8);
+  zone9GroundRaycaster.set(new THREE.Vector3(x,top,z),zone9GroundDown);
+  zone9GroundRaycaster.near=0;
+  zone9GroundRaycaster.far=Math.max(40,zone9Bounds.max.y-zone9Bounds.min.y+24);
+  const hits=zone9GroundRaycaster.intersectObject(zone9Root,true);
+  let bestY=null,bestScore=Infinity;
+  for(const hit of hits){
+    if(!hit.face)continue;
+    const normal=hit.face.normal.clone().applyMatrix3(
+      new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld)
+    ).normalize();
+    if(Math.abs(normal.y)<.48)continue;
+    const y=Number(hit.point.y),delta=y-referenceY;
+    if(!Number.isFinite(y)||Math.abs(delta)>maxDelta)continue;
+    const score=Math.abs(delta);
+    if(score<bestScore){bestScore=score;bestY=y}
+  }
+  zone9GroundRaycaster.far=Infinity;
+  if(bestY!==null){
+    zone9GroundCache.set(key,bestY);
+    if(zone9GroundCache.size>900)zone9GroundCache.clear();
+  }
+  return bestY;
+}
+function snapPlayerToZone9Floor(searchNearby=false){
+  if(!player||!zone9Root||!zone9Bounds||selectedMap!=="ZONE_9")return false;
+  let x=player.position.x,z=player.position.z;
+  const referenceY=Number(player.position.y)||0;
+  let floor=zone9FloorAt(x,z,referenceY,searchNearby?18:3.2);
+  if(floor===null&&searchNearby){
+    const preferredSide=myTeam==="B"||(!myTeam&&localStorage.getItem("sx-agent-side")==="T")?"T":"CT";
+    let best=null,bestScore=Infinity;
+    const offsets=[[0,0],[2,0],[-2,0],[0,2],[0,-2],[3,3],[3,-3],[-3,3],[-3,-3],[5,0],[-5,0],[0,5],[0,-5],[7,0],[-7,0],[0,7],[0,-7],[9,0],[-9,0],[0,9],[0,-9]];
+    for(const [ox,oz] of offsets){
+      const candidateX=x+ox,candidateZ=z+oz;
+      const sameQuadrant=preferredSide==="CT"?(candidateX<0&&candidateZ>0):(candidateX>0&&candidateZ<0);
+      if(!sameQuadrant)continue;
+      const candidateFloor=zone9FloorAt(candidateX,candidateZ,referenceY,22);
+      if(candidateFloor===null)continue;
+      const score=Math.hypot(ox,oz)+Math.abs(candidateFloor-referenceY)*.12;
+      if(score<bestScore){bestScore=score;best={x:candidateX,z:candidateZ,y:candidateFloor}}
+    }
+    if(best){x=best.x;z=best.z;floor=best.y}
+  }
+  if(floor===null){
+    console.warn("[Zone 9] Ground surface not found at player position",x,z,referenceY);
+    return false;
+  }
+  player.position.set(x,floor+.045,z);
+  velocityY=0;jumping=false;
+  updateVisual();
+  return true;
+}
+
 function buildZone9Map(){
   if(mapLoadFinished||zone9AssetState==="loading")return;
   zone9AssetState="loading";
@@ -2821,6 +2885,8 @@ function buildZone9Map(){
       });
       if(!meshCount)throw new Error("У Zone 9 немає видимих mesh-об’єктів.");
       scene.add(root);zone9Root=root;
+      zone9Bounds=new THREE.Box3().setFromObject(root);
+      zone9GroundCache.clear();
       zone9AssetState="loaded";mapLoaded=true;mapLoadFinished=true;
       $("progress").style.width="100%";
       setLoadingDetail("mapLoadStatus","ZONE 9 · ГОТОВО","done");
@@ -3250,7 +3316,7 @@ function ensurePlayerVisual(){
 }
 function ensureEnemy(data){
   const key=String(data.uuid||data.userId||data.id);
-  if((myUuid&&String(data.uuid||"")===myUuid)||(!data.uuid&&String(data.userId||data.id)===String(myId)))return null;
+  if(String(data.userId||data.id)===String(myId))return null;
   if(!enemies[key]){
     const mesh=makeVisual(colorFor(data.role,data.team));
     mesh.userData.team=data.team||null;
@@ -3412,7 +3478,7 @@ function sendMove(force=false){
   const now=performance.now();
   if(!force&&now-lastMoveSend<80)return;
   lastMoveSend=now;
-  const data={uuid:myUuid,x:player.position.x,y:player.position.y,z:player.position.z,rotY:player.rotationY,anim:jumping?"Jump":(isCrouching?"Crouch":((keys.w||keys.s||keys.a||keys.d)?"Running":"Idle"))};
+  const data={x:player.position.x,y:player.position.y,z:player.position.z,rotY:player.rotationY,anim:jumping?"Jump":(isCrouching?"Crouch":((keys.w||keys.s||keys.a||keys.d)?"Running":"Idle"))};
   if(isTrainingMode)socket.emit("training_move",{trainingId,viewY:camera.rotation.y,...data});
   else socket.emit("player_moved",{matchId,myId,userId:myId,...data});
 }
@@ -3428,6 +3494,7 @@ function finishClientReady(){
   setLoadingDetail("mapLoadStatus",mapLabel+" · ГОТОВО","done");
   rebuildCollisionIndex();
   ensurePlayerVisual();
+  snapPlayerToZone9Floor(true);
   if(isTrainingMode){
     matchPhase="game";
     $("overlayTitle").textContent=mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":"ТРЕНУВАННЯ";
@@ -3911,7 +3978,7 @@ function pauseToMenu(){
   if(isTrainingMode||matchPhase==="finished"||!matchId){leaveGame();return}
   isLeavingMatch=true;
   try{
-    localStorage.setItem("sx_active_match",JSON.stringify({matchId,userId:myId,uuid:myUuid,map:selectedMap,mode,updatedAt:Date.now()}));
+    localStorage.setItem("sx_active_match",JSON.stringify({matchId,userId:myId,map:selectedMap,mode,updatedAt:Date.now()}));
     localStorage.removeItem("sx_abandoned_match");
     saveSquadRoster();
   }catch{}
@@ -3981,7 +4048,7 @@ socket.on("training_init",data=>{
   $("modeName").textContent=data.modeName||mode.toUpperCase();
   matchPhase="game";canControl=true;
   ensurePlayerVisual();
-  if(data.spawn)player.position.set(data.spawn.x||0,data.spawn.y||0,data.spawn.z||0);
+  if(data.spawn)player.position.set(data.spawn.x||0,data.spawn.y||0,data.spawn.z||0);\n   if(mapLoadFinished)snapPlayerToZone9Floor(true);
   $("trainingControls").style.display=mode==="field_test"?"block":"none";
   $("overlayTitle").textContent=data.prototype?(data.gameMode==="allies"?"СОЮЗНИКИ · ПРОТОТИП":"КБ · ПРОТОТИП"):mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":"ТРЕНУВАННЯ";
   $("overlayText").textContent=mapLoadFinished?"Готово.":"Завантажуємо карту…";
@@ -4034,7 +4101,7 @@ socket.on("init_match",data=>{
   renderDroppedItems();
   applyMapInteractionState(data.mapState);
   try{
-    if(!isTrainingMode)localStorage.setItem("sx_active_match",JSON.stringify({matchId:data.matchId||matchId,userId:myId,uuid:myUuid,map:data.map||selectedMap,mode:data.mode||mode,prototype:Boolean(data.prototype||isPrototypeMode),updatedAt:Date.now()}));
+    if(!isTrainingMode)localStorage.setItem("sx_active_match",JSON.stringify({matchId:data.matchId||matchId,userId:myId,map:data.map||selectedMap,mode:data.mode||mode,prototype:Boolean(data.prototype||isPrototypeMode),updatedAt:Date.now()}));
   }catch{}
   $("reconnectBtn").style.display="none";$("reconnectExitBtn").style.display="none";document.body.classList.remove("reconnecting");
   updateWeaponHud();
@@ -4349,7 +4416,7 @@ $("reconnectBtn").addEventListener("click",e=>{
   $("reconnectBtn").textContent="ПІДКЛЮЧАЄМОСЯ…";
   if(socket.connected){
     if(isTrainingMode)socket.emit("join_training",{trainingId});
-    else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
+    else socket.emit("join_room",{matchId,userId:myId});
   }else socket.connect();
 });
 $("reconnectExitBtn").addEventListener("click",e=>{
@@ -4583,8 +4650,16 @@ function animate(){
       player.rotationY=Math.atan2(dir.x,dir.z);
     }
     if(jumpQueued&&!jumping){isCrouching=false;velocityY=10;jumping=true;jumpQueued=false}
-    velocityY-=28*dt;player.position.y+=velocityY*dt;
-    if(player.position.y<=0){player.position.y=0;velocityY=0;jumping=false}
+    const floorY=zone9FloorAt(player.position.x,player.position.z,player.position.y,3.2);
+    velocityY-=28*dt;
+    player.position.y+=velocityY*dt;
+    if(floorY!==null){
+      if(!jumping&&player.position.y>=floorY-1.35&&player.position.y<=floorY+.58){
+        player.position.y=floorY+.045;velocityY=0;
+      }else if(jumping&&velocityY<=0&&player.position.y<=floorY+.045){
+        player.position.y=floorY+.045;velocityY=0;jumping=false;
+      }
+    }
     if(!isThird){camera.position.set(player.position.x,player.position.y+(isCrouching?1.05:1.58),player.position.z)}
     else{const offset=new THREE.Vector3(0,isCrouching?1.65:2.5,5).applyQuaternion(camera.quaternion);camera.position.copy(player.position).add(offset)}
     updateVisual();updateInteractButtonLabel();sendMove();
@@ -4714,7 +4789,7 @@ socket.on("connect",()=>{
   if(isLeavingMatch){connectedToGameplay=true;return}
   if(!connectedToGameplay){connectedToGameplay=true;return}
   if(isTrainingMode)socket.emit("join_training",{trainingId});
-  else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
+  else socket.emit("join_room",{matchId,userId:myId});
   if(matchPhase==="game"&&mapLoadFinished){
     $("overlay").style.display="none";
     $("overlayText").textContent="З’єднання відновлено.";
@@ -4727,7 +4802,7 @@ loadTacticalAgentModel();
 loadPlayerSkinLoadout();
 loadMap();
 if(isTrainingMode)socket.emit("join_training",{trainingId});
-else socket.emit("join_room",{matchId,userId:myId,uuid:myUuid});
+else socket.emit("join_room",{matchId,userId:myId});
 animate();
 </script>
 <script src="/mobile-game.js" defer></script>
