@@ -4123,6 +4123,10 @@ socket.on("training_init",data=>{
   $("modeName").textContent=data.modeName||mode.toUpperCase();
   matchPhase="game";canControl=true;
   ensurePlayerVisual();
+  if(data.side==="T"||data.side==="CT"){
+    myTeam=data.side==="T"?"B":"A";
+    if(playerVisual)setTacticalAgentSide(playerVisual,data.side);
+  }
   if(data.spawn)player.position.set(data.spawn.x||0,data.spawn.y||0,data.spawn.z||0);
    if(Number.isFinite(Number(data.rotY)))player.rotationY=Number(data.rotY);
    if(mapLoadFinished)snapPlayerToZone9Floor(true);
