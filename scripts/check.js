@@ -55,6 +55,8 @@ assert.match(server, /SameSite=Lax/);
 assert.match(server, /const ADMIN_PASSWORD = String\(process\.env\.ADMIN_PASSWORD \|\| ""\)/);
 assert.doesNotMatch(server, /process\.env\.ADMIN_PASSWORD\s*\|\|\s*["']sonia["']/);
 assert.match(server, /const JSON_FALLBACK_ENABLED = process\.env\.STANDOFFX_ALLOW_JSON_FALLBACK === "1"/);
+assert.match(server, /const LEGACY_USERS_IMPORT_ENABLED = process\.env\.STANDOFFX_IMPORT_LEGACY_JSON === "1"/);
+assert.match(server, /Legacy account\.json contains player records[\s\S]{0,260}STANDOFFX_IMPORT_LEGACY_JSON=1/);
 assert.match(server, /MongoDB Atlas is required but unavailable/);
 assert.match(server, /const activeMatches = new Map\(\);[^\n]*in-memory only/);
 assert.match(server, /const trainingSessions = new Map\(\);[^\n]*never written to MongoDB/);
@@ -109,6 +111,9 @@ assert.match(menu, /data-home-agent-side="T"/);
 assert.match(menu, /data-home-agent-side="CT"/);
 for (const pose of ["Excited.fbx", "Talking On Phone.fbx", "Talking On Phone _CT.fbx", "Illegal Elbow Punch.fbx", "Illegal Elbow Punch_CT.fbx"]) assert.ok(menu.includes(pose), "agent selector must use repository asset " + pose);
 assert.match(menu, /function animationFor\(person,index\)/);
+assert.match(menu, /window\.__sxHomeOnlineFriends/);
+assert.match(menu, /isPreviewFriend/);
+assert.match(menu, /roster\.slice\(0,6\)/);
 assert.match(menu, /localStorage\.setItem\("sx-agent-animation"/);
 assert.equal((menu.match(/data-map="/g) || []).length, 1, "the map picker must contain only Zone 9");
 assert.match(menu, /const lobbyMode=\["allies","team_fight","team_fight_3v3"\]/);
@@ -158,6 +163,8 @@ assert.match(lobbyCss, /grid-template-columns:minmax\(215px,\.76fr\) minmax\(0,1
 assert.match(lobbyCss, /orientation:landscape/);
 assert.match(lobbyCss, /orientation:portrait/);
 assert.match(lobbyCss, /\.home-agent-panel\.open/);
+assert.match(lobbyCss, /#home\.screen\.active\{[\s\S]{0,180}display:flex/);
+assert.match(lobbyCss, /\.home-squad-card\.is-preview-friend/);
 assert.match(lobbyCss, /#adminBtn\[style\*="display: none"\]/);
 
 // Retired collection/market screens stay out of the visible menu until the new skins arrive.
