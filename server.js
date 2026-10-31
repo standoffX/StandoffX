@@ -3054,6 +3054,8 @@ function segmentIntersectsRect2d(from,to,rect){
 }
 
 const SERVER_MAP_LIMITS = Object.freeze({
+  // Zone 9 is normalized to a 250-unit footprint by the GLB loader.
+  ZONE_9: { x: 125, z: 125 },
   // Keep server limits just inside the physical perimeter walls built by the client.
   SANDSTONE: { x: 60, z: 60 },
   SMALL_YARD: { x: 32, z: 32 },
