@@ -1849,7 +1849,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
   const MATCH_SPAWNS = {
     HILL_TOWN: [{x:-42,y:0,z:-28},{x:42,y:0,z:-28},{x:-42,y:0,z:28},{x:42,y:0,z:28}],
-    ZONE_9: [{x:-92,y:0,z:92},{x:-86,y:0,z:92},{x:92,y:0,z:-92},{x:86,y:0,z:-92},{x:92,y:0,z:-86},{x:86,y:0,z:-86}],
+    ZONE_9: [{x:-92,y:0,z:92},{x:-86,y:0,z:92},{x:-92,y:0,z:86},{x:92,y:0,z:-92},{x:86,y:0,z:-92},{x:92,y:0,z:-86}],
     SANDSTONE: [{x:-50,y:0,z:-8.75},{x:-50,y:0,z:8.75},{x:50,y:0,z:-8.75},{x:50,y:0,z:8.75}],
     SMALL_YARD: [{x:-23,y:0,z:-23},{x:23,y:0,z:-23},{x:0,y:0,z:24}],
     M3_Maze: [{x:-195,y:0,z:-195},{x:195,y:0,z:-195},{x:-195,y:0,z:195},{x:195,y:0,z:195}],
