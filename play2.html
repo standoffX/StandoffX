@@ -631,6 +631,7 @@ html,body{font-family:Inter,"Nunito",system-ui,-apple-system,"Segoe UI",sans-ser
 import * as THREE from "three";
 import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js";
 import {FBXLoader} from "three/addons/loaders/FBXLoader.js";
+import {TGALoader} from "three/addons/loaders/TGALoader.js";
 import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 import {PointerLockControls} from "three/addons/controls/PointerLockControls.js";
 
@@ -784,7 +785,11 @@ const weaponModelTemplates={m4a1:null,p90:null,shotgun:null,sniper:null,deagle:n
 const knifeSkinModelTemplates={};
 const knifeSkinLoadPromises=new Map();
 let tacticalAgentTemplate=null;
-const TACTICAL_AGENT_URL="https://raw.githubusercontent.com/cktang88/3d-fps/main/public/assets/models/characters/soldier_tac.glb";
+const TACTICAL_AGENT_BASE="https://raw.githubusercontent.com/standoffX/3d-models/main/";
+const TACTICAL_AGENT_URL=TACTICAL_AGENT_BASE+"Excited.fbx";
+const TACTICAL_AGENT_CT_URL=TACTICAL_AGENT_BASE+"Excited_CT.fbx";
+const TACTICAL_AGENT_TEXTURES={T:null,CT:null};
+let tacticalAgentCTTemplate=null;
 let muzzleFlash=null;
 let muzzleFlashUntil=0;
 const loadedAssetTemplates=new Map();
@@ -3053,7 +3058,9 @@ function fixExternalHeadset(actor){
 }
 function attachTacticalAgent(model,color){
   if(!model||!tacticalAgentTemplate||model.userData.tacticalAgent)return;
-  const actor=SkeletonUtils.clone(tacticalAgentTemplate);
+  const side=model.userData.agentSide==="CT"?"CT":"T";
+  const template=side==="CT"?(tacticalAgentCTTemplate||tacticalAgentTemplate):tacticalAgentTemplate;
+  const actor=SkeletonUtils.clone(template||tacticalAgentTemplate);
   actor.updateMatrixWorld(true);
   const initialBounds=new THREE.Box3().setFromObject(actor);
   const initialSize=initialBounds.getSize(new THREE.Vector3());
@@ -3067,6 +3074,8 @@ function attachTacticalAgent(model,color){
   fixExternalHeadset(actor);
   const bones={spine:[],head:[],leftShoulder:[],rightShoulder:[],arms:[],leftLeg:[],rightLeg:[],leftKnee:[],rightKnee:[]};
   const tintMaterials=[];
+  const agentSide=model.userData.agentSide==="CT"?"CT":"T";
+  const sideTexture=TACTICAL_AGENT_TEXTURES[agentSide];
   actor.traverse(node=>{
     if(node.isMesh){
       node.castShadow=false;node.receiveShadow=false;node.frustumCulled=false;
@@ -3074,8 +3083,10 @@ function attachTacticalAgent(model,color){
         const originals=Array.isArray(node.material)?node.material:[node.material];
         const materials=originals.map(original=>{
           const material=original.clone();
+          if(sideTexture&&"map" in material){material.map=sideTexture;if(material.color)material.color.set(0xffffff)}
           tintMaterials.push({material,baseColor:material.color?.clone()||null,baseEmissive:material.emissive?.clone()||null});
           if("roughness" in material)material.roughness=Math.max(.42,material.roughness||.55);
+          material.needsUpdate=true;
           return material;
         });
         node.material=Array.isArray(node.material)?materials:materials[0];
@@ -3099,17 +3110,54 @@ function attachTacticalAgent(model,color){
   model.userData.tacticalAgent=actor;
   model.userData.tacticalMaterials=tintMaterials;
   model.userData.externalRig={...bones,offset:Math.random()*Math.PI*2};
+  if(actor.animations?.length){
+    const mixer=new THREE.AnimationMixer(actor);
+    const action=mixer.clipAction(actor.animations[0]);
+    action.setLoop(THREE.LoopRepeat,Infinity);
+    action.play();
+    model.userData.tacticalMixer=mixer;
+  }
   setSoldierTint(model,color);
 }
 function loadTacticalAgentModel(){
-  loader.load(TACTICAL_AGENT_URL,gltf=>{
-    if(!gltf?.scene)throw new Error("The tactical agent model has no scene.");
-    tacticalAgentTemplate=gltf.scene;
-    if(playerVisual)attachTacticalAgent(playerVisual,colorFor(myRole,myTeam));
-    for(const enemy of Object.values(enemies))attachTacticalAgent(enemy.mesh,colorFor(enemy.role,enemy.team));
-    console.info("[AGENT] Shared tactical model loaded for the menu and match.");
-  },undefined,error=>{
-    console.warn("[AGENT] Tactical GLB unavailable; using the built-in soldier fallback.",error?.message||error);
+  const manager=new THREE.LoadingManager();
+  const tgaLoader=new TGALoader(manager);
+  const textureJobs=[
+    ["T","OTCChA_D.tga"],
+    ["CT","FSB_A_D.tga"]
+  ].map(([side,file])=>new Promise(resolve=>{
+    tgaLoader.load(TACTICAL_AGENT_BASE+file,texture=>{
+      texture.colorSpace=THREE.SRGBColorSpace;
+      texture.flipY=true;
+      texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+      TACTICAL_AGENT_TEXTURES[side]=texture;
+      resolve(true);
+    },undefined,error=>{
+      console.warn("[AGENT] Side texture unavailable:",file,error?.message||error);
+      resolve(false);
+    });
+  }));
+  const fbxLoader=new FBXLoader(manager);
+  Promise.all([
+    fbxLoader.loadAsync(TACTICAL_AGENT_URL),
+    fbxLoader.loadAsync(TACTICAL_AGENT_CT_URL).catch(error=>{
+      console.warn("[AGENT] CT model unavailable; using the T model for both sides.",error?.message||error);
+      return null;
+    }),
+    Promise.all(textureJobs)
+  ]).then(([tModel,ctModel])=>{
+    if(!tModel)throw new Error("Excited.fbx has no scene.");
+    tacticalAgentTemplate=tModel;
+    tacticalAgentCTTemplate=ctModel||tModel;
+    const attach=(model,side)=>{
+      model.userData.agentSide=side;
+      attachTacticalAgent(model,colorFor(model.userData.team==="A"?"teamA":"teamB",model.userData.team));
+    };
+    if(playerVisual)attach(playerVisual,myTeam==="A"?"CT":"T");
+    for(const enemy of Object.values(enemies))attach(enemy.mesh,enemy.team==="A"?"CT":"T");
+    console.info("[AGENT] T/CT FBX models from 3d-models loaded for gameplay.");
+  }).catch(error=>{
+    console.warn("[AGENT] FBX models unavailable; using the built-in soldier fallback.",error?.message||error);
   });
 }
 function setSoldierTint(model,color){
@@ -3134,6 +3182,10 @@ function setSoldierDown(model,down){
 function animateSoldier(model,dt,now,moving=false,inAir=false,crouching=false,sprinting=false){
   if(!model||model.userData.dead)return;
   const external=model.userData.externalRig;
+  if(model.userData.tacticalMixer){
+    model.userData.tacticalMixer.update(dt);
+    return;
+  }
   if(external){
     const phase=now*(sprinting?.014:.010)+external.offset;
     const stride=moving?(sprinting?.68:.48):0;
@@ -3184,6 +3236,7 @@ function ensurePlayerVisual(){
   if(player)return;
   player={position:new THREE.Vector3(0,0,0),rotationY:0};
   playerVisual=makeVisual(colorFor(myRole,myTeam));
+  playerVisual.userData.agentSide=myTeam==="A"?"CT":"T";
   playerVisual.visible=isThird;
   scene.add(playerVisual);
 }
@@ -3192,6 +3245,8 @@ function ensureEnemy(data){
   if((myUuid&&String(data.uuid||"")===myUuid)||(!data.uuid&&String(data.userId||data.id)===String(myId)))return null;
   if(!enemies[key]){
     const mesh=makeVisual(colorFor(data.role,data.team));
+    mesh.userData.team=data.team||null;
+    mesh.userData.agentSide=data.team==="A"?"CT":"T";
     scene.add(mesh);
     enemies[key]={id:key,userId:String(data.userId||data.id||key),mesh,pos:new THREE.Vector3(),role:data.role||"runner",team:data.team||null,hp:data.hp||100,score:data.score||0,anim:data.anim||"Idle",connected:data.connected!==false};
   }
