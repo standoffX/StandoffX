@@ -509,10 +509,9 @@ function findUser(idOrNickname, options = {}) {
   });
 }
 
-function publicUser(user, options = {}) {
+function publicUser(user) {
   if (!user) return null;
   const { password, passwordHash, uuid, messages: privateMessages, friendRequests, ...safe } = user;
-  if (options.includeUuid === true && typeof uuid === "string") safe.uuid = uuid;
   safe.friendsList = Array.isArray(user.friendsList) ? user.friendsList : [];
   safe.incomingRequests = Array.isArray(user.incomingRequests) ? user.incomingRequests : [];
   safe.blocked = Array.isArray(user.blocked) ? user.blocked : [];
@@ -541,7 +540,7 @@ function ensureUserShape(user) {
   user.clan = user.clan ? cleanText(user.clan, 5).toUpperCase() : null;
   user.isVerified = Boolean(user.isVerified);
   user.isBanned = user.id === ADMIN_ID ? false : Boolean(user.isBanned);
-  user.isAdmin = user.id === ADMIN_ID ? true : Boolean(user.isAdmin);
+  user.isAdmin = user.id === ADMIN_ID;
   user.isTester = user.id === ADMIN_ID ? true : Boolean(user.isTester);
 }
 
@@ -678,7 +677,7 @@ function requireAuth(req, res, next) {
 }
 
 function isAdmin(user) {
-  return Boolean(user && (user.id === ADMIN_ID || user.isAdmin === true));
+  return Boolean(user && user.id === ADMIN_ID);
 }
 
 function requireAdmin(req, res, next) {
@@ -918,18 +917,21 @@ app.post("/api/register", registrationRateLimit, (req, res) => {
   res.json({
     success: true,
     redirect: "/game",
-    user: publicUser(user, { includeUuid: true }),
+    user: publicUser(user),
     createdId: user.id,
     message: "Акаунт створено."
   });
 });
 
 app.post("/api/login", loginRateLimit, (req, res) => {
-  const id = normalizeId(req.body.id || req.body.userId || req.body.uuid || "");
+  const id = normalizeId(req.body.id || req.body.userId || "");
   const password = String(req.body.password || "");
 
   if (!id) {
-    return res.status(400).json({ success: false, message: "Введи свій ID." });
+    return res.status(400).json({ success: false, message: "Введи свій Player ID." });
+  }
+  if (id !== ADMIN_ID && !/^\d{6,10}$/.test(id)) {
+    return res.status(400).json({ success: false, message: "Вхід можливий лише за Player ID із 6–10 цифр." });
   }
   if (!password) {
     return res.status(400).json({ success: false, message: "Введи пароль." });
@@ -958,8 +960,7 @@ app.post("/api/login", loginRateLimit, (req, res) => {
     if (!users.some(u => u.id === ADMIN_ID)) users.push(user);
     saveUsers();
   } else {
-    // UUID is the stable, globally unique identity; Player ID remains a shorter public identifier.
-    user = users.find(candidate => candidate.uuid === id) || findUser(id, { allowNickname: false });
+    user = findUser(id, { allowNickname: false });
   }
 
   if (!user || !verifyPassword(password, user.passwordHash || user.password)) {
@@ -980,7 +981,7 @@ app.post("/api/login", loginRateLimit, (req, res) => {
 
   const token = createSession(user.uuid || user.id);
   setSessionCookie(res, token);
-  res.json({ success: true, redirect: "/game", user: publicUser(user, { includeUuid: true }) });
+  res.json({ success: true, redirect: "/game", user: publicUser(user) });
 });
 
 app.post("/api/logout", requireAuth, (req, res) => {
@@ -998,7 +999,7 @@ app.post("/api/logout", requireAuth, (req, res) => {
 });
 
 app.get("/api/me", requireAuth, (req, res) => {
-  res.json({ success: true, user: publicUser(req.user, { includeUuid: true }) });
+  res.json({ success: true, user: publicUser(req.user) });
 });
 
 app.post("/api/settings/keybinds", requireAuth, (req, res) => {
@@ -1022,7 +1023,7 @@ app.get("/api/user-data", requireAuth, (req, res) => {
     .map(id => users.find(u => u.id === id))
     .filter(Boolean)
     .map(publicUser);
-  res.json({ success: true, user: publicUser(target, { includeUuid: target.id === req.user.id }), friends });
+  res.json({ success: true, user: publicUser(target), friends });
 });
 
 app.post("/api/sync-user", requireAuth, (req, res) => {
@@ -1867,6 +1868,27 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     FIELD_ARENA: [{x:-110,y:0,z:-110},{x:110,y:0,z:-110},{x:-110,y:0,z:110},{x:110,y:0,z:110}]
   };
   const matchSpawns = MATCH_SPAWNS[safeMapId] || (safeMapId === "HILL_TOWN" ? HILL_TOWN_SPAWNS : SPAWNS);
+  const ZONE9_CT_SPAWNS = [
+    {x:-92,y:0,z:92},{x:-86,y:0,z:92},{x:-92,y:0,z:86}
+  ];
+  const ZONE9_T_SPAWNS = [
+    {x:92,y:0,z:-92},{x:86,y:0,z:-92},{x:92,y:0,z:-86}
+  ];
+  const resolvePlayerTeam = (candidate,index) => mode === "allies"
+    ? (candidate.team === "B" ? "B" : candidate.team === "A" ? "A" : (index < 2 ? "A" : "B"))
+    : mode === "team_fight_3v3"
+      ? (candidate.team === "B" ? "B" : candidate.team === "A" ? "A" : (index < 3 ? "A" : "B"))
+      : mode === "team_fight" ? ["A","B","C"][index % 3] : null;
+  const resolvePlayerSpawn = (candidate,index,team) => {
+    if (safeMapId !== "ZONE_9") return matchSpawns[index % matchSpawns.length];
+    if (mode === "allies" || mode === "team_fight_3v3") {
+      const pool = team === "B" ? ZONE9_T_SPAWNS : ZONE9_CT_SPAWNS;
+      const slot = players.slice(0,index+1).filter((entry,entryIndex)=>resolvePlayerTeam(entry,entryIndex)===team).length-1;
+      return pool[Math.max(0,slot) % pool.length];
+    }
+    // The three FFA seats are spread across both ends of Zone 9.
+    return [ZONE9_CT_SPAWNS[1],ZONE9_T_SPAWNS[1],ZONE9_CT_SPAWNS[2]][index % 3];
+  };
 
   const match = {
     id: matchId,
@@ -1877,42 +1899,39 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     map: safeMapId,
     mapName: PLAYABLE_MAPS[safeMapId]?.name || PLAYABLE_MAPS.ZONE_9.name,
     mapState: safeMapId === "HILL_TOWN" ? createMapInteractionState() : null,
-    players: players.map((p, i) => ({
-      socketId: p.socketId || null,
-      userId: p.userId,
-      uuid: p.uuid || "",
-      isBot: Boolean(p.isBot),
-      nickname: p.nickname,
-      playerAvatar: p.playerAvatar || "/avatars/default.jpg",
-      role: mode === "allies"
-        ? ((lobbyMatch && p.team) ? (p.team === "B" ? "teamB" : "teamA") : (i < 2 ? "teamA" : "teamB"))
-        : mode === "team_fight_3v3"
-          ? ((p.team || (i < 3 ? "A" : "B")) === "B" ? "teamB" : "teamA")
-          : (i % 2 === 0 ? "teamA" : "teamB"),
-      team: mode === "allies"
-        ? (lobbyMatch ? (p.team === "B" ? "B" : "A") : (i < 2 ? "A" : "B"))
-        : mode === "team_fight_3v3"
-          ? (p.team === "B" ? "B" : p.team === "A" ? "A" : (i < 3 ? "A" : "B"))
-          : mode === "team_fight"
-            ? ["A", "B", "C"][i % 3]
-            : null,
-      hp: 100,
-      score: 0,
-      kills: 0,
-      deaths: 0,
-      spawn: { ...matchSpawns[i % matchSpawns.length] },
-      pos: { ...matchSpawns[i % matchSpawns.length] },
-      rotY: 0,
-      anim: "Idle",
-      lastMoveAt: 0,
-      prevMoveTime: 0,
-      ready: Boolean(p.isBot),
-      cash: mode === "allies" ? 800 : 0,
-      weapons: mode === "allies" ? ["p350", "knife"] : ["akr", "p350", "knife"],
-      equippedWeapon: mode === "allies" ? "p350" : "knife",
-      joinedAt: null,
-      disconnectTimer: null
-    })),
+    players: players.map((p, i) => {
+      const team = resolvePlayerTeam(p,i);
+      const spawn = resolvePlayerSpawn(p,i,team);
+      const role = mode === "allies" || mode === "team_fight_3v3"
+        ? (team === "B" ? "teamB" : "teamA")
+        : (i % 2 === 0 ? "teamA" : "teamB");
+      return {
+        socketId: p.socketId || null,
+        userId: p.userId,
+        uuid: p.uuid || "",
+        isBot: Boolean(p.isBot),
+        nickname: p.nickname,
+        playerAvatar: p.playerAvatar || "/avatars/default.jpg",
+        role,
+        team,
+        hp: 100,
+        score: 0,
+        kills: 0,
+        deaths: 0,
+        spawn: { ...spawn },
+        pos: { ...spawn },
+        rotY: Math.atan2(spawn.x,spawn.z),
+        anim: "Idle",
+        lastMoveAt: 0,
+        prevMoveTime: 0,
+        ready: Boolean(p.isBot),
+        cash: mode === "allies" ? 800 : 0,
+        weapons: mode === "allies" ? ["p350", "knife"] : ["akr", "p350", "knife"],
+        equippedWeapon: mode === "allies" ? "p350" : "knife",
+        joinedAt: null,
+        disconnectTimer: null
+      };
+    }),
     phase: "waiting",
     phaseRemaining: null,
     started: false,
@@ -1927,8 +1946,8 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     droppedItems: [],
     roundNumber: 0,
     roundWins: { A: 0, B: 0 },
-    attackingTeam: "A",
-    defendingTeam: "B",
+    attackingTeam: "B",
+    defendingTeam: "A",
     roundRemaining: 0,
     remaining: GAME_SECONDS
   };
@@ -2603,9 +2622,9 @@ function startAlliesRound(io, match, initial = false) {
   };
   // Match the 1.25x Sandstone geometry scale used by the client and bomb sites.
   const sideSpawns = {
-    // Sandstone is oriented with T spawn on the west (left) and CT spawn on the east (right).
-    attack: [{ x: -50, y: 0, z: -8.75 }, { x: -50, y: 0, z: 8.75 }],
-    defense: [{ x: 50, y: 0, z: -8.75 }, { x: 50, y: 0, z: 8.75 }]
+    // Zone 9: T is north-east (+X,-Z); CT is south-west (-X,+Z).
+    attack: [{x:92,y:0,z:-92},{x:86,y:0,z:-92}],
+    defense: [{x:-92,y:0,z:92},{x:-86,y:0,z:92}]
   };
   const teamIndices = { A: 0, B: 0 };
   for (const player of match.players) {
@@ -2622,7 +2641,7 @@ function startAlliesRound(io, match, initial = false) {
     teamIndices[player.team] = spawnIndex + 1;
     player.spawn = { ...spawnList[spawnIndex] };
     player.pos = { ...player.spawn };
-    player.rotY = side === "attack" ? -Math.PI / 2 : Math.PI / 2;
+    player.rotY = Math.atan2(player.spawn.x,player.spawn.z);
     player.anim = "Idle";
     emitAlliesLoadout(io, match, player);
   }
@@ -3331,8 +3350,10 @@ function handleTeamShot(io, match, shooter, data) {
   shooter.lastShotAt = now;
 
   const shotOrigin = { x: shooter.pos.x, y: resolveShotOriginY(shooter.pos, data?.oy), z: shooter.pos.z };
+  const clientMapBlocked = data?.mapBlocked === true;
   let best = null, bestDistance = Infinity, bestHorizontalDistance = Infinity, bestHitPoint = null;
   for (const target of match.players) {
+    if (clientMapBlocked) break;
     if (target.userId === shooter.userId || target.team === shooter.team || target.hp <= 0) continue;
     const vx = target.pos.x - shooter.pos.x, vz = target.pos.z - shooter.pos.z;
     const horizontalDistance = Math.hypot(vx, vz);
@@ -3345,7 +3366,7 @@ function handleTeamShot(io, match, shooter, data) {
       }
       continue;
     }
-    const trace = tracePlayerHit(shotOrigin, aim, target.pos, weapon.range, { radius: 0.56, maxHeight: 1.9 });
+    const trace = tracePlayerHit(shotOrigin, aim, target.pos, weapon.range, { radius: 0.7, maxHeight: 2.05 });
     if (!trace) continue;
     if (!validateMapLineOfSight(match.map, shotOrigin, trace.point, match.mapState || {})) continue;
     if (trace.distance < bestDistance) {
@@ -3356,10 +3377,10 @@ function handleTeamShot(io, match, shooter, data) {
     }
   }
 
-  const targetBlocked = Boolean(best) && !validateMapLineOfSight(
+  const targetBlocked = clientMapBlocked || (Boolean(best) && !validateMapLineOfSight(
     match.map, weapon.type === "melee" ? shooter.pos : shotOrigin,
     bestHitPoint || best.pos, match.mapState || {}
-  );
+  ));
   if (weapon.type !== "melee") {
     const supplied = data?.impact;
     const suppliedDistance = supplied && [supplied.x, supplied.y, supplied.z].every(value => Number.isFinite(Number(value)))
@@ -3453,7 +3474,7 @@ function validateMove(player, data, mapId = null, mapState = {}) {
   }
   player.pos.x=targetX;
   player.pos.z=targetZ;
-  player.pos.y = Math.max(0, Math.min(2.25, y));
+  player.pos.y = Math.max(-4, Math.min(48, y));
   player.rotY = rotY;
   player.anim = ["Idle", "Running", "Jump", "Walking", "Crouch"].includes(data.anim) ? data.anim : "Idle";
   return true;
@@ -3529,9 +3550,9 @@ io.on("connection", socket => {
     const gameMode = ["allies", "team_fight", "team_fight_3v3"].includes(data?.gameMode) ? data.gameMode : "team_fight";
     const previous = trainingSessions.get(user.id);
     const sessionMap = normalizeMapId(data?.map || cfg.map);
+    const trainingSide = cleanText(data?.side,4).toUpperCase() === "T" ? "T" : "CT";
     const TRAINING_SPAWNS = {
-      // Zone 9 is normalized to a 250-unit footprint in the client; CT is on the south-west entrance.
-      ZONE_9: {x:-92,y:0,z:92},
+      ZONE_9: trainingSide === "T" ? {x:92,y:0,z:-92} : {x:-92,y:0,z:92},
       HILL_TOWN: {x:-42,y:0,z:0},
       NEON_YARD: {x:0,y:0,z:115},
       SANDSTONE: {x:0,y:0,z:0},
@@ -3544,6 +3565,7 @@ io.on("connection", socket => {
       id: "practice_" + crypto.randomBytes(10).toString("hex"),
       userId: user.id,
       nickname: user.nickname,
+      side: trainingSide,
       mode: cfg.id,
       gameMode: prototype ? gameMode : null,
       prototype,
@@ -3647,7 +3669,7 @@ io.on("connection", socket => {
     }
     previous.x=target.x;
     previous.z=target.z;
-    previous.y = Math.max(0, Math.min(2.25, y));
+    previous.y = Math.max(-4, Math.min(48, y));
     session.playerRotY = Number.isFinite(viewY) ? viewY : rotY;
   });
 
@@ -4010,8 +4032,7 @@ io.on("connection", socket => {
       userId: user.id,
       nickname: user.nickname,
       playerAvatar: user.playerAvatar || "/avatars/default.jpg",
-      uuid: user.uuid,
-      mode,
+       mode,
       map
     });
 
@@ -4084,8 +4105,7 @@ io.on("connection", socket => {
       droppedItems: Array.isArray(match.droppedItems) ? match.droppedItems.map(item => ({ ...item, position: { ...item.position } })) : [],
       me: {
         userId: player.userId,
-        uuid: player.uuid || "",
-        nickname: player.nickname,
+         nickname: player.nickname,
         playerAvatar: player.playerAvatar || "/avatars/default.jpg",
         role: player.role,
         team: player.team,
@@ -4612,7 +4632,6 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
   if (req.body.MMRAllies !== undefined) u.MMRAllies = Math.max(0, Number(req.body.MMRAllies) || 0);
   if (req.body.isBanned !== undefined) u.isBanned = Boolean(req.body.isBanned);
   if (req.body.isVerified !== undefined) u.isVerified = Boolean(req.body.isVerified);
-  if (!isMaster && req.body.isAdmin !== undefined) u.isAdmin = Boolean(req.body.isAdmin);
   if (!isMaster && req.body.isTester !== undefined) u.isTester = Boolean(req.body.isTester);
   if (isMaster) {
     u.isAdmin = true;
@@ -4710,7 +4729,7 @@ app.post("/api/admin/users/create", requireAdmin, (req, res) => {
   const user = {
     nickname, id, uuid: crypto.randomUUID(), passwordHash: hashPassword(password), playerAvatar: "/avatars/default.jpg",
     status:false, XP:0, gold:0, clan:null, MMRCompetitive:1000, MMRAllies:1000,
-    isVerified:false, isBanned:false, isAdmin:Boolean(req.body.isAdmin), isTester:Boolean(req.body.isTester),
+    isVerified:false, isBanned:false, isAdmin:false, isTester:Boolean(req.body.isTester),
     friendsList:[], incomingRequests:[], blocked:[], usedPromos:[]
   };
   ensureUserShape(user);
