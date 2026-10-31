@@ -994,7 +994,7 @@ body.lobby-screen .profile-col .ranks{gap:4px!important}
 body.lobby-screen .profile-col .rankcard{padding:7px 5px!important}
 body.lobby-screen .profile-col .rankname{font-size:7px!important}
 body.lobby-screen .profile-col .rankdesc{font-size:8px!important}
-body.lobby-screen .profiletop .playerid:has(#profilePageUuid),body.lobby-screen #copyUuid{display:none!important}
+
 body.lobby-screen .lobby-team-control{display:flex;align-items:center;gap:5px;color:#a9cbea;font-size:8px;font-weight:900;white-space:nowrap}
 body.lobby-screen .lobby-team-control select{min-width:48px;padding:5px 7px;background:#121b23;color:#edf3f8;border:1px solid #a9cbea50;border-radius:2px;font-size:10px;font-weight:900}
 body.lobby-screen .lobby-team-pill{padding:5px 7px;border:1px solid #a9cbea35;color:#cde6f9;font-size:8px;font-weight:900;white-space:nowrap}
@@ -1420,7 +1420,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 
 <section id="profile" class="screen">
   <div class="sectionhead"><h2>ПРОФІЛЬ</h2></div>
-  <div class="panel panelbody"><div class="profiletop"><img id="profileAvatar" class="avatar" src="/avatars/default.jpg" alt=""><div><div class="nick" id="profilePageNick"></div><div class="playerid">PLAYER ID: <b id="profilePageId"></b></div><button id="copyId" class="secondary" style="margin-top:8px">СКОПІЮВАТИ ID</button><div class="playerid" style="margin-top:12px">UUID: <b id="profilePageUuid" style="overflow-wrap:anywhere"></b></div><button id="copyUuid" class="secondary" style="margin-top:8px">СКОПІЮВАТИ UUID</button></div></div>
+  <div class="panel panelbody"><div class="profiletop"><img id="profileAvatar" class="avatar" src="/avatars/default.jpg" alt=""><div><div class="nick" id="profilePageNick"></div><div class="playerid">PLAYER ID: <b id="profilePageId"></b></div><button id="copyId" class="secondary" style="margin-top:8px">СКОПІЮВАТИ ID</button></div></div>
   <div class="cardgrid" style="margin-top:14px"><div class="statcard"><small>XP</small><strong id="profileXP">0</strong></div><div class="statcard"><small>GOLD</small><strong id="profileGold">0</strong></div><div class="statcard"><small>COMPETITIVE</small><strong id="profileComp">1000</strong></div><div class="statcard"><small>ALLIES</small><strong id="profileAllies">1000</strong></div></div></div>
 </section>
 
@@ -1695,7 +1695,7 @@ function resumeSavedMatch(saved){
     updateReconnectButton();notifyToast("Незавершений матч уже недоступний.");return;
   }
   sessionStorage.setItem("myPlayerId",String(saved.userId||me?.id||""));
-  sessionStorage.setItem("myPlayerUUID",String(saved.uuid||me?.uuid||""));
+  sessionStorage.removeItem("myPlayerUUID");
   sessionStorage.setItem("currentMatchId",String(saved.matchId));
   sessionStorage.setItem("selectedMap","ZONE_9");
   sessionStorage.setItem("selectedMode",String(saved.mode||"allies"));
@@ -1710,7 +1710,7 @@ function exitSavedMatch(){
   try{
     localStorage.setItem("sx_abandoned_match",JSON.stringify({
       kind:"match",matchId:String(saved.matchId),userId:String(saved.userId||me?.id||""),
-      uuid:String(saved.uuid||me?.uuid||""),map:"ZONE_9",mode:String(saved.mode||"allies")
+      map:"ZONE_9",mode:String(saved.mode||"allies")
     }));
     localStorage.removeItem("sx_active_match");
     sessionStorage.removeItem("currentMatchId");
@@ -1773,19 +1773,10 @@ function show(view){
   if(view==="market")loadMarket();
 }
 async function refreshProfileIdentity(){
-  const uuidEl=$("profilePageUuid");
-  if(uuidEl)uuidEl.textContent=me?.uuid||"Завантаження UUID…";
   try{
-    let fresh=(await api("/api/me")).user;
-    if(!fresh?.uuid){
-      const fallback=await api("/api/user-data?id="+encodeURIComponent(me?.id||""));
-      fresh=fallback.user||fresh;
-    }
+    const fresh=(await api("/api/me")).user;
     if(fresh){me={...me,...fresh};render();}
-    if(uuidEl)uuidEl.textContent=me?.uuid||"UUID не повернув сервер";
-  }catch{
-    if(uuidEl)uuidEl.textContent=me?.uuid||"UUID не вдалося завантажити";
-  }
+  }catch(error){notifyToast(error.message||"Не вдалося оновити профіль.")}
 }
 function render(){
   if(!me)return;
@@ -1816,7 +1807,7 @@ function render(){
   $("statsXP").textContent=me.XP||0;$("statsGold").textContent=me.gold||0;
   $("statsComp").textContent=me.MMRCompetitive||1000;$("statsAllies").textContent=me.MMRAllies||1000;
   $("verifiedMark").textContent=me.isVerified?"✓ VERIFIED":"";
-  $("adminBtn").style.display=(me.isAdmin||me.id==="Dev_01")?"grid":"none";
+  $("adminBtn").style.display=me.isAdmin===true?"grid":"none";
   const testerSwitch=$("testerGameplaySwitch");
   if(testerSwitch)testerSwitch.style.display=selectedMode==="training"?"none":"flex";
   const testerKeybinds=$("testKeybindSettings");
@@ -2000,7 +1991,7 @@ function openPlay(){
       searching=false;
       $("searchModal").classList.remove("show");
       sessionStorage.setItem("myPlayerId",d.userId||me.id);
-      sessionStorage.setItem("myPlayerUUID",d.uuid||me.uuid||"");
+      sessionStorage.removeItem("myPlayerUUID");
       sessionStorage.removeItem("currentMatchId");
       sessionStorage.removeItem("prototypeMode");
       sessionStorage.removeItem("prototypeGameMode");
@@ -2012,7 +2003,7 @@ function openPlay(){
     });
     sessionStorage.setItem("selectedMap",selectedMap);
     sessionStorage.setItem("selectedMode","training");
-    socket.emit("start_training",{mode:"training",map:selectedMap,gameMode:selectedMode});
+    socket.emit("start_training",{mode:"training",map:selectedMap,gameMode:selectedMode,side:localStorage.getItem("sx-agent-side")==="T"?"T":"CT"});
     return;
   }
   if(testGameplayMode==="prototype"){
@@ -2042,7 +2033,7 @@ function openPlay(){
       searching=false;
       $("searchModal").classList.remove("show");
       sessionStorage.setItem("myPlayerId",d.userId);
-      sessionStorage.setItem("myPlayerUUID",d.uuid||me.uuid||"");
+      sessionStorage.removeItem("myPlayerUUID");
       sessionStorage.setItem("currentMatchId",d.matchId);
       sessionStorage.setItem("selectedMap",d.map||selectedMap);
       sessionStorage.setItem("selectedMode",d.mode||selectedMode);
@@ -2050,7 +2041,7 @@ function openPlay(){
       if(d.prototype)sessionStorage.setItem("prototypeGameMode",d.mode||selectedMode);
       else sessionStorage.removeItem("prototypeGameMode");
       sessionStorage.removeItem("trainingId");
-      try{localStorage.setItem("sx_active_match",JSON.stringify({matchId:d.matchId,userId:d.userId,uuid:d.uuid||me.uuid||"",map:d.map||selectedMap,mode:d.mode||selectedMode,prototype:Boolean(d.prototype),updatedAt:Date.now()}))}catch{}
+      try{localStorage.setItem("sx_active_match",JSON.stringify({matchId:d.matchId,userId:d.userId,map:d.map||selectedMap,mode:d.mode||selectedMode,prototype:Boolean(d.prototype),updatedAt:Date.now()}))}catch{}
       location.href="/play2.html";
     });
     sessionStorage.setItem("selectedMap",selectedMap);
@@ -2081,7 +2072,7 @@ function openPlay(){
   socket.on("match_found",d=>{
     sessionStorage.setItem("myPlayerId",d.userId);sessionStorage.setItem("myPlayerUUID",d.uuid||me.uuid||"");sessionStorage.setItem("currentMatchId",d.matchId);
     sessionStorage.setItem("selectedMap",d.map||selectedMap);sessionStorage.setItem("selectedMode",d.mode||selectedMode);
-    try{localStorage.setItem("sx_active_match",JSON.stringify({matchId:d.matchId,userId:d.userId,uuid:d.uuid||me.uuid||"",map:d.map||selectedMap,mode:d.mode||selectedMode,updatedAt:Date.now()}))}catch{}
+    try{localStorage.setItem("sx_active_match",JSON.stringify({matchId:d.matchId,userId:d.userId,map:d.map||selectedMap,mode:d.mode||selectedMode,updatedAt:Date.now()}))}catch{}
     location.href="/play2.html";
   });
   sessionStorage.setItem("selectedMap",selectedMap);
@@ -2098,23 +2089,10 @@ function renderHomeFriendsPreview(friends){
   const root=$("homeFriendsPreview");if(!root)return;
   const list=Array.isArray(friends)?friends:[];
   const online=list.filter(friend=>Boolean(friend.status));
-  // Online friends are visual previews in the menu only. They are never
-  // inserted into currentLobby or counted as players in an actual match.
-  window.__sxHomeOnlineFriends=online
-    .filter(friend=>friend&&(friend.id||friend.userId)&&String(friend.id||friend.userId)!==String(me?.id||""))
-    .slice(0,3)
-    .map(friend=>({
-      userId:String(friend.id||friend.userId),
-      nickname:String(friend.nickname||"PLAYER"),
-      playerAvatar:String(friend.playerAvatar||friend.avatar||"/avatars/default.jpg"),
-      connected:true,
-      isPreviewFriend:true
-    }));
   const shown=(online.length?online:list).slice(0,4);
   const count=$("homeOnlineCount");if(count)count.textContent=online.length+" ОНЛАЙН";
   if(!shown.length){
     root.innerHTML="<div class='muted'>Друзів поки немає. Знайди гравців і створи команду.</div>";
-    renderHomeSquadRoster(currentLobby);
     return;
   }
   root.innerHTML=shown.map(friend=>{
@@ -2125,7 +2103,6 @@ function renderHomeFriendsPreview(friends){
     const disabled=!friend.status||(Boolean(currentLobby)&&currentLobby.members.length>=currentLobby.maxPlayers);
     return "<div class='home-friend"+onlineClass+"'><img src='"+avatar+"' alt=''><div class='home-friend-copy'><b>"+nick+"</b><small>"+state+"</small></div><i class='home-online'></i><button class='home-friend-invite' data-home-invite='"+esc(friend.id)+"' aria-label='Запросити "+nick+"' "+(disabled?"disabled":"")+">+</button></div>";
   }).join("");
-  renderHomeSquadRoster(currentLobby);
 }
 async function loadFriends(){
   try{
@@ -2150,20 +2127,18 @@ function renderHomeSquadRoster(lobby=currentLobby){
     userId:me?.id||"",nickname:me?.nickname||"ГРАВЕЦЬ",
     playerAvatar:me?.playerAvatar||"/avatars/default.jpg",isOwner:true,connected:true,team:null
   };
-  const previewFriends=!lobby&&Array.isArray(window.__sxHomeOnlineFriends)?window.__sxHomeOnlineFriends:[];
-  const members=lobby?(realMembers.length?realMembers:[selfMember]):[selfMember,...previewFriends];
+  const members=realMembers.length?realMembers:[selfMember];
   const maxPlayers=lobby?.maxPlayers||(selectedMode==="allies"?4:selectedMode==="team_fight_3v3"?6:3);
   const status=$("homeSquadStatus"),count=$("homeSquadCount");
-  if(status)status.textContent=lobby?((lobby.modeName||MODES[lobby.mode]||"МАТЧ")+" · "+(lobby.mapName||MAPS[lobby.map]||lobby.map)):(previewFriends.length?"ДРУЗІ ПОРУЧ · ПРЕВ’Ю":"СОЛО · ЗАПРОШУЙ ДРУЗІВ");
-  if(count)count.textContent=lobby?(members.length+" / "+maxPlayers):(previewFriends.length?(members.length+" ONLINE"):(members.length+" / "+maxPlayers));
+  if(status)status.textContent=lobby?((lobby.modeName||MODES[lobby.mode]||"МАТЧ")+" · "+(lobby.mapName||MAPS[lobby.map]||lobby.map)):"СОЛО";
+  if(count)count.textContent=members.length+" / "+maxPlayers;
   if(root){
     const cards=members.slice(0,6).map(member=>{
-      const label=member.isOwner?"ТИ":(member.isPreviewFriend?"ONLINE · ПРЕВ’Ю":((lobby?.mode==="allies"||lobby?.mode==="team_fight_3v3")&&member.team?"КОМАНДА "+member.team:(member.connected===false?"ПІДКЛЮЧЕННЯ":"У ЗАГОНІ")));
-      const previewClass=member.isPreviewFriend?" is-preview-friend":"";
+      const label=member.isOwner?"ТИ":((lobby?.mode==="allies"||lobby?.mode==="team_fight_3v3")&&member.team?"КОМАНДА "+member.team:(member.connected===false?"ПІДКЛЮЧЕННЯ":"У ЗАГОНІ"));
       const teamPicker=lobby&&(lobby.mode==="allies"||lobby.mode==="team_fight_3v3")&&String(lobby.ownerId)===String(me?.id)
         ?"<select class='home-squad-team' data-home-lobby-team='"+esc(member.userId)+"' aria-label='Команда гравця'><option value='A' "+(member.team==="A"?"selected":"")+">A</option><option value='B' "+(member.team==="B"?"selected":"")+">B</option></select>"
         :"";
-      return "<div class='home-squad-card"+previewClass+"'><img src='"+esc(member.playerAvatar||"/avatars/default.jpg")+"' alt=''><b>"+esc(member.nickname||"ГРАВЕЦЬ")+"</b><small>"+esc(label)+"</small>"+teamPicker+"</div>";
+      return "<div class='home-squad-card'><img src='"+esc(member.playerAvatar||"/avatars/default.jpg")+"' alt=''><b>"+esc(member.nickname||"ГРАВЕЦЬ")+"</b><small>"+esc(label)+"</small>"+teamPicker+"</div>";
     });
     if(lobby&&members.length<maxPlayers)cards.push("<button type='button' class='home-squad-card is-empty' data-squad-add-friend aria-label='Запросити друга'><strong>+</strong><small>ДОДАТИ</small></button>");
     root.innerHTML=cards.join("");
@@ -2173,7 +2148,7 @@ function renderHomeSquadRoster(lobby=currentLobby){
   window.__sxHomeRoster=members.map(member=>({
     userId:String(member.userId||member.id||""),nickname:String(member.nickname||"ГРАВЕЦЬ"),
     playerAvatar:String(member.playerAvatar||"/avatars/default.jpg"),isOwner:Boolean(member.isOwner),
-    isPreviewFriend:Boolean(member.isPreviewFriend),connected:member.connected!==false,
+    connected:member.connected!==false,
     team:member.team||null,side:member.side||null
   }));
   window.__sxLobbyState=lobby||null;
@@ -2255,7 +2230,7 @@ function launchLobbyMatch(data){
   sessionStorage.setItem("selectedMap",data.map||selectedMap);
   sessionStorage.setItem("selectedMode",data.mode||selectedMode);
   sessionStorage.removeItem("prototypeMode");sessionStorage.removeItem("prototypeGameMode");sessionStorage.removeItem("trainingId");
-  try{localStorage.setItem("sx_active_match",JSON.stringify({matchId:data.matchId,userId:data.userId,uuid:data.uuid||me.uuid||"",map:data.map||selectedMap,mode:data.mode||selectedMode,prototype:false,updatedAt:Date.now()}))}catch{}
+  try{localStorage.setItem("sx_active_match",JSON.stringify({matchId:data.matchId,userId:data.userId,map:data.map||selectedMap,mode:data.mode||selectedMode,prototype:false,updatedAt:Date.now()}))}catch{}
   location.href="/play2.html";
 }
 async function friendAction(type,id){
@@ -2807,8 +2782,7 @@ if(canvas&&hero){
      if(person.team==="A")return "CT";
      if(person.team==="B")return "T";
      if(person.side==="T"||person.side==="CT")return person.side;
-     if(person.isPreviewFriend&&index%2===1)return storedAgentSide()==="T"?"CT":"T";
-     return storedAgentSide();
+       return storedAgentSide();
    }
    function animationFor(person,index){
      const requested=person.agentAnimation||person.selectedAnimation||(isLocalPerson(person,index)?storedAgentAnimation():"Excited");
