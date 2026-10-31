@@ -1721,17 +1721,10 @@ const JOIN_TIMEOUT_SECONDS = 90;
 const MAX_CONCURRENT_MATCHES = Math.max(1, Math.min(100, Number.parseInt(process.env.MAX_CONCURRENT_MATCHES || "100", 10) || 100));
 
 const PLAYABLE_MAPS = Object.freeze({
-  SANDSTONE: { id: "SANDSTONE", name: "SANDSTONE", kind: "tight-defuse" },
-  SMALL_YARD: { id: "SMALL_YARD", name: "SMALL YARD", kind: "small-arena" },
-  M3_Maze: { id: "M3_Maze", name: "M3 MAZE", kind: "model" },
-  FIELD_ARENA: { id: "FIELD_ARENA", name: "FIELD ARENA", kind: "arena" },
-  NEON_YARD: { id: "NEON_YARD", name: "NEON YARD", kind: "neon" },
-  HILL_TOWN: { id: "HILL_TOWN", name: "HILL TOWN", kind: "hill-town" },
-  ZONE_9: { id: "ZONE_9", name: "ZONE 9", kind: "zone9-fbx" }
+  ZONE_9: { id: "ZONE_9", name: "ZONE 9", kind: "glb" }
 });
 function normalizeMapId(value) {
-  const id = cleanText(value, 32);
-  return Object.prototype.hasOwnProperty.call(PLAYABLE_MAPS, id) ? id : "M3_Maze";
+  return "ZONE_9";
 }
 
 const MODE_CONFIGS = {
@@ -1739,22 +1732,22 @@ const MODE_CONFIGS = {
     id: "allies",
     name: "СОЮЗНИКИ · 2×2",
     short: "2V2",
-    map: "SANDSTONE",
+    map: "ZONE_9",
     requiredPlayers: 4
-  },
-  hide_seek: {
-    id: "hide_seek",
-    name: "HIDE & SEEK",
-    short: "HS",
-    map: "M3_Maze",
-    requiredPlayers: 3
   },
   team_fight: {
     id: "team_fight",
     name: "КБ · 1×1×1",
     short: "FFA",
-    map: "SMALL_YARD",
+    map: "ZONE_9",
     requiredPlayers: 3
+  },
+  team_fight_3v3: {
+    id: "team_fight_3v3",
+    name: "КОМАНДНИЙ БІЙ · 3×3",
+    short: "3V3",
+    map: "ZONE_9",
+    requiredPlayers: 6
   }
 };
 
@@ -1842,9 +1835,7 @@ function emitQueueCount(io) {
 function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   if (activeMatches.size >= MAX_CONCURRENT_MATCHES) return null;
   const requestedMap = normalizeMapId(mapId);
-  const safeMapId = mode === "allies" ? "SANDSTONE"
-    : mode === "team_fight" ? (requestedMap === "NEON_YARD" ? "NEON_YARD" : "SMALL_YARD")
-    : requestedMap;
+  const safeMapId = "ZONE_9";
   const candidates = Array.isArray(forcedCandidates) ? forcedCandidates : matchmakingQueue.filter(p => p.mode === mode && p.map === safeMapId);
   const requiredPlayers = getRequiredPlayers(mode);
   if (candidates.length < requiredPlayers) return;
@@ -1859,7 +1850,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
   const MATCH_SPAWNS = {
     HILL_TOWN: [{x:-42,y:0,z:-28},{x:42,y:0,z:-28},{x:-42,y:0,z:28},{x:42,y:0,z:28}],
-    ZONE_9: [{x:-92,y:0,z:92},{x:-86,y:0,z:92},{x:-92,y:0,z:86},{x:-86,y:0,z:86}],
+    ZONE_9: [{x:-92,y:0,z:92},{x:-86,y:0,z:92},{x:92,y:0,z:-92},{x:86,y:0,z:-92},{x:92,y:0,z:-86},{x:86,y:0,z:-86}],
     SANDSTONE: [{x:-50,y:0,z:-8.75},{x:-50,y:0,z:8.75},{x:50,y:0,z:-8.75},{x:50,y:0,z:8.75}],
     SMALL_YARD: [{x:-23,y:0,z:-23},{x:23,y:0,z:-23},{x:0,y:0,z:24}],
     M3_Maze: [{x:-195,y:0,z:-195},{x:195,y:0,z:-195},{x:-195,y:0,z:195},{x:195,y:0,z:195}],
@@ -1884,14 +1875,18 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
       isBot: Boolean(p.isBot),
       nickname: p.nickname,
       playerAvatar: p.playerAvatar || "/avatars/default.jpg",
-      role: mode === "hide_seek" ? (i === hunterIndex ? "hunter" : "runner")
-        : mode === "allies" ? ((lobbyMatch && p.team) ? (p.team === "B" ? "teamB" : "teamA") : (i < 2 ? "teamA" : "teamB"))
-        : (i % 2 === 0 ? "teamA" : "teamB"),
+      role: mode === "allies"
+        ? ((lobbyMatch && p.team) ? (p.team === "B" ? "teamB" : "teamA") : (i < 2 ? "teamA" : "teamB"))
+        : mode === "team_fight_3v3"
+          ? ((p.team || (i < 3 ? "A" : "B")) === "B" ? "teamB" : "teamA")
+          : (i % 2 === 0 ? "teamA" : "teamB"),
       team: mode === "allies"
-        ? (lobbyMatch ? (p.team === "B" ? "B" : "A") : (prototypeBotMatch ? (i < 2 ? "A" : "B") : (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i < 2 ? "A" : "B"))))
-        : mode === "team_fight"
-          ? ((prototypeBotMatch || lobbyMatch) ? ["A", "B", "C"][i % 3] : (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : ["A", "B", "C"][i % 3]) : ["A", "B", "C"][i % 3]))
-          : null,
+        ? (lobbyMatch ? (p.team === "B" ? "B" : "A") : (i < 2 ? "A" : "B"))
+        : mode === "team_fight_3v3"
+          ? (p.team === "B" ? "B" : p.team === "A" ? "A" : (i < 3 ? "A" : "B"))
+          : mode === "team_fight"
+            ? ["A", "B", "C"][i % 3]
+            : null,
       hp: 100,
       score: 0,
       kills: 0,
@@ -2106,7 +2101,7 @@ function createLobbyMatch(io, socket, data = {}) {
       uuid: user?.uuid || "",
       isBot: false,
       lobbyMatch: true,
-      team: mode === "allies" ? (member.team === "B" ? "B" : "A") : null,
+      team: mode === "allies" || mode === "team_fight_3v3" ? (member.team === "B" ? "B" : member.team === "A" ? "A" : (index < Math.ceil(getRequiredPlayers(mode) / 2) ? "A" : "B")) : null,
       mode, map
     };
   });
@@ -2114,7 +2109,7 @@ function createLobbyMatch(io, socket, data = {}) {
     const userId = "lobby_bot_" + crypto.randomBytes(8).toString("hex");
     const countA = candidates.filter(candidate => candidate.team === "A").length;
     const countB = candidates.filter(candidate => candidate.team === "B").length;
-    const botTeam = mode === "allies" ? (countA <= countB ? "A" : "B") : null;
+    const botTeam = mode === "allies" || mode === "team_fight_3v3" ? (countA <= countB ? "A" : "B") : null;
     candidates.push({
       socketId: null, userId, uuid: "", isBot: true, lobbyMatch: true, team: botTeam,
       nickname: "BOT · " + String(index + 1).padStart(2, "0"),
@@ -2351,19 +2346,27 @@ function finishMatch(io, matchId) {
   if (match.phaseTimer) clearInterval(match.phaseTimer);
   if (match.joinTimer) clearTimeout(match.joinTimer);
 
+  const teamScore = match.mode === "team_fight_3v3" ? match.players.reduce((totals, player) => {
+    if (player.team === "A" || player.team === "B") totals[player.team] += Number(player.score) || 0;
+    return totals;
+  }, { A: 0, B: 0 }) : null;
   const ranked = [...match.players].sort((a, b) => match.mode === "allies"
     ? (match.roundWins?.[b.team] || 0) - (match.roundWins?.[a.team] || 0) || b.score - a.score
-    : b.score - a.score);
+    : match.mode === "team_fight_3v3"
+      ? (teamScore[b.team] || 0) - (teamScore[a.team] || 0) || b.score - a.score
+      : b.score - a.score);
   const highestScore = ranked[0]?.score || 0;
   const winningTeam = match.mode === "allies"
     ? (match.roundWins.A === match.roundWins.B ? null : (match.roundWins.A > match.roundWins.B ? "A" : "B"))
-    : null;
+    : match.mode === "team_fight_3v3"
+      ? (teamScore.A === teamScore.B ? null : (teamScore.A > teamScore.B ? "A" : "B"))
+      : null;
 
   for (const player of match.players) {
     const user = users.find(u => u.id === player.userId);
     if (!user) continue;
 
-    const won = match.mode === "allies"
+    const won = match.mode === "allies" || match.mode === "team_fight_3v3"
       ? Boolean(winningTeam && player.team === winningTeam)
       : highestScore > 0 && player.score === highestScore;
     const gold = won ? 10 : 2;
@@ -2400,8 +2403,8 @@ function respawnPlayer(match, player) {
 }
 
 const SANDSTONE_BOMB_SITES = Object.freeze({
-  A: Object.freeze({ x: 37.5, z: -33.75 }),
-  B: Object.freeze({ x: 22.5, z: 37.5 })
+  A: Object.freeze({ x: 48, z: 70 }),
+  B: Object.freeze({ x: -72, z: -40 })
 });
 
 function alliesSide(match, team) {
