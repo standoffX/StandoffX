@@ -1923,11 +1923,6 @@ $("cancelSearch").addEventListener("click",cancelSearch);
 $("refreshClan").addEventListener("click",loadClan);
 $("refreshMarket").addEventListener("click",loadMarket);
 $("copyId").addEventListener("click",async()=>{try{await navigator.clipboard.writeText(cleanId(me.id));$("copyId").textContent="СКОПІЙОВАНО ✓"}catch{}});
-$("copyUuid").addEventListener("click",async()=>{
-  const uuid=me?.uuid||$("profilePageUuid").textContent;
-  if(!uuid||uuid.includes("UUID ")||uuid.includes("Завантаження"))return notifyToast("UUID ще не завантажено.");
-  try{await navigator.clipboard.writeText(uuid);$("copyUuid").textContent="СКОПІЙОВАНО ✓"}catch{notifyToast("Не вдалося скопіювати UUID.")}
-});
 $("findFriend").addEventListener("click",findFriend);
 $("lobbyCreateBtn").addEventListener("click",createLobby);
 $("lobbyStartBtn").addEventListener("click",()=>socialSocket?.emit("lobby_start_match",{fillWithBots:$("lobbyFillBots").checked}));
