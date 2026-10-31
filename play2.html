@@ -1670,15 +1670,9 @@ function applyEquippedSkinToHeldWeapon(){
   }
 }
 async function loadPlayerSkinLoadout(){
-  try{
-    const [profileResponse,skinsResponse]=await Promise.all([
-      fetch("/api/me",{credentials:"same-origin"}).then(response=>response.ok?response.json():null),
-      fetch("/api/skins",{credentials:"same-origin"}).then(response=>response.ok?response.json():null)
-    ]);
-    equippedSkinLoadout=profileResponse?.user?.equippedSkins||{};
-    weaponSkinCatalog=skinsResponse?.skins||{};
-    if(heldWeaponRoot)selectWeapon(selectedWeapon,true);
-  }catch(error){console.warn("[SOFTER SKINS] Could not load equipped skins.",error?.message||error)}
+  // Legacy Softer skins are intentionally disabled until the new collection is ready.
+  equippedSkinLoadout={};
+  weaponSkinCatalog={};
 }
 function clearHeldWeapon(){
   if(!heldWeaponRoot)return;
