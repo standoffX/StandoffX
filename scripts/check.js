@@ -53,6 +53,15 @@ assert.match(server, /function isAdmin\(user\) \{\s*return Boolean\(user && user
 assert.doesNotMatch(server, /req\.body\.uuid/);
 assert.match(server, /function publicUser\(user\)/);
 assert.doesNotMatch(server.slice(server.indexOf("function publicUser(user)"),server.indexOf("function ensureUserShape")), /safe\.uuid|includeUuid/);
+assert.match(server, /const PROTECTED_STATIC_PAGES = new Set\(\["admin\.html", "mainmenu\.html"\]\)/);
+assert.match(server, /app\.get\("\/admin", requireAdmin/);
+assert.match(server, /const ZONE9_CT_SPAWNS = \[/);
+assert.match(server, /const ZONE9_T_SPAWNS = \[/);
+assert.match(server, /attackingTeam: "B",\s*defendingTeam: "A"/);
+assert.match(server, /rotY: Math\.atan2\(-spawn\.x,-spawn\.z\)/);
+assert.match(server, /player\.rotY = Math\.atan2\(-player\.spawn\.x,-player\.spawn\.z\)/);
+assert.doesNotMatch(server, /socket\.emit\("training_started",\s*\{[\s\S]{0,400}uuid:/);
+assert.doesNotMatch(server, /emit\("match_found",\s*\{[\s\S]{0,300}uuid:/);
 assert.match(server, /function sessionTokenHash\(token\)/);
 assert.match(server, /const SESSION_TTL_MS = 30 \* 24 \* 60 \* 60 \* 1000/);
 assert.match(server, /SameSite=Lax/);
@@ -155,6 +164,8 @@ assert.doesNotMatch(game, /player\.position\.y<=0/);
 assert.match(game, /WEAPON_BASE_PALETTES/);
 assert.match(game, /applyWeaponBaseMaterials\(model,weaponId\)/);
 assert.match(game, /mapBlocked:lastShotMapBlocked/);
+assert.match(game, /if\(data\.side==="T"\|\|data\.side==="CT"\)/);
+assert.match(game, /applyWeaponBaseMaterials\(model,weaponId\)/);
 assert.match(game, /function requestMouseLook\(\)/);
 assert.match(game, /new PointerLockControls\(camera,renderer\.domElement\)/);
 
@@ -186,6 +197,7 @@ assert.ok(mobileCss.includes('.rail button[data-view="inventory"]') && mobileCss
 assert.ok(mobileCss.includes('.rail button[data-view="market"]') && mobileCss.includes("#market"));
 assert.match(mobileCss, /#authNote/);
 assert.doesNotMatch(auth, /UUID|uuid|createdUuid|copyUuid/);
+assert.doesNotMatch(admin, /fAdmin/);
 assert.match(auth, /@media\(max-width:560px\)/);
 assert.match(auth, /Player ID із 6–10 цифр/);
 assert.match(mobileCss, /home-hero-copy/);
