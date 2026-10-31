@@ -1937,12 +1937,22 @@ function applyWeaponBaseMaterials(model,weaponId){
   const texture=weaponBaseTexture(weaponId);
   model.traverse(node=>{
     if(!node.isMesh)return;
+    const hasUv=Boolean(node.geometry?.attributes?.uv);
     const originalMaterials=Array.isArray(node.material)?node.material:[node.material];
     const materials=originalMaterials.map(original=>{
       const material=original?.clone?.()||new THREE.MeshStandardMaterial();
-      if(!original?.map?.image){material.map=texture;if(material.color)material.color.set("#ffffff")}
+      const hasLoadedMap=Boolean(original?.map?.image);
+      if(!hasLoadedMap){
+        material.map=hasUv?texture:null;
+        if(material.color)material.color.set(hasUv?"#ffffff":palette.base);
+      }else if(!hasUv){
+        material.map=null;
+        if(material.color)material.color.set(palette.base);
+      }
       material.roughness=weaponId==="knife"?.3:weaponId==="shotgun"?.62:.48;
-      material.metalness=palette.metal;material.side=THREE.DoubleSide;material.needsUpdate=true;
+      material.metalness=palette.metal;
+      material.side=THREE.DoubleSide;
+      material.needsUpdate=true;
       return material;
     });
     node.material=Array.isArray(node.material)?materials:materials[0];
