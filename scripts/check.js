@@ -102,7 +102,7 @@ assert.match(menu, /Excited_CT\.fbx/);
 assert.match(menu, /Excited\.fbx/);
 assert.match(menu, /OTCChA_D\.tga/);
 assert.match(menu, /FSB_A_D\.tga/);
-assert.match(menu, /function addActor/);
+assert.match(menu, /function createActor\\(person,index,side\\)/);
 assert.doesNotMatch(menu, /soldier_tac\.glb/);
 assert.doesNotMatch(menu, /DEV BUILD/i);
 
