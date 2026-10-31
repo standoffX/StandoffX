@@ -49,6 +49,10 @@ console.log("OK mobile-game.js syntax");
 
 // Account, session and database safety invariants.
 assert.match(server, /function requireAuth\(req, res, next\)/);
+assert.match(server, /function isAdmin\(user\) \{\s*return Boolean\(user && user\.id === ADMIN_ID\);\s*\}/);
+assert.doesNotMatch(server, /req\.body\.uuid/);
+assert.match(server, /function publicUser\(user\)/);
+assert.doesNotMatch(server.slice(server.indexOf("function publicUser(user)"),server.indexOf("function ensureUserShape")), /safe\.uuid|includeUuid/);
 assert.match(server, /function sessionTokenHash\(token\)/);
 assert.match(server, /const SESSION_TTL_MS = 30 \* 24 \* 60 \* 60 \* 1000/);
 assert.match(server, /SameSite=Lax/);
@@ -111,10 +115,15 @@ assert.match(menu, /data-home-agent-side="T"/);
 assert.match(menu, /data-home-agent-side="CT"/);
 for (const pose of ["Excited.fbx", "Talking On Phone.fbx", "Talking On Phone _CT.fbx", "Illegal Elbow Punch.fbx", "Illegal Elbow Punch_CT.fbx"]) assert.ok(menu.includes(pose), "agent selector must use repository asset " + pose);
 assert.match(menu, /function animationFor\(person,index\)/);
-assert.match(menu, /window\.__sxHomeOnlineFriends/);
-assert.match(menu, /isPreviewFriend/);
+assert.doesNotMatch(menu, /profilePageUuid|copyUuid|UUID:|UUID /);
+assert.doesNotMatch(menu, /window\.__sxHomeOnlineFriends|isPreviewFriend/);
+assert.match(menu, /const members=realMembers\.length\?realMembers:\[selfMember\]/);
+assert.match(menu, /me\.isAdmin===true/);
+assert.doesNotMatch(menu, /window\.__sxHomeOnlineFriends|isPreviewFriend/);
+assert.match(menu, /const members=realMembers\.length\?realMembers:\[selfMember\]/);
 assert.match(menu, /roster\.slice\(0,6\)/);
 assert.match(menu, /localStorage\.setItem\("sx-agent-animation"/);
+assert.match(menu, /lobby-remaster\.css\?v=/);
 assert.equal((menu.match(/data-map="/g) || []).length, 1, "the map picker must contain only Zone 9");
 assert.match(menu, /const lobbyMode=\["allies","team_fight","team_fight_3v3"\]/);
 assert.match(menu, /selectedMode!==\"team_fight_3v3\"/);
@@ -142,6 +151,12 @@ assert.match(game, /async function loadPlayerSkinLoadout\(\)[\s\S]{0,180}equippe
 assert.doesNotMatch(game, /fetch\("\/api\/skins"/);
 assert.match(game, /function makeFallbackWeaponById/);
 assert.match(game, /function finishClientReady\(\)/);
+assert.match(game, /function zone9FloorAt\(/);
+assert.match(game, /snapPlayerToZone9Floor\(true\)/);
+assert.doesNotMatch(game, /player\.position\.y<=0/);
+assert.match(game, /WEAPON_BASE_PALETTES/);
+assert.match(game, /applyWeaponBaseMaterials\(model,weaponId\)/);
+assert.match(game, /mapBlocked:lastShotMapBlocked/);
 assert.match(game, /function requestMouseLook\(\)/);
 assert.match(game, /new PointerLockControls\(camera,renderer\.domElement\)/);
 
@@ -164,14 +179,17 @@ assert.match(lobbyCss, /orientation:landscape/);
 assert.match(lobbyCss, /orientation:portrait/);
 assert.match(lobbyCss, /\.home-agent-panel\.open/);
 assert.match(lobbyCss, /#home\.screen\.active\{[\s\S]{0,180}display:flex/);
-assert.match(lobbyCss, /\.home-squad-card\.is-preview-friend/);
 assert.match(lobbyCss, /#adminBtn\[style\*="display: none"\]/);
+assert.match(lobbyCss, /Final desktop fill/);
 
 // Retired collection/market screens stay out of the visible menu until the new skins arrive.
 assert.ok(mobileCss.includes('.rail button[data-view="store"]') && mobileCss.includes("#store"));
 assert.ok(mobileCss.includes('.rail button[data-view="inventory"]') && mobileCss.includes("#inventory"));
 assert.ok(mobileCss.includes('.rail button[data-view="market"]') && mobileCss.includes("#market"));
 assert.match(mobileCss, /#authNote/);
+assert.doesNotMatch(auth, /UUID|uuid|createdUuid|copyUuid/);
+assert.match(auth, /@media\(max-width:560px\)/);
+assert.match(auth, /Player ID із 6–10 цифр/);
 assert.match(mobileCss, /home-hero-copy/);
 assert.match(mobileCss, /coming-soon-tag/);
 
