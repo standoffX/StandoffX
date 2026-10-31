@@ -1894,21 +1894,75 @@ const WEAPON_MODEL_URLS={
 };
 const WEAPON_MODEL_LENGTHS={akr:.9,p350:.5,deagle:.52,m4a1:.94,p90:.72,shotgun:.98,sniper:1.08,knife:.62};
 const KNIFE_SKIN_MODEL_URLS={};
-function normalizeWeaponModel(model,targetLength){
-  const originalBounds=new THREE.Box3().setFromObject(model);
-  const originalSize=originalBounds.getSize(new THREE.Vector3());
-  const longest=Math.max(originalSize.x,originalSize.y,originalSize.z);
-  if(longest>0)model.scale.setScalar(targetLength/longest);
-  model.updateMatrixWorld(true);
-  const bounds=new THREE.Box3().setFromObject(model);
-  const center=bounds.getCenter(new THREE.Vector3());
-  model.position.sub(center);
-  model.rotation.y=Math.PI;
+
+const WEAPON_BASE_PALETTES={
+  akr:{base:"#36312b",panel:"#20282a",accent:"#9a8462",metal:.34},
+  p350:{base:"#32383d",panel:"#171d22",accent:"#83929b",metal:.62},
+  deagle:{base:"#48423a",panel:"#20262a",accent:"#b79c6e",metal:.72},
+  m4a1:{base:"#343b34",panel:"#1b2220",accent:"#8a9277",metal:.46},
+  p90:{base:"#343b40",panel:"#20272a",accent:"#81939a",metal:.48},
+  shotgun:{base:"#3a3027",panel:"#211e1b",accent:"#96704c",metal:.3},
+  sniper:{base:"#343b42",panel:"#1b2229",accent:"#90a1ad",metal:.58},
+  knife:{base:"#4b555b",panel:"#20272c",accent:"#b8c4c8",metal:.82}
+};
+const weaponBaseTextures=new Map();
+function weaponBaseTexture(weaponId){
+  if(weaponBaseTextures.has(weaponId))return weaponBaseTextures.get(weaponId);
+  const palette=WEAPON_BASE_PALETTES[weaponId]||WEAPON_BASE_PALETTES.akr;
+  const canvas=document.createElement("canvas");canvas.width=256;canvas.height=256;
+  const ctx=canvas.getContext("2d");
+  ctx.fillStyle=palette.base;ctx.fillRect(0,0,256,256);
+  const grad=ctx.createLinearGradient(0,0,256,256);
+  grad.addColorStop(0,"#ffffff12");grad.addColorStop(.48,"#00000008");grad.addColorStop(1,"#00000055");
+  ctx.fillStyle=grad;ctx.fillRect(0,0,256,256);
+  ctx.fillStyle=palette.panel;
+  ctx.fillRect(12,12,232,48);ctx.fillRect(16,76,224,28);ctx.fillRect(18,120,220,42);
+  ctx.fillStyle=palette.accent;ctx.fillRect(22,18,76,5);ctx.fillRect(170,86,64,4);
+  ctx.fillStyle="#0d1215";ctx.fillRect(18,178,220,62);
+  ctx.strokeStyle="#d5e0e522";ctx.lineWidth=2;
+  for(let y=8;y<256;y+=16){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(256,y+22);ctx.stroke()}
+  ctx.strokeStyle="#05090c88";ctx.lineWidth=3;
+  for(let x=20;x<244;x+=38){ctx.beginPath();ctx.moveTo(x,112);ctx.lineTo(x,166);ctx.stroke()}
+  ctx.fillStyle=palette.accent;
+  for(let x=30;x<230;x+=44){ctx.fillRect(x,192,16,3);ctx.fillRect(x+4,205,8,2)}
+  const texture=new THREE.CanvasTexture(canvas);
+  texture.colorSpace=THREE.SRGBColorSpace;
+  texture.wrapS=THREE.RepeatWrapping;texture.wrapT=THREE.RepeatWrapping;
+  texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+  texture.needsUpdate=true;weaponBaseTextures.set(weaponId,texture);
+  return texture;
+}
+function applyWeaponBaseMaterials(model,weaponId){
+  const palette=WEAPON_BASE_PALETTES[weaponId]||WEAPON_BASE_PALETTES.akr;
+  const texture=weaponBaseTexture(weaponId);
   model.traverse(node=>{
     if(!node.isMesh)return;
+    const originalMaterials=Array.isArray(node.material)?node.material:[node.material];
+    const materials=originalMaterials.map(original=>{
+      const material=original?.clone?.()||new THREE.MeshStandardMaterial();
+      if(!original?.map?.image){material.map=texture;if(material.color)material.color.set("#ffffff")}
+      material.roughness=weaponId==="knife"?.3:weaponId==="shotgun"?.62:.48;
+      material.metalness=palette.metal;material.side=THREE.DoubleSide;material.needsUpdate=true;
+      return material;
+    });
+    node.material=Array.isArray(node.material)?materials:materials[0];
     node.castShadow=false;node.receiveShadow=false;node.frustumCulled=true;
-    if(node.material&&"roughness" in node.material)node.material.roughness=Math.max(.4,node.material.roughness||.5);
   });
+}
+function normalizeWeaponModel(model,targetLength,weaponId="akr"){
+  let bounds=new THREE.Box3().setFromObject(model);
+  const size=bounds.getSize(new THREE.Vector3());
+  // FBX files in this asset pack use more than one local forward axis.
+  if(size.x>=size.y&&size.x>=size.z)model.rotation.y+=Math.PI/2;
+  else if(size.y>=size.x&&size.y>=size.z)model.rotation.x+=Math.PI/2;
+  else model.rotation.y+=Math.PI;
+  model.updateMatrixWorld(true);bounds.setFromObject(model);
+  const rotatedSize=bounds.getSize(new THREE.Vector3());
+  const longest=Math.max(rotatedSize.x,rotatedSize.y,rotatedSize.z);
+  if(longest>0)model.scale.setScalar(targetLength/longest);
+  model.updateMatrixWorld(true);bounds.setFromObject(model);
+  const center=bounds.getCenter(new THREE.Vector3());model.position.sub(center);
+  applyWeaponBaseMaterials(model,weaponId);
   return model;
 }
 function normalizeKnifeSkinModel(model,targetLength=.62){
@@ -1933,13 +1987,14 @@ async function loadKnifeSkinTemplate(skinId){
   }
   return knifeSkinLoadPromises.get(skinId);
 }
-async function loadRemoteWeapon(url,targetLength){
+async function loadRemoteWeapon(url,targetLength,weaponId){
   const manager=new THREE.LoadingManager();
   manager.addHandler(/\\.tga$/i,new TGALoader(manager));
   const loader=new FBXLoader(manager);
   const model=await loader.loadAsync(url);
-  return normalizeWeaponModel(model,targetLength);
+  return normalizeWeaponModel(model,targetLength,weaponId);
 }
+
 async function loadHeldWeapon(){
   if(!heldWeaponRoot){
     heldWeaponRoot=new THREE.Group();
@@ -1951,7 +2006,7 @@ async function loadHeldWeapon(){
   setLoadingDetail("weaponLoadStatus","ЗАВАНТАЖЕННЯ МОДЕЛЕЙ ЗБРОЇ…","active");
   const modelKeys=Object.keys(WEAPON_MODEL_URLS);
   const jobs=modelKeys.map(async weaponId=>{
-    const model=await loadRemoteWeapon(WEAPON_MODEL_URLS[weaponId],WEAPON_MODEL_LENGTHS[weaponId]);
+    const model=await loadRemoteWeapon(WEAPON_MODEL_URLS[weaponId],WEAPON_MODEL_LENGTHS[weaponId],weaponId);
     if(weaponId==="akr")akModelTemplate=model;
     else if(weaponId==="p350")p350ModelTemplate=model;
     else weaponModelTemplates[weaponId]=model;
@@ -1987,6 +2042,8 @@ let velocityY=0;
 let isThird=false;
 let lastMoveSend=0;
 let lastShot=0;
+let lastShotMapBlocked=false;
+let lastShotMapImpact=null;
 let hitConfirmTimer=null;
 let selectedWeapon="knife";
 let equippedSkinLoadout={};
@@ -3804,7 +3861,8 @@ function getLocalShotEndpoint(direction,range,preferredImpact=null){
   const origin=camera.position.clone();
   const maxRange=Math.max(.1,Number(range)||60);
   const endpoint=origin.clone().addScaledVector(direction,maxRange);
-  let nearestDistance=maxRange;
+  let nearestDistance=maxRange,targetDistance=Infinity;
+  lastShotMapBlocked=false;lastShotMapImpact=null;
   scene.updateMatrixWorld(true);camera.updateMatrixWorld(true);
   raycaster.set(origin,direction);raycaster.near=.02;raycaster.far=maxRange;
   const mapHits=raycaster.intersectObjects(mapObjects.filter(object=>object?.visible),false);
@@ -3813,16 +3871,22 @@ function getLocalShotEndpoint(direction,range,preferredImpact=null){
   const targetMeshes=Object.values(enemies).filter(enemy=>enemy?.mesh?.visible&&Number(enemy.hp)>0).map(enemy=>enemy.mesh);
   if(targetMeshes.length){
     const targetHits=raycaster.intersectObjects(targetMeshes,true);
-    const targetHit=targetHits.find(hit=>hit.distance>.03&&hit.distance<nearestDistance);
-    if(targetHit){nearestDistance=targetHit.distance;endpoint.copy(targetHit.point)}
+    const targetHit=targetHits.find(hit=>hit.distance>.03);
+    if(targetHit){targetDistance=targetHit.distance;if(targetHit.distance<nearestDistance){nearestDistance=targetHit.distance;endpoint.copy(targetHit.point)}}
   }
+  lastShotMapBlocked=Boolean(mapHit&&mapHit.distance<targetDistance);
+  if(lastShotMapBlocked)lastShotMapImpact=mapHit.point.clone();
   if(preferredImpact?.isVector3){
     const distance=origin.distanceTo(preferredImpact);
-    if(distance>.03&&distance<nearestDistance+.02){nearestDistance=distance;endpoint.copy(preferredImpact)}
+    if(distance>.03&&distance<nearestDistance+.02){
+      nearestDistance=distance;endpoint.copy(preferredImpact);
+      lastShotMapBlocked=true;lastShotMapImpact=preferredImpact.clone();
+    }
   }
   raycaster.near=0;raycaster.far=Infinity;
   return endpoint;
 }
+
 function shoot(attackStyle="primary"){
   if(!isTeamCombat&&!isTrainingMode)return;
   if(matchPhase!=="game"||hp<=0||!mapLoadFinished)return;
@@ -3868,9 +3932,10 @@ function shoot(attackStyle="primary"){
     spawnMuzzleFlash(start,dir,selectedWeapon==="p350"?0xc8efff:0xffc56d);
     spawnTracer(start,end,selectedWeapon==="p350"?0xbceaff:0xffdf9a,110);
   }
-  const impactPayload=impact&&!isThird?{x:impact.x,y:impact.y,z:impact.z}:null;
-  if(isTrainingMode)socket.emit("training_shoot",{trainingId,weapon:selectedWeapon,oy:shotOriginY,dx:serverAim.x,dy:serverAim.y,dz:serverAim.z});
-  else socket.emit("team_shoot",{matchId,weapon:selectedWeapon,oy:shotOriginY,dx:serverAim.x,dy:serverAim.y,dz:serverAim.z,impact:impactPayload});
+  const mapImpact=lastShotMapBlocked&&!isThird&&lastShotMapImpact?{x:lastShotMapImpact.x,y:lastShotMapImpact.y,z:lastShotMapImpact.z}:null;
+  const impactPayload=impact&&!isThird?{x:impact.x,y:impact.y,z:impact.z}:(mapImpact||null);
+  if(isTrainingMode)socket.emit("training_shoot",{trainingId,weapon:selectedWeapon,oy:shotOriginY,dx:serverAim.x,dy:serverAim.y,dz:serverAim.z,mapBlocked:lastShotMapBlocked});
+  else socket.emit("team_shoot",{matchId,weapon:selectedWeapon,oy:shotOriginY,dx:serverAim.x,dy:serverAim.y,dz:serverAim.z,impact:impactPayload,mapBlocked:lastShotMapBlocked});
 }
 function fireLoop(){
   if(fireHeld){shoot();requestAnimationFrame(fireLoop)}
