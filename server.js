@@ -1721,17 +1721,10 @@ const JOIN_TIMEOUT_SECONDS = 90;
 const MAX_CONCURRENT_MATCHES = Math.max(1, Math.min(100, Number.parseInt(process.env.MAX_CONCURRENT_MATCHES || "100", 10) || 100));
 
 const PLAYABLE_MAPS = Object.freeze({
-  SANDSTONE: { id: "SANDSTONE", name: "SANDSTONE", kind: "tight-defuse" },
-  SMALL_YARD: { id: "SMALL_YARD", name: "SMALL YARD", kind: "small-arena" },
-  M3_Maze: { id: "M3_Maze", name: "M3 MAZE", kind: "model" },
-  FIELD_ARENA: { id: "FIELD_ARENA", name: "FIELD ARENA", kind: "arena" },
-  NEON_YARD: { id: "NEON_YARD", name: "NEON YARD", kind: "neon" },
-  HILL_TOWN: { id: "HILL_TOWN", name: "HILL TOWN", kind: "hill-town" },
-  ZONE_9: { id: "ZONE_9", name: "ZONE 9", kind: "zone9-fbx" }
+  ZONE_9: { id: "ZONE_9", name: "ZONE 9", kind: "glb" }
 });
 function normalizeMapId(value) {
-  const id = cleanText(value, 32);
-  return Object.prototype.hasOwnProperty.call(PLAYABLE_MAPS, id) ? id : "M3_Maze";
+  return "ZONE_9";
 }
 
 const MODE_CONFIGS = {
@@ -1739,30 +1732,29 @@ const MODE_CONFIGS = {
     id: "allies",
     name: "СОЮЗНИКИ · 2×2",
     short: "2V2",
-    map: "SANDSTONE",
+    map: "ZONE_9",
     requiredPlayers: 4
-  },
-  hide_seek: {
-    id: "hide_seek",
-    name: "HIDE & SEEK",
-    short: "HS",
-    map: "M3_Maze",
-    requiredPlayers: 3
   },
   team_fight: {
     id: "team_fight",
     name: "КБ · 1×1×1",
     short: "FFA",
-    map: "SMALL_YARD",
+    map: "ZONE_9",
     requiredPlayers: 3
+  },
+  team_fight_3v3: {
+    id: "team_fight_3v3",
+    name: "КОМАНДНИЙ БІЙ · 3×3",
+    short: "3V3",
+    map: "ZONE_9",
+    requiredPlayers: 6
   }
 };
 
 const ALLIES_BUY_PRICES = Object.freeze({ p350: 0, deagle: 700, akr: 2700, m4a1: 3100, p90: 2200, shotgun: 1900, sniper: 4600, knife: 0 });
 
 const TESTER_MODE_CONFIGS = {
-  training: { id: "training", name: "TRAINING", map: "ZONE_9", kind: "solo-map-inspection" },
-  field_test: { id: "field_test", name: "FIELD TEST", map: "HILL_TOWN", kind: "free-range" }
+  training: { id: "training", name: "TRAINING", map: "ZONE_9", kind: "solo-map-inspection" }
 };
 
 function canUseTesterModes(user) {
@@ -1827,7 +1819,7 @@ function emitQueueCount(io) {
       required: getRequiredPlayers(entry.mode),
       mode: entry.mode,
       map: entry.map,
-      mapName: PLAYABLE_MAPS[entry.map]?.name || PLAYABLE_MAPS.M3_Maze.name,
+      mapName: PLAYABLE_MAPS[entry.map]?.name || PLAYABLE_MAPS.ZONE_9.name,
       players: modePlayers.map(p => ({
         userId: p.userId,
         nickname: p.nickname,
@@ -1842,9 +1834,7 @@ function emitQueueCount(io) {
 function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   if (activeMatches.size >= MAX_CONCURRENT_MATCHES) return null;
   const requestedMap = normalizeMapId(mapId);
-  const safeMapId = mode === "allies" ? "SANDSTONE"
-    : mode === "team_fight" ? (requestedMap === "NEON_YARD" ? "NEON_YARD" : "SMALL_YARD")
-    : requestedMap;
+  const safeMapId = "ZONE_9";
   const candidates = Array.isArray(forcedCandidates) ? forcedCandidates : matchmakingQueue.filter(p => p.mode === mode && p.map === safeMapId);
   const requiredPlayers = getRequiredPlayers(mode);
   if (candidates.length < requiredPlayers) return;
@@ -1859,7 +1849,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
   const hunterIndex = mode === "hide_seek" ? crypto.randomInt(0, players.length) : -1;
   const MATCH_SPAWNS = {
     HILL_TOWN: [{x:-42,y:0,z:-28},{x:42,y:0,z:-28},{x:-42,y:0,z:28},{x:42,y:0,z:28}],
-    ZONE_9: [{x:-92,y:0,z:92},{x:-86,y:0,z:92},{x:-92,y:0,z:86},{x:-86,y:0,z:86}],
+    ZONE_9: [{x:-92,y:0,z:92},{x:-86,y:0,z:92},{x:-92,y:0,z:86},{x:92,y:0,z:-92},{x:86,y:0,z:-92},{x:92,y:0,z:-86}],
     SANDSTONE: [{x:-50,y:0,z:-8.75},{x:-50,y:0,z:8.75},{x:50,y:0,z:-8.75},{x:50,y:0,z:8.75}],
     SMALL_YARD: [{x:-23,y:0,z:-23},{x:23,y:0,z:-23},{x:0,y:0,z:24}],
     M3_Maze: [{x:-195,y:0,z:-195},{x:195,y:0,z:-195},{x:-195,y:0,z:195},{x:195,y:0,z:195}],
@@ -1875,7 +1865,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     prototypeBotMatch,
     lobbyMatch,
     map: safeMapId,
-    mapName: PLAYABLE_MAPS[safeMapId]?.name || PLAYABLE_MAPS.M3_Maze.name,
+    mapName: PLAYABLE_MAPS[safeMapId]?.name || PLAYABLE_MAPS.ZONE_9.name,
     mapState: safeMapId === "HILL_TOWN" ? createMapInteractionState() : null,
     players: players.map((p, i) => ({
       socketId: p.socketId || null,
@@ -1884,14 +1874,18 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
       isBot: Boolean(p.isBot),
       nickname: p.nickname,
       playerAvatar: p.playerAvatar || "/avatars/default.jpg",
-      role: mode === "hide_seek" ? (i === hunterIndex ? "hunter" : "runner")
-        : mode === "allies" ? ((lobbyMatch && p.team) ? (p.team === "B" ? "teamB" : "teamA") : (i < 2 ? "teamA" : "teamB"))
-        : (i % 2 === 0 ? "teamA" : "teamB"),
+      role: mode === "allies"
+        ? ((lobbyMatch && p.team) ? (p.team === "B" ? "teamB" : "teamA") : (i < 2 ? "teamA" : "teamB"))
+        : mode === "team_fight_3v3"
+          ? ((p.team || (i < 3 ? "A" : "B")) === "B" ? "teamB" : "teamA")
+          : (i % 2 === 0 ? "teamA" : "teamB"),
       team: mode === "allies"
-        ? (lobbyMatch ? (p.team === "B" ? "B" : "A") : (prototypeBotMatch ? (i < 2 ? "A" : "B") : (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : "A") : (i < 2 ? "A" : "B"))))
-        : mode === "team_fight"
-          ? ((prototypeBotMatch || lobbyMatch) ? ["A", "B", "C"][i % 3] : (players.some(candidate => candidate.isBot) ? (p.isBot ? "B" : ["A", "B", "C"][i % 3]) : ["A", "B", "C"][i % 3]))
-          : null,
+        ? (lobbyMatch ? (p.team === "B" ? "B" : "A") : (i < 2 ? "A" : "B"))
+        : mode === "team_fight_3v3"
+          ? (p.team === "B" ? "B" : p.team === "A" ? "A" : (i < 3 ? "A" : "B"))
+          : mode === "team_fight"
+            ? ["A", "B", "C"][i % 3]
+            : null,
       hp: 100,
       score: 0,
       kills: 0,
@@ -2085,7 +2079,7 @@ function createLobbyMatch(io, socket, data = {}) {
   const lobby = current.lobby;
   if (lobby.ownerId !== socket.user.id) return emitLobbyError(socket, "Почати матч може лише лідер лобі.", "lobby_start_error");
   const mode = lobby.mode;
-  const map = mode === "allies" ? "SANDSTONE" : lobby.map;
+  const map = "ZONE_9";
   const required = getRequiredPlayers(mode);
   const members = [...lobby.members];
   if (members.length > required) return emitLobbyError(socket, "У лобі більше гравців, ніж підтримує цей режим.", "lobby_start_error");
@@ -2096,7 +2090,7 @@ function createLobbyMatch(io, socket, data = {}) {
   }
   const fillBots = data.fillWithBots !== false;
   if (members.length < required && !fillBots) return emitLobbyError(socket, "Додай друзів або ввімкни заповнення ботами.", "lobby_start_error");
-  const candidates = members.map(member => {
+  const candidates = members.map((member, index) => {
     const user = users.find(candidate => candidate.id === member.userId);
     return {
       socketId: member.socketId,
@@ -2106,7 +2100,7 @@ function createLobbyMatch(io, socket, data = {}) {
       uuid: user?.uuid || "",
       isBot: false,
       lobbyMatch: true,
-      team: mode === "allies" ? (member.team === "B" ? "B" : "A") : null,
+      team: mode === "allies" || mode === "team_fight_3v3" ? (member.team === "B" ? "B" : member.team === "A" ? "A" : (index < Math.ceil(getRequiredPlayers(mode) / 2) ? "A" : "B")) : null,
       mode, map
     };
   });
@@ -2114,7 +2108,7 @@ function createLobbyMatch(io, socket, data = {}) {
     const userId = "lobby_bot_" + crypto.randomBytes(8).toString("hex");
     const countA = candidates.filter(candidate => candidate.team === "A").length;
     const countB = candidates.filter(candidate => candidate.team === "B").length;
-    const botTeam = mode === "allies" ? (countA <= countB ? "A" : "B") : null;
+    const botTeam = mode === "allies" || mode === "team_fight_3v3" ? (countA <= countB ? "A" : "B") : null;
     candidates.push({
       socketId: null, userId, uuid: "", isBot: true, lobbyMatch: true, team: botTeam,
       nickname: "BOT · " + String(index + 1).padStart(2, "0"),
@@ -2351,19 +2345,27 @@ function finishMatch(io, matchId) {
   if (match.phaseTimer) clearInterval(match.phaseTimer);
   if (match.joinTimer) clearTimeout(match.joinTimer);
 
+  const teamScore = match.mode === "team_fight_3v3" ? match.players.reduce((totals, player) => {
+    if (player.team === "A" || player.team === "B") totals[player.team] += Number(player.score) || 0;
+    return totals;
+  }, { A: 0, B: 0 }) : null;
   const ranked = [...match.players].sort((a, b) => match.mode === "allies"
     ? (match.roundWins?.[b.team] || 0) - (match.roundWins?.[a.team] || 0) || b.score - a.score
-    : b.score - a.score);
+    : match.mode === "team_fight_3v3"
+      ? (teamScore[b.team] || 0) - (teamScore[a.team] || 0) || b.score - a.score
+      : b.score - a.score);
   const highestScore = ranked[0]?.score || 0;
   const winningTeam = match.mode === "allies"
     ? (match.roundWins.A === match.roundWins.B ? null : (match.roundWins.A > match.roundWins.B ? "A" : "B"))
-    : null;
+    : match.mode === "team_fight_3v3"
+      ? (teamScore.A === teamScore.B ? null : (teamScore.A > teamScore.B ? "A" : "B"))
+      : null;
 
   for (const player of match.players) {
     const user = users.find(u => u.id === player.userId);
     if (!user) continue;
 
-    const won = match.mode === "allies"
+    const won = match.mode === "allies" || match.mode === "team_fight_3v3"
       ? Boolean(winningTeam && player.team === winningTeam)
       : highestScore > 0 && player.score === highestScore;
     const gold = won ? 10 : 2;
@@ -2400,8 +2402,8 @@ function respawnPlayer(match, player) {
 }
 
 const SANDSTONE_BOMB_SITES = Object.freeze({
-  A: Object.freeze({ x: 37.5, z: -33.75 }),
-  B: Object.freeze({ x: 22.5, z: 37.5 })
+  A: Object.freeze({ x: 48, z: 70 }),
+  B: Object.freeze({ x: -72, z: -40 })
 });
 
 function alliesSide(match, team) {
@@ -3052,6 +3054,8 @@ function segmentIntersectsRect2d(from,to,rect){
 }
 
 const SERVER_MAP_LIMITS = Object.freeze({
+  // Zone 9 is normalized to a 250-unit footprint by the GLB loader.
+  ZONE_9: { x: 125, z: 125 },
   // Keep server limits just inside the physical perimeter walls built by the client.
   SANDSTONE: { x: 60, z: 60 },
   SMALL_YARD: { x: 32, z: 32 },
@@ -3300,7 +3304,7 @@ function tracePlayerHit(origin, aim, targetPos, range, options = {}) {
 }
 
 function handleTeamShot(io, match, shooter, data) {
-  if (!["team_fight", "allies"].includes(match.mode) || match.phase !== "game") return;
+  if (!["team_fight", "allies", "team_fight_3v3"].includes(match.mode) || match.phase !== "game") return;
 
   const weaponId = normalizeWeaponId(data?.weapon);
   if (match.mode === "allies" && (!Array.isArray(shooter.weapons) || !shooter.weapons.includes(weaponId) || shooter.equippedWeapon !== weaponId)) return;
@@ -3511,10 +3515,10 @@ io.on("connection", socket => {
       return socket.emit("training_error", { message: "Усі тренувальні та тестові режими доступні лише тестерам." });
     }
 
-    const prototype = mode === "field_test" && data?.prototype === true;
-    const gameMode = ["allies", "team_fight"].includes(data?.gameMode) ? data.gameMode : "team_fight";
+    const prototype = false;
+    const gameMode = ["allies", "team_fight", "team_fight_3v3"].includes(data?.gameMode) ? data.gameMode : "team_fight";
     const previous = trainingSessions.get(user.id);
-    const sessionMap = ["field_test", "training"].includes(mode) ? normalizeMapId(data?.map || cfg.map) : cfg.map;
+    const sessionMap = normalizeMapId(data?.map || cfg.map);
     const TRAINING_SPAWNS = {
       // Zone 9 is normalized to a 250-unit footprint in the client; CT is on the south-west entrance.
       ZONE_9: {x:-92,y:0,z:92},
@@ -3539,8 +3543,8 @@ io.on("connection", socket => {
       socketId: socket.id,
       playerPos: spawnPosition,
       playerRotY: 0,
-      // Map inspection is strictly solo; the optional moving target exists only in FIELD TEST.
-      bot: mode === "field_test" ? { id: "training_bot", nickname: "ТРЕНУВАЛЬНА МІШЕНЬ", role: "runner", team: "B", hp: 100, maxHp: 100, hits: 0, x: spawnPosition.x, y: 0, z: spawnPosition.z - 8, rotY: Math.PI, action: "idle", updatedAt: Date.now() } : null,
+      // Training is strictly solo: no bots, targets, or additional players.
+      bot: null,
       spawnPosition: { ...spawnPosition },
       lastMoveAt: 0,
       lastActionAt: 0,
@@ -3819,15 +3823,15 @@ io.on("connection", socket => {
     const user = socket.user;
     if (!user || playerMatch(user.uuid || user.id)) return emitLobbyError(socket, "Ти вже перебуваєш у матчі.");
     if (lobbyByUser.has(user.id)) return emitLobbyError(socket, "Ти вже в лобі.");
-    const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
+    const mode = ["allies", "team_fight", "team_fight_3v3"].includes(data?.mode) ? data.mode : "allies";
     const requestedMap = normalizeMapId(data?.map);
-    const map = mode === "allies" ? "SANDSTONE" : (requestedMap === "NEON_YARD" ? "NEON_YARD" : "SMALL_YARD");
+    const map = "ZONE_9";
     const lobbyId = "lobby_" + crypto.randomBytes(7).toString("hex");
     const lobby = {
       id: lobbyId, ownerId: user.id, mode, map, maxPlayers: getRequiredPlayers(mode),
       createdAt: Date.now(),
       members: [{
-        userId: user.id, uuid: user.uuid || "", socketId: socket.id, team: mode === "allies" ? "A" : null,
+        userId: user.id, uuid: user.uuid || "", socketId: socket.id, team: mode === "allies" || mode === "team_fight_3v3" ? "A" : null,
         nickname: user.nickname, playerAvatar: user.playerAvatar || "/avatars/default.jpg"
       }]
     };
@@ -3863,7 +3867,7 @@ io.on("connection", socket => {
     const countB = lobby.members.filter(member => member.team === "B").length;
     lobby.members.push({
       userId: user.id, uuid: user.uuid || "", socketId: socket.id,
-      team: lobby.mode === "allies" ? (countA <= countB ? "A" : "B") : null,
+      team: lobby.mode === "allies" || lobby.mode === "team_fight_3v3" ? (countA <= countB ? "A" : "B") : null,
       nickname: user.nickname, playerAvatar: user.playerAvatar || "/avatars/default.jpg"
     });
     lobbyByUser.set(user.id, lobby.id);
@@ -3877,14 +3881,14 @@ io.on("connection", socket => {
   });
   socket.on("lobby_set_team", data => {
     const current = lobbyMemberFromSocket(socket);
-    if (!current || current.lobby.mode !== "allies") return emitLobbyError(socket, "Команди доступні лише в режимі «Союзники».", "lobby_team_result");
+    if (!current || !["allies","team_fight_3v3"].includes(current.lobby.mode)) return emitLobbyError(socket, "Команди доступні лише в командних режимах.", "lobby_team_result");
     if (current.lobby.ownerId !== socket.user.id) return emitLobbyError(socket, "Змінювати команди може лише лідер лобі.", "lobby_team_result");
     const targetId = normalizeId(data?.userId);
     const team = data?.team === "B" ? "B" : data?.team === "A" ? "A" : null;
     const target = current.lobby.members.find(member => member.userId === targetId);
     if (!target || !team) return emitLobbyError(socket, "Не вдалося змінити команду.", "lobby_team_result");
     const countInTeam = current.lobby.members.filter(member => member.team === team && member.userId !== targetId).length;
-    if (countInTeam >= 2) return emitLobbyError(socket, "У команді вже є двоє гравців. Перенеси когось в іншу команду.", "lobby_team_result");
+    if (countInTeam >= (current.lobby.mode === "team_fight_3v3" ? 3 : 2)) return emitLobbyError(socket, "У команді вже немає вільних місць.", "lobby_team_result");
     target.team = team;
     socket.emit("lobby_team_result", { success: true, userId: targetId, team });
     emitLobbyState(io, current.lobby);
@@ -3894,10 +3898,10 @@ io.on("connection", socket => {
     if (!current) return emitLobbyError(socket, "Спочатку створи або приєднайся до лобі.", "lobby_settings_result");
     const lobby = current.lobby;
     if (lobby.ownerId !== socket.user?.id) return emitLobbyError(socket, "Змінювати режим може лише лідер лобі.", "lobby_settings_result");
-    const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : null;
+    const mode = ["allies", "team_fight", "team_fight_3v3"].includes(data?.mode) ? data.mode : null;
     if (!mode) return emitLobbyError(socket, "Невідомий режим гри.", "lobby_settings_result");
     const mapCandidate = normalizeMapId(data?.map);
-    const map = mode === "allies" ? "SANDSTONE" : (["SMALL_YARD", "NEON_YARD"].includes(mapCandidate) ? mapCandidate : null);
+    const map = "ZONE_9";
     if (!map) return emitLobbyError(socket, "Для цього режиму обери доступну карту.", "lobby_settings_result");
     const required = getRequiredPlayers(mode);
     if (lobby.members.length > required) return emitLobbyError(socket, "У лобі забагато гравців для цього режиму. Вийди з лобі або обери інший режим.", "lobby_settings_result");
@@ -3905,9 +3909,9 @@ io.on("connection", socket => {
     lobby.mode = mode;
     lobby.map = map;
     lobby.maxPlayers = required;
-    if (mode === "allies" && modeChanged) {
+    if ((mode === "allies" || mode === "team_fight_3v3") && modeChanged) {
       lobby.members.forEach((member, index) => { member.team = index % 2 === 0 ? "A" : "B"; });
-    } else if (mode !== "allies") {
+    } else if (mode !== "allies" && mode !== "team_fight_3v3") {
       lobby.members.forEach(member => { member.team = null; });
     }
     socket.emit("lobby_settings_result", { success: true, mode, map, maxPlayers: required });
@@ -3940,9 +3944,9 @@ io.on("connection", socket => {
       return;
     }
 
-    const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
+    const mode = ["allies", "team_fight", "team_fight_3v3"].includes(data?.mode) ? data.mode : "allies";
     const requestedMap = normalizeMapId(data?.map);
-    const map = mode === "allies" ? "SANDSTONE" : (requestedMap === "NEON_YARD" ? "NEON_YARD" : "SMALL_YARD");
+    const map = "ZONE_9";
     removeFromQueue(user.uuid || user.id);
 
     const botCandidate = (nickname, suffix) => ({
@@ -3969,7 +3973,9 @@ io.on("connection", socket => {
     };
     const bots = mode === "allies"
       ? [botCandidate("BOT · СОЮЗНИК", "ally"), botCandidate("BOT · ПРОТИВНИК 1", "enemy1"), botCandidate("BOT · ПРОТИВНИК 2", "enemy2")]
-      : [botCandidate("BOT · ПРОТИВНИК 1", "enemy1"), botCandidate("BOT · ПРОТИВНИК 2", "enemy2")];
+      : mode === "team_fight_3v3"
+        ? [botCandidate("BOT · СОЮЗНИК 1", "ally1"), botCandidate("BOT · СОЮЗНИК 2", "ally2"), botCandidate("BOT · ПРОТИВНИК 1", "enemy1"), botCandidate("BOT · ПРОТИВНИК 2", "enemy2"), botCandidate("BOT · ПРОТИВНИК 3", "enemy3")]
+        : [botCandidate("BOT · ПРОТИВНИК 1", "enemy1"), botCandidate("BOT · ПРОТИВНИК 2", "enemy2")];
     createMatch(io, mode, map, [humanCandidate, ...bots]);
   });
 
@@ -3984,9 +3990,9 @@ io.on("connection", socket => {
       }
     }
 
-    const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
+    const mode = ["allies", "team_fight", "team_fight_3v3"].includes(data?.mode) ? data.mode : "allies";
     const requestedMap = normalizeMapId(data?.map);
-    const map = mode === "allies" ? "SANDSTONE" : (requestedMap === "NEON_YARD" ? "NEON_YARD" : "SMALL_YARD");
+    const map = "ZONE_9";
     removeFromQueue(user.uuid || user.id);
 
     matchmakingQueue.push({

@@ -1293,6 +1293,9 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 @keyframes softer-reveal-sweep{from{transform:translateX(-12%) rotate(0)}to{transform:translateX(12%) rotate(360deg)}}
 @media(max-width:900px){#softerCollectionGrid{grid-template-columns:repeat(2,minmax(0,1fr))}#store .softer-hero{grid-template-columns:1fr}.softer-market-card{grid-template-columns:60px minmax(0,1fr) auto}}
 </style>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="/mobile-game.css">
+<link rel="stylesheet" href="/lobby-remaster.css">
 </head>
 <body class="lobby-screen">
 <div class="app">
@@ -1339,6 +1342,22 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
     <section class="home-hero panel" aria-label="Головне ігрове меню">
       <img class="home-hero-art" src="game1.png" alt="" aria-hidden="true">
       <canvas id="homeAgentCanvas" class="home-agent-canvas" aria-label="3D-загін StandoffX"></canvas>
+       <button type="button" class="home-agent-toggle" id="homeAgentToggle" aria-expanded="false" aria-controls="homeAgentPanel">
+         <span class="home-agent-toggle-mark">A</span><span>АГЕНТ</span><span class="home-agent-toggle-arrow">⌄</span>
+       </button>
+       <div class="home-agent-panel" id="homeAgentPanel" aria-hidden="true">
+         <div class="home-agent-panel-head"><b>АГЕНТ</b><span>ЗОВНІШНІЙ ВИГЛЯД</span></div>
+         <div class="home-agent-side" role="group" aria-label="Сторона">
+           <button type="button" data-home-agent-side="T">T · АТАКА</button>
+           <button type="button" data-home-agent-side="CT">CT · ЗАХИСТ</button>
+         </div>
+         <div class="home-agent-panel-label">ПОЗА / АНІМАЦІЯ</div>
+         <div class="home-agent-poses" role="group" aria-label="Анімація агента">
+           <button type="button" data-home-agent-animation="Excited"><span>01</span><b>ГОТОВНІСТЬ</b></button>
+           <button type="button" data-home-agent-animation="Talking On Phone"><span>02</span><b>ПО ТЕЛЕФОНУ</b></button>
+           <button type="button" data-home-agent-animation="Illegal Elbow Punch"><span>03</span><b>УДАР ЛІКТЕМ</b></button>
+         </div>
+       </div>
       <div class="home-squad-bar" aria-label="Загін гравців"><div class="home-squad-head"><span>ЗАГІН</span><small id="homeSquadStatus">СОЛО</small><small id="homeSquadCount">1 / 4</small></div><div id="homeSquadRoster" class="home-squad-roster" aria-live="polite"></div></div>
       <div class="home-hero-copy">
         <div class="home-hero-overline"><span class="hero-live-dot"></span> STANDOFFX <span class="hero-separator">/</span> TACTICAL COMBAT</div>
@@ -1414,10 +1433,10 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
       <div class="panelhead"><span>СТВОРИТИ ЛОБІ</span><span>PARTY</span></div>
       <div class="panelbody">
         <label class="lobby-field">РЕЖИМ
-          <select id="lobbyModeSelect"><option value="allies">СОЮЗНИКИ · 2×2</option><option value="team_fight">КБ · 1×1×1</option></select>
+          <select id="lobbyModeSelect"><option value="allies">СОЮЗНИКИ · 2×2</option><option value="team_fight">КБ · 1×1×1</option><option value="team_fight_3v3">КОМАНДНИЙ БІЙ · 3×3</option></select>
         </label>
         <label class="lobby-field">КАРТА
-          <select id="lobbyMapSelect"><option value="SANDSTONE">SANDSTONE</option><option value="SMALL_YARD">SMALL YARD</option><option value="NEON_YARD">NEON YARD</option></select>
+          <select id="lobbyMapSelect"><option value="ZONE_9">ZONE 9</option></select>
         </label>
         <label class="lobby-check"><input type="checkbox" id="lobbyFillBots" checked><span>Заповнити вільні місця ботами</span></label>
         <p class="muted lobby-help">Створи кімнату, запроси друзів і натисни «Почати». Вільні місця можна заповнити агентами, а для режиму «Союзники» розподіляй гравців між командами.</p>
@@ -1519,16 +1538,17 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 </div>
 
 <div id="modeModal" class="modal"><div class="modalbox modebox"><div class="modalhead"><span>ОБЕРИ РЕЖИМ</span><button class="close" data-close="modeModal" aria-label="Закрити">×</button></div><div class="muted mode-modal-subtitle">Обери режим і карту. Налаштування зброї — вже в грі.</div><div class="modecards" id="modeBar">
-  <button class="modebtn active" data-mode="allies"><strong>СОЮЗНИКИ · 2 НА 2</strong><span class="mode-desc">Раунди · закладка та знешкодження бомби</span></button>
-  <button class="modebtn" data-mode="team_fight"><strong>КБ · 1 НА 1 НА 1</strong><span class="mode-desc">Кожен сам за себе · різні точки респавну</span></button>
-  <button class="modebtn" data-mode="training"><strong>ТРЕНУВАННЯ</strong><span class="mode-desc">Соло · огляд карти без інших гравців · лише тестери</span></button>
+  <button class="modebtn active" data-mode="allies"><strong>СОЮЗНИКИ · 2 НА 2</strong><span class="mode-desc">Раунди · атака / захист · бомба</span></button>
+  <button class="modebtn" data-mode="team_fight"><strong>КБ · 1 НА 1 НА 1</strong><span class="mode-desc">Кожен сам за себе · три гравці</span></button>
+  <button class="modebtn" data-mode="team_fight_3v3"><strong>КОМАНДНИЙ БІЙ · 3 НА 3</strong><span class="mode-desc">Дві команди · шість гравців</span></button>
+  <button class="modebtn" data-mode="training"><strong>ТРЕНУВАННЯ</strong><span class="mode-desc">Соло · тільки тестери</span></button>
 </div><div id="testerGameplaySwitch" class="tester-mode-switch" role="group" aria-label="Тип гри">
   <span class="tester-mode-label">ТИП ГРИ</span>
   <div class="tester-mode-segment">
     <button type="button" class="tester-mode-option active" data-test-gameplay="prototype" aria-pressed="true" title="Той самий режим і ті самі правила; місця інших гравців займають нерухомі боти">ПРОТОТИП · БОТИ</button>
     <button type="button" class="tester-mode-option" data-test-gameplay="real" aria-pressed="false" title="Звичайний пошук матчу з реальними гравцями">ГРА · ГРАВЦІ</button>
   </div>
-</div><h3 style="margin:10px 0 4px">ВИБІР КАРТИ</h3><div class="mapcards" id="mapBar"><button class="map-option active" data-map="SANDSTONE"><b>SANDSTONE</b><span>Закриті провулки · центральний Mid · бомбсайти A/B</span></button><button class="map-option" data-map="SMALL_YARD"><b>SMALL YARD</b><span>Мала закрита арена для КБ 1 на 1 на 1</span></button><button class="map-option" data-map="NEON_YARD"><b>NEON YARD</b><span>Компактна промислова арена з трьома проходами</span></button><button class="map-option" data-map="HILL_TOWN"><b>HILL TOWN</b><span>Тестова модульна карта з будівлями й арками</span></button><button class="map-option" data-map="M3_Maze"><b>M3 MAZE</b><span>Лабіринт для тестування</span></button><button class="map-option" data-map="FIELD_ARENA"><b>FIELD ARENA</b><span>Відкрита тренувальна арена</span></button><button class="map-option" data-map="ZONE_9"><b>ZONE 9</b><span>Стара індустріальна карта · CT Spawn · A/B</span></button></div><button class="primary" id="confirmModeBtn">ПОЧАТИ ПОШУК МАТЧУ</button></div></div>
+</div><h3 style="margin:10px 0 4px">ВИБІР КАРТИ</h3><div class="mapcards" id="mapBar"><button class="map-option active" data-map="ZONE_9"><b>ZONE 9</b><span>Єдина карта всіх режимів</span></button></div><button class="primary" id="confirmModeBtn">ПОЧАТИ ПОШУК МАТЧУ</button></div></div>
 <div id="searchModal" class="modal"><div class="modalbox"><div class="modalhead"><span id="searchTitle">ПОШУК МАТЧУ</span><button class="close" data-close="searchModal">×</button></div><div id="searchMode" class="muted">HIDE &amp; SEEK</div><div id="queue" class="queuecount">1 / 3</div><div id="searchText" class="muted">Очікування гравців...</div><div id="searchPlayers" class="waitplayers"></div><button class="danger" id="cancelSearch">СКАСУВАТИ</button></div></div>
 <div id="clanModal" class="modal"><div class="modalbox"><div class="modalhead"><span id="clanModalTitle">КЛАН</span><button class="close" data-close="clanModal">×</button></div><div id="clanModalBody"></div></div></div>
 <div id="lobbyInviteModal" class="modal"><div class="modalbox"><div class="modalhead"><span>ЗАПРОШЕННЯ ДО ЛОБІ</span><button class="close" id="declineLobbyInviteTop" type="button">×</button></div><div id="lobbyInviteText" class="muted">Друг запросив тебе до лобі.</div><div class="actions" style="margin-top:16px"><button class="primary" id="acceptLobbyInvite" type="button">ПРИЄДНАТИСЯ</button><button class="secondary" id="declineLobbyInvite" type="button">ВІДХИЛИТИ</button></div></div></div>
@@ -1610,18 +1630,18 @@ let socialSocket=null,currentClanTag=null,clanChatHistory=[],toastTimer=null;
 let currentLobby=null,pendingLobbyInvite=null,pendingHomeInvite=null;
 const savedGameplayMode=localStorage.getItem("sx_test_gameplay");
 let selectedMode=savedGameplayMode==="training"?"training":(localStorage.getItem("sx_mode")||"allies");
-if(!["allies","team_fight","training"].includes(selectedMode))selectedMode="allies";
+if(!["allies","team_fight","team_fight_3v3","training"].includes(selectedMode))selectedMode="allies";
 localStorage.setItem("sx_mode",selectedMode);
-let selectedMap=localStorage.getItem("sx_map")||(selectedMode==="training"?"ZONE_9":selectedMode==="allies"?"SANDSTONE":"SMALL_YARD");
-if(!Object.prototype.hasOwnProperty.call({SANDSTONE:1,SMALL_YARD:1,HILL_TOWN:1,M3_Maze:1,FIELD_ARENA:1,NEON_YARD:1,ZONE_9:1},selectedMap))selectedMap=selectedMode==="training"?"ZONE_9":selectedMode==="allies"?"SANDSTONE":"SMALL_YARD";
+let selectedMap="ZONE_9";
+localStorage.setItem("sx_map",selectedMap);
 let selectedTheme=localStorage.getItem("sx_theme")||"cyan";
 const THEMES=["cyan","violet","red"];
-const MAPS={SANDSTONE:"SANDSTONE",SMALL_YARD:"SMALL YARD",HILL_TOWN:"HILL TOWN",M3_Maze:"M3 MAZE",FIELD_ARENA:"FIELD ARENA",NEON_YARD:"NEON YARD",ZONE_9:"ZONE 9"};
-const MODES={allies:"СОЮЗНИКИ · 2×2",team_fight:"КБ · 1×1×1",training:"ТРЕНУВАННЯ · СОЛО"};
+const MAPS={ZONE_9:"ZONE 9"};
+const MODES={allies:"СОЮЗНИКИ · 2×2",team_fight:"КБ · 1×1×1",team_fight_3v3:"КОМАНДНИЙ БІЙ · 3×3",training:"ТРЕНУВАННЯ · СОЛО"};
 let testGameplayMode=["prototype","real"].includes(savedGameplayMode)?savedGameplayMode:"prototype";
 if(savedGameplayMode==="training")localStorage.setItem("sx_test_gameplay","prototype");
 {
-  const allowed=selectedMode==="training"?Object.keys(MAPS):(selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD","NEON_YARD"]);
+  const allowed=["ZONE_9"];
   if(!allowed.includes(selectedMap))selectedMap=selectedMode==="training"?"ZONE_9":allowed[0];
   localStorage.setItem("sx_map",selectedMap);
 }
@@ -1677,7 +1697,7 @@ function resumeSavedMatch(saved){
   sessionStorage.setItem("myPlayerId",String(saved.userId||me?.id||""));
   sessionStorage.setItem("myPlayerUUID",String(saved.uuid||me?.uuid||""));
   sessionStorage.setItem("currentMatchId",String(saved.matchId));
-  sessionStorage.setItem("selectedMap",String(saved.map||"SANDSTONE"));
+  sessionStorage.setItem("selectedMap","ZONE_9");
   sessionStorage.setItem("selectedMode",String(saved.mode||"allies"));
   sessionStorage.setItem("prototypeMode",saved.prototype?"true":"false");
   if(saved.prototype)sessionStorage.setItem("prototypeGameMode",String(saved.mode||"allies"));
@@ -1690,7 +1710,7 @@ function exitSavedMatch(){
   try{
     localStorage.setItem("sx_abandoned_match",JSON.stringify({
       kind:"match",matchId:String(saved.matchId),userId:String(saved.userId||me?.id||""),
-      uuid:String(saved.uuid||me?.uuid||""),map:String(saved.map||"HILL_TOWN"),mode:String(saved.mode||"allies")
+      uuid:String(saved.uuid||me?.uuid||""),map:"ZONE_9",mode:String(saved.mode||"allies")
     }));
     localStorage.removeItem("sx_active_match");
     sessionStorage.removeItem("currentMatchId");
@@ -1724,10 +1744,7 @@ function applyTheme(theme){
   localStorage.setItem("sx_theme",selectedTheme);
   document.querySelectorAll("[data-theme-choice]").forEach(button=>button.classList.toggle("active",button.dataset.themeChoice===selectedTheme));
 }
-function allowedMapsForMode(){
-  if(selectedMode==="training"&&canTest())return Object.keys(MAPS);
-  return selectedMode==="allies"?["SANDSTONE"]:["SMALL_YARD","NEON_YARD"];
-}
+function allowedMapsForMode(){return ["ZONE_9"];}
 function renderMapSelection(){
   const allowed=allowedMapsForMode();
   if(!allowed.includes(selectedMap))selectedMap=allowed[0];
@@ -1810,7 +1827,7 @@ function render(){
   updateReconnectButton();
 }
 function renderMode(){
-  if(selectedMode==="training"&&!canTest()){selectedMode="allies";selectedMap="SANDSTONE";localStorage.setItem("sx_mode",selectedMode);localStorage.setItem("sx_map",selectedMap)}
+  if(selectedMode==="training"&&!canTest()){selectedMode="allies";selectedMap="ZONE_9";localStorage.setItem("sx_mode",selectedMode);localStorage.setItem("sx_map",selectedMap)}
   const testerSwitch=document.querySelector(".tester-mode-switch");
   if(testerSwitch)testerSwitch.style.display=selectedMode!=="training"?"":"none";
   document.querySelectorAll(".modebtn[data-mode]").forEach(b=>{
@@ -1829,7 +1846,7 @@ document.querySelectorAll(".rail button[data-view]").forEach(b=>b.addEventListen
   $("homeInviteBtn").addEventListener("click",()=>show("friends"));
   $("homeFriendsPreview").addEventListener("click",event=>{const button=event.target.closest("[data-home-invite]");if(button&&!button.disabled)inviteToLobby(button.dataset.homeInvite)});
   $("lobbyModeSelect").value=selectedMode;
-  $("lobbyMapSelect").value=selectedMode==="allies"?"SANDSTONE":selectedMap;
+  $("lobbyMapSelect").value="ZONE_9";
   $("lobbyModeSelect").dispatchEvent(new Event("change"));
 document.querySelectorAll("[data-theme-choice]").forEach(button=>button.addEventListener("click",()=>applyTheme(button.dataset.themeChoice)));
 document.querySelectorAll("[data-map]").forEach(button=>button.addEventListener("click",()=>{
@@ -1841,9 +1858,9 @@ document.querySelectorAll("[data-map]").forEach(button=>button.addEventListener(
 document.querySelectorAll(".modebtn[data-mode]").forEach(b=>b.addEventListener("click",()=>{
   const next=b.dataset.mode;
   if(next==="training"&&!canTest()){notifyToast("Тренування доступне лише тестерам.");return}
-  if(!["allies","team_fight","training"].includes(next))return;
+  if(!["allies","team_fight","team_fight_3v3","training"].includes(next))return;
   selectedMode=next;localStorage.setItem("sx_mode",selectedMode);
-  selectedMap=selectedMode==="training"?"ZONE_9":selectedMode==="allies"?"SANDSTONE":"SMALL_YARD";
+  selectedMap="ZONE_9";
   localStorage.setItem("sx_map",selectedMap);
   renderMode();renderMapSelection();
 }));
@@ -1940,7 +1957,7 @@ $("declineLobbyInvite").addEventListener("click",()=>respondToLobbyInvite(false)
 $("declineLobbyInviteTop").addEventListener("click",()=>respondToLobbyInvite(false));
 $("lobbyModeSelect").addEventListener("change",()=>{
   const mode=$("lobbyModeSelect").value,select=$("lobbyMapSelect");
-  const allowed=mode==="allies"?["SANDSTONE"]:["SMALL_YARD","NEON_YARD"];
+  const allowed=["ZONE_9"];
   for(const option of select.options)option.disabled=!allowed.includes(option.value);
   if(!allowed.includes(select.value))select.value=allowed[0];
 });
@@ -2004,14 +2021,16 @@ function openPlay(){
     $("searchModal").classList.add("show");
     $("searchTitle").textContent="ЗАПУСК ПРОТОТИПУ";
     $("searchMode").textContent=(MODES[selectedMode]||MODES.allies)+" · СТАТИЧНІ БОТИ";
-    const requiredPlayers=selectedMode==="allies"?4:3;
+    const requiredPlayers=selectedMode==="allies"?4:selectedMode==="team_fight_3v3"?6:3;
     $("queue").textContent=requiredPlayers+" / "+requiredPlayers;
     $("searchText").textContent=selectedMode==="allies"
       ?"Завантажуємо повноцінний матч із бомбою, закупівлею та раундами. Замість трьох гравців будуть нерухомі боти."
       :"Завантажуємо звичайний КБ-матч. Два місця суперників займуть нерухомі боти.";
     const botNames=selectedMode==="allies"
       ?["BOT · СОЮЗНИК","BOT · ПРОТИВНИК 1","BOT · ПРОТИВНИК 2"]
-      :["BOT · ПРОТИВНИК 1","BOT · ПРОТИВНИК 2"];
+      :selectedMode==="team_fight_3v3"
+        ?["BOT · СОЮЗНИК 1","BOT · СОЮЗНИК 2","BOT · ПРОТИВНИК 1","BOT · ПРОТИВНИК 2","BOT · ПРОТИВНИК 3"]
+        :["BOT · ПРОТИВНИК 1","BOT · ПРОТИВНИК 2"];
     renderWaitPlayers([
       {nickname:me.nickname,userId:me.id,playerAvatar:me.playerAvatar,connected:true},
       ...botNames.map((nickname,index)=>({nickname,userId:"BOT"+(index+1),playerAvatar:"/avatars/default.jpg",connected:true}))
@@ -2042,11 +2061,11 @@ function openPlay(){
   if(searching)return;
   sessionStorage.removeItem("prototypeMode");
   sessionStorage.removeItem("prototypeGameMode");
-  const requiredPlayers=selectedMode==="allies"?4:3;
-  const searchMap=selectedMode==="allies"?"SANDSTONE":(["SMALL_YARD","NEON_YARD"].includes(selectedMap)?selectedMap:"SMALL_YARD");
+  const requiredPlayers=selectedMode==="allies"?4:selectedMode==="team_fight_3v3"?6:3;
+  const searchMap="ZONE_9";
   selectedMap=searchMap;localStorage.setItem("sx_map",selectedMap);
   $("searchModal").classList.add("show");$("searchTitle").textContent="ПОШУК РЕАЛЬНИХ ГРАВЦІВ";$("searchMode").textContent=(MODES[selectedMode]||MODES.allies)+" · ЛИШЕ ЛЮДИ";$("queue").textContent="1 / "+requiredPlayers;
-  $("searchText").textContent=selectedMode==="allies"?"2 на 2 · раунди · закладка та знешкодження бомби. Чекаємо 4 гравців.":"1 на 1 на 1 · кожен сам за себе. Чекаємо 3 гравців.";
+  $("searchText").textContent=selectedMode==="allies"?"2 на 2 · раунди · атака та захист на Zone 9. Чекаємо 4 гравців.":selectedMode==="team_fight_3v3"?"3 на 3 · дві команди на Zone 9. Чекаємо 6 гравців.":"1 на 1 на 1 · кожен сам за себе на Zone 9. Чекаємо 3 гравців.";
   renderWaitPlayers([{nickname:me.nickname,userId:me.id,playerAvatar:me.playerAvatar,connected:true}]);searching=true;
   socket=createRealtimeSocket();
   socket.on("connect_error",err=>{$("searchText").textContent="З’єднання із сервером… повторна спроба підключення";console.warn("[Socket.IO] Matchmaking connection failed; retrying.",err?.message||err)});
@@ -2117,14 +2136,14 @@ function renderHomeSquadRoster(lobby=currentLobby){
     userId:me?.id||"",nickname:me?.nickname||"ГРАВЕЦЬ",
     playerAvatar:me?.playerAvatar||"/avatars/default.jpg",isOwner:true,connected:true,team:null
   }];
-  const maxPlayers=lobby?.maxPlayers||(selectedMode==="allies"?4:3);
+  const maxPlayers=lobby?.maxPlayers||(selectedMode==="allies"?4:selectedMode==="team_fight_3v3"?6:3);
   const status=$("homeSquadStatus"),count=$("homeSquadCount");
   if(status)status.textContent=lobby?((lobby.modeName||MODES[lobby.mode]||"МАТЧ")+" · "+(lobby.mapName||MAPS[lobby.map]||lobby.map)):"СОЛО · ЗАПРОШУЙ ДРУЗІВ";
   if(count)count.textContent=members.length+" / "+maxPlayers;
   if(root){
-    const cards=members.slice(0,4).map(member=>{
-      const label=member.isOwner?"ЛІДЕР":(lobby?.mode==="allies"&&member.team?"КОМАНДА "+member.team:(member.connected===false?"ПІДКЛЮЧЕННЯ":"У ЗАГОНІ"));
-      const teamPicker=lobby?.mode==="allies"&&String(lobby.ownerId)===String(me?.id)
+    const cards=members.slice(0,6).map(member=>{
+      const label=member.isOwner?"ЛІДЕР":((lobby?.mode==="allies"||lobby?.mode==="team_fight_3v3")&&member.team?"КОМАНДА "+member.team:(member.connected===false?"ПІДКЛЮЧЕННЯ":"У ЗАГОНІ"));
+      const teamPicker=(lobby?.mode==="allies"||lobby?.mode==="team_fight_3v3")&&String(lobby.ownerId)===String(me?.id)
         ?"<select class='home-squad-team' data-home-lobby-team='"+esc(member.userId)+"' aria-label='Команда гравця'><option value='A' "+(member.team==="A"?"selected":"")+">A</option><option value='B' "+(member.team==="B"?"selected":"")+">B</option></select>"
         :"";
       return "<div class='home-squad-card'><img src='"+esc(member.playerAvatar||"/avatars/default.jpg")+"' alt=''><b>"+esc(member.nickname||"ГРАВЕЦЬ")+"</b><small>"+esc(label)+"</small>"+teamPicker+"</div>";
@@ -2133,6 +2152,7 @@ function renderHomeSquadRoster(lobby=currentLobby){
     root.innerHTML=cards.join("");
     root.querySelectorAll("[data-squad-add-friend]").forEach(button=>button.addEventListener("click",()=>show("friends")));
   }
+  window.__sxHomePlayerId=String(me?.id||"");
   window.__sxHomeRoster=members.map(member=>({
     userId:String(member.userId||member.id||""),nickname:String(member.nickname||"ГРАВЕЦЬ"),
     playerAvatar:String(member.playerAvatar||"/avatars/default.jpg"),isOwner:Boolean(member.isOwner),
@@ -2183,8 +2203,8 @@ function renderLobbyState(lobby){
 function createLobby(mode=selectedMode,map=selectedMap){
   if(mode==="training"){notifyToast("Тренування — соло режим, лобі не створюється.");return}
   if(currentLobby){notifyToast("Ти вже в лобі.");return}
-  const lobbyMode=["allies","team_fight"].includes(mode)?mode:"allies";
-  const lobbyMap=lobbyMode==="allies"?"SANDSTONE":(["SMALL_YARD","NEON_YARD"].includes(map)?map:"SMALL_YARD");
+  const lobbyMode=["allies","team_fight","team_fight_3v3"].includes(mode)?mode:"allies";
+  const lobbyMap="ZONE_9";
   $("lobbyModeSelect").value=lobbyMode;
   $("lobbyMapSelect").value=lobbyMap;
   initSocialSocket();
@@ -2678,7 +2698,7 @@ async function refreshAtlasIndicator(){}
 (async()=>{
   try{
     me=(await api("/api/me")).user;
-    if(!canTest()&&selectedMode!=="allies"&&selectedMode!=="team_fight"){
+    if(!canTest()&&selectedMode!=="allies"&&selectedMode!=="team_fight"&&selectedMode!=="team_fight_3v3"){
       selectedMode="allies";localStorage.setItem("sx_mode",selectedMode);
     }
     if(!canTest()){testGameplayMode="real";localStorage.setItem("sx_test_gameplay","real")}
@@ -2691,343 +2711,209 @@ async function refreshAtlasIndicator(){}
 </script>
 <script type="module">
 import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
-const hero=document.querySelector(".home-hero");
-const canvas=document.getElementById("homeAgentCanvas");
-if(hero&&canvas){
-  let renderer=null,scene=null,camera=null,shadow=null,last=0,resizeObserver=null;
-  let tacticalTemplate=null,hoveredAgentIndex=-1,touchEvasionIndex=-1;
-  const squadAgents=[];
-  const agentPalette=[0x8999a5,0x8b6b51,0x637887,0x71775e];
-  const modelUrl="https://raw.githubusercontent.com/cktang88/3d-fps/main/public/assets/models/characters/soldier_tac.glb";
-  const raycaster=new THREE.Raycaster();
-  const pointerNdc=new THREE.Vector2();
-  const pointerWorld=new THREE.Vector3();
-  const reducedMotion=matchMedia("(prefers-reduced-motion: reduce)");
-  const isSmallScreen=matchMedia("(max-width: 700px)").matches;
-  try{
-    renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:!isSmallScreen,powerPreference:"low-power"});
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,isSmallScreen?1.05:1.3));
-    renderer.outputColorSpace=THREE.SRGBColorSpace;
-    renderer.toneMapping=THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure=1.08;
-    renderer.setClearColor(0x000000,0);
-    scene=new THREE.Scene();
-    camera=new THREE.PerspectiveCamera(35,1,.1,35);
-    camera.position.set(0,1.32,6.65);
-    camera.lookAt(0,1.08,0);
-    scene.add(new THREE.HemisphereLight(0xc8e4f6,0x1a2531,2.05));
-    const keyLight=new THREE.DirectionalLight(0xffe8d1,2.25);
-    keyLight.position.set(-3.2,4.5,4);scene.add(keyLight);
-    const fillLight=new THREE.DirectionalLight(0x6caedc,1.25);
-    fillLight.position.set(3,2.5,-3);scene.add(fillLight);
-    const rimLight=new THREE.PointLight(0x79bde7,1.35,10);
-    rimLight.position.set(-2,2.6,-1.8);scene.add(rimLight);
-    const shadowCanvas=document.createElement("canvas");
-    shadowCanvas.width=shadowCanvas.height=128;
-    const ctx=shadowCanvas.getContext("2d");
-    const gradient=ctx.createRadialGradient(64,64,4,64,64,62);
-    gradient.addColorStop(0,"rgba(0,0,0,.48)");
-    gradient.addColorStop(.48,"rgba(0,0,0,.16)");
-    gradient.addColorStop(1,"rgba(0,0,0,0)");
-    ctx.fillStyle=gradient;ctx.fillRect(0,0,128,128);
-    const shadowTexture=new THREE.CanvasTexture(shadowCanvas);
-    shadow=new THREE.Mesh(new THREE.PlaneGeometry(4.4,1.5),new THREE.MeshBasicMaterial({map:shadowTexture,transparent:true,opacity:.75,depthWrite:false,side:THREE.DoubleSide}));
-    shadow.rotation.x=-Math.PI/2;shadow.position.set(0,.015,.02);scene.add(shadow);
+import {FBXLoader} from "three/addons/loaders/FBXLoader.js";
+import {TGALoader} from "three/addons/loaders/TGALoader.js";
 
-    function findAgentRoot(object){
-      let node=object;
-      while(node&&node!==scene&&node.userData?.agentIndex===undefined)node=node.parent;
-      return node&&node!==scene?node:null;
-    }
-    function setEvade(index,direction){
-      for(const actor of squadAgents){
-        if(!actor.mesh.visible)continue;
-        actor.evasionTarget=actor.index===index?direction:0;
-      }
-    }
-    function updatePointerTarget(event){
-      if(event.pointerType==="touch")return;
-      if(event.target?.closest?.(".playarea,.home-squad-bar,button,a,input,select")){hoveredAgentIndex=-1;setEvade(-1,0);return}
-      const rect=hero.getBoundingClientRect();
-      if(!rect.width||!rect.height)return;
-      pointerNdc.set(((event.clientX-rect.left)/rect.width)*2-1,-((event.clientY-rect.top)/rect.height)*2+1);
-      camera.updateMatrixWorld();
-      for(const actor of squadAgents)actor.mesh.updateMatrixWorld(true);
-      raycaster.setFromCamera(pointerNdc,camera);
-      const roots=squadAgents.filter(actor=>actor.mesh.visible).map(actor=>actor.mesh);
-      const hits=raycaster.intersectObjects(roots,true);
-      const root=hits.length?findAgentRoot(hits[0].object):null;
-      const nextIndex=root?.userData?.agentIndex??-1;
-      if(nextIndex===hoveredAgentIndex)return;
-      hoveredAgentIndex=nextIndex;
-      if(nextIndex<0){setEvade(-1,0);return}
-      const actor=squadAgents.find(item=>item.index===nextIndex);
-      if(!actor)return;
-      actor.mesh.getWorldPosition(pointerWorld);
-      pointerWorld.project(camera);
-      const screenX=rect.left+(pointerWorld.x+1)*.5*rect.width;
-      setEvade(nextIndex,event.clientX<screenX?1:-1);
-    }
-    function fixMenuHeadset(model){
-      if(!model)return;
-      model.updateMatrixWorld(true);
-      const pattern=/(headset|headphone|earmuff|earcup|earpad|earpiece|earphone|headphones)/i;
-      const named=[];
-      model.traverse(node=>{
-        if(node===model||node.isBone||node.isSkinnedMesh||!pattern.test(String(node.name||"")))return;
-        named.push(node);
+const canvas=document.getElementById("homeAgentCanvas");
+const hero=document.querySelector(".home-hero");
+if(canvas&&hero){
+  const base="https://raw.githubusercontent.com/standoffX/3d-models/main/";
+  const manager=new THREE.LoadingManager();
+  manager.addHandler(/\.tga$/i,new TGALoader(manager));
+  const loader=new FBXLoader(manager);
+  const textureLoader=new TGALoader(manager);
+  const textures={T:null,CT:null};
+  const actors=new Map();
+  let renderer=null,scene=null,camera=null,lastResize=0;
+  const clock=new THREE.Clock();
+  const lowMotion=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const lowPower=matchMedia("(max-width: 700px)").matches;
+
+  renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:!lowPower,powerPreference:"low-power"});
+  renderer.setPixelRatio(Math.min(devicePixelRatio||1,lowPower?1:1.25));
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.08;
+  renderer.setClearColor(0x000000,0);
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(34,1,.1,50);
+  camera.position.set(0,2.35,9.2);
+  camera.lookAt(0,1.42,0);
+  scene.add(new THREE.HemisphereLight(0xd9e9f5,0x24313d,2.05));
+  const key=new THREE.DirectionalLight(0xffead7,2.25);key.position.set(-3.2,5,4);scene.add(key);
+  const rim=new THREE.DirectionalLight(0x75b7e2,1.25);rim.position.set(3,2.5,-4);scene.add(rim);
+  const floor=new THREE.Mesh(new THREE.CircleGeometry(4.8,48),new THREE.MeshBasicMaterial({color:0x24313a,transparent:true,opacity:.32,depthWrite:false}));
+  floor.rotation.x=-Math.PI/2;floor.position.y=.006;scene.add(floor);
+
+  function applyTexture(root,side){
+    const tex=textures[side];
+    if(!tex)return;
+    root.traverse(node=>{
+      if(!node.isMesh)return;
+      node.frustumCulled=false;
+      const mats=Array.isArray(node.material)?node.material:[node.material];
+      mats.forEach(mat=>{
+        if(!mat)return;
+        mat.side=THREE.DoubleSide;
+        if("map" in mat){mat.map=tex;if(mat.color)mat.color.set(0xffffff)}
+        mat.needsUpdate=true;
       });
-      const namedSet=new Set(named);
-      const roots=named.filter(node=>{
-        let parent=node.parent;
-        while(parent&&parent!==model){if(namedSet.has(parent))return false;parent=parent.parent}
-        return true;
-      });
-      const bodyBounds=new THREE.Box3().setFromObject(model);
-      const bodySize=bodyBounds.getSize(new THREE.Vector3());
-      if(bodyBounds.isEmpty()||bodySize.y<.5)return;
-      const headBounds=new THREE.Box3().makeEmpty();
-      model.traverse(node=>{
-        if(!node.isMesh||!/(head|helmet|skull|face|headgear)/i.test(String(node.name||"")))return;
-        const bounds=new THREE.Box3().setFromObject(node),size=bounds.getSize(new THREE.Vector3());
-        if(!bounds.isEmpty()&&size.y>bodySize.y*.025&&size.y<bodySize.y*.38)headBounds.union(bounds);
-      });
-      const hasHead=!headBounds.isEmpty();
-      const headSize=hasHead?headBounds.getSize(new THREE.Vector3()):new THREE.Vector3(bodySize.x*.34,bodySize.y*.15,bodySize.z*.22);
-      const center=hasHead?headBounds.getCenter(new THREE.Vector3()):new THREE.Vector3(
-        (bodyBounds.min.x+bodyBounds.max.x)*.5,
-        bodyBounds.min.y+bodySize.y*.865,
-        bodyBounds.min.z+bodySize.z*.02
-      );
-      const headTop=hasHead?headBounds.max.y:bodyBounds.min.y+bodySize.y*.945;
-      for(const node of roots){
-        if(!node.parent)continue;
-        node.updateWorldMatrix(true,true);
-        const bounds=new THREE.Box3().setFromObject(node);
-        if(bounds.isEmpty())continue;
-        const accessoryCenter=bounds.getCenter(new THREE.Vector3());
-        if(Math.abs(center.y-accessoryCenter.y)>.035){
-          const worldOrigin=node.getWorldPosition(new THREE.Vector3());
-          worldOrigin.y+=center.y-accessoryCenter.y;
-          node.parent.worldToLocal(worldOrigin);
-          node.position.copy(worldOrigin);
-          node.updateWorldMatrix(true,true);
-        }
-      }
-      if(roots.length)return;
-      const worldScale=model.getWorldScale(new THREE.Vector3());
-      const sx=Math.max(.001,Math.abs(worldScale.x)),sy=Math.max(.001,Math.abs(worldScale.y)),sz=Math.max(.001,Math.abs(worldScale.z));
-      const localCenter=model.worldToLocal(center.clone());
-      const localTop=model.worldToLocal(new THREE.Vector3(center.x,headTop,center.z));
-      const halfWidth=Math.max(.10,Math.min(.205,Math.max(headSize.x*.56,bodySize.x*.15)))/sx;
-      const earRadius=Math.max(.035,Math.min(.068,headSize.y*.27))/sy;
-      const cupDepth=Math.max(.028,Math.min(.05,headSize.z*.22))/sz;
-      const bandY=localTop.y+.018/sy,bandZ=localCenter.z-headSize.z*.12/sz,earY=localCenter.y;
-      const headset=new THREE.Group();headset.name="StandoffX_Menu_Headset";
-      const bandMat=new THREE.MeshStandardMaterial({color:0x18232c,roughness:.48,metalness:.34});
-      const cupMat=new THREE.MeshStandardMaterial({color:0x293b49,roughness:.4,metalness:.5});
-      const padMat=new THREE.MeshStandardMaterial({color:0x0b1218,roughness:.9,metalness:.03});
-      const curve=new THREE.CatmullRomCurve3([
-        new THREE.Vector3(localCenter.x-halfWidth,earY+.01/sy,bandZ),
-        new THREE.Vector3(localCenter.x-halfWidth*.91,bandY-.11/sy,bandZ),
-        new THREE.Vector3(localCenter.x-halfWidth*.56,bandY-.025/sy,bandZ),
-        new THREE.Vector3(localCenter.x,bandY,bandZ),
-        new THREE.Vector3(localCenter.x+halfWidth*.56,bandY-.025/sy,bandZ),
-        new THREE.Vector3(localCenter.x+halfWidth*.91,bandY-.11/sy,bandZ),
-        new THREE.Vector3(localCenter.x+halfWidth,earY+.01/sy,bandZ)
-      ]);
-      headset.add(new THREE.Mesh(new THREE.TubeGeometry(curve,20,.012/sy,6,false),bandMat));
-      for(const side of [-1,1]){
-        const cup=new THREE.Mesh(new THREE.CylinderGeometry(earRadius,earRadius,cupDepth,12),cupMat);
-        cup.rotation.z=Math.PI/2;cup.position.set(localCenter.x+side*halfWidth*.91,earY,localCenter.z);headset.add(cup);
-        const pad=new THREE.Mesh(new THREE.CylinderGeometry(earRadius*.72,earRadius*.72,cupDepth*1.08,12),padMat);
-        pad.rotation.z=Math.PI/2;pad.position.set(localCenter.x+side*(halfWidth*.91+cupDepth*.12),earY,localCenter.z);headset.add(pad);
-      }
-      model.add(headset);
-      model.updateMatrixWorld(true);
-    }
-    function createAgent(index){
-      if(!tacticalTemplate)return null;
-      const mesh=SkeletonUtils.clone(tacticalTemplate);
-      const before=new THREE.Box3().setFromObject(mesh);
-      const dimensions=before.getSize(new THREE.Vector3());
-      const originalHeight=Math.max(.01,dimensions.y);
-      const baseScale=2.22/originalHeight;
-      mesh.scale.setScalar(baseScale);
-      mesh.updateMatrixWorld(true);
-      const bounds=new THREE.Box3().setFromObject(mesh);
-      const center=bounds.getCenter(new THREE.Vector3());
-      mesh.position.set(-center.x,-bounds.min.y,-center.z);
-      mesh.updateMatrixWorld(true);
-      fixMenuHeadset(mesh);
-      const tint=new THREE.Color(agentPalette[index%agentPalette.length]);
-      const bones={spine:[],head:[],leftShoulder:[],rightShoulder:[],arms:[]};
-      mesh.traverse(node=>{
-        if(node.isMesh){
-          node.frustumCulled=false;node.castShadow=false;node.receiveShadow=false;
-          if(node.material){
-            const originals=Array.isArray(node.material)?node.material:[node.material];
-            const materials=originals.map(original=>{
-              const material=original.clone();
-              if(material.color){material.color.multiply(new THREE.Color(.93,.95,.98));material.color.lerp(tint,.08)}
-              if("roughness" in material)material.roughness=Math.max(.48,material.roughness||.6);
-              return material;
-            });
-            node.material=Array.isArray(node.material)?materials:materials[0];
-          }
-        }
-        if(!node.isBone)return;
-        const name=String(node.name||"").toLowerCase().replace(/[^a-z0-9]/g,"");
-        const entry={node,rotation:node.rotation.clone(),position:node.position.clone(),name};
-        if(/spine|chest|thorax|upperbody/.test(name))bones.spine.push(entry);
-        if(/head|neck/.test(name))bones.head.push(entry);
-        if(/left.*(shoulder|clavicle)|clavicle.*left|leftshoulder|shoulderl/.test(name))bones.leftShoulder.push(entry);
-        if(/right.*(shoulder|clavicle)|clavicle.*right|rightshoulder|shoulderr/.test(name))bones.rightShoulder.push(entry);
-        if(/upperarm|lowerarm|arm_[lr]|forearm/.test(name))bones.arms.push(entry);
-      });
-      mesh.rotation.y=Math.PI;
-      mesh.userData.agentIndex=index;
-      scene.add(mesh);
-      const actor={index,mesh,bones,baseScale,homeX:0,homeY:0,homeZ:0,homeYaw:Math.PI,phase:index*1.13,evasion:0,evasionTarget:0,evadeUntil:0,external:true};
-      return actor;
-    }
-    function disposeAgent(actor){
-      if(!actor?.mesh)return;
-      scene.remove(actor.mesh);
-      actor.mesh.traverse(node=>{
-        if(node.isMesh&&node.material){
-          if(Array.isArray(node.material))node.material.forEach(material=>material.dispose());
-          else node.material.dispose();
-        }
-      });
-    }
-    function relayoutAgents(){
-      const visible=squadAgents.filter(actor=>actor.mesh.visible);
-      const n=visible.length;
-      const layouts={1:[0],2:[-.72,.72],3:[-1.15,0,1.15],4:[-1.48,-.5,.5,1.48]};
-      const positions=layouts[n]||layouts[1];
-      visible.forEach((actor,index)=>{
-        const x=positions[index]??0;
-        const factor=n>=4?.84:n===3?.92:n===2?1.02:1.16;
-        actor.mesh.scale.setScalar(actor.baseScale*factor);
-        actor.homeX=x;
-        actor.homeZ=n>=3?(Math.abs(x)>.9?-.10:.12):0;
-        actor.homeY=0;
-        actor.homeYaw=Math.PI+(index-(n-1)/2)*-.035;
-        actor.mesh.position.set(actor.homeX,actor.homeY,actor.homeZ);
-        actor.mesh.rotation.y=actor.homeYaw;
-      });
-      if(shadow)shadow.scale.x=n>=3?1.1:n===2?.78:.56;
-    }
-    function syncSquad(members){
-      // Do not recreate the old procedural mannequin: the menu uses only the tactical GLB.
-      if(!tacticalTemplate)return;
-      const safe=Array.isArray(members)&&members.length?members.slice(0,4):[{nickname:"ГРАВЕЦЬ"}];
-      while(squadAgents.length<safe.length){
-        const actor=createAgent(squadAgents.length);
-        if(!actor)break;
-        squadAgents.push(actor);
-      }
-      squadAgents.forEach((actor,index)=>{actor.mesh.visible=index<safe.length});
-      relayoutAgents();
-    }
-    function loadTacticalAgent(){
-      const loader=new GLTFLoader();
-      loader.load(modelUrl,gltf=>{
-        if(!gltf?.scene)throw new Error("The tactical model has no scene.");
-        tacticalTemplate=gltf.scene;
-        syncSquad(Array.isArray(window.__sxHomeRoster)?window.__sxHomeRoster:[{nickname:"ГРАВЕЦЬ"}]);
-        resize();
-      },undefined,error=>{
-        console.warn("[MENU AGENT] Could not load the tactical model.",error?.message||error);
-        // Never fall back to the old homemade mannequin.
-        canvas.style.opacity="0";
-        hero.classList.add("agent-model-unavailable");
-      });
-    }
-    function resize(){
-      if(!renderer||!camera)return;
-      const rect=hero.getBoundingClientRect();
-      const width=Math.max(1,Math.round(rect.width)),height=Math.max(1,Math.round(rect.height));
-      renderer.setSize(width,height,false);
-      camera.aspect=width/height;
-      camera.updateProjectionMatrix();
-      relayoutAgents();
-    }
-    if("ResizeObserver" in window){resizeObserver=new ResizeObserver(resize);resizeObserver.observe(hero)}
-    window.addEventListener("resize",resize,{passive:true});
-    hero.addEventListener("pointermove",updatePointerTarget,{passive:true});
-    hero.addEventListener("pointerleave",()=>{
-      const touchActor=squadAgents.find(actor=>actor.index===touchEvasionIndex);
-      if(touchActor&&touchActor.evadeUntil>performance.now()){hoveredAgentIndex=-1;return}
-      hoveredAgentIndex=-1;touchEvasionIndex=-1;setEvade(-1,0);
-    },{passive:true});
-    hero.addEventListener("pointerdown",event=>{
-      if(event.pointerType!=="touch"||event.target?.closest?.(".playarea,.home-squad-bar,button,a,input,select"))return;
-      updatePointerTarget({clientX:event.clientX,clientY:event.clientY,pointerType:"mouse",target:event.target});
-      if(hoveredAgentIndex>=0){
-        const actor=squadAgents.find(item=>item.index===hoveredAgentIndex);
-        if(actor){actor.evadeUntil=performance.now()+850;touchEvasionIndex=actor.index;hoveredAgentIndex=-1;}
-      }
-    },{passive:true});
-    document.addEventListener("visibilitychange",()=>{if(!document.hidden)last=performance.now()});
-    window.addEventListener("sx:home-squad",event=>syncSquad(event.detail?.members));
-    resize();
-    loadTacticalAgent();
-    function animateIdle(actor,now,dt){
-      const motionEnabled=!reducedMotion.matches;
-      const breath=motionEnabled?Math.sin(now*.00155+actor.phase):0;
-      const sway=motionEnabled?Math.sin(now*.00036+actor.phase)*.016:0;
-      const scan=motionEnabled?Math.sin(now*.00048+actor.phase*1.7)*.045:0;
-      const cycle=((now*.001+actor.phase*1.7)%9+9)%9;
-      const inspectProgress=motionEnabled?THREE.MathUtils.clamp((cycle-5.55)/1.7,0,1):0;
-      const inspect=Math.sin(inspectProgress*Math.PI);
-      const weightShift=motionEnabled?Math.sin(now*.00072+actor.phase)*.018:0;
-      if(now>actor.evadeUntil){
-        if(actor.index===touchEvasionIndex)touchEvasionIndex=-1;
-        if(actor.index!==hoveredAgentIndex)actor.evasionTarget=0;
-      }
-      actor.evasion=THREE.MathUtils.damp(actor.evasion,actor.evasionTarget,6.5,dt);
-      actor.mesh.position.x=actor.homeX+actor.evasion*.52+weightShift;
-      actor.mesh.position.y=actor.homeY+breath*.019+inspect*.005;
-      actor.mesh.position.z=actor.homeZ+(motionEnabled?Math.sin(now*.00055+actor.phase)*.012:0);
-      actor.mesh.rotation.y=actor.homeYaw+sway+actor.evasion*.12+scan+inspect*.075;
-      actor.bones.spine.forEach((bone,index)=>{
-        const weight=index===actor.bones.spine.length-1?1:.55;
-        bone.node.rotation.x=bone.rotation.x+breath*.022*weight-inspect*.035*weight;
-        bone.node.rotation.z=bone.rotation.z+breath*.008*weight+weightShift*.5;
-      });
-      actor.bones.head.forEach(bone=>{
-        bone.node.rotation.x=bone.rotation.x+breath*.006-inspect*.055;
-        bone.node.rotation.y=bone.rotation.y+(motionEnabled?Math.sin(now*.00043+actor.phase)*.026:0)+scan*.7;
-      });
-      actor.bones.leftShoulder.forEach(bone=>{bone.node.rotation.z=bone.rotation.z+breath*.012+inspect*.045});
-      actor.bones.rightShoulder.forEach(bone=>{bone.node.rotation.z=bone.rotation.z-breath*.012-inspect*.055});
-      actor.bones.arms.forEach((bone,index)=>{
-        const side=index%2?-1:1;
-        bone.node.rotation.x=bone.rotation.x+breath*.006*(side*.7)+inspect*.045*side;
-        bone.node.rotation.z=bone.rotation.z+inspect*.035*side;
-      });
-    }
-    function draw(now){
-      requestAnimationFrame(draw);
-      if(document.hidden||!renderer||!scene||!camera)return;
-      const dt=last?Math.min(.05,(now-last)/1000):0;last=now;
-      squadAgents.forEach(actor=>{
-        if(actor.mesh.visible)animateIdle(actor,now,dt);
-      });
-      renderer.render(scene,camera);
-    }
-    requestAnimationFrame(draw);
-  }catch(error){
-    console.warn("[MENU AGENT] 3D preview unavailable.",error);
-    canvas.style.opacity="0";
-    hero.classList.add("agent-model-unavailable");
-    if(resizeObserver)resizeObserver.disconnect();
-    if(renderer)renderer.dispose();
+    });
   }
-}</script>
+  function loadSideTexture(side,file){
+    textureLoader.load(base+file,texture=>{
+      texture.colorSpace=THREE.SRGBColorSpace;
+      texture.flipY=true;
+      texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+      textures[side]=texture;
+      for(const actor of actors.values())if(actor.side===side&&actor.model)applyTexture(actor.model,side);
+    },undefined,error=>console.warn("[Lobby agent] Texture unavailable:",file,error));
+  }
+  loadSideTexture("T","OTCChA_D.tga");
+  loadSideTexture("CT","FSB_A_D.tga");
+
+     const AGENT_ANIMATIONS=Object.freeze({
+     "Excited":{T:"Excited.fbx",CT:"Excited_CT.fbx"},
+     "Talking On Phone":{T:"Talking On Phone.fbx",CT:"Talking On Phone _CT.fbx"},
+     "Illegal Elbow Punch":{T:"Illegal Elbow Punch.fbx",CT:"Illegal Elbow Punch_CT.fbx"}
+   });
+   const storedAgentSide=()=>localStorage.getItem("sx-agent-side")==="CT"?"CT":"T";
+   const storedAgentAnimation=()=>Object.prototype.hasOwnProperty.call(AGENT_ANIMATIONS,localStorage.getItem("sx-agent-animation"))?localStorage.getItem("sx-agent-animation"):"Excited";
+   function isLocalPerson(person,index){
+     const playerId=String(window.__sxHomePlayerId||"");
+     const personId=String(person.userId||person.id||"");
+     return Boolean(person.isOwner||person.isLocal||(playerId&&personId===playerId)||(!playerId&&index===0));
+   }
+   function sideFor(person,index){
+     if(isLocalPerson(person,index))return storedAgentSide();
+     if(person.team==="A")return "CT";
+     if(person.team==="B")return "T";
+     if(person.side==="T"||person.side==="CT")return person.side;
+     return storedAgentSide();
+   }
+   function animationFor(person,index){
+     const requested=person.agentAnimation||person.selectedAnimation||(isLocalPerson(person,index)?storedAgentAnimation():"Excited");
+     return Object.prototype.hasOwnProperty.call(AGENT_ANIMATIONS,requested)?requested:"Excited";
+   }
+   const agentToggle=document.getElementById("homeAgentToggle");
+   const agentPanel=document.getElementById("homeAgentPanel");
+   function updateAgentPanel(){
+     if(!agentPanel)return;
+     const side=storedAgentSide(),animation=storedAgentAnimation();
+     agentPanel.querySelectorAll("[data-home-agent-side]").forEach(b=>b.classList.toggle("active",b.dataset.homeAgentSide===side));
+     agentPanel.querySelectorAll("[data-home-agent-animation]").forEach(b=>b.classList.toggle("active",b.dataset.homeAgentAnimation===animation));
+     if(agentToggle)agentToggle.setAttribute("aria-expanded",String(agentPanel.classList.contains("open")));
+     agentPanel.setAttribute("aria-hidden",String(!agentPanel.classList.contains("open")));
+   }
+   agentToggle?.addEventListener("click",()=>{const open=!agentPanel.classList.contains("open");agentPanel.classList.toggle("open",open);updateAgentPanel()});
+   agentPanel?.addEventListener("click",event=>{
+     const sideButton=event.target.closest("[data-home-agent-side]");
+     const animationButton=event.target.closest("[data-home-agent-animation]");
+     if(sideButton){localStorage.setItem("sx-agent-side",sideButton.dataset.homeAgentSide);updateAgentPanel();updateLayout()}
+     if(animationButton){localStorage.setItem("sx-agent-animation",animationButton.dataset.homeAgentAnimation);updateAgentPanel();updateLayout()}
+   });
+   document.addEventListener("pointerdown",event=>{if(agentPanel?.classList.contains("open")&&!agentPanel.contains(event.target)&&!agentToggle?.contains(event.target)){agentPanel.classList.remove("open");updateAgentPanel()}});
+function clearActor(actor){
+    if(actor.mixer)actor.mixer.stopAllAction();
+    actor.group.traverse(node=>{
+      if(node.geometry)node.geometry.dispose();
+      const mats=Array.isArray(node.material)?node.material:[node.material];
+      mats.forEach(mat=>{if(mat){if(mat.map&&mat.map!==textures.T&&mat.map!==textures.CT)mat.map.dispose?.();mat.dispose?.()}});
+    });
+    scene.remove(actor.group);
+  }
+  function createActor(person,index,side){
+    const id=String(person.userId||person.id||("local-"+index));
+    const animation=animationFor(person,index);
+     const file=AGENT_ANIMATIONS[animation][side];
+    if(actors.has(id)){
+      const old=actors.get(id);
+      if(old.file===file)return;
+      clearActor(old);actors.delete(id);
+    }
+    const group=new THREE.Group();
+    group.position.x=(index-1.5)*1.68;
+    group.rotation.y=0;
+    scene.add(group);
+    const actor={id,file,side,animation,group,model:null,mixer:null,phase:index*1.83};
+    actors.set(id,actor);
+    loader.load(base+encodeURIComponent(file),model=>{
+      const current=actors.get(id);
+      if(!current||current!==actor){model.traverse(n=>{n.geometry?.dispose?.()});return}
+      let meshes=0;
+      model.traverse(node=>{
+        if(!node.isMesh)return;
+        meshes++;node.castShadow=false;node.receiveShadow=false;node.frustumCulled=false;
+        const mats=Array.isArray(node.material)?node.material:[node.material];
+        mats.forEach(mat=>{if(mat)mat.side=THREE.DoubleSide});
+      });
+      const bounds=new THREE.Box3().setFromObject(model);
+      const size=bounds.getSize(new THREE.Vector3());
+      const center=bounds.getCenter(new THREE.Vector3());
+      if(!meshes||!Number.isFinite(size.y)||size.y<=0){
+        console.warn("[Lobby agent] Invalid FBX:",file);return;
+      }
+      const scale=3.65/size.y;
+      model.scale.setScalar(scale);
+      model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
+      group.add(model);
+      actor.model=model;
+      applyTexture(model,side);
+      if(model.animations?.length){
+        actor.mixer=new THREE.AnimationMixer(model);
+        const action=actor.mixer.clipAction(model.animations[0]);
+        action.setLoop(THREE.LoopRepeat,Infinity);
+        action.play();
+      }
+      updateLayout();
+    },undefined,error=>console.warn("[Lobby agent] FBX unavailable:",file,error));
+  }
+  function updateLayout(){
+    const roster=Array.isArray(window.__sxHomeRoster)?window.__sxHomeRoster:[];
+    const visible=roster.length?roster.slice(0,4):[{userId:"local-player",nickname:"PLAYER"}];
+    const ids=new Set(visible.map((p,i)=>String(p.userId||p.id||("local-"+i))));
+    for(const [id,actor] of actors){if(!ids.has(id)){clearActor(actor);actors.delete(id)}}
+    visible.forEach((person,index)=>createActor(person,index,sideFor(person,index)));
+    const count=Math.max(1,visible.length);
+    visible.forEach((person,index)=>{
+      const actor=actors.get(String(person.userId||person.id||("local-"+index)));
+      if(actor)actor.group.position.x=(index-(count-1)/2)*Math.min(1.8,5.2/count);
+    });
+  }
+  window.addEventListener("sx:home-squad",event=>{
+    if(event.detail?.members)window.__sxHomeRoster=event.detail.members;
+    updateLayout();
+  });
+  window.addEventListener("storage",event=>{if(event.key==="sx-agent-side")updateLayout()});
+
+  function resize(){
+    const width=canvas.clientWidth||hero.clientWidth||700;
+    const height=canvas.clientHeight||hero.clientHeight||500;
+    if(!width||!height)return;
+    renderer.setSize(width,height,false);
+    camera.aspect=width/height;
+    camera.updateProjectionMatrix();
+  }
+  const observer=new ResizeObserver(resize);
+  observer.observe(hero);
+  window.addEventListener("resize",resize,{passive:true});
+  resize();
+  updateLayout();
+
+  function draw(){
+    requestAnimationFrame(draw);
+    const dt=Math.min(clock.getDelta(),.05);
+    const t=performance.now()*.001;
+    for(const actor of actors.values()){
+      if(actor.mixer){actor.mixer.timeScale=lowMotion?0:1;actor.mixer.update(dt)}
+      actor.group.position.y=lowMotion?0:Math.sin(t*1.15+actor.phase)*.015;
+    }
+    renderer.render(scene,camera);
+  }
+  draw();
+  window.__sxSetAgentQuality=low=>renderer.setPixelRatio(Math.min(devicePixelRatio||1,low?.65:1.25));
+}
+</script>
+<script src="/mobile-game.js" defer></script>
 </body>
 </html>

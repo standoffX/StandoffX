@@ -1,0 +1,9 @@
+{
+  "name": "StandoffX",
+  "short_name": "StandoffX",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#090f17",
+  "theme_color": "#101923"
+}

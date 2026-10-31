@@ -1,0 +1,184 @@
+/* Mobile landscape presentation for StandoffX. Loaded after the core game styles. */
+#sxOrientationPrompt{position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;padding:22px;background:radial-gradient(ellipse at 50% 35%,#1a2c40f7,#060b12f8 72%);color:#eef7ff;text-align:center;font-family:Inter,system-ui,sans-serif;touch-action:manipulation}
+#sxOrientationPrompt[data-visible="true"]{display:flex}
+#sxOrientationPrompt .sx-orient-card{width:min(430px,100%);padding:28px 22px;border:1px solid #b8d8ef2b;background:linear-gradient(155deg,#182632f5,#0b1119f5);box-shadow:0 24px 80px #000b}
+#sxOrientationPrompt .sx-orient-icon{width:94px;height:94px;margin:0 auto 18px;display:grid;place-items:center;color:#d9f0ff}
+#sxOrientationPrompt h2{margin:0 0 9px;font-size:clamp(20px,4vw,27px);font-weight:950;letter-spacing:.04em}
+#sxOrientationPrompt p{margin:0 auto 18px;max-width:320px;color:#a9bac8;font-size:13px;line-height:1.55}
+#sxOrientationPrompt .sx-orient-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+#sxOrientationPrompt button{min-height:42px;padding:0 16px;border:1px solid #a9cee7;background:#c9e9ff;color:#10202b;font-weight:950;letter-spacing:.04em}
+#sxOrientationPrompt button.sx-orient-skip{background:#16232e;color:#d4e3ed;border-color:#ffffff2b}
+@media (pointer:coarse) and (orientation:landscape) and (max-height:560px){
+  html,body{width:100%;height:100%;min-height:100%;overflow:hidden}
+  /* The menu becomes a compact two-column lobby on a phone held sideways. */
+  body .home-layout{display:grid!important;grid-template-columns:minmax(148px,25vw) minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important;gap:8px!important;padding:8px!important;min-height:0!important;height:calc(100dvh - 108px)!important;overflow:hidden!important}
+  body .home-friends{grid-column:1!important;grid-row:1!important;min-height:0!important;height:100%!important;max-height:100%!important;padding:8px!important;overflow:hidden!important}
+  body .home-friends .panelhead{min-height:32px!important;padding:4px 6px!important;font-size:9px!important}
+  body .home-friends-body{gap:7px!important;padding:7px!important;overflow:auto!important}
+  body .home-self-card{grid-template-columns:34px minmax(0,1fr) 6px!important;gap:6px!important;padding:6px!important}
+  body .home-self-card img{width:34px!important;height:34px!important}
+  body .home-self-card b{font-size:10px!important}
+  body .home-self-card span,body .home-self-card small{font-size:7px!important}
+  body .home-friends-title{font-size:8px!important}
+  body .home-friends-list{min-height:0!important;overflow:auto!important}
+  body .home-hero{grid-column:2!important;grid-row:1!important;min-width:0!important;min-height:0!important;height:100%!important;max-height:100%!important;overflow:hidden!important}
+  body .home-hero-art{inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important;opacity:.32!important}
+  body .home-agent-canvas{inset:0!important;width:100%!important;height:100%!important}
+  body .home-hero-copy{left:14px!important;top:12px!important}
+  body .home-hero-copy h1{font-size:clamp(17px,4vh,27px)!important;margin:0!important}
+  body .home-hero-overline{font-size:7px!important}
+  body .home-squad-bar{left:10px!important;right:auto!important;bottom:10px!important;max-width:52%!important;padding:6px!important}
+  body .home-squad-roster{gap:4px!important}
+  body .home-squad-card{min-width:48px!important;padding:4px!important}
+  body .home-squad-card img{width:22px!important;height:22px!important}
+  body .playarea{position:absolute!important;right:10px!important;left:auto!important;bottom:10px!important;top:auto!important;min-height:0!important;width:auto!important;padding:0!important;z-index:20!important}
+  body .playwrap{align-items:flex-end!important;gap:5px!important}
+  body .playbutton{width:clamp(130px,24vw,205px)!important;height:43px!important;font-size:12px!important}
+  body #resumeMatchBtn{min-width:130px!important;min-height:30px!important}
+  body #selectedModeText,body #selectedMapText{font-size:8px!important;text-align:right!important}
+  body .profile-col,body .promo-col,body .passpanel{display:none!important}
+  body .bottom-nav{height:47px!important;padding-bottom:env(safe-area-inset-bottom)!important}
+  body .bottom-nav .nav-button{min-width:0!important;padding:4px!important;font-size:7px!important}
+  body .bottom-nav .nav-button svg{width:17px!important;height:17px!important}
+  body .topbar{height:42px!important;min-height:42px!important;padding:0 9px!important}
+  body .topbrand{font-size:12px!important}
+  body .content{height:calc(100dvh - 89px)!important;min-height:0!important;padding:4px!important;overflow:hidden!important}
+  body .screen{height:100%!important;min-height:0!important;overflow:auto!important}
+  /* Compact first-person HUD and touch controls in the match. */
+  #score{top:7px!important;left:7px!important;padding:5px 7px!important;font-size:9px!important}
+  .top{top:6px!important;gap:7px!important;padding:4px 8px!important}
+  .top b{font-size:9px!important}
+  .top span{font-size:18px!important}
+  #hint{display:none!important}
+  #ammo{right:9px!important;bottom:7px!important}
+  .ammo-name{font-size:8px!important}
+  .ammo-num{font-size:24px!important;line-height:1!important}
+  .ammo-sub{font-size:7px!important}
+  #weaponDamage{display:none!important}
+  #radarWrap{top:7px!important;right:7px!important;width:104px!important;max-width:22vw!important}
+  #radarCanvas{width:100%!important;height:auto!important}
+  #mobile .stick{left:12px!important;bottom:12px!important;width:100px!important;height:100px!important}
+  #mobile .stick i{left:28px!important;top:28px!important;width:44px!important;height:44px!important}
+  #mobile .mbtn{width:52px!important;height:52px!important;font-size:8px!important}
+  #mobile .fire{right:12px!important;bottom:12px!important;width:62px!important;height:62px!important}
+  #mobile .jump{right:82px!important;bottom:70px!important}
+  #mobile .reload{right:82px!important;bottom:12px!important}
+  #mobile .crouch{right:12px!important;bottom:82px!important}
+  #mobile .sprint{right:143px!important;bottom:12px!important;width:49px!important;height:42px!important}
+  #mobile .leave{right:7px!important;top:7px!important;width:36px!important;height:30px!important}
+  #trainingControls{top:46px!important;right:7px!important;width:min(180px,34vw)!important;max-height:31vh!important;padding:6px!important}
+  .buy-backdrop .allies-buy-panel{max-height:92dvh!important}
+  #overlay .panel{max-height:90dvh!important;overflow:auto!important;padding:14px!important}
+  #overlay h1{font-size:21px!important}
+  #phase{font-size:16px!important;margin:7px 0 4px!important}
+  #bigTimer{font-size:38px!important}
+  .players{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important;margin-top:8px!important}
+  .player{padding:6px!important;font-size:8px!important}
+}
+@media (pointer:coarse) and (orientation:portrait){
+  #sxOrientationPrompt{padding:16px}
+  #sxOrientationPrompt .sx-orient-card{padding:22px 16px}
+}
+@media (prefers-reduced-motion:reduce){#sxOrientationPrompt *{transition:none!important;animation:none!important}}
+
+/* Keep the lobby free of temporary branding and registration explanations. */
+#authNote,.auth-note{display:none!important}
+body:not(.auth-mode) .topbrand,
+body:not(.auth-mode) #home .home-hero-copy,
+body:not(.auth-mode) #home .promo-tag,
+body:not(.auth-mode) #home .promo-title,
+body:not(.auth-mode) #home .news-soon,
+body:not(.auth-mode) #home .coming-soon-tag,
+body:not(.auth-mode) #home .homefooter span:first-child{display:none!important}
+body:not(.auth-mode) #home .promo-col{display:none!important}
+body:not(.auth-mode) #home .passpanel{display:none!important}
+body:not(.auth-mode) #home .home-layout{grid-template-columns:minmax(210px,.7fr) minmax(0,1.65fr)!important}
+body:not(.auth-mode) #home .home-hero{grid-column:2!important;grid-row:1!important;min-height:520px}
+body:not(.auth-mode) #home .home-friends{grid-column:1!important;grid-row:1!important}
+#sxOrientationPrompt .sx-orient-card{border-radius:4px}
+
+/* Desktop lobby palette and hierarchy aligned with the 3D-models menu reference. */
+body:not(.auth-mode){
+  --bg:#17191d;
+  --panel:#202329;
+  --panel2:#292d33;
+  --line:#ffffff18;
+  --muted:#9ba2a9;
+  --blue:#70df69;
+  --accent:#70df69;
+  --glow:#70df69;
+  background:#17191d!important;
+  color:#f3f4f4!important;
+}
+body:not(.auth-mode) .app,
+body:not(.auth-mode) #app,
+body:not(.auth-mode) .shell,
+body:not(.auth-mode) .content{background:#17191d!important}
+body:not(.auth-mode) .topbar,
+body:not(.auth-mode) .rail{background:#12161bd9!important;border-color:#ffffff18!important}
+body:not(.auth-mode) .panel{background:linear-gradient(145deg,#202329f2,#171a1feF)!important;border-color:#ffffff18!important;box-shadow:0 8px 26px #0004!important;border-radius:3px!important}
+body:not(.auth-mode) .panelhead{background:#171a1e!important;border-bottom-color:#ffffff18!important;color:#d9dfe2!important}
+body:not(.auth-mode) .rail button{color:#aab2b8!important}
+body:not(.auth-mode) .rail button.active,
+body:not(.auth-mode) .rail button:hover{background:#70df6914!important;color:#a7f59f!important;border-left-color:#70df69!important}
+body:not(.auth-mode) .playbutton,
+body:not(.auth-mode) .primary{background:#70df69!important;border-color:#70df69!important;color:#121812!important;box-shadow:0 4px 18px #70df6930!important;clip-path:none!important;border-radius:3px!important}
+body:not(.auth-mode) .modebtn.active,
+body:not(.auth-mode) .mode-option.active{background:#26342a!important;border-color:#70df69!important;color:#f2fff0!important;box-shadow:inset 0 0 0 1px #70df6940!important}
+body:not(.auth-mode) .home-layout{grid-template-columns:minmax(205px,.72fr) minmax(420px,1.65fr) minmax(210px,.75fr)!important;gap:12px!important}
+body:not(.auth-mode) #home .home-hero{background:#1b1e23!important;border-color:#ffffff1b!important}
+body:not(.auth-mode) #home .home-hero-art{opacity:.26!important;filter:grayscale(.7)!important}
+body:not(.auth-mode) #home .home-squad-bar{background:#171c21dd!important;border-color:#ffffff1a!important}
+body:not(.auth-mode) #home .home-friends{background:#171b20!important}
+body:not(.auth-mode) #home .profile-col{background:#1e2227!important}
+body:not(.auth-mode) #home .promo-col,
+body:not(.auth-mode) #home .passpanel,
+body:not(.auth-mode) #home .home-hero-copy,
+body:not(.auth-mode) #home .promo-tag,
+body:not(.auth-mode) #home .promo-title,
+body:not(.auth-mode) #home .news-soon,
+body:not(.auth-mode) #home .coming-soon-tag,
+body:not(.auth-mode) #home .homefooter span:first-child,
+body:not(.auth-mode) .topbrand,
+#authNote,.auth-note{display:none!important}
+@media(max-width:1000px){
+ body:not(.auth-mode) .home-layout{grid-template-columns:minmax(170px,.7fr) minmax(0,1.55fr)!important}
+ body:not(.auth-mode) #home .profile-col{display:none!important}
+}
+
+/* Temporarily hide the retired Softer skin shop and its old inventory pages. */
+body:not(.auth-mode) .rail button[data-view="store"],
+body:not(.auth-mode) .rail button[data-view="inventory"],
+body:not(.auth-mode) .rail button[data-view="market"],
+body:not(.auth-mode) #store,
+body:not(.auth-mode) #inventory,
+body:not(.auth-mode) #market,
+body:not(.auth-mode) #softerReveal{display:none!important}
+body:not(.auth-mode) #home .profile-col .rankrow,
+body:not(.auth-mode) #home .profile-col .ranks{display:none!important}
+@media (pointer:coarse) and (orientation:portrait) and (max-width:700px){
+  body:not(.auth-mode) #home .home-layout{grid-template-columns:1fr!important;grid-template-rows:auto 1fr!important;height:auto!important;min-height:calc(100dvh - 90px)!important;overflow:auto!important}
+  body:not(.auth-mode) #home .home-friends{grid-column:1!important;grid-row:1!important;min-height:116px!important;height:116px!important}
+  body:not(.auth-mode) #home .home-hero{grid-column:1!important;grid-row:2!important;min-height:280px!important;height:calc(100dvh - 245px)!important}
+  body:not(.auth-mode) #home .home-friends-body{padding:7px!important;gap:6px!important}
+  body:not(.auth-mode) #home .home-friends-title,
+  body:not(.auth-mode) #home .home-friends-list,
+  body:not(.auth-mode) #home .home-invite-btn,
+  body:not(.auth-mode) #home .home-squad-note{display:none!important}
+  body:not(.auth-mode) #home .home-self-card{padding:6px!important}
+  body:not(.auth-mode) #home .playarea{position:absolute!important;right:9px!important;bottom:8px!important;top:auto!important}
+}
+
+/* Mode and matchmaking dialogs use the same restrained charcoal/green visual language. */
+body:not(.auth-mode) .modalbox,
+body:not(.auth-mode) .modebox{background:#202329!important;border-color:#ffffff22!important;color:#f3f4f4!important;box-shadow:0 22px 70px #000a!important;border-radius:3px!important}
+body:not(.auth-mode) .modalhead{color:#f3f4f4!important;border-bottom:1px solid #ffffff17;padding-bottom:10px}
+body:not(.auth-mode) .modebtn{background:#171a1e!important;border-color:#ffffff19!important;color:#e7ecee!important;border-radius:3px!important}
+body:not(.auth-mode) .modebtn.active{background:#253329!important;border-color:#70df69!important;color:#f3fff2!important}
+body:not(.auth-mode) .mode-desc{color:#9ba6ad!important}
+body:not(.auth-mode) .map-option{background:#171a1e!important;border-color:#ffffff19!important;color:#dce2e5!important}
+body:not(.auth-mode) .map-option.active{background:#243329!important;border-color:#70df69!important;box-shadow:inset 0 0 0 1px #70df6940!important}
+body:not(.auth-mode) .waitplayer{background:#171a1e!important;border-color:#ffffff19!important;color:#e9eef0!important}
+body:not(.auth-mode) .muted{color:#9ba6ad!important}
+body:not(.auth-mode) .secondary{background:#252a2f!important;border-color:#ffffff20!important;color:#e2e8eb!important}
+body:not(.auth-mode) .danger{background:#56282b!important;border-color:#a34c50!important;color:#fff!important}
