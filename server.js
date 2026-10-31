@@ -1920,7 +1920,7 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
         deaths: 0,
         spawn: { ...spawn },
         pos: { ...spawn },
-        rotY: Math.atan2(spawn.x,spawn.z),
+        rotY: Math.atan2(-spawn.x,-spawn.z),
         anim: "Idle",
         lastMoveAt: 0,
         prevMoveTime: 0,
@@ -1960,7 +1960,6 @@ function createMatch(io, mode, mapId = "M3_Maze", forcedCandidates = null) {
     io.to(p.socketId).emit("match_found", {
       matchId,
       userId: p.userId,
-      uuid: p.uuid,
       mode: cfg.id,
       modeName: cfg.name,
       map: match.map,
@@ -2426,7 +2425,7 @@ function finishMatch(io, matchId) {
 function respawnPlayer(match, player) {
   player.pos = { ...player.spawn };
   player.hp = 100;
-  player.rotY = 0;
+  player.rotY = Math.atan2(-player.spawn.x,-player.spawn.z);
   player.anim = "Idle";
 }
 
@@ -2620,7 +2619,7 @@ function startAlliesRound(io, match, initial = false) {
     action: null,
     explodeTimer: null
   };
-  // Match the 1.25x Sandstone geometry scale used by the client and bomb sites.
+  // Reposition allies on Zone 9 side anchors every round.
   const sideSpawns = {
     // Zone 9: T is north-east (+X,-Z); CT is south-west (-X,+Z).
     attack: [{x:92,y:0,z:-92},{x:86,y:0,z:-92}],
@@ -2641,7 +2640,7 @@ function startAlliesRound(io, match, initial = false) {
     teamIndices[player.team] = spawnIndex + 1;
     player.spawn = { ...spawnList[spawnIndex] };
     player.pos = { ...player.spawn };
-    player.rotY = Math.atan2(player.spawn.x,player.spawn.z);
+    player.rotY = Math.atan2(-player.spawn.x,-player.spawn.z);
     player.anim = "Idle";
     emitAlliesLoadout(io, match, player);
   }
@@ -3561,6 +3560,7 @@ io.on("connection", socket => {
       M3_Maze: {x:5,y:0,z:5}
     };
     const spawnPosition = { ...(TRAINING_SPAWNS[sessionMap] || {x:0,y:0,z:0}) };
+    const spawnRotationY = Math.atan2(-spawnPosition.x,-spawnPosition.z);
     const session = {
       id: "practice_" + crypto.randomBytes(10).toString("hex"),
       userId: user.id,
@@ -3574,7 +3574,7 @@ io.on("connection", socket => {
       mapState: sessionMap === "HILL_TOWN" ? createMapInteractionState() : null,
       socketId: socket.id,
       playerPos: spawnPosition,
-      playerRotY: 0,
+      playerRotY: spawnRotationY,
       // Training is strictly solo: no bots, targets, or additional players.
       bot: null,
       spawnPosition: { ...spawnPosition },
@@ -3639,6 +3639,8 @@ io.on("connection", socket => {
       map: session.map,
       mapState: session.mapState || null,
       spawn: { ...session.playerPos },
+      rotY: session.playerRotY,
+      side: session.side,
       bot: session.bot
     });
     if (session.bot) socket.emit("training_state", { bot: session.bot });
@@ -4112,7 +4114,8 @@ io.on("connection", socket => {
         hp: player.hp,
         score: player.score,
         spawn: player.spawn,
-        position: player.pos
+        position: player.pos,
+         rotY: player.rotY
       },
       players: match.players.map(p => ({
         userId: p.userId,
