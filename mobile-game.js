@@ -4,7 +4,7 @@
   const coarse=matchMedia("(pointer:coarse)").matches||navigator.maxTouchPoints>0;
   if(!coarse)return;
   const inMatch=Boolean(document.getElementById("game"));
-  let armed=inMatch,dismissed=false,requesting=false;
+  let armed=true,dismissed=false,requesting=false;
   const portrait=()=>innerHeight>innerWidth;
   const prompt=(()=>{
     const node=document.createElement("div");
@@ -48,7 +48,7 @@
   document.addEventListener("click",event=>{
     if(shouldRequest(event.target)){armed=true;requestLandscape()}
   },{capture:true});
-  if(inMatch)update();
+  update();
   window.addEventListener("resize",update,{passive:true});
   window.addEventListener("orientationchange",()=>setTimeout(update,100),{passive:true});
   screen.orientation?.addEventListener?.("change",update);
