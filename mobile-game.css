@@ -80,3 +80,19 @@
   #sxOrientationPrompt .sx-orient-card{padding:22px 16px}
 }
 @media (prefers-reduced-motion:reduce){#sxOrientationPrompt *{transition:none!important;animation:none!important}}
+
+/* Keep the lobby free of temporary branding and registration explanations. */
+#authNote,.auth-note{display:none!important}
+body:not(.auth-mode) .topbrand,
+body:not(.auth-mode) #home .home-hero-copy,
+body:not(.auth-mode) #home .promo-tag,
+body:not(.auth-mode) #home .promo-title,
+body:not(.auth-mode) #home .news-soon,
+body:not(.auth-mode) #home .coming-soon-tag,
+body:not(.auth-mode) #home .homefooter span:first-child{display:none!important}
+body:not(.auth-mode) #home .promo-col{display:none!important}
+body:not(.auth-mode) #home .passpanel{display:none!important}
+body:not(.auth-mode) #home .home-layout{grid-template-columns:minmax(210px,.7fr) minmax(0,1.65fr)!important}
+body:not(.auth-mode) #home .home-hero{grid-column:2!important;grid-row:1!important;min-height:520px}
+body:not(.auth-mode) #home .home-friends{grid-column:1!important;grid-row:1!important}
+#sxOrientationPrompt .sx-orient-card{border-radius:4px}
