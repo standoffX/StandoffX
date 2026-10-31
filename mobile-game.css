@@ -96,3 +96,52 @@ body:not(.auth-mode) #home .home-layout{grid-template-columns:minmax(210px,.7fr)
 body:not(.auth-mode) #home .home-hero{grid-column:2!important;grid-row:1!important;min-height:520px}
 body:not(.auth-mode) #home .home-friends{grid-column:1!important;grid-row:1!important}
 #sxOrientationPrompt .sx-orient-card{border-radius:4px}
+
+/* Desktop lobby palette and hierarchy aligned with the 3D-models menu reference. */
+body:not(.auth-mode){
+  --bg:#17191d;
+  --panel:#202329;
+  --panel2:#292d33;
+  --line:#ffffff18;
+  --muted:#9ba2a9;
+  --blue:#70df69;
+  --accent:#70df69;
+  --glow:#70df69;
+  background:#17191d!important;
+  color:#f3f4f4!important;
+}
+body:not(.auth-mode) .app,
+body:not(.auth-mode) #app,
+body:not(.auth-mode) .shell,
+body:not(.auth-mode) .content{background:#17191d!important}
+body:not(.auth-mode) .topbar,
+body:not(.auth-mode) .rail{background:#12161bd9!important;border-color:#ffffff18!important}
+body:not(.auth-mode) .panel{background:linear-gradient(145deg,#202329f2,#171a1feF)!important;border-color:#ffffff18!important;box-shadow:0 8px 26px #0004!important;border-radius:3px!important}
+body:not(.auth-mode) .panelhead{background:#171a1e!important;border-bottom-color:#ffffff18!important;color:#d9dfe2!important}
+body:not(.auth-mode) .rail button{color:#aab2b8!important}
+body:not(.auth-mode) .rail button.active,
+body:not(.auth-mode) .rail button:hover{background:#70df6914!important;color:#a7f59f!important;border-left-color:#70df69!important}
+body:not(.auth-mode) .playbutton,
+body:not(.auth-mode) .primary{background:#70df69!important;border-color:#70df69!important;color:#121812!important;box-shadow:0 4px 18px #70df6930!important;clip-path:none!important;border-radius:3px!important}
+body:not(.auth-mode) .modebtn.active,
+body:not(.auth-mode) .mode-option.active{background:#26342a!important;border-color:#70df69!important;color:#f2fff0!important;box-shadow:inset 0 0 0 1px #70df6940!important}
+body:not(.auth-mode) .home-layout{grid-template-columns:minmax(205px,.72fr) minmax(420px,1.65fr) minmax(210px,.75fr)!important;gap:12px!important}
+body:not(.auth-mode) #home .home-hero{background:#1b1e23!important;border-color:#ffffff1b!important}
+body:not(.auth-mode) #home .home-hero-art{opacity:.26!important;filter:grayscale(.7)!important}
+body:not(.auth-mode) #home .home-squad-bar{background:#171c21dd!important;border-color:#ffffff1a!important}
+body:not(.auth-mode) #home .home-friends{background:#171b20!important}
+body:not(.auth-mode) #home .profile-col{background:#1e2227!important}
+body:not(.auth-mode) #home .promo-col,
+body:not(.auth-mode) #home .passpanel,
+body:not(.auth-mode) #home .home-hero-copy,
+body:not(.auth-mode) #home .promo-tag,
+body:not(.auth-mode) #home .promo-title,
+body:not(.auth-mode) #home .news-soon,
+body:not(.auth-mode) #home .coming-soon-tag,
+body:not(.auth-mode) #home .homefooter span:first-child,
+body:not(.auth-mode) .topbrand,
+#authNote,.auth-note{display:none!important}
+@media(max-width:1000px){
+ body:not(.auth-mode) .home-layout{grid-template-columns:minmax(170px,.7fr) minmax(0,1.55fr)!important}
+ body:not(.auth-mode) #home .profile-col{display:none!important}
+}
