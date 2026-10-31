@@ -1245,7 +1245,7 @@ function addBreakableWood(x,z,rotationY=Math.PI/2){
 function nearestSandstoneSite(maxDistance=5.5){
   if(!player)return null;
   let nearest=null,best=maxDistance;
-  for(const [site,center] of Object.entries({A:{x:37.5,z:-33.75},B:{x:22.5,z:37.5}})){
+  for(const [site,center] of Object.entries({A:{x:48,z:70},B:{x:-72,z:-40}})){
     const distance=Math.hypot(player.position.x-center.x,player.position.z-center.z);
     if(distance<best){best=distance;nearest={site,distance,center}}
   }
@@ -2386,7 +2386,7 @@ function renderBombWorldVisual(){
     });
     bombWorldVisual=null;
   }
-  if(mode!=="allies"||selectedMap!=="SANDSTONE"||!bombState||!["planting","planted","dropped"].includes(bombState.state))return;
+  if(mode!=="allies"||selectedMap!=="ZONE_9"||!bombState||!["planting","planted","dropped"].includes(bombState.state))return;
   if(bombState.state==="dropped"&&!bombState.position)return;
   const center=bombState.state==="dropped"?bombState.position:(bombState.site==="A"?{x:37.5,z:-33.75}:{x:22.5,z:37.5});
   const group=new THREE.Group();
