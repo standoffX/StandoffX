@@ -18,6 +18,7 @@ function getExecutableScripts(html, file) {
       js = js.replace(/^\s*import\s+\*\s+as\s+THREE\s+from\s+["']three["'];?\s*$/gm, "");
       js = js.replace(/^\s*import\s+\{\s*GLTFLoader\s*\}\s+from\s+["']three\/addons\/loaders\/GLTFLoader\.js["'];?\s*$/gm, "");
       js = js.replace(/^\s*import\s+\{\s*FBXLoader\s*\}[^\n]*$/gm, "");
+      js = js.replace(/^\s*import\s+\{\s*TGALoader\s*\}[^\n]*$/gm, "");
       js = js.replace(/^\s*import\s+\*\s+as\s+SkeletonUtils\s+from\s+["']three\/addons\/utils\/SkeletonUtils\.js["'];?\s*$/gm, "");
       js = js.replace(/^\s*import\s+\{\s*PointerLockControls\s*\}\s+from\s+["']three\/addons\/controls\/PointerLockControls\.js["'];?\s*$/gm, "");
     }
