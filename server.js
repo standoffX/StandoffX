@@ -1754,8 +1754,7 @@ const MODE_CONFIGS = {
 const ALLIES_BUY_PRICES = Object.freeze({ p350: 0, deagle: 700, akr: 2700, m4a1: 3100, p90: 2200, shotgun: 1900, sniper: 4600, knife: 0 });
 
 const TESTER_MODE_CONFIGS = {
-  training: { id: "training", name: "TRAINING", map: "ZONE_9", kind: "solo-map-inspection" },
-  field_test: { id: "field_test", name: "FIELD TEST", map: "HILL_TOWN", kind: "free-range" }
+  training: { id: "training", name: "TRAINING", map: "ZONE_9", kind: "solo-map-inspection" }
 };
 
 function canUseTesterModes(user) {
@@ -3514,10 +3513,10 @@ io.on("connection", socket => {
       return socket.emit("training_error", { message: "Усі тренувальні та тестові режими доступні лише тестерам." });
     }
 
-    const prototype = mode === "field_test" && data?.prototype === true;
+    const prototype = false;
     const gameMode = ["allies", "team_fight", "team_fight_3v3"].includes(data?.gameMode) ? data.gameMode : "team_fight";
     const previous = trainingSessions.get(user.id);
-    const sessionMap = ["field_test", "training"].includes(mode) ? normalizeMapId(data?.map || cfg.map) : cfg.map;
+    const sessionMap = normalizeMapId(data?.map || cfg.map);
     const TRAINING_SPAWNS = {
       // Zone 9 is normalized to a 250-unit footprint in the client; CT is on the south-west entrance.
       ZONE_9: {x:-92,y:0,z:92},
@@ -3542,8 +3541,8 @@ io.on("connection", socket => {
       socketId: socket.id,
       playerPos: spawnPosition,
       playerRotY: 0,
-      // Map inspection is strictly solo; the optional moving target exists only in FIELD TEST.
-      bot: mode === "field_test" ? { id: "training_bot", nickname: "ТРЕНУВАЛЬНА МІШЕНЬ", role: "runner", team: "B", hp: 100, maxHp: 100, hits: 0, x: spawnPosition.x, y: 0, z: spawnPosition.z - 8, rotY: Math.PI, action: "idle", updatedAt: Date.now() } : null,
+      // Training is strictly solo: no bots, targets, or additional players.
+      bot: null,
       spawnPosition: { ...spawnPosition },
       lastMoveAt: 0,
       lastActionAt: 0,
