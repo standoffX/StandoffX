@@ -3615,7 +3615,7 @@ io.on("connection", socket => {
       prototype: session.prototype,
       modeName: session.modeName,
       map: session.map,
-      uuid: user.uuid
+      side: session.side
     });
   });
 
