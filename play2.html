@@ -1889,10 +1889,7 @@ const WEAPON_MODEL_URLS={
   knife:MODEL_REPO_BASE+"Knifes/Karambit.fbx"
 };
 const WEAPON_MODEL_LENGTHS={akr:.9,p350:.5,deagle:.52,m4a1:.94,p90:.72,shotgun:.98,sniper:1.08,knife:.62};
-const KNIFE_SKIN_MODEL_URLS={
-  softer_knife_blue_blood:"/assets/weapons/bayonet_m9_blue_blood.glb",
-  softer_knife_sparkling_gaze:"/assets/weapons/bayonet_m9_sparkling_gaze.glb"
-};
+const KNIFE_SKIN_MODEL_URLS={};
 function normalizeWeaponModel(model,targetLength){
   const originalBounds=new THREE.Box3().setFromObject(model);
   const originalSize=originalBounds.getSize(new THREE.Vector3());
