@@ -168,3 +168,17 @@ body:not(.auth-mode) #home .profile-col .ranks{display:none!important}
   body:not(.auth-mode) #home .home-self-card{padding:6px!important}
   body:not(.auth-mode) #home .playarea{position:absolute!important;right:9px!important;bottom:8px!important;top:auto!important}
 }
+
+/* Mode and matchmaking dialogs use the same restrained charcoal/green visual language. */
+body:not(.auth-mode) .modalbox,
+body:not(.auth-mode) .modebox{background:#202329!important;border-color:#ffffff22!important;color:#f3f4f4!important;box-shadow:0 22px 70px #000a!important;border-radius:3px!important}
+body:not(.auth-mode) .modalhead{color:#f3f4f4!important;border-bottom:1px solid #ffffff17;padding-bottom:10px}
+body:not(.auth-mode) .modebtn{background:#171a1e!important;border-color:#ffffff19!important;color:#e7ecee!important;border-radius:3px!important}
+body:not(.auth-mode) .modebtn.active{background:#253329!important;border-color:#70df69!important;color:#f3fff2!important}
+body:not(.auth-mode) .mode-desc{color:#9ba6ad!important}
+body:not(.auth-mode) .map-option{background:#171a1e!important;border-color:#ffffff19!important;color:#dce2e5!important}
+body:not(.auth-mode) .map-option.active{background:#243329!important;border-color:#70df69!important;box-shadow:inset 0 0 0 1px #70df6940!important}
+body:not(.auth-mode) .waitplayer{background:#171a1e!important;border-color:#ffffff19!important;color:#e9eef0!important}
+body:not(.auth-mode) .muted{color:#9ba6ad!important}
+body:not(.auth-mode) .secondary{background:#252a2f!important;border-color:#ffffff20!important;color:#e2e8eb!important}
+body:not(.auth-mode) .danger{background:#56282b!important;border-color:#a34c50!important;color:#fff!important}
