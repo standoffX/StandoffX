@@ -7,15 +7,15 @@
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f4f7fb;background:#0a0e14}
-body{display:grid;place-items:center;overflow:hidden}
+body{display:grid;place-items:center;overflow:auto;padding:clamp(14px,3vh,30px) max(14px,env(safe-area-inset-right)) clamp(14px,3vh,30px) max(14px,env(safe-area-inset-left));min-height:100svh}
 body:before{content:"";position:fixed;inset:0;background:radial-gradient(circle at 50% 15%,rgba(55,126,255,.22),transparent 42%),linear-gradient(120deg,#080b10,#101823);pointer-events:none}
-.card{position:relative;width:min(470px,92vw);padding:30px;border:1px solid rgba(255,255,255,.1);background:rgba(13,18,27,.94);box-shadow:0 30px 100px rgba(0,0,0,.5);border-radius:18px}
+.card{position:relative;width:min(470px,100%);margin:auto;padding:clamp(20px,5vw,30px);border:1px solid rgba(255,255,255,.1);background:rgba(13,18,27,.94);box-shadow:0 30px 100px rgba(0,0,0,.5);border-radius:18px}
 .brand{display:flex;align-items:end;gap:10px}.brand h1{margin:0;font-size:36px;letter-spacing:-2px}.brand b{color:#4c8dff}.tag{font-size:10px;letter-spacing:2px;color:#7d8ba0;font-weight:800;margin-bottom:6px}
 .subtitle{margin:7px 0 24px;color:#8d9bb0}
 .tabs{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:4px;background:#080d14;border-radius:10px;margin-bottom:18px}
 .tab{border:0;background:transparent;color:#77859a;padding:11px;border-radius:8px;font-weight:800;cursor:pointer}.tab.active{background:#1a2739;color:#fff}
 .field{margin-top:12px}.field label{display:block;color:#93a1b6;font-size:12px;font-weight:700;margin-bottom:7px}
-input{width:100%;height:48px;padding:0 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:#080d14;color:#fff;outline:none}
+input{width:100%;min-width:0;height:50px;padding:0 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:#080d14;color:#fff;outline:none}
 input:focus{border-color:#377fff;box-shadow:0 0 0 3px rgba(55,127,255,.12)}
 .password-wrap{position:relative}.toggle{position:absolute;right:8px;top:8px;height:32px;padding:0 9px;border:0;border-radius:7px;background:#151e2b;color:#9aa8ba;cursor:pointer}
 button.primary{width:100%;height:50px;margin-top:18px;border:0;border-radius:10px;background:#327cff;color:#fff;font-weight:900;cursor:pointer}
@@ -24,6 +24,16 @@ button.primary:disabled{opacity:.55;cursor:wait}
 .note{margin-top:16px;color:#68768a;font-size:11px;text-align:center;line-height:1.45}
 .success{display:none}.success.show{display:block}.success-id{margin:18px 0;padding:18px;border:1px solid rgba(76,141,255,.25);background:#0b1422;border-radius:12px;text-align:center}.success-id .small{font-size:11px;color:#7d8ca0}.success-id strong{display:block;font-size:28px;letter-spacing:1px;margin-top:5px}
 .copy{margin-top:10px;border:1px solid rgba(255,255,255,.12);background:#121b28;color:#fff;border-radius:9px;padding:10px 14px;cursor:pointer}
+@media(max-width:560px){
+ body{place-items:start center;padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(16px,env(safe-area-inset-bottom))}
+ .card{border-radius:14px;padding:20px 16px;width:100%;min-height:0}
+ .brand h1{font-size:29px}.subtitle{font-size:13px;margin-bottom:18px}
+ .tabs{margin-bottom:14px}.field{margin-top:10px}
+ input{height:48px;font-size:16px}
+ button.primary{height:48px}
+ .success-id strong{font-size:25px}
+}
+.auth-art{display:none!important}
 </style>
 <link rel="stylesheet" href="/ui.css">
 </head>
@@ -50,7 +60,7 @@ button.primary:disabled{opacity:.55;cursor:wait}
     <form id="form">
       <div class="field" id="idField">
         <label id="idLabel">PLAYER ID</label>
-        <input id="identity" autocomplete="username" inputmode="text" maxlength="80" placeholder="Player ID або повний UUID">
+        <input id="identity" autocomplete="username" inputmode="text" maxlength="10" placeholder="1234567">
       </div>
       <div class="field">
         <label>ПАРОЛЬ</label>
@@ -71,15 +81,12 @@ button.primary:disabled{opacity:.55;cursor:wait}
 
   <div id="successView" class="success">
     <div class="brand"><h1>АКАУНТ ГОТОВИЙ</h1></div>
-    <div class="subtitle">Нік може повторюватися. ID потрібен для пошуку гравця, а UUID — унікальний ідентифікатор акаунта.</div>
+    <div class="subtitle">Збережи свій Player ID — він потрібен для наступного входу.</div>
     <div class="success-id">
       <div class="small">PLAYER ID</div>
       <strong id="createdId">ID_000000</strong>
       <button class="copy" id="copyId" type="button">СКОПІЮВАТИ ID</button>
-      <div class="small" style="margin-top:14px">УНІКАЛЬНИЙ UUID</div>
-      <strong id="createdUuid" style="font-size:12px;overflow-wrap:anywhere">00000000-0000-0000-0000-000000000000</strong>
-      <button class="copy" id="copyUuid" type="button">СКОПІЮВАТИ UUID</button>
-    </div>
+</div>
     <button class="primary" id="continueBtn" type="button">ПЕРЕЙТИ В ГРУ</button>
   </div>
 </main>
@@ -94,14 +101,14 @@ function setMode(next){
   $("regTab").classList.toggle("active",mode==="register");
   $("nicknameField").style.display=mode==="register"?"block":"none";
   $("idField").style.display=mode==="login"?"block":"none";
-  $("idLabel").textContent="PLAYER ID або UUID";
+  $("idLabel").textContent="PLAYER ID";
   $("identity").style.display="block";
   $("identity").required=mode==="login";
-  $("identity").placeholder=mode==="login"?"ID_123456 або UUID":"Реєстрація створить ID та UUID автоматично";
+  $("identity").placeholder=mode==="login"?"7-значний Player ID":"ID буде створено автоматично";
   $("submit").textContent=mode==="login"?"УВІЙТИ":"СТВОРИТИ АКАУНТ";
   $("note").textContent=mode==="login"
-    ?"Вхід за Player ID або унікальним UUID + пароль. Нік може збігатися з ніком іншого гравця."
-    :"Придумай нік і пароль. Player ID та унікальний UUID система створить автоматично.";
+    ?"Вхід тільки за Player ID та паролем."
+    :"Придумай нік і пароль. Player ID система створить автоматично.";
   $("msg").textContent="";
   $("msg").className="msg";
   if(mode==="register") $("nickname").focus(); else $("identity").focus();
@@ -118,8 +125,12 @@ $("form").onsubmit=async e=>{
   e.preventDefault();
   const btn=$("submit"); btn.disabled=true; $("msg").textContent=""; $("msg").className="msg";
   try{
+    const playerId=$("identity").value.trim().replace(/^ID_/i,"");
+    if(mode==="login" && playerId!=="Dev_01" && !/^\d{6,10}$/.test(playerId)){
+      throw new Error("Введи Player ID із 6–10 цифр.");
+    }
     const payload=mode==="login"
-      ? {id:$("identity").value.trim(),password:$("password").value}
+      ? {id:playerId,password:$("password").value}
       : {nickname:$("nickname").value.trim(),password:$("password").value};
 
     const r=await fetch(mode==="login"?"/api/login":"/api/register",{
@@ -135,7 +146,6 @@ $("form").onsubmit=async e=>{
       $("authView").style.display="none";
       $("successView").classList.add("show");
       $("createdId").textContent=d.createdId||d.user?.id||"ID_000000";
-      $("createdUuid").textContent=d.user?.uuid||"UUID не отримано";
       setTimeout(()=>location.href=d.redirect||"/game",1800);
     }else{
       location.href=d.redirect||"/game";
@@ -151,10 +161,6 @@ $("form").onsubmit=async e=>{
 $("copyId").onclick=async()=>{
   const id=$("createdId").textContent;
   try{await navigator.clipboard.writeText(id);$("copyId").textContent="СКОПІЙОВАНО ✓"}catch{}
-};
-$("copyUuid").onclick=async()=>{
-  const uuid=$("createdUuid").textContent;
-  try{await navigator.clipboard.writeText(uuid);$("copyUuid").textContent="СКОПІЙОВАНО ✓"}catch{}
 };
 $("continueBtn").onclick=()=>location.href="/game";
 
