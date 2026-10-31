@@ -177,3 +177,6 @@ body.lobby-screen:not(.auth-mode) .map-option[data-map="ZONE_9"]{display:flex!im
  body.lobby-screen:not(.auth-mode) .home-agent-toggle,
  body.lobby-screen:not(.auth-mode) .home-agent-panel{transition:none!important;animation:none!important}
 }
+/* Preserve the admin permission gate and keep secondary screens scrollable. */
+body.lobby-screen:not(.auth-mode) #adminBtn[style*="display: none"]{display:none!important}
+body.lobby-screen:not(.auth-mode) .screen.active:not(#home){overflow:auto!important}
