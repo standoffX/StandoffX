@@ -60,7 +60,7 @@ button.primary:disabled{opacity:.55;cursor:wait}
     <form id="form">
       <div class="field" id="idField">
         <label id="idLabel">PLAYER ID</label>
-        <input id="identity" autocomplete="username" inputmode="numeric" maxlength="10" pattern="[0-9]{6,10}" placeholder="1234567">
+        <input id="identity" autocomplete="username" inputmode="numeric" maxlength="10" placeholder="1234567">
       </div>
       <div class="field">
         <label>ПАРОЛЬ</label>
@@ -86,10 +86,7 @@ button.primary:disabled{opacity:.55;cursor:wait}
       <div class="small">PLAYER ID</div>
       <strong id="createdId">ID_000000</strong>
       <button class="copy" id="copyId" type="button">СКОПІЮВАТИ ID</button>
-      <div class="small" style="margin-top:14px">УНІКАЛЬНИЙ UUID</div>
-      <strong id="createdUuid" style="font-size:12px;overflow-wrap:anywhere">00000000-0000-0000-0000-000000000000</strong>
-      <button class="copy" id="copyUuid" type="button">СКОПІЮВАТИ UUID</button>
-    </div>
+</div>
     <button class="primary" id="continueBtn" type="button">ПЕРЕЙТИ В ГРУ</button>
   </div>
 </main>
@@ -104,10 +101,10 @@ function setMode(next){
   $("regTab").classList.toggle("active",mode==="register");
   $("nicknameField").style.display=mode==="register"?"block":"none";
   $("idField").style.display=mode==="login"?"block":"none";
-  $("idLabel").textContent="PLAYER ID або UUID";
+  $("idLabel").textContent="PLAYER ID";
   $("identity").style.display="block";
   $("identity").required=mode==="login";
-  $("identity").placeholder=mode==="login"?"ID_123456 або UUID":"Реєстрація створить ID та UUID автоматично";
+  $("identity").placeholder=mode==="login"?"7-значний Player ID":"ID буде створено автоматично";
   $("submit").textContent=mode==="login"?"УВІЙТИ":"СТВОРИТИ АКАУНТ";
   $("note").textContent=mode==="login"
     ?"Вхід за Player ID або унікальним UUID + пароль. Нік може збігатися з ніком іншого гравця."
@@ -128,8 +125,12 @@ $("form").onsubmit=async e=>{
   e.preventDefault();
   const btn=$("submit"); btn.disabled=true; $("msg").textContent=""; $("msg").className="msg";
   try{
+    const playerId=$("identity").value.trim().replace(/^ID_/i,"");
+    if(mode==="login" && playerId!=="Dev_01" && !/^\d{6,10}$/.test(playerId)){
+      throw new Error("Введи Player ID із 6–10 цифр.");
+    }
     const payload=mode==="login"
-      ? {id:$("identity").value.trim(),password:$("password").value}
+      ? {id:playerId,password:$("password").value}
       : {nickname:$("nickname").value.trim(),password:$("password").value};
 
     const r=await fetch(mode==="login"?"/api/login":"/api/register",{
