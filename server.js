@@ -3989,7 +3989,7 @@ io.on("connection", socket => {
       }
     }
 
-    const mode = ["allies", "team_fight"].includes(data?.mode) ? data.mode : "allies";
+    const mode = ["allies", "team_fight", "team_fight_3v3"].includes(data?.mode) ? data.mode : "allies";
     const requestedMap = normalizeMapId(data?.map);
     const map = "ZONE_9";
     removeFromQueue(user.uuid || user.id);
