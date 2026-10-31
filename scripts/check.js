@@ -74,7 +74,7 @@ assert.doesNotMatch(server, /id: "hide_seek"|field_test: \{ id: "field_test"/);
 assert.match(server, /function createMatch\(io, mode,[\s\S]{0,300}const safeMapId = "ZONE_9"/);
 assert.match(server, /ZONE_9: \[\{x:-92,y:0,z:92\}[\s\S]*?\{x:92,y:0,z:-86\}\]/);
 assert.match(server, /team_fight_3v3[\s\S]{0,500}requiredPlayers: 6/);
-assert.match(server, /if \(match\.mode === "team_fight_3v3"\)/);
+assert.match(server, /match\\.mode === "team_fight_3v3"/, "3v3 results are grouped by team score");
 assert.match(server, /teamScore/);
 assert.match(server, /socket\.on\("start_training"/);
 assert.match(server, /training: \{ id: "training", name: "TRAINING", map: "ZONE_9"/);
