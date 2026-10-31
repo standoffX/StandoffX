@@ -3160,6 +3160,21 @@ function loadTacticalAgentModel(){
     console.warn("[AGENT] FBX models unavailable; using the built-in soldier fallback.",error?.message||error);
   });
 }
+function setTacticalAgentSide(model,side){
+  if(!model)return;
+  const nextSide=side==="CT"?"CT":"T";
+  if(model.userData.agentSide===nextSide&&model.userData.tacticalAgent)return;
+  if(model.userData.tacticalMixer){
+    model.userData.tacticalMixer.stopAllAction();
+    model.userData.tacticalMixer=null;
+  }
+  if(model.userData.tacticalAgent){
+    model.remove(model.userData.tacticalAgent);
+    model.userData.tacticalAgent=null;
+  }
+  model.userData.agentSide=nextSide;
+  if(tacticalAgentTemplate)attachTacticalAgent(model,colorFor(myRole,myTeam));
+}
 function setSoldierTint(model,color){
   if(!model)return;
   if(model.userData.tintMaterial)model.userData.tintMaterial.color.setHex(color);
@@ -3262,6 +3277,7 @@ function applyEnemy(data){
   if(data.hp!=null)p.hp=data.hp;
   if(data.score!=null)p.score=data.score;
   if(typeof data.anim==="string")p.anim=data.anim;
+  if(previousTeam!==p.team)setTacticalAgentSide(p.mesh,p.team==="A"?"CT":"T");
   if(previousRole!==p.role||previousTeam!==p.team)setSoldierTint(p.mesh,colorFor(p.role,p.team));
   if(p.hp<=0){p.anim="Dead";setSoldierDown(p.mesh,true)}
 }
@@ -4035,7 +4051,7 @@ socket.on("init_match",data=>{
   if(data.prototype)sessionStorage.setItem("prototypeGameMode",data.mode||mode);
   else sessionStorage.removeItem("prototypeGameMode");
   myRole=data.me?.role||"runner";myTeam=data.me?.team||null;score=data.me?.score||0;hp=data.me?.hp||100;
-  if(playerVisual)setSoldierTint(playerVisual,colorFor(myRole,myTeam));
+  if(playerVisual){setTacticalAgentSide(playerVisual,myTeam==="A"?"CT":"T");setSoldierTint(playerVisual,colorFor(myRole,myTeam));}
   $("modeName").textContent=data.modeName||"MATCH";
   ensurePlayerVisual();
   const authoritativePosition=data.me?.position||data.me?.spawn;
