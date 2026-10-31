@@ -4114,6 +4114,7 @@ socket.on("training_init",data=>{
   matchPhase="game";canControl=true;
   ensurePlayerVisual();
   if(data.spawn)player.position.set(data.spawn.x||0,data.spawn.y||0,data.spawn.z||0);
+   if(Number.isFinite(Number(data.rotY)))player.rotationY=Number(data.rotY);
    if(mapLoadFinished)snapPlayerToZone9Floor(true);
   $("trainingControls").style.display=mode==="field_test"?"block":"none";
   $("overlayTitle").textContent=data.prototype?(data.gameMode==="allies"?"СОЮЗНИКИ · ПРОТОТИП":"КБ · ПРОТОТИП"):mode==="field_test"?"ВІЛЬНИЙ РЕЖИМ":"ТРЕНУВАННЯ";
@@ -4149,7 +4150,7 @@ socket.on("training_state",data=>{
     removeTrainingBot();
     if(data.spawn&&player){
       player.position.set(Number(data.spawn.x)||0,Number(data.spawn.y)||0,Number(data.spawn.z)||0);
-      player.rotationY=0;velocityY=0;jumping=false;isCrouching=false;updateVisual();
+      if(Number.isFinite(Number(data.rotY)))player.rotationY=Number(data.rotY);velocityY=0;jumping=false;isCrouching=false;if(mapLoadFinished)snapPlayerToZone9Floor(true);updateVisual();
     }
     if(data.bot)applyTrainingBot(data.bot);
   }else if(data.bot===null)removeTrainingBot();
@@ -4182,7 +4183,9 @@ socket.on("init_match",data=>{
   ensurePlayerVisual();
   const authoritativePosition=data.me?.position||data.me?.spawn;
   if(authoritativePosition)player.position.set(authoritativePosition.x||0,authoritativePosition.y||0,authoritativePosition.z||0);
-  updateSquadRoster(data.players||[]);
+   if(Number.isFinite(Number(data.me?.rotY)))player.rotationY=Number(data.me.rotY);
+   if(mapLoadFinished)snapPlayerToZone9Floor(true);
+   updateSquadRoster(data.players||[]);
   (data.players||[]).forEach(p=>{if(String(p.userId)!==String(myId))applyEnemy(p)});
   updateVisual();
   emitClientReadyWhenJoined();
