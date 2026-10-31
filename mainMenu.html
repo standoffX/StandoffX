@@ -1295,7 +1295,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 </style>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="/mobile-game.css">
-<link rel="stylesheet" href="/lobby-remaster.css">
+<link rel="stylesheet" href="/lobby-remaster.css?v=20261031-05">
 </head>
 <body class="lobby-screen">
 <div class="app">
@@ -1800,7 +1800,7 @@ function render(){
   $("profileAvatar").src=me.playerAvatar||"/avatars/default.jpg";
   $("profilePageNick").textContent=me.nickname||"PLAYER";
   $("profilePageId").textContent=id;
-  $("profilePageUuid").textContent=me.uuid||"Завантаження UUID…";
+  
   renderMapSelection();
   $("profileXP").textContent=me.XP||0;$("profileGold").textContent=me.gold||0;
   $("profileComp").textContent=me.MMRCompetitive||1000;$("profileAllies").textContent=me.MMRAllies||1000;
@@ -2070,7 +2070,7 @@ function openPlay(){
       :"Очікуємо інших гравців...";
   });
   socket.on("match_found",d=>{
-    sessionStorage.setItem("myPlayerId",d.userId);sessionStorage.setItem("myPlayerUUID",d.uuid||me.uuid||"");sessionStorage.setItem("currentMatchId",d.matchId);
+    sessionStorage.setItem("myPlayerId",d.userId);sessionStorage.removeItem("myPlayerUUID");sessionStorage.setItem("currentMatchId",d.matchId);
     sessionStorage.setItem("selectedMap",d.map||selectedMap);sessionStorage.setItem("selectedMode",d.mode||selectedMode);
     try{localStorage.setItem("sx_active_match",JSON.stringify({matchId:d.matchId,userId:d.userId,map:d.map||selectedMap,mode:d.mode||selectedMode,updatedAt:Date.now()}))}catch{}
     location.href="/play2.html";
@@ -2225,7 +2225,7 @@ function respondToLobbyInvite(accept){
 function launchLobbyMatch(data){
   if(!data?.matchId)return;
   sessionStorage.setItem("myPlayerId",data.userId);
-  sessionStorage.setItem("myPlayerUUID",data.uuid||me.uuid||"");
+  sessionStorage.removeItem("myPlayerUUID");
   sessionStorage.setItem("currentMatchId",data.matchId);
   sessionStorage.setItem("selectedMap",data.map||selectedMap);
   sessionStorage.setItem("selectedMode",data.mode||selectedMode);
