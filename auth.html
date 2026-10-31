@@ -107,7 +107,7 @@ function setMode(next){
   $("identity").placeholder=mode==="login"?"7-значний Player ID":"ID буде створено автоматично";
   $("submit").textContent=mode==="login"?"УВІЙТИ":"СТВОРИТИ АКАУНТ";
   $("note").textContent=mode==="login"
-    ?"Вхід тільки за Player ID та паролем. UUID не потрібен."
+    ?"Вхід тільки за Player ID та паролем."
     :"Придумай нік і пароль. Player ID система створить автоматично.";
   $("msg").textContent="";
   $("msg").className="msg";
@@ -161,10 +161,6 @@ $("form").onsubmit=async e=>{
 $("copyId").onclick=async()=>{
   const id=$("createdId").textContent;
   try{await navigator.clipboard.writeText(id);$("copyId").textContent="СКОПІЙОВАНО ✓"}catch{}
-};
-$("copyUuid").onclick=async()=>{
-  const uuid=$("createdUuid").textContent;
-  try{await navigator.clipboard.writeText(uuid);$("copyUuid").textContent="СКОПІЙОВАНО ✓"}catch{}
 };
 $("continueBtn").onclick=()=>location.href="/game";
 
