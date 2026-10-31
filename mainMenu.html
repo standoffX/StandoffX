@@ -2098,10 +2098,23 @@ function renderHomeFriendsPreview(friends){
   const root=$("homeFriendsPreview");if(!root)return;
   const list=Array.isArray(friends)?friends:[];
   const online=list.filter(friend=>Boolean(friend.status));
+  // Online friends are visual previews in the menu only. They are never
+  // inserted into currentLobby or counted as players in an actual match.
+  window.__sxHomeOnlineFriends=online
+    .filter(friend=>friend&&(friend.id||friend.userId)&&String(friend.id||friend.userId)!==String(me?.id||""))
+    .slice(0,3)
+    .map(friend=>({
+      userId:String(friend.id||friend.userId),
+      nickname:String(friend.nickname||"PLAYER"),
+      playerAvatar:String(friend.playerAvatar||friend.avatar||"/avatars/default.jpg"),
+      connected:true,
+      isPreviewFriend:true
+    }));
   const shown=(online.length?online:list).slice(0,4);
   const count=$("homeOnlineCount");if(count)count.textContent=online.length+" ОНЛАЙН";
   if(!shown.length){
     root.innerHTML="<div class='muted'>Друзів поки немає. Знайди гравців і створи команду.</div>";
+    renderHomeSquadRoster(currentLobby);
     return;
   }
   root.innerHTML=shown.map(friend=>{
@@ -2112,6 +2125,7 @@ function renderHomeFriendsPreview(friends){
     const disabled=!friend.status||(Boolean(currentLobby)&&currentLobby.members.length>=currentLobby.maxPlayers);
     return "<div class='home-friend"+onlineClass+"'><img src='"+avatar+"' alt=''><div class='home-friend-copy'><b>"+nick+"</b><small>"+state+"</small></div><i class='home-online'></i><button class='home-friend-invite' data-home-invite='"+esc(friend.id)+"' aria-label='Запросити "+nick+"' "+(disabled?"disabled":"")+">+</button></div>";
   }).join("");
+  renderHomeSquadRoster(currentLobby);
 }
 async function loadFriends(){
   try{
@@ -2132,21 +2146,24 @@ function renderLobbyFriends(friends){
 function renderHomeSquadRoster(lobby=currentLobby){
   const root=$("homeSquadRoster");
   const realMembers=Array.isArray(lobby?.members)?lobby.members:[];
-  const members=realMembers.length?realMembers:[{
+  const selfMember={
     userId:me?.id||"",nickname:me?.nickname||"ГРАВЕЦЬ",
     playerAvatar:me?.playerAvatar||"/avatars/default.jpg",isOwner:true,connected:true,team:null
-  }];
+  };
+  const previewFriends=!lobby&&Array.isArray(window.__sxHomeOnlineFriends)?window.__sxHomeOnlineFriends:[];
+  const members=lobby?(realMembers.length?realMembers:[selfMember]):[selfMember,...previewFriends];
   const maxPlayers=lobby?.maxPlayers||(selectedMode==="allies"?4:selectedMode==="team_fight_3v3"?6:3);
   const status=$("homeSquadStatus"),count=$("homeSquadCount");
-  if(status)status.textContent=lobby?((lobby.modeName||MODES[lobby.mode]||"МАТЧ")+" · "+(lobby.mapName||MAPS[lobby.map]||lobby.map)):"СОЛО · ЗАПРОШУЙ ДРУЗІВ";
-  if(count)count.textContent=members.length+" / "+maxPlayers;
+  if(status)status.textContent=lobby?((lobby.modeName||MODES[lobby.mode]||"МАТЧ")+" · "+(lobby.mapName||MAPS[lobby.map]||lobby.map)):(previewFriends.length?"ДРУЗІ ПОРУЧ · ПРЕВ’Ю":"СОЛО · ЗАПРОШУЙ ДРУЗІВ");
+  if(count)count.textContent=lobby?(members.length+" / "+maxPlayers):(previewFriends.length?(members.length+" ONLINE"):(members.length+" / "+maxPlayers));
   if(root){
     const cards=members.slice(0,6).map(member=>{
-      const label=member.isOwner?"ЛІДЕР":((lobby?.mode==="allies"||lobby?.mode==="team_fight_3v3")&&member.team?"КОМАНДА "+member.team:(member.connected===false?"ПІДКЛЮЧЕННЯ":"У ЗАГОНІ"));
-      const teamPicker=(lobby?.mode==="allies"||lobby?.mode==="team_fight_3v3")&&String(lobby.ownerId)===String(me?.id)
+      const label=member.isOwner?"ТИ":(member.isPreviewFriend?"ONLINE · ПРЕВ’Ю":((lobby?.mode==="allies"||lobby?.mode==="team_fight_3v3")&&member.team?"КОМАНДА "+member.team:(member.connected===false?"ПІДКЛЮЧЕННЯ":"У ЗАГОНІ")));
+      const previewClass=member.isPreviewFriend?" is-preview-friend":"";
+      const teamPicker=lobby&&(lobby.mode==="allies"||lobby.mode==="team_fight_3v3")&&String(lobby.ownerId)===String(me?.id)
         ?"<select class='home-squad-team' data-home-lobby-team='"+esc(member.userId)+"' aria-label='Команда гравця'><option value='A' "+(member.team==="A"?"selected":"")+">A</option><option value='B' "+(member.team==="B"?"selected":"")+">B</option></select>"
         :"";
-      return "<div class='home-squad-card'><img src='"+esc(member.playerAvatar||"/avatars/default.jpg")+"' alt=''><b>"+esc(member.nickname||"ГРАВЕЦЬ")+"</b><small>"+esc(label)+"</small>"+teamPicker+"</div>";
+      return "<div class='home-squad-card"+previewClass+"'><img src='"+esc(member.playerAvatar||"/avatars/default.jpg")+"' alt=''><b>"+esc(member.nickname||"ГРАВЕЦЬ")+"</b><small>"+esc(label)+"</small>"+teamPicker+"</div>";
     });
     if(lobby&&members.length<maxPlayers)cards.push("<button type='button' class='home-squad-card is-empty' data-squad-add-friend aria-label='Запросити друга'><strong>+</strong><small>ДОДАТИ</small></button>");
     root.innerHTML=cards.join("");
@@ -2156,7 +2173,8 @@ function renderHomeSquadRoster(lobby=currentLobby){
   window.__sxHomeRoster=members.map(member=>({
     userId:String(member.userId||member.id||""),nickname:String(member.nickname||"ГРАВЕЦЬ"),
     playerAvatar:String(member.playerAvatar||"/avatars/default.jpg"),isOwner:Boolean(member.isOwner),
-    connected:member.connected!==false,team:member.team||null
+    isPreviewFriend:Boolean(member.isPreviewFriend),connected:member.connected!==false,
+    team:member.team||null,side:member.side||null
   }));
   window.__sxLobbyState=lobby||null;
   window.dispatchEvent(new CustomEvent("sx:home-squad",{detail:{members:window.__sxHomeRoster,lobby:lobby||null}}));
@@ -2789,6 +2807,7 @@ if(canvas&&hero){
      if(person.team==="A")return "CT";
      if(person.team==="B")return "T";
      if(person.side==="T"||person.side==="CT")return person.side;
+     if(person.isPreviewFriend&&index%2===1)return storedAgentSide()==="T"?"CT":"T";
      return storedAgentSide();
    }
    function animationFor(person,index){
@@ -2870,14 +2889,14 @@ function clearActor(actor){
   }
   function updateLayout(){
     const roster=Array.isArray(window.__sxHomeRoster)?window.__sxHomeRoster:[];
-    const visible=roster.length?roster.slice(0,4):[{userId:"local-player",nickname:"PLAYER"}];
+    const visible=roster.length?roster.slice(0,6):[{userId:"local-player",nickname:"PLAYER"}];
     const ids=new Set(visible.map((p,i)=>String(p.userId||p.id||("local-"+i))));
     for(const [id,actor] of actors){if(!ids.has(id)){clearActor(actor);actors.delete(id)}}
     visible.forEach((person,index)=>createActor(person,index,sideFor(person,index)));
     const count=Math.max(1,visible.length);
     visible.forEach((person,index)=>{
       const actor=actors.get(String(person.userId||person.id||("local-"+index)));
-      if(actor)actor.group.position.x=(index-(count-1)/2)*Math.min(1.8,5.2/count);
+      if(actor)actor.group.position.x=(index-(count-1)/2)*Math.min(1.45,4.3/Math.max(1,count-1));
     });
   }
   window.addEventListener("sx:home-squad",event=>{

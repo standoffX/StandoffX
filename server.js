@@ -19,6 +19,7 @@ if (!ADMIN_PASSWORD) console.warn("[AUTH] ADMIN_PASSWORD is not set; master acco
 
 const ROOT = __dirname;
 const JSON_FALLBACK_ENABLED = process.env.STANDOFFX_ALLOW_JSON_FALLBACK === "1";
+const LEGACY_USERS_IMPORT_ENABLED = process.env.STANDOFFX_IMPORT_LEGACY_JSON === "1";
 const USERS_PATH = path.join(ROOT, "account.json");
 const CLANS_PATH = path.join(ROOT, "clans.json");
 const MESSAGES_PATH = path.join(ROOT, "messages.json");
@@ -225,10 +226,19 @@ async function loadMongoState(name, legacySnapshot) {
     }
     return existing.data;
   }
-  const snapshot = JSON.parse(JSON.stringify(legacySnapshot));
+  if (name === "state_users" && Array.isArray(legacySnapshot) && legacySnapshot.length > 0 && !LEGACY_USERS_IMPORT_ENABLED) {
+    throw new Error(
+      "Legacy account.json contains player records but MongoDB state_users is missing. " +
+      "To import this file into an empty Atlas database one time, set STANDOFFX_IMPORT_LEGACY_JSON=1 " +
+      "for the migration deployment, verify the users in Atlas, then remove the variable."
+    );
+  }
+  const snapshot = name === "state_users" && !LEGACY_USERS_IMPORT_ENABLED
+    ? []
+    : JSON.parse(JSON.stringify(legacySnapshot));
   try {
     await collection.insertOne({ _id: "main", data: snapshot });
-    console.warn("[DB] One-time legacy import into MongoDB:", name);
+    console.warn("[DB] Initialized/imported MongoDB state:", name, name === "state_users" && LEGACY_USERS_IMPORT_ENABLED ? "(legacy account import enabled)" : "");
     return snapshot;
   } catch (err) {
     if (err?.code !== 11000) throw err;
