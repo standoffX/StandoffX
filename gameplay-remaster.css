@@ -37,9 +37,11 @@
  #radarWrap{top:7px!important;left:7px!important;width:103px!important;padding:5px!important}
  #radarCanvas{width:91px!important;height:91px!important}
  #radarWrap>span{font-size:6px!important}
- #combatVitals{left:8px;bottom:9px;min-width:128px;padding:7px 8px;gap:7px}
- #combatVitals .vitals-icon{width:23px;height:23px;font-size:13px}
- #combatVitals strong{font-size:12px}
+ #combatVitals{left:8px;top:110px;bottom:auto;min-width:112px;max-width:112px;padding:6px 7px;gap:6px}
+ #combatVitals .vitals-icon{width:21px;height:21px;font-size:12px}
+ #combatVitals .vitals-label{font-size:6px}
+ #combatVitals strong{font-size:11px}
+ #combatVitals .health-track{height:3px}
  #ammo{right:8px!important;bottom:9px!important;min-width:96px!important;padding:7px 8px!important}
  .ammo-num{font-size:25px!important}
  .hud .top{top:7px!important;padding:6px 9px!important;gap:8px!important}
