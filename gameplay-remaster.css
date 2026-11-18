@@ -1,0 +1,50 @@
+/* StandoffX combat HUD visual pass */
+.hud{font-family:Inter,Arial,sans-serif!important;color:#f1f4f5}
+.hud .top{top:12px!important;min-height:48px!important;gap:15px!important;padding:7px 15px!important;border:1px solid #ffffff1c!important;border-radius:4px!important;background:linear-gradient(180deg,#141a20ee,#080d12e8)!important;box-shadow:0 8px 24px #0005!important;backdrop-filter:blur(10px)}
+.hud .top b{font-size:10px!important;letter-spacing:1.4px!important;color:#e5ebee!important}
+.hud .top-right{display:flex!important;align-items:center!important;gap:12px!important}
+.hud .top-right span{font-size:10px!important;font-weight:850!important;color:#b7c2c9!important;font-variant-numeric:tabular-nums}
+.hud .top-right #timer{color:#f3f4f4!important;font-size:14px!important}
+#score{position:absolute!important;top:13px!important;left:14px!important;right:auto!important;padding:8px 11px!important;border:1px solid #ffffff1b!important;border-radius:3px!important;background:#10161bd9!important;color:#e4eaed!important;font-size:9px!important;font-weight:950!important;letter-spacing:1px!important;box-shadow:0 5px 18px #0004!important}
+#score .teamA{color:#80b5ff!important}.teamB{color:#ff8891!important}
+#radarWrap{position:absolute!important;top:12px!important;left:13px!important;right:auto!important;width:142px!important;padding:7px!important;border:1px solid #ffffff1b!important;border-radius:4px!important;background:#0b1118c9!important;box-shadow:0 7px 22px #0005!important;backdrop-filter:blur(8px)!important}
+#radarCanvas{display:block!important;width:128px!important;height:128px!important;border-radius:2px!important}
+#radarWrap>span{display:block!important;margin-top:4px!important;color:#87959d!important;font-size:7px!important;letter-spacing:1.4px!important;text-align:center!important}
+#ammo{right:17px!important;bottom:17px!important;min-width:130px!important;padding:9px 11px!important;border:1px solid #ffffff1b!important;border-radius:4px!important;background:linear-gradient(145deg,#131b22df,#090e13e8)!important;box-shadow:0 7px 24px #0005!important;backdrop-filter:blur(8px)!important}
+.ammo-name{font-size:9px!important;letter-spacing:1.5px!important;color:#b9c8d0!important}
+.ammo-num{font-size:31px!important;line-height:1.05!important;color:#f3f5f6!important;font-variant-numeric:tabular-nums!important}
+.ammo-sub{font-size:8px!important;color:#8898a2!important}
+#weaponDamage{display:none!important}
+#hint{display:none!important}
+#combatVitals{position:absolute;left:17px;bottom:17px;display:flex;align-items:center;gap:10px;min-width:172px;padding:9px 11px;border:1px solid #ffffff1a;border-radius:4px;background:linear-gradient(145deg,#131b22e8,#090e13ed);box-shadow:0 7px 24px #0005;backdrop-filter:blur(8px);pointer-events:none}
+#combatVitals .vitals-icon{width:28px;height:28px;display:grid;place-items:center;border:1px solid #ffffff18;border-radius:3px;background:#ffffff08;color:#dce5e8;font-size:17px}
+#combatVitals .vitals-data{display:grid;gap:5px;flex:1;min-width:0}
+#combatVitals .vitals-label{display:flex;align-items:baseline;justify-content:space-between;gap:12px;color:#91a0a8;font-size:7px;font-weight:950;letter-spacing:1.2px}
+#combatVitals strong{font-size:14px;color:#f0f4f5;font-variant-numeric:tabular-nums;letter-spacing:0}
+#combatVitals .health-track{height:4px;overflow:hidden;background:#ffffff18;border-radius:4px}
+#combatVitals .health-track i{display:block;width:100%;height:100%;background:linear-gradient(90deg,#53c976,#9ee18f);border-radius:4px;transition:width .14s ease,background .14s ease}
+#combatVitals.is-low .health-track i{background:linear-gradient(90deg,#df8b4a,#efc36e)}
+#combatVitals.is-critical .health-track i{background:linear-gradient(90deg,#e14a55,#fa8990)}
+#combatVitals.is-dead{opacity:.5}
+#crosshair{filter:drop-shadow(0 1px 1px #000b)}
+#crosshair.hit{filter:drop-shadow(0 0 5px #9be7c4)}
+#damagePopup{border-radius:3px!important;backdrop-filter:blur(7px);box-shadow:0 5px 18px #0005}
+#weaponActionLabel{border-radius:3px!important;backdrop-filter:blur(7px);box-shadow:0 5px 18px #0005}
+#deathNotice{border-radius:3px!important;box-shadow:0 10px 32px #0008;backdrop-filter:blur(8px)}
+#bombHud{border-radius:3px!important;background:#0c1419e8!important;border:1px solid #ffffff22!important;box-shadow:0 8px 24px #0006!important}
+#squadStrip{filter:drop-shadow(0 3px 10px #0005)}
+@media(max-width:800px){
+ #radarWrap{top:7px!important;left:7px!important;width:103px!important;padding:5px!important}
+ #radarCanvas{width:91px!important;height:91px!important}
+ #radarWrap>span{font-size:6px!important}
+ #combatVitals{left:8px;bottom:9px;min-width:128px;padding:7px 8px;gap:7px}
+ #combatVitals .vitals-icon{width:23px;height:23px;font-size:13px}
+ #combatVitals strong{font-size:12px}
+ #ammo{right:8px!important;bottom:9px!important;min-width:96px!important;padding:7px 8px!important}
+ .ammo-num{font-size:25px!important}
+ .hud .top{top:7px!important;padding:6px 9px!important;gap:8px!important}
+ .hud .top b{font-size:8px!important}
+ .hud .top-right{gap:7px!important}
+ .hud .top-right #timer{font-size:11px!important}
+ #score{top:7px!important;right:7px!important;left:auto!important;padding:6px 7px!important;font-size:7px!important}
+}
