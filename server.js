@@ -975,8 +975,9 @@ app.post("/api/login", loginRateLimit, (req, res) => {
     delete user.password;
   }
 
-  user.status = true;
   ensureUserShape(user);
+  const liveLoginSockets=activeUserSockets.get(String(user.id));
+  user.status=Boolean(liveLoginSockets&&liveLoginSockets.size);
   saveUsers();
 
   const token = createSession(user.uuid || user.id);
@@ -992,8 +993,10 @@ app.post("/api/logout", requireAuth, (req, res) => {
     req.user.authSessions = (Array.isArray(req.user.authSessions) ? req.user.authSessions : [])
       .filter(session => session?.tokenHash !== tokenHash);
   }
-  req.user.status = false;
+  const liveLogoutSockets=activeUserSockets.get(String(req.user.id));
+  req.user.status=Boolean(liveLogoutSockets&&liveLogoutSockets.size);
   saveUsers();
+  if(!req.user.status)broadcastFriendPresence(req.user,false);
   clearSessionCookie(res);
   res.json({ success: true });
 });
