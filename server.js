@@ -3522,6 +3522,21 @@ const io = new Server(server, {
   cors: { origin: true, credentials: true }
 });
 
+const activeUserSockets=new Map();
+function broadcastFriendPresence(user,isOnline){
+  if(!user||!user.id)return;
+  const payload={
+    id:String(user.id),
+    userId:String(user.id),
+    nickname:String(user.nickname||"PLAYER"),
+    status:Boolean(isOnline),
+    lastSeen:isOnline?null:(Number(user.lastSeen)||Date.now())
+  };
+  for(const friendId of (Array.isArray(user.friendsList)?user.friendsList:[])){
+    io.to("user:"+String(friendId)).emit("friend_presence",payload);
+  }
+}
+
 io.on("connection", socket => {
   globalSocketServer = io;
   const cookies = parseCookies(socket.handshake.headers.cookie || "");
@@ -3533,8 +3548,17 @@ io.on("connection", socket => {
     return;
   }
 
-  socket.user.status = true;
-  saveUsers();
+  const connectedUserId=String(socket.user.id);
+  const connectedSockets=activeUserSockets.get(connectedUserId)||new Set();
+  const wasAlreadyOnline=connectedSockets.size>0;
+  connectedSockets.add(socket.id);
+  activeUserSockets.set(connectedUserId,connectedSockets);
+  socket.join("user:"+connectedUserId);
+  socket.user.status=true;
+  if(!wasAlreadyOnline){
+    saveUsers();
+    broadcastFriendPresence(socket.user,true);
+  }
 
   socket.on("start_training", data => {
     const user = socket.user;
@@ -4434,9 +4458,24 @@ io.on("connection", socket => {
     if (socket.user?.id) removeLobbyMember(io, socket.user.id, socket.id, "Гравець відключився.");
     removeFromQueue(socket.user?.uuid || socket.user?.id, socket.id);
 
-    if (socket.user) {
-      socket.user.status = false;
-      saveUsers();
+    if(socket.user?.id){
+      const userId=String(socket.user.id);
+      const sockets=activeUserSockets.get(userId);
+      if(sockets){
+        sockets.delete(socket.id);
+        if(sockets.size===0){
+          activeUserSockets.delete(userId);
+          socket.user.status=false;
+          socket.user.lastSeen=Date.now();
+          saveUsers();
+          broadcastFriendPresence(socket.user,false);
+        }
+      }else{
+        socket.user.status=false;
+        socket.user.lastSeen=Date.now();
+        saveUsers();
+        broadcastFriendPresence(socket.user,false);
+      }
     }
 
     const practice = socket.user ? trainingSessions.get(socket.user.id) : null;
