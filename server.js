@@ -3551,14 +3551,13 @@ io.on("connection", socket => {
   const connectedUserId=String(socket.user.id);
   const connectedSockets=activeUserSockets.get(connectedUserId)||new Set();
   const wasAlreadyOnline=connectedSockets.size>0;
+  const statusChanged=!socket.user.status;
   connectedSockets.add(socket.id);
   activeUserSockets.set(connectedUserId,connectedSockets);
   socket.join("user:"+connectedUserId);
   socket.user.status=true;
-  if(!wasAlreadyOnline){
-    saveUsers();
-    broadcastFriendPresence(socket.user,true);
-  }
+  if(!wasAlreadyOnline||statusChanged)saveUsers();
+  if(!wasAlreadyOnline)broadcastFriendPresence(socket.user,true);
 
   socket.on("start_training", data => {
     const user = socket.user;
