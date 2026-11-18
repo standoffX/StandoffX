@@ -498,6 +498,7 @@ html,body{font-family:Inter,"Nunito",system-ui,-apple-system,"Segoe UI",sans-ser
 </style>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="/mobile-game.css">
+<link rel="stylesheet" href="/gameplay-remaster.css?v=1">
 </head>
 <body>
 <div id="game"></div>
@@ -577,6 +578,7 @@ html,body{font-family:Inter,"Nunito",system-ui,-apple-system,"Segoe UI",sans-ser
   <div id="crosshair" class="crosshair-display style-classic" aria-hidden="true"><i class="crosshair-arm top"></i><i class="crosshair-arm right"></i><i class="crosshair-arm bottom"></i><i class="crosshair-arm left"></i><i class="crosshair-dot"></i></div>
   <div id="weaponActionLabel" aria-live="polite"></div>
   <div id="deathNotice" role="status" aria-live="polite">ТЕБЕ ЛІКВІДУВАЛИ</div>
+  <div id="combatVitals" aria-label="Здоров’я гравця"><span class="vitals-icon" aria-hidden="true">✚</span><div class="vitals-data"><div class="vitals-label"><span>ЗДОРОВ’Я</span><strong id="currentHealth">100</strong></div><div class="health-track"><i id="healthFill"></i></div></div></div>
   <div id="ammo" style="display:none"><div class="ammo-name" id="weaponName">AKR</div><div class="ammo-num" id="ammoNum">30</div><div class="ammo-sub" id="ammoSub">/ 30 · R — RELOAD</div><div class="ammo-sub" id="weaponDamage">5 м · ГОЛ 164 ТІЛ 35 ЖИВ 45 НОГ 27</div></div>
   <div id="damagePopup" role="status" aria-live="polite"></div>
   <div id="hint">WASD — рух · B — магазин · 1–3 — зброя · 4 — C4 · G — кинути предмет · F — підібрати / карта · V — камера</div>
@@ -709,7 +711,7 @@ const camera=new THREE.PerspectiveCamera(74,innerWidth/innerHeight,.08,700);
 scene.add(camera);
 const renderer=new THREE.WebGLRenderer({
   // Desktop gets antialiasing and soft shadows; touch devices keep a lighter profile.
-  antialias:!isMobileDevice&&!isLowEndDevice&&selectedMap!=="ZONE_9",
+  antialias:!isMobileDevice&&!isLowEndDevice,
   powerPreference:"high-performance",
   stencil:false,
   depth:true,
@@ -720,7 +722,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?0.9:isLowEndD
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.12;
-renderer.shadowMap.enabled=!isMobileDevice&&!isLowEndDevice&&selectedMap!=="ZONE_9";
+renderer.shadowMap.enabled=!isMobileDevice&&!isLowEndDevice;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 $("game").appendChild(renderer.domElement);
 
@@ -728,7 +730,7 @@ scene.add(new THREE.HemisphereLight(0xe7f3ff,0x4b4b43,1.35));
 scene.add(new THREE.AmbientLight(0xffffff,.22));
 const keyLight=new THREE.DirectionalLight(0xfff1dc,2.0);
 keyLight.position.set(-42,78,32);
-keyLight.castShadow=!isMobileDevice&&!isLowEndDevice&&selectedMap!=="ZONE_9";
+keyLight.castShadow=!isMobileDevice&&!isLowEndDevice;
 keyLight.shadow.mapSize.set(isMobileDevice||isLowEndDevice?512:1024,isMobileDevice||isLowEndDevice?512:1024);
 keyLight.shadow.camera.left=-90;
 keyLight.shadow.camera.right=90;
@@ -2044,6 +2046,7 @@ let matchPhase="waiting";
 let myRole="runner";
 let myTeam=null;
 let hp=100;
+window.__sxGetHealth=()=>hp;
 let score=0;
 let matchTime=0;
 let speed=7.5;
@@ -4888,6 +4891,7 @@ if(isTrainingMode)socket.emit("join_training",{trainingId});
 else socket.emit("join_room",{matchId,userId:myId});
 animate();
 </script>
+<script src="/gameplay-remaster.js" defer></script>
 <script src="/mobile-game.js" defer></script>
 </body>
 </html>
