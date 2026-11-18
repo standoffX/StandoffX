@@ -321,7 +321,12 @@ async function initMongo() {
     const atlasUsers = await readState("state_users");
     if (!Array.isArray(atlasUsers)) throw new Error("MongoDB state_users.data must be an array.");
     users = atlasUsers.filter(user => user && typeof user === "object" && !Array.isArray(user)).map(user => ({ ...user }));
-    for (const user of users) ensureUserShape(user);
+    for (const user of users) {
+      ensureUserShape(user);
+      const liveSockets=activeUserSockets.get(String(user.id));
+      user.status=Boolean(liveSockets&&liveSockets.size);
+      if(!user.status&&user.lastSeen==null)user.lastSeen=Date.now();
+    }
     migratePlayerIds();
 
     const atlasClans = await readState("state_clans");
