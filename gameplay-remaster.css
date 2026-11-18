@@ -5,7 +5,7 @@
 .hud .top-right{display:flex!important;align-items:center!important;gap:12px!important}
 .hud .top-right span{font-size:10px!important;font-weight:850!important;color:#b7c2c9!important;font-variant-numeric:tabular-nums}
 .hud .top-right #timer{color:#f3f4f4!important;font-size:14px!important}
-#score{position:absolute!important;top:13px!important;left:14px!important;right:auto!important;padding:8px 11px!important;border:1px solid #ffffff1b!important;border-radius:3px!important;background:#10161bd9!important;color:#e4eaed!important;font-size:9px!important;font-weight:950!important;letter-spacing:1px!important;box-shadow:0 5px 18px #0004!important}
+#score{position:absolute!important;top:13px!important;left:auto!important;right:14px!important;padding:8px 11px!important;border:1px solid #ffffff1b!important;border-radius:3px!important;background:#10161bd9!important;color:#e4eaed!important;font-size:9px!important;font-weight:950!important;letter-spacing:1px!important;box-shadow:0 5px 18px #0004!important}
 #score .teamA{color:#80b5ff!important}.teamB{color:#ff8891!important}
 #radarWrap{position:absolute!important;top:12px!important;left:13px!important;right:auto!important;width:142px!important;padding:7px!important;border:1px solid #ffffff1b!important;border-radius:4px!important;background:#0b1118c9!important;box-shadow:0 7px 22px #0005!important;backdrop-filter:blur(8px)!important}
 #radarCanvas{display:block!important;width:128px!important;height:128px!important;border-radius:2px!important}
