@@ -1296,6 +1296,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="/mobile-game.css">
 <link rel="stylesheet" href="/lobby-remaster.css?v=20261031-05">
+<link rel="stylesheet" href="/menu-remaster.css?v=1">
 </head>
 <body class="lobby-screen">
 <div class="app">
@@ -2082,22 +2083,31 @@ function renderWaitPlayers(players){
 }
 function renderHomeFriendsPreview(friends){
   const root=$("homeFriendsPreview");if(!root)return;
-  const list=Array.isArray(friends)?friends:[];
-  const online=list.filter(friend=>Boolean(friend.status));
-  const shown=(online.length?online:list).slice(0,4);
-  const count=$("homeOnlineCount");if(count)count.textContent=online.length+" ОНЛАЙН";
-  if(!shown.length){
+  const list=Array.isArray(friends)?friends.slice():[];
+  const online=list.filter(friend=>Boolean(friend.status)).sort((a,b)=>String(a.nickname||"").localeCompare(String(b.nickname||""),"uk"));
+  const offline=list.filter(friend=>!friend.status).sort((a,b)=>String(a.nickname||"").localeCompare(String(b.nickname||""),"uk"));
+  const count=$("homeOnlineCount");
+  if(count)count.textContent=online.length+" ОНЛАЙН · "+offline.length+" ОФЛАЙН";
+  if(!list.length){
     root.innerHTML="<div class='muted'>Друзів поки немає. Знайди гравців і створи команду.</div>";
     return;
   }
-  root.innerHTML=shown.map(friend=>{
-    const avatar=esc(friend.playerAvatar||friend.avatar||"/avatars/default.jpg");
-    const nick=esc(friend.nickname||"PLAYER");
-    const state=friend.status?"ONLINE":"OFFLINE";
-    const onlineClass=friend.status?" is-online":"";
-    const disabled=!friend.status||(Boolean(currentLobby)&&currentLobby.members.length>=currentLobby.maxPlayers);
-    return "<div class='home-friend"+onlineClass+"'><img src='"+avatar+"' alt=''><div class='home-friend-copy'><b>"+nick+"</b><small>"+state+"</small></div><i class='home-online'></i><button class='home-friend-invite' data-home-invite='"+esc(friend.id)+"' aria-label='Запросити "+nick+"' "+(disabled?"disabled":"")+">+</button></div>";
-  }).join("");
+  const renderGroup=(title,items,isOnline)=>{
+    if(!items.length)return "";
+    const rows=items.map(friend=>{
+      const avatar=esc(friend.playerAvatar||friend.avatar||"/avatars/default.jpg");
+      const nick=esc(friend.nickname||"PLAYER");
+      const state=isOnline?"ONLINE":"OFFLINE";
+      const onlineClass=isOnline?" is-online":"";
+      const disabled=!isOnline||(Boolean(currentLobby)&&currentLobby.members.length>=currentLobby.maxPlayers);
+      const invite=isOnline
+        ?"<button class='home-friend-invite' data-home-invite='"+esc(friend.id)+"' aria-label='Запросити "+nick+"' "+(disabled?"disabled":"")+">+</button>"
+        :"<button class='home-friend-invite' type='button' disabled aria-label='Гравець не в мережі'>·</button>";
+      return "<div class='home-friend"+onlineClass+"'><img src='"+avatar+"' alt=''><div class='home-friend-copy'><b>"+nick+"</b><small>"+state+"</small></div><i class='home-online'></i>"+invite+"</div>";
+    }).join("");
+    return "<section class='home-presence-group'><div class='home-presence-heading'><span>"+title+"</span><span class='presence-count'>"+items.length+"</span></div>"+rows+"</section>";
+  };
+  root.innerHTML=renderGroup("В МЕРЕЖІ",online,true)+renderGroup("НЕ В МЕРЕЖІ",offline,false);
 }
 async function loadFriends(){
   try{
@@ -2902,6 +2912,7 @@ function clearActor(actor){
   window.__sxSetAgentQuality=low=>renderer.setPixelRatio(Math.min(devicePixelRatio||1,low?.65:1.25));
 }
 </script>
+<script src="/menu-remaster.js" defer></script>
 <script src="/mobile-game.js" defer></script>
 </body>
 </html>
