@@ -112,17 +112,6 @@
     });
     $("sxOpenClanPage")?.addEventListener("click",()=>window.sxShowMenuView?.("clan"));
     $("settingsBack")?.addEventListener("click",()=>window.sxShowMenuView?.("home"));
-    $("guestQuickBtn")?.addEventListener("click",async event=>{
-      const button=event.currentTarget;
-      if(button.disabled)return;
-      button.disabled=true;
-      try{
-        const response=await fetch("/api/guest",{method:"POST",credentials:"same-origin"});
-        const data=await response.json().catch(()=>({}));
-        if(!response.ok)throw new Error(data.message||"Не вдалося створити гостьовий профіль.");
-        location.assign(data.redirect||"/game");
-      }catch(error){button.disabled=false;window.notifyToast?.(error.message||"Помилка гостьового входу")}
-    });
     window.sxOpenAdminPanel=openAdminPanel;
     window.addEventListener("keydown",event=>{if(event.key==="Escape")closeAdminPanel()});
     window.addEventListener("sx:user-updated",event=>{
