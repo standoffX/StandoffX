@@ -4578,31 +4578,103 @@ io.on("connection", socket => {
   socket.on("join_chat", ({ friendId } = {}) => {
     const user = socket.user;
     const friend = users.find(u => u.id === normalizeId(friendId));
-    if (!friend || !areFriends(user, friend)) return socket.emit("chat_error", { message: "Можна писати лише друзям." });
-
+    if (!friend || friend.isGuest || user.isGuest || !areFriends(user, friend)) {
+      return socket.emit("chat_error", { message: "Можна писати лише друзям." });
+    }
     const room = chatRoom(user.id, friend.id);
+    messages[room] = Array.isArray(messages[room]) ? messages[room] : [];
+    let changed=false;
+    for(const message of messages[room]){
+      if(!message.id){message.id=crypto.randomUUID();changed=true;}
+      if(!Array.isArray(message.reactions)){message.reactions=[];changed=true;}
+      if(message.deleted===undefined)message.deleted=false;
+    }
+    if(changed)saveMessages();
     socket.join(room);
-    socket.emit("chat_history", messages[room] || []);
+    socket.emit("chat_history", messages[room]);
+  });
+
+  socket.on("leave_chat", ({ friendId } = {}) => {
+    const friendIdSafe=normalizeId(friendId);
+    if(friendIdSafe&&socket.user?.id)socket.leave(chatRoom(socket.user.id,friendIdSafe));
   });
 
   socket.on("send_msg", ({ toId, text } = {}) => {
     const user = socket.user;
     const friend = users.find(u => u.id === normalizeId(toId));
     const body = cleanText(text, 1000);
-    if (!friend || !body || !areFriends(user, friend)) return;
-
+    if (!friend || friend.isGuest || user.isGuest || !body || !areFriends(user, friend)) {
+      return socket.emit("chat_error", { message: "Не вдалося надіслати повідомлення." });
+    }
     const room = chatRoom(user.id, friend.id);
     const msg = {
+      id:crypto.randomUUID(),
       senderId: user.id,
       senderName: user.nickname,
       text: body,
-      time: new Date().toISOString()
+      time: new Date().toISOString(),
+      editedAt:null,
+      deleted:false,
+      reactions:[]
     };
     messages[room] = Array.isArray(messages[room]) ? messages[room] : [];
     messages[room].push(msg);
-    if (messages[room].length > 200) messages[room].splice(0, messages[room].length - 200);
+    if (messages[room].length > 300) messages[room].splice(0, messages[room].length - 300);
     saveMessages();
     io.to(room).emit("new_msg", msg);
+    io.to("user:"+friend.id).emit("private_message_notification",{
+      fromId:user.id,fromNickname:user.nickname,
+      messageId:msg.id,text:body.slice(0,120),time:msg.time
+    });
+  });
+
+  socket.on("edit_msg", ({ toId, messageId, text } = {}) => {
+    const user=socket.user,friend=users.find(item=>item.id===normalizeId(toId));
+    const body=cleanText(text,1000),id=cleanText(messageId,80);
+    if(!friend||friend.isGuest||user.isGuest||!body||!id||!areFriends(user,friend))return;
+    const room=chatRoom(user.id,friend.id);
+    const message=(messages[room]||[]).find(item=>item.id===id&&String(item.senderId)===String(user.id));
+    if(!message||message.deleted)return socket.emit("chat_error",{message:"Це повідомлення вже недоступне."});
+    message.text=body;
+    message.editedAt=new Date().toISOString();
+    saveMessages();
+    io.to(room).emit("msg_updated",message);
+  });
+
+  socket.on("delete_msg", ({ toId, messageId } = {}) => {
+    const user=socket.user,friend=users.find(item=>item.id===normalizeId(toId));
+    const id=cleanText(messageId,80);
+    if(!friend||friend.isGuest||user.isGuest||!id||!areFriends(user,friend))return;
+    const room=chatRoom(user.id,friend.id);
+    const message=(messages[room]||[]).find(item=>item.id===id&&String(item.senderId)===String(user.id));
+    if(!message)return socket.emit("chat_error",{message:"Повідомлення вже недоступне."});
+    message.text="";
+    message.deleted=true;
+    message.deletedAt=new Date().toISOString();
+    message.reactions=[];
+    saveMessages();
+    io.to(room).emit("msg_deleted",{id:message.id,senderId:message.senderId,deletedAt:message.deletedAt});
+  });
+
+  socket.on("react_msg", ({ toId, messageId, emoji } = {}) => {
+    const user=socket.user,friend=users.find(item=>item.id===normalizeId(toId));
+    const id=cleanText(messageId,80);
+    const allowed=new Set(["👍","❤️","😂","😮","😢","🔥","👏"]);
+    const reaction=String(emoji||"");
+    if(!friend||friend.isGuest||user.isGuest||!id||!allowed.has(reaction)||!areFriends(user,friend))return;
+    const room=chatRoom(user.id,friend.id);
+    const message=(messages[room]||[]).find(item=>item.id===id&&!item.deleted);
+    if(!message)return;
+    message.reactions=Array.isArray(message.reactions)?message.reactions:[];
+    let row=message.reactions.find(item=>item.emoji===reaction);
+    if(!row){row={emoji:reaction,users:[]};message.reactions.push(row);}
+    row.users=Array.isArray(row.users)?row.users:[];
+    const userId=String(user.id);
+    row.users=row.users.filter(value=>String(value)!==userId);
+    if(!message.reactions.some(item=>item!==row&&item.emoji===reaction))row.users.push(userId);
+    message.reactions=message.reactions.filter(item=>Array.isArray(item.users)&&item.users.length>0);
+    saveMessages();
+    io.to(room).emit("msg_reaction",{id:message.id,reactions:message.reactions});
   });
 
   socket.on("disconnect", () => {
