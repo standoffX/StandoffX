@@ -1797,6 +1797,8 @@ async function refreshProfileIdentity(){
 }
 function render(){
   if(!me)return;
+  window.__sxMenuUser=me;
+  window.dispatchEvent(new CustomEvent("sx:user-updated",{detail:me}));
   const id=cleanId(me.id);
   window.__sxHomePlayerId=String(me.id||"");
   $("topId").textContent="ID "+id;
@@ -2732,9 +2734,12 @@ if(canvas&&hero){
   const base="https://raw.githubusercontent.com/standoffX/3d-models/main/";
   const manager=new THREE.LoadingManager();
   manager.setURLModifier(url=>{
-    const value=String(url||"").replace(/\\\\/g,"/");
+    const value=String(url||"").replace(/\\/g,"/");
     const marker=value.toLowerCase().lastIndexOf("/c:/");
-    if(marker>=0){const filename=value.slice(marker).split("/").pop().split(/[?#]/)[0];if(/^[a-z0-9 _().-]+\\.tga$/i.test(filename))return base+encodeURIComponent(filename);}
+    if(marker>=0){
+      const filename=value.slice(marker).split("/").pop().split(/[?#]/)[0];
+      if(/^[a-z0-9 _().-]+\.tga$/i.test(filename))return base+encodeURIComponent(filename);
+    }
     return url;
   });
   manager.addHandler(/\\.tga$/i,new TGALoader(manager));
@@ -2826,6 +2831,8 @@ if(canvas&&hero){
    }
    function saveAgentSettings(){fetch("/api/settings/agent",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({side:storedAgentSide(),animation:storedAgentAnimation()})}).catch(error=>console.warn("[Agent] Could not sync settings:",error));}
    agentToggle?.addEventListener("click",()=>{const open=!agentPanel.classList.contains("active");agentPanel.classList.toggle("active",open);updateAgentPanel()});
+   window.addEventListener("sx:agent-panel-open",updateAgentPanel);
+   updateAgentPanel();
    agentPanel?.addEventListener("click",event=>{
      const sideButton=event.target.closest("[data-home-agent-side]");
      const animationButton=event.target.closest("[data-home-agent-animation]");
