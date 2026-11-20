@@ -160,7 +160,7 @@ function persistState(name, data, legacyPath) {
   }
   return Promise.resolve(false);
 }
-function saveUsers() { return persistState("state_users", users, USERS_PATH); }
+function saveUsers() { return persistState("state_users", users.filter(user => !user.isGuest), USERS_PATH); }
 function saveClans() { return persistState("state_clans", clans, CLANS_PATH); }
 function saveMessages() { return persistState("state_messages", messages, MESSAGES_PATH); }
 function saveInventory() { return persistState("state_inventory", inventory, INVENTORY_PATH); }
@@ -516,7 +516,7 @@ function findUser(idOrNickname, options = {}) {
 
 function publicUser(user) {
   if (!user) return null;
-  const { password, passwordHash, uuid, messages: privateMessages, friendRequests, ...safe } = user;
+  const { password, passwordHash, uuid, messages: privateMessages, friendRequests, incomingClanInvites: privateClanInvites, authSessions, ...safe } = user;
   safe.friendsList = Array.isArray(user.friendsList) ? user.friendsList : [];
   safe.incomingRequests = Array.isArray(user.incomingRequests) ? user.incomingRequests : [];
   safe.blocked = Array.isArray(user.blocked) ? user.blocked : [];
@@ -525,7 +525,7 @@ function publicUser(user) {
 }
 
 function ensureUserShape(user) {
-  user.nickname = cleanText(user.nickname, 24);
+  user.nickname = cleanText(user.nickname, 24) || "PLAYER";
   user.id = normalizeId(user.id);
   if (typeof user.uuid !== "string" || !/^[0-9a-f-]{36}$/i.test(user.uuid) || users.some(other => other !== user && other.uuid === user.uuid)) {
     do { user.uuid = crypto.randomUUID(); }
@@ -535,6 +535,13 @@ function ensureUserShape(user) {
   if (!Array.isArray(user.incomingRequests)) user.incomingRequests = [];
   if (!Array.isArray(user.blocked)) user.blocked = [];
   if (!Array.isArray(user.usedPromos)) user.usedPromos = [];
+  if (!Array.isArray(user.incomingClanInvites)) user.incomingClanInvites = [];
+  user.stats = user.stats && typeof user.stats === "object" && !Array.isArray(user.stats) ? user.stats : {};
+  for(const key of ["kills","deaths","wins","losses","matches"]){
+    user.stats[key]=Math.max(0,Math.floor(Number(user.stats[key])||0));
+  }
+  user.createdAt=Number(user.createdAt)||Date.now();
+  user.isGuest=Boolean(user.isGuest);
   user.equippedSkins = user.equippedSkins && typeof user.equippedSkins === "object" && !Array.isArray(user.equippedSkins) ? user.equippedSkins : {};
   user.softerIntroBoxClaimed = Boolean(user.softerIntroBoxClaimed);
   user.XP = Number(user.XP) || 0;
@@ -597,6 +604,7 @@ for (const user of users) {
 saveClans();
 
 const sessions = new Map();
+const GUEST_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
 function parseCookies(header = "") {
   const out = {};
@@ -643,6 +651,15 @@ function createSession(userId) {
 function sessionUserFromToken(token) {
   if (!token) return null;
   let data = sessions.get(token);
+  if(data?.isGuest){
+    const guest=users.find(candidate=>candidate.isGuest&&candidate.uuid===data.userId);
+    if(!Number.isFinite(data.expiresAt)||data.expiresAt<=Date.now()){
+      sessions.delete(token);
+      if(guest)users=users.filter(candidate=>candidate!==guest);
+      return null;
+    }
+    return guest||null;
+  }
   if (!data) {
     // Socket.IO and HTTP share this path; restore a session from the saved user
     // snapshot/MongoDB Atlas after a cold start instead of forcing another login.
@@ -880,11 +897,11 @@ app.post("/api/register", registrationRateLimit, (req, res) => {
   const nickname = cleanText(req.body.nickname, 24);
   const password = String(req.body.password || "");
 
-  if (!/^[\p{L}\p{N}_-]{3,24}$/u.test(nickname)) {
-    return res.status(400).json({ success: false, message: "Нік: 3–24 символи, літери/цифри/_/-." });
+  if (!/^[\p{L}\p{N}_-]{1,24}$/u.test(nickname)) {
+    return res.status(400).json({ success: false, message: "Нік: 1–24 символи, літери/цифри/_/-." });
   }
-  if (password.length < 6 || password.length > 128) {
-    return res.status(400).json({ success: false, message: "Пароль має містити 6–128 символів." });
+  if (password.length < 1 || password.length > 128) {
+    return res.status(400).json({ success: false, message: "Пароль має містити 1–128 символів." });
   }
   // Nicknames are display names and intentionally do not need to be unique.
   const id = newPlayerId();
@@ -895,6 +912,8 @@ app.post("/api/register", registrationRateLimit, (req, res) => {
     uuid: crypto.randomUUID(),
     passwordHash: hashPassword(password),
     playerAvatar: "/avatars/default.jpg",
+    createdAt: Date.now(),
+    stats: { kills: 0, deaths: 0, wins: 0, losses: 0, matches: 0 },
     status: true,
     XP: 0,
     gold: 0,
