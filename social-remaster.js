@@ -142,10 +142,11 @@ function leaveActiveChat(){
  if(activeFriend&&socketRef?.connected)socketRef.emit("leave_chat",{friendId:activeFriend.id});
  activeFriend=null;chatMessages=[];editingId=null;
 }
-function openChat(id){
+async function openChat(id){
  if(guest())return notify("Гостьовий профіль не має збережених приватних переписок.");
  const friendId=String(id||"");
  if(!friendId)return;
+ if(!friendMap.has(friendId))await loadDialogs();
  if(activeFriend&&String(activeFriend.id)!==friendId)leaveActiveChat();
  activeFriend=friendMap.get(friendId)||chatDialogs.find(function(friend){return String(friend.id)===friendId})||{id:friendId,nickname:"ГРАВЕЦЬ",playerAvatar:"/avatars/default.jpg"};
  chatMessages=[];editingId=null;chatOpen=true;
