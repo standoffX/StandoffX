@@ -2285,7 +2285,6 @@ function initSocialSocket(){
     if(!data?.lobbyId)return;
     pendingLobbyInvite=data;
     $("lobbyInviteText").textContent=String(data.inviterNickname||"Друг")+" запросив тебе до "+String(data.modeName||"матчу")+" · "+String(data.mapName||data.map)+". Запрошення діє 60 секунд.";
-    $("lobbyInviteModal").classList.add("show");
   });
   socialSocket.on("match_found",data=>{
     if(!data?.matchId)return;
