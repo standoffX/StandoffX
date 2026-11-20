@@ -1422,7 +1422,6 @@ app.post("/api/clans/invites/respond", transactionRateLimit, requireAuth, (req, 
   const invites=Array.isArray(req.user.incomingClanInvites)?req.user.incomingClanInvites:[];
   const invite=invites.find(item=>item.id===inviteId&&Number(item.expiresAt)>Date.now());
   if(!invite)return res.status(404).json({success:false,message:"Запрошення вже недійсне."});
-  req.user.incomingClanInvites=invites.filter(item=>item.id!==inviteId);
   if(req.body.accept===true){
     if(req.user.isGuest)return res.status(403).json({success:false,message:"Гостьовий профіль не може вступити до клану."});
     if(req.user.clan)return res.status(400).json({success:false,message:"Ти вже в іншому клані."});
@@ -1430,6 +1429,7 @@ app.post("/api/clans/invites/respond", transactionRateLimit, requireAuth, (req, 
     if(!clan)return res.status(404).json({success:false,message:"Цей клан більше не існує."});
     const count=users.filter(user=>user.clan===clan.tag).length;
     if(count>=clan.memberLimit)return res.status(400).json({success:false,message:"Клан уже заповнений."});
+    req.user.incomingClanInvites=invites.filter(item=>item.id!==inviteId);
     req.user.clan=clan.tag;
     saveClans();
     for(const client of io.sockets.sockets.values()){
@@ -1442,6 +1442,7 @@ app.post("/api/clans/invites/respond", transactionRateLimit, requireAuth, (req, 
     saveUsers();
     return res.json({success:true,accepted:true,message:"Ти вступив до клану ["+clan.tag+"].",clan:{tag:clan.tag,name:clan.name}});
   }
+  req.user.incomingClanInvites=invites.filter(item=>item.id!==inviteId);
   saveUsers();
   io.to("user:"+String(invite.fromId)).emit("clan_invite_declined",{
     inviteId:invite.id,tag:invite.tag,userId:req.user.id,nickname:req.user.nickname
