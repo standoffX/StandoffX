@@ -1097,6 +1097,25 @@ app.get("/api/get-my-friends", requireAuth, (req, res) => {
   res.json({ success: true, friends });
 });
 
+app.get("/api/profile/:id", requireAuth, (req, res) => {
+  const id=normalizeId(req.params.id);
+  const target=users.find(user=>user.id===id);
+  if(!target)return res.status(404).json({success:false,message:"Гравця не знайдено."});
+  ensureUserShape(target);
+  const stats=target.stats||{};
+  const kills=Number(stats.kills)||0;
+  const deaths=Number(stats.deaths)||0;
+  const clan=target.clan?clans[target.clan]:null;
+  res.json({success:true,profile:{
+    id:target.id,nickname:target.nickname,playerAvatar:target.playerAvatar||"/avatars/default.jpg",
+    isGuest:Boolean(target.isGuest),isVerified:Boolean(target.isVerified),isBanned:Boolean(target.isBanned),
+    createdAt:Number(target.createdAt)||null,XP:Number(target.XP)||0,
+    MMRCompetitive:Number(target.MMRCompetitive)||1000,MMRAllies:Number(target.MMRAllies)||1000,
+    clan:clan?{tag:clan.tag,name:clan.name,avatar:clan.avatar||"/avatars/default.jpg",memberCount:users.filter(user=>user.clan===clan.tag).length}:null,
+    stats:{kills,deaths,kd:(kills/Math.max(1,deaths)).toFixed(2),wins:Number(stats.wins)||0,losses:Number(stats.losses)||0,matches:Number(stats.matches)||0}
+  }});
+});
+
 app.post("/api/search-user", requireAuth, (req, res) => {
   const query = cleanText(req.body.query, 80);
   const target = findUser(query);
@@ -1117,7 +1136,8 @@ app.post("/api/search-user", requireAuth, (req, res) => {
 app.post("/api/friends/request", transactionRateLimit, requireAuth, (req, res) => {
   const from = req.user;
   const to = users.find(u => u.id === normalizeId(req.body.toId));
-  if (!to) return res.status(404).json({ success: false, message: "Гравця не знайдено." });
+  if (!to || to.isGuest) return res.status(404).json({ success: false, message: "Гравця не знайдено." });
+  if(from.isGuest)return res.status(403).json({success:false,message:"Гостьовий профіль не може надсилати заявки в друзі."});
   if (to.id === from.id) return res.status(400).json({ success: false, message: "Не можна додати себе." });
   if ((from.blocked || []).includes(to.id) || (to.blocked || []).includes(from.id)) {
     return res.status(403).json({ success: false, message: "Користувач недоступний." });
@@ -1359,6 +1379,74 @@ app.post("/api/clans/request", transactionRateLimit, requireAuth, (req, res) => 
   }
 
   res.json({ success: true, message: "Заявку відправлено." });
+});
+
+app.post("/api/clans/invite", transactionRateLimit, requireAuth, (req, res) => {
+  if(req.user.isGuest)return res.status(403).json({success:false,message:"Гостьовий профіль не може запрошувати до клану."});
+  const clan=req.user.clan?clans[req.user.clan]:null;
+  if(!clan)return res.status(403).json({success:false,message:"Спочатку вступи до клану."});
+  if(clan.ownerId!==req.user.id&&!(clan.officers||[]).includes(req.user.id)){
+    return res.status(403).json({success:false,message:"Запрошувати до клану може власник або офіцер."});
+  }
+  const target=users.find(user=>user.id===normalizeId(req.body.userId));
+  if(!target||target.isGuest)return res.status(404).json({success:false,message:"Гравця не знайдено."});
+  if(target.clan)return res.status(400).json({success:false,message:"Гравець уже перебуває в клані."});
+  const memberCount=users.filter(user=>user.clan===clan.tag).length;
+  if(memberCount>=clan.memberLimit)return res.status(400).json({success:false,message:"Клан заповнений."});
+  target.incomingClanInvites=Array.isArray(target.incomingClanInvites)?target.incomingClanInvites:[];
+  if(target.incomingClanInvites.some(invite=>invite.tag===clan.tag&&invite.expiresAt>Date.now())){
+    return res.status(400).json({success:false,message:"Запрошення до цього клану вже надіслано."});
+  }
+  const invite={
+    id:crypto.randomUUID(),tag:clan.tag,clanName:clan.name,
+    fromId:req.user.id,fromNickname:req.user.nickname,
+    createdAt:Date.now(),expiresAt:Date.now()+7*24*60*60*1000
+  };
+  target.incomingClanInvites.push(invite);
+  saveUsers();
+  io.to("user:"+target.id).emit("clan_invite_received",{
+    inviteId:invite.id,tag:clan.tag,clanName:clan.name,
+    fromId:req.user.id,fromNickname:req.user.nickname,
+    expiresAt:invite.expiresAt
+  });
+  res.json({success:true,message:"Запрошення до клану надіслано.",inviteId:invite.id});
+});
+
+app.get("/api/clans/invites", requireAuth, (req, res) => {
+  const invites=(req.user.incomingClanInvites||[]).filter(invite=>invite&&Number(invite.expiresAt)>Date.now());
+  res.json({success:true,invites});
+});
+
+app.post("/api/clans/invites/respond", transactionRateLimit, requireAuth, (req, res) => {
+  const inviteId=cleanText(req.body.inviteId,80);
+  const invites=Array.isArray(req.user.incomingClanInvites)?req.user.incomingClanInvites:[];
+  const invite=invites.find(item=>item.id===inviteId&&Number(item.expiresAt)>Date.now());
+  if(!invite)return res.status(404).json({success:false,message:"Запрошення вже недійсне."});
+  req.user.incomingClanInvites=invites.filter(item=>item.id!==inviteId);
+  if(req.body.accept===true){
+    if(req.user.isGuest)return res.status(403).json({success:false,message:"Гостьовий профіль не може вступити до клану."});
+    if(req.user.clan)return res.status(400).json({success:false,message:"Ти вже в іншому клані."});
+    const clan=clans[invite.tag];
+    if(!clan)return res.status(404).json({success:false,message:"Цей клан більше не існує."});
+    const count=users.filter(user=>user.clan===clan.tag).length;
+    if(count>=clan.memberLimit)return res.status(400).json({success:false,message:"Клан уже заповнений."});
+    req.user.clan=clan.tag;
+    saveClans();
+    for(const client of io.sockets.sockets.values()){
+      if(client.user?.id===req.user.id)client.join("clan:"+clan.tag);
+    }
+    io.to("clan:"+clan.tag).emit("clan_member_joined",{
+      tag:clan.tag,userId:req.user.id,nickname:req.user.nickname,
+      playerAvatar:req.user.playerAvatar||"/avatars/default.jpg"
+    });
+    saveUsers();
+    return res.json({success:true,accepted:true,message:"Ти вступив до клану ["+clan.tag+"].",clan:{tag:clan.tag,name:clan.name}});
+  }
+  saveUsers();
+  io.to("user:"+String(invite.fromId)).emit("clan_invite_declined",{
+    inviteId:invite.id,tag:invite.tag,userId:req.user.id,nickname:req.user.nickname
+  });
+  res.json({success:true,accepted:false,message:"Запрошення відхилено."});
 });
 
 app.post("/api/clans/requests", requireAuth, (req, res) => {
