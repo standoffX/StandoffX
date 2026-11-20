@@ -2224,12 +2224,13 @@ function inviteFriendToLobby(io, socket, targetId) {
     if (candidate.user?.id === target.id) targetSocket = candidate;
   }
   if (!targetSocket) return emitLobbyError(socket, "Друг зараз не в мережі.", "lobby_invite_result");
-  lobbyInvites.set(target.id, {
-    lobbyId: current.lobby.id,
-    invitedBy: socket.user.id,
-    expiresAt: Date.now() + 60000
-  });
-  targetSocket.emit("lobby_invite_received", {
+  const previousInvite=lobbyInvites.get(target.id);
+  if(previousInvite&&previousInvite.expiresAt>Date.now()){
+    return socket.emit("lobby_invite_result",{success:false,userId:target.id,message:"Запрошення цьому гравцю вже надіслано."});
+  }
+  const invite={lobbyId:current.lobby.id,invitedBy:socket.user.id,expiresAt:Date.now()+60000};
+  lobbyInvites.set(target.id,invite);
+  io.to("user:"+target.id).emit("lobby_invite_received", {
     lobbyId: current.lobby.id,
     lobbyName: socket.user.nickname + " · ЛОБІ",
     inviterId: socket.user.id,
@@ -2240,7 +2241,7 @@ function inviteFriendToLobby(io, socket, targetId) {
     mapName: PLAYABLE_MAPS[current.lobby.map]?.name || current.lobby.map,
     expiresIn: 60
   });
-  socket.emit("lobby_invite_result", { success: true, message: "Запрошення надіслано: " + target.nickname });
+  socket.emit("lobby_invite_result", { success: true,userId:target.id,lobbyId:current.lobby.id,message: "Запрошення надіслано: " + target.nickname });
 }
 function createLobbyMatch(io, socket, data = {}) {
   if (activeMatches.size >= MAX_CONCURRENT_MATCHES) {
@@ -4050,6 +4051,18 @@ io.on("connection", socket => {
     emitLobbyState(io, lobby);
   });
   socket.on("lobby_invite", data => inviteFriendToLobby(io, socket, normalizeId(data?.userId)));
+  socket.on("lobby_invite_cancel", data => {
+    const targetId=normalizeId(data?.userId);
+    const invite=lobbyInvites.get(targetId);
+    if(!invite||invite.invitedBy!==socket.user?.id){
+      return socket.emit("lobby_invite_cancel_result",{success:false,userId:targetId,message:"Запрошення вже неактивне."});
+    }
+    lobbyInvites.delete(targetId);
+    io.to("user:"+targetId).emit("lobby_invite_cancelled",{
+      lobbyId:invite.lobbyId,inviterId:socket.user.id
+    });
+    socket.emit("lobby_invite_cancel_result",{success:true,userId:targetId,message:"Запрошення скасовано."});
+  });
   socket.on("lobby_invite_response", data => {
     const targetId = socket.user?.id;
     const invite = targetId ? lobbyInvites.get(targetId) : null;
