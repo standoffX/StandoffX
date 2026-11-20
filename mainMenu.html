@@ -2279,7 +2279,7 @@ function initSocialSocket(){
   socialSocket.on("lobby_notice",data=>{if(data?.message)notifyToast(data.message);});
   socialSocket.on("lobby_error",data=>notifyToast(data?.message||"Помилка лобі."));
   socialSocket.on("lobby_start_error",data=>notifyToast(data?.message||"Не вдалося запустити матч."));
-  socialSocket.on("lobby_invite_result",data=>notifyToast(data?.message||(data?.success?"Запрошення надіслано.":"Не вдалося запросити друга.")));
+  socialSocket.on("lobby_invite_result",()=>{});
   socialSocket.on("lobby_invite_response_result",data=>{if(data?.message)notifyToast(data.message);});
   socialSocket.on("lobby_invite_received",data=>{
     if(!data?.lobbyId)return;
