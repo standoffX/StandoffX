@@ -4074,6 +4074,9 @@ io.on("connection", socket => {
     lobbyInvites.delete(targetId);
     if (data?.accept !== true) {
       socket.emit("lobby_invite_response_result", { success: true, accepted: false, message: "Запрошення відхилено." });
+      io.to("user:"+String(invite.invitedBy)).emit("lobby_invite_response_received",{
+        userId:targetId,accepted:false,lobbyId:invite.lobbyId,nickname:socket.user.nickname
+      });
       const lobby = activeLobbies.get(invite.lobbyId);
       const inviter = lobby?.members.find(member => member.userId === invite.invitedBy);
       if (inviter?.socketId) io.to(inviter.socketId).emit("lobby_notice", { message: socket.user.nickname + " відхилив запрошення." });
@@ -4096,6 +4099,9 @@ io.on("connection", socket => {
     lobbyByUser.set(user.id, lobby.id);
     socket.join(lobby.id);
     socket.emit("lobby_invite_response_result", { success: true, accepted: true, message: "Ти приєднався до лобі." });
+    io.to("user:"+String(invite.invitedBy)).emit("lobby_invite_response_received",{
+      userId:targetId,accepted:true,lobbyId:lobby.id,nickname:user.nickname
+    });
     emitLobbyState(io, lobby);
   });
   socket.on("lobby_leave", () => {
