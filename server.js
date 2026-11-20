@@ -947,6 +947,26 @@ app.post("/api/register", registrationRateLimit, (req, res) => {
   });
 });
 
+app.post("/api/guest", loginRateLimit, (req, res) => {
+  const id="GUEST-"+crypto.randomBytes(3).toString("hex").toUpperCase();
+  const user={
+    id,uuid:crypto.randomUUID(),nickname:"Гість",
+    playerAvatar:"/avatars/default.jpg",createdAt:Date.now(),
+    isGuest:true,isAdmin:false,isTester:false,isBanned:false,isVerified:false,
+    status:false,XP:0,gold:0,clan:null,MMRCompetitive:1000,MMRAllies:1000,
+    stats:{kills:0,deaths:0,wins:0,losses:0,matches:0},
+    friendsList:[],incomingRequests:[],incomingClanInvites:[],blocked:[],usedPromos:[],
+    equippedSkins:{}
+  };
+  ensureUserShape(user);
+  users.push(user);
+  const token=crypto.randomBytes(32).toString("hex");
+  const now=Date.now();
+  sessions.set(token,{userId:user.uuid,createdAt:now,expiresAt:now+GUEST_SESSION_TTL_MS,isGuest:true});
+  setSessionCookie(res,token);
+  res.json({success:true,redirect:"/game",user:publicUser(user),message:"Гостьовий профіль створено. ID тимчасовий."});
+});
+
 app.post("/api/login", loginRateLimit, (req, res) => {
   const id = normalizeId(req.body.id || req.body.userId || "");
   const password = String(req.body.password || "");
@@ -1011,6 +1031,15 @@ app.post("/api/login", loginRateLimit, (req, res) => {
 
 app.post("/api/logout", requireAuth, (req, res) => {
   const cookies = parseCookies(req.headers.cookie || "");
+  if(req.user.isGuest){
+    if(cookies.standoffx_session)sessions.delete(cookies.standoffx_session);
+    for(const client of io.sockets.sockets.values()){
+      if(client.user?.id===req.user.id)client.disconnect(true);
+    }
+    users=users.filter(user=>user!==req.user);
+    clearSessionCookie(res);
+    return res.json({success:true});
+  }
   if (cookies.standoffx_session) {
     sessions.delete(cookies.standoffx_session);
     const tokenHash = sessionTokenHash(cookies.standoffx_session);
