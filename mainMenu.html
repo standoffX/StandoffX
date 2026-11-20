@@ -1304,18 +1304,14 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 <aside class="rail">
   <div class="logo">S<span>X</span></div>
   <nav class="railnav">
-    <button class="active" data-view="home" title="Головна"><svg viewBox="0 0 24 24"><path d="m8 4 12 8-12 8z"/></svg></button>
-    <button data-view="profile" title="Профіль"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1-4 3-6 7-6s6 2 7 6"/></svg></button>
-    <button data-view="inventory" title="Інвентар"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4zM7 7V4h10v3"/></svg></button>
-    <button data-view="store" title="Магазин і колекція Softer"><svg viewBox="0 0 24 24"><path d="M4 8h16l-1.4 12H5.4zM7 8V6a5 5 0 0 1 10 0v2M8 13h8M12 10v6"/></svg></button>
-    <button data-view="market" title="Ринок"><svg viewBox="0 0 24 24"><path d="M5 9h14l-1 11H6zM8 9V7a4 4 0 0 1 8 0v2"/></svg></button>
-    <button data-view="clan" title="Клан"><svg viewBox="0 0 24 24"><path d="m12 3 8 3v5c0 5-3 8-8 10-5-2-8-5-8-10V6z"/></svg></button>
-    <button data-view="friends" title="Друзі"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.3"/><path d="M3 20c.8-4 2.8-6 6-6s5.2 2 6 6M15 15c2.5 0 4.3 1.6 5 5"/></svg></button>
+    <button class="active" data-view="home" title="Головна" aria-label="Головна"><svg viewBox="0 0 24 24"><path d="m8 4 12 8-12 8z"/></svg></button>
+    <button data-view="profile" title="Профіль" aria-label="Профіль"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1-4 3-6 7-6s6 2 7 6"/></svg></button>
+    <button data-view="friends" title="Друзі" aria-label="Друзі"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.3"/><path d="M3 20c.8-4 2.8-6 6-6s5.2 2 6 6M15 15c2.5 0 4.3 1.6 5 5"/></svg></button>
+    <button data-view="chat" title="Повідомлення" aria-label="Повідомлення"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-5 4v-4.5a2.5 2.5 0 0 1-1-2z"/><path d="M8 8h8M8 11.5h5"/></svg></button>
   </nav>
   <div class="rail-bottom">
-    <button data-view="stats" title="Статистика"><svg viewBox="0 0 24 24"><path d="M5 19V9M12 19V5M19 19v-8"/></svg></button>
-    <button data-view="settings" title="Налаштування"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 13.5 21 14l-1 3-2-.6a7 7 0 0 1-2 1.2l-.3 2.1h-3.4L12 17.6a7 7 0 0 1-2-1.2l-2 .6-1-3 2-.5a7 7 0 0 1 0-2.5l-2-.6 1-3 2 .6a7 7 0 0 1 2-1.2l.3-2.1h3.4l.3 2.1a7 7 0 0 1 2 1.2l2-.6 1 3-2 .6a7 7 0 0 1 0 2.5z"/></svg></button>
-    <button id="adminBtn" data-view="admin" title="Admin" style="display:none"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="m8 12 2.5 2.5L16 9"/></svg></button>
+    <button data-view="settings" title="Налаштування" aria-label="Налаштування"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 13.5 21 14l-1 3-2-.6a7 7 0 0 1-2 1.2l-.3 2.1h-3.4L12 17.6a7 7 0 0 1-2-1.2l-2 .6-1-3 2-.5a7 7 0 0 1 0-2.5l-2-.6 1-3 2 .6a7 7 0 0 1 2-1.2l.3-2.1h3.4l.3 2.1a7 7 0 0 1 2 1.2l2-.6 1 3-2 .6a7 7 0 0 1 0 2.5z"/></svg></button>
+    <button id="adminBtn" data-view="admin" title="Admin" aria-label="Admin" style="display:none"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="m8 12 2.5 2.5L16 9"/></svg></button>
   </div>
 </aside>
 
@@ -1323,6 +1319,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 <header class="topbar">
   <div class="topbrand">STANDOFF<b>X</b></div>
   <div id="gold" class="pill">0 G</div>
+  <button class="secondary sx-guest-quick" id="guestQuickBtn" type="button">УВІЙТИ ЯК ГОСТЬ</button>
   <div id="topId" class="pill">0000000</div>
   <button class="secondary" id="logout">ВИЙТИ</button>
 </header>
@@ -1342,32 +1339,6 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
     <section class="home-hero panel" aria-label="Головне ігрове меню">
       <img class="home-hero-art" src="game1.png" alt="" aria-hidden="true">
       <canvas id="homeAgentCanvas" class="home-agent-canvas" aria-label="3D-загін StandoffX"></canvas>
-       <button type="button" class="home-agent-toggle" id="homeAgentToggle" aria-expanded="false" aria-controls="homeAgentPanel">
-         <span class="home-agent-toggle-mark">A</span><span>АГЕНТ</span><span class="home-agent-toggle-arrow">⌄</span>
-       </button>
-       <div class="home-agent-panel" id="homeAgentPanel" aria-hidden="true">
-         <div class="home-agent-panel-head"><b>АГЕНТ</b><span>ЗОВНІШНІЙ ВИГЛЯД</span></div>
-         <div class="home-agent-side" role="group" aria-label="Сторона">
-           <button type="button" data-home-agent-side="T">T · АТАКА</button>
-           <button type="button" data-home-agent-side="CT">CT · ЗАХИСТ</button>
-         </div>
-         <div class="home-agent-panel-label">ПОЗА / АНІМАЦІЯ</div>
-         <div class="home-agent-poses" role="group" aria-label="Анімація агента">
-           <button type="button" data-home-agent-animation="Excited"><span>01</span><b>ГОТОВНІСТЬ</b></button>
-           <button type="button" data-home-agent-animation="Talking On Phone"><span>02</span><b>ПО ТЕЛЕФОНУ</b></button>
-           <button type="button" data-home-agent-animation="Illegal Elbow Punch"><span>03</span><b>УДАР ЛІКТЕМ</b></button>
-         </div>
-       </div>
-      <div class="home-social-dock" aria-label="Соціальні функції">
-        <button id="sxChatDock" type="button" title="Повідомлення" aria-label="Повідомлення">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-5 4v-4.5a2.5 2.5 0 0 1-1-2z"/><path d="M8 8h8M8 11.5h5"/></svg>
-          <i id="sxChatUnread" class="sx-unread-dot" hidden></i>
-        </button>
-        <button id="sxLobbyDock" type="button" title="Відкрити лобі" aria-label="Відкрити лобі" hidden>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 20c.5-4 2.4-6 5.5-6s5.1 2 5.6 6M14 15c3.3-.8 6.2 1 7.2 4.5"/></svg>
-          <i id="sxLobbyStatus"></i>
-        </button>
-      </div>
       <div class="playarea">
         <div class="playwrap">
           <button class="playbutton" id="playBtn"><span>▶ &nbsp; ГРАТИ</span></button>
@@ -1385,12 +1356,53 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
           <img id="avatar" class="avatar" src="/avatars/default.jpg" alt="">
           <div><div class="nick" id="profileNick">PLAYER</div><div class="playerid">ID <b id="profileId">0000000</b></div><div class="smallplus" id="profileLevel">LEVEL 1</div><div class="rankline"><span id="rankProgress"></span></div><div class="rankrow"><span id="xpText">0 XP</span><span id="rankText">COMING SOON</span></div></div>
         </div>
-        <div class="ranks">
-          <div class="rankcard"><div class="rankicon">◇</div><div class="rankname">COMPETITIVE</div><div class="rankdesc" id="compMmr">COMING SOON</div></div>
-          <div class="rankcard"><div class="rankicon">⬡</div><div class="rankname">ALLIES</div><div class="rankdesc" id="alliesMmr">COMING SOON</div></div>
-          <div class="rankcard"><div class="rankicon">♜</div><div class="rankname">КЛАН</div><div class="rankdesc" id="clanName">НЕМАЄ</div></div>
+        <div class="sx-side-tabs" role="tablist" aria-label="Панель гравця">
+          <button class="sx-side-tab active" type="button" data-sx-side-tab="clan" aria-selected="true" title="Клан"><svg viewBox="0 0 24 24"><path d="m12 3 8 3v5c0 5-3 8-8 10-5-2-8-5-8-10V6z"/></svg><span>КЛАН</span></button>
+          <button class="sx-side-tab" type="button" data-sx-side-tab="stats" aria-selected="false" title="Статистика"><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg><span>СТАТИСТИКА</span></button>
+          <button class="sx-side-tab" type="button" data-sx-side-tab="inventory" aria-selected="false" title="Інвентар"><svg viewBox="0 0 24 24"><path d="M4 8h16v12H4zM7 8V5h10v3M9 13h6"/></svg><span>ІНВЕНТАР</span></button>
+          <button class="sx-side-tab" type="button" data-sx-side-tab="market" aria-selected="false" title="Ринок"><svg viewBox="0 0 24 24"><path d="M4 9h16l-1.2 11H5.2zM8 9V7a4 4 0 0 1 8 0v2"/></svg><span>РИНОК</span></button>
+          <button class="sx-side-tab" type="button" data-sx-side-tab="agent" aria-selected="false" title="Агент"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="3.2"/><path d="M5 21c.8-4.4 3-6.6 7-6.6s6.2 2.2 7 6.6"/></svg><span>АГЕНТ</span></button>
         </div>
-        <div class="homefooter"><span>ПРОФІЛЬ ГРАВЦЯ</span><button class="secondary" id="openProfile">ПРОФІЛЬ ↗</button></div>
+        <div class="sx-side-content">
+          <section class="sx-side-view active" data-sx-side-view="clan">
+            <div class="sx-side-clan" id="sxClanSummary">
+              <div class="sx-side-emblem">♜</div>
+              <div><b id="clanName">НЕМАЄ</b><small id="sxClanSub">ТИ ЩЕ НЕ В КЛАНІ</small></div>
+            </div>
+            <button type="button" class="secondary sx-side-action" id="sxOpenClanPage">ВІДКРИТИ КЛАН</button>
+          </section>
+          <section class="sx-side-view" data-sx-side-view="stats" hidden>
+            <div class="sx-stats-grid">
+              <div><b id="sxStatKd">0.00</b><small>K/D</small></div>
+              <div><b id="sxStatKills">0</b><small>ВБИВСТВА</small></div>
+              <div><b id="sxStatDeaths">0</b><small>СМЕРТІ</small></div>
+              <div><b id="sxStatWins">0</b><small>ПЕРЕМОГИ</small></div>
+              <div><b id="sxStatLosses">0</b><small>ПОРАЗКИ</small></div>
+              <div><b id="sxStatMatches">0</b><small>МАТЧІ</small></div>
+            </div>
+            <div class="sx-side-note">ТВОЯ ІГРОВА СТАТИСТИКА</div>
+          </section>
+          <section class="sx-side-view" data-sx-side-view="inventory" hidden>
+            <div class="sx-empty-state"><span>▣</span><b>ІНВЕНТАР ПОРОЖНІЙ</b><small>Предмети з’являться тут після отримання.</small></div>
+          </section>
+          <section class="sx-side-view" data-sx-side-view="market" hidden>
+            <div class="sx-empty-state"><span>◇</span><b>РИНОК ПОРОЖНІЙ</b><small>Тут поки немає доступних лотів.</small></div>
+          </section>
+          <section class="sx-side-view sx-agent-controls" id="homeAgentPanel" data-sx-side-view="agent" aria-hidden="true" hidden>
+            <div class="sx-agent-control-title">СТОРОНА АГЕНТА</div>
+            <div class="home-agent-side" role="group" aria-label="Сторона агента">
+              <button type="button" data-home-agent-side="T">T · АТАКА</button>
+              <button type="button" data-home-agent-side="CT">CT · ЗАХИСТ</button>
+            </div>
+            <div class="sx-agent-control-title">АНІМАЦІЯ</div>
+            <div class="home-agent-poses" role="group" aria-label="Анімація агента">
+              <button type="button" data-home-agent-animation="Excited"><span>01</span><b>ГОТОВНІСТЬ</b></button>
+              <button type="button" data-home-agent-animation="Talking On Phone"><span>02</span><b>ПО ТЕЛЕФОНУ</b></button>
+              <button type="button" data-home-agent-animation="Illegal Elbow Punch"><span>03</span><b>УДАР ЛІКТЕМ</b></button>
+            </div>
+          </section>
+        </div>
+        <div class="homefooter sx-side-footer"><span>STANDOFFX</span><button class="secondary" id="openProfile" type="button">ПРОФІЛЬ ↗</button></div>
       </div>
     </div>
 
@@ -1483,7 +1495,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 
 <section id="stats" class="screen"><div class="sectionhead"><h2>СТАТИСТИКА</h2></div><div class="cardgrid"><div class="statcard"><small>XP</small><strong id="statsXP">0</strong></div><div class="statcard"><small>GOLD</small><strong id="statsGold">0</strong></div><div class="statcard"><small>COMPETITIVE MMR</small><strong id="statsComp">1000</strong></div><div class="statcard"><small>ALLIES MMR</small><strong id="statsAllies">1000</strong></div></div></section>
 
-<section id="settings" class="screen"><div class="sectionhead"><h2>НАЛАШТУВАННЯ</h2></div><div class="panel panelbody"><h3 style="margin:0 0 8px">ТЕМА ІНТЕРФЕЙСУ</h3><div class="muted">Обери один із трьох неонових стилів. Вибір зберігається на цьому пристрої.</div><div class="theme-picker"><button class="theme-option" data-theme-choice="cyan">01 · CYBER CYAN</button><button class="theme-option" data-theme-choice="violet">02 · NEON VIOLET</button><button class="theme-option" data-theme-choice="red">03 · RED ALERT</button></div><div id="desktopControlsSettings"><h3>КЕРУВАННЯ ПК</h3><label>Чутливість миші <input id="sens" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">ADS <input id="ads" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">Розмір прицілу <input id="crossSize" type="range" min="8" max="36" step="1" style="width:100%"></label><label style="display:block;margin-top:16px">Відстань між рисками <input id="crossGap" type="range" min="0" max="12" step="1" style="width:100%"></label><div class="crosshair-settings-row"><div class="crosshair-preview-box"><span>ПЕРЕГЛЯД</span><div id="crosshairPreview" class="crosshair-display style-classic" aria-hidden="true"><i class="crosshair-arm top"></i><i class="crosshair-arm right"></i><i class="crosshair-arm bottom"></i><i class="crosshair-arm left"></i><i class="crosshair-dot"></i></div></div><div class="crosshair-settings-controls"><label>ФОРМА <select id="crossStyle"><option value="classic">Класичний</option><option value="thin">Тонкий</option><option value="dot">Крапка</option><option value="circle">Коло</option></select></label><label style="display:block;margin-top:10px">КОЛІР <input id="crossColor" type="color" value="#63ff91" style="width:100%;height:38px"></label></div></div>
+<section id="settings" class="screen"><div class="sectionhead"><button class="secondary" id="settingsBack" type="button">← ГОЛОВНЕ МЕНЮ</button><h2>НАЛАШТУВАННЯ</h2></div><div class="panel panelbody"><h3 style="margin:0 0 8px">ТЕМА ІНТЕРФЕЙСУ</h3><div class="muted">Обери один із трьох неонових стилів. Вибір зберігається на цьому пристрої.</div><div class="theme-picker"><button class="theme-option" data-theme-choice="cyan">01 · CYBER CYAN</button><button class="theme-option" data-theme-choice="violet">02 · NEON VIOLET</button><button class="theme-option" data-theme-choice="red">03 · RED ALERT</button></div><div id="desktopControlsSettings"><h3>КЕРУВАННЯ ПК</h3><label>Чутливість миші <input id="sens" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">ADS <input id="ads" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">Розмір прицілу <input id="crossSize" type="range" min="8" max="36" step="1" style="width:100%"></label><label style="display:block;margin-top:16px">Відстань між рисками <input id="crossGap" type="range" min="0" max="12" step="1" style="width:100%"></label><div class="crosshair-settings-row"><div class="crosshair-preview-box"><span>ПЕРЕГЛЯД</span><div id="crosshairPreview" class="crosshair-display style-classic" aria-hidden="true"><i class="crosshair-arm top"></i><i class="crosshair-arm right"></i><i class="crosshair-arm bottom"></i><i class="crosshair-arm left"></i><i class="crosshair-dot"></i></div></div><div class="crosshair-settings-controls"><label>ФОРМА <select id="crossStyle"><option value="classic">Класичний</option><option value="thin">Тонкий</option><option value="dot">Крапка</option><option value="circle">Коло</option></select></label><label style="display:block;margin-top:10px">КОЛІР <input id="crossColor" type="color" value="#63ff91" style="width:100%;height:38px"></label></div></div>
 <div class="crosshair-presets" aria-label="Швидкі пресети прицілу">
   <button type="button" data-crosshair-preset="precision">ТОЧНИЙ ЗЕЛЕНИЙ</button>
   <button type="button" data-crosshair-preset="cyan">ЦИАНОВИЙ</button>
@@ -1775,6 +1787,7 @@ function show(view){
   if(view==="inventory")loadInventory();
   if(view==="market")loadMarket();
 }
+window.sxShowMenuView=show;
 async function refreshProfileIdentity(){
   try{
     const fresh=(await api("/api/me")).user;
@@ -1784,7 +1797,9 @@ async function refreshProfileIdentity(){
 function render(){
   if(!me)return;
   const id=cleanId(me.id);
+  window.__sxHomePlayerId=String(me.id||"");
   $("topId").textContent="ID "+id;
+  const guestButton=$("guestQuickBtn");if(guestButton){guestButton.textContent=me.isGuest?"ГОСТЬ АКТИВНИЙ":"УВІЙТИ ЯК ГОСТЬ";guestButton.disabled=Boolean(me.isGuest);}
   $("gold").textContent=(me.gold||0)+" G";
   $("profileNick").textContent=me.nickname||"PLAYER";
   $("profileId").textContent=id;
@@ -1835,7 +1850,7 @@ function renderMode(){
   if($("confirmModeBtn"))$("confirmModeBtn").textContent=selectedMode==="training"?"ЗАПУСТИТИ ТРЕНУВАННЯ":testGameplayMode==="real"?"ЗНАЙТИ ГРАВЦІВ":"ЗАПУСТИТИ З БОТАМИ";
   renderMapSelection();
 }
-document.querySelectorAll(".rail button[data-view]").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.view==="admin"){location.href="/admin";return}show(b.dataset.view)}));
+document.querySelectorAll(".rail button[data-view]").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.view==="admin"){window.sxOpenAdminPanel?.();return}show(b.dataset.view)}));
   document.querySelectorAll("[data-view='friends']").forEach(b=>b.addEventListener("click",()=>show("friends")));
   $("homeInviteBtn").addEventListener("click",()=>show("friends"));
   $("homeFriendsPreview").addEventListener("click",event=>{const button=event.target.closest("[data-home-invite]");if(button&&!button.disabled)inviteToLobby(button.dataset.homeInvite)});
@@ -1921,6 +1936,7 @@ $("saveAvatarBtn").addEventListener("click",async()=>{
   }catch(error){notifyToast(error.message)}
 });
 $("logout").addEventListener("click",async()=>{try{await api("/api/logout",{method:"POST"})}catch{}location.href="/"});
+$("guestQuickBtn")?.addEventListener("click",async event=>{const button=event.currentTarget;button.disabled=true;try{const data=await api("/api/guest",{method:"POST"});location.href=data.redirect||"/game"}catch(error){button.disabled=false;notifyToast(error.message||"Не вдалося увійти як гість.")}});
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>$(b.dataset.close).classList.remove("show")));
 $("cancelSearch").addEventListener("click",cancelSearch);
 $("refreshClan").addEventListener("click",loadClan);
@@ -1934,7 +1950,7 @@ $("lobbyMembers").addEventListener("change",e=>{
   if(!select)return;
   socialSocket?.emit("lobby_set_team",{userId:select.dataset.lobbyTeam,team:select.value});
 });
-$("homeSquadRoster").addEventListener("change",e=>{
+$("homeSquadRoster")?.addEventListener("change",e=>{
   const select=e.target.closest("[data-home-lobby-team]");
   if(!select)return;
   socialSocket?.emit("lobby_set_team",{userId:select.dataset.homeLobbyTeam,team:select.value});
@@ -2714,7 +2730,13 @@ const hero=document.querySelector(".home-hero");
 if(canvas&&hero){
   const base="https://raw.githubusercontent.com/standoffX/3d-models/main/";
   const manager=new THREE.LoadingManager();
-  manager.addHandler(/\.tga$/i,new TGALoader(manager));
+  manager.setURLModifier(url=>{
+    const value=String(url||"").replace(/\\\\/g,"/");
+    const marker=value.toLowerCase().lastIndexOf("/c:/");
+    if(marker>=0){const filename=value.slice(marker).split("/").pop().split(/[?#]/)[0];if(/^[a-z0-9 _().-]+\\.tga$/i.test(filename))return base+encodeURIComponent(filename);}
+    return url;
+  });
+  manager.addHandler(/\\.tga$/i,new TGALoader(manager));
   const loader=new FBXLoader(manager);
   const textureLoader=new TGALoader(manager);
   const textures={T:null,CT:null};
@@ -2781,6 +2803,7 @@ if(canvas&&hero){
    }
    function sideFor(person,index){
      if(isLocalPerson(person,index))return storedAgentSide();
+     if(person.agentSide==="T"||person.agentSide==="CT")return person.agentSide;
      if(person.team==="A")return "CT";
      if(person.team==="B")return "T";
      if(person.side==="T"||person.side==="CT")return person.side;
@@ -2790,22 +2813,23 @@ if(canvas&&hero){
      const requested=person.agentAnimation||person.selectedAnimation||(isLocalPerson(person,index)?storedAgentAnimation():"Excited");
      return Object.prototype.hasOwnProperty.call(AGENT_ANIMATIONS,requested)?requested:"Excited";
    }
-   const agentToggle=document.getElementById("homeAgentToggle");
+   const agentToggle=null;
    const agentPanel=document.getElementById("homeAgentPanel");
    function updateAgentPanel(){
      if(!agentPanel)return;
      const side=storedAgentSide(),animation=storedAgentAnimation();
      agentPanel.querySelectorAll("[data-home-agent-side]").forEach(b=>b.classList.toggle("active",b.dataset.homeAgentSide===side));
      agentPanel.querySelectorAll("[data-home-agent-animation]").forEach(b=>b.classList.toggle("active",b.dataset.homeAgentAnimation===animation));
-     if(agentToggle)agentToggle.setAttribute("aria-expanded",String(agentPanel.classList.contains("open")));
-     agentPanel.setAttribute("aria-hidden",String(!agentPanel.classList.contains("open")));
+     if(agentToggle)agentToggle.setAttribute("aria-expanded",String(agentPanel.classList.contains("active")));
+     agentPanel.setAttribute("aria-hidden",String(!agentPanel.classList.contains("active")));
    }
-   agentToggle?.addEventListener("click",()=>{const open=!agentPanel.classList.contains("open");agentPanel.classList.toggle("open",open);updateAgentPanel()});
+   function saveAgentSettings(){fetch("/api/settings/agent",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({side:storedAgentSide(),animation:storedAgentAnimation()})}).catch(error=>console.warn("[Agent] Could not sync settings:",error));}
+   agentToggle?.addEventListener("click",()=>{const open=!agentPanel.classList.contains("active");agentPanel.classList.toggle("active",open);updateAgentPanel()});
    agentPanel?.addEventListener("click",event=>{
      const sideButton=event.target.closest("[data-home-agent-side]");
      const animationButton=event.target.closest("[data-home-agent-animation]");
-     if(sideButton){localStorage.setItem("sx-agent-side",sideButton.dataset.homeAgentSide);updateAgentPanel();updateLayout()}
-     if(animationButton){localStorage.setItem("sx-agent-animation",animationButton.dataset.homeAgentAnimation);updateAgentPanel();updateLayout()}
+     if(sideButton){localStorage.setItem("sx-agent-side",sideButton.dataset.homeAgentSide);updateAgentPanel();updateLayout();saveAgentSettings()}
+     if(animationButton){localStorage.setItem("sx-agent-animation",animationButton.dataset.homeAgentAnimation);updateAgentPanel();updateLayout();saveAgentSettings()}
    });
    document.addEventListener("pointerdown",event=>{if(agentPanel?.classList.contains("open")&&!agentPanel.contains(event.target)&&!agentToggle?.contains(event.target)){agentPanel.classList.remove("open");updateAgentPanel()}});
 function clearActor(actor){
@@ -2875,6 +2899,53 @@ function clearActor(actor){
       if(actor)actor.group.position.x=(index-(count-1)/2)*Math.min(1.45,4.3/Math.max(1,count-1));
     });
   }
+  let friendPreviewRuntime=null;
+  function stopFriendPreview(){
+    if(!friendPreviewRuntime)return;
+    const runtime=friendPreviewRuntime;friendPreviewRuntime=null;runtime.active=false;
+    if(runtime.frame)cancelAnimationFrame(runtime.frame);
+    runtime.resizeObserver?.disconnect();runtime.mixer?.stopAllAction();
+    runtime.model?.traverse(node=>{if(node.geometry)node.geometry.dispose();});
+    runtime.renderer?.dispose();
+  }
+  function previewFriendAgent(person){
+    const previewCanvas=document.getElementById("sxFriendAgentCanvas");
+    if(!previewCanvas)return;
+    stopFriendPreview();
+    const side=person.agentSide==="CT"?"CT":"T";
+    const animation=Object.prototype.hasOwnProperty.call(AGENT_ANIMATIONS,person.agentAnimation)?person.agentAnimation:"Excited";
+    const file=AGENT_ANIMATIONS[animation][side];
+    const previewRenderer=new THREE.WebGLRenderer({canvas:previewCanvas,alpha:true,antialias:!lowPower,powerPreference:"low-power"});
+    previewRenderer.setPixelRatio(Math.min(devicePixelRatio||1,1.15));
+    previewRenderer.outputColorSpace=THREE.SRGBColorSpace;
+    previewRenderer.toneMapping=THREE.ACESFilmicToneMapping;
+    previewRenderer.toneMappingExposure=1.08;
+    previewRenderer.setClearColor(0x000000,0);
+    const previewScene=new THREE.Scene(),previewCamera=new THREE.PerspectiveCamera(32,1,.1,50);
+    previewCamera.position.set(0,2.1,7.2);previewCamera.lookAt(0,1.42,0);
+    previewScene.add(new THREE.HemisphereLight(0xd9e9f5,0x24313d,2.05));
+    const previewKey=new THREE.DirectionalLight(0xffead7,2.25);previewKey.position.set(-3.2,5,4);previewScene.add(previewKey);
+    const previewRim=new THREE.DirectionalLight(0x75b7e2,1.25);previewRim.position.set(3,2.5,-4);previewScene.add(previewRim);
+    const runtime={active:true,renderer:previewRenderer,scene:previewScene,camera:previewCamera,model:null,mixer:null,frame:0,resizeObserver:null};
+    friendPreviewRuntime=runtime;
+    function resizePreview(){if(!runtime.active)return;const width=previewCanvas.clientWidth||340,height=previewCanvas.clientHeight||210;previewRenderer.setSize(width,height,false);previewCamera.aspect=width/height;previewCamera.updateProjectionMatrix();}
+    runtime.resizeObserver=new ResizeObserver(resizePreview);runtime.resizeObserver.observe(previewCanvas);resizePreview();
+    loader.load(base+encodeURIComponent(file),model=>{
+      if(!runtime.active){model.traverse(n=>{n.geometry?.dispose?.()});return}
+      const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3());
+      if(!Number.isFinite(size.y)||size.y<=0)return;
+      const scale=3.05/size.y;model.scale.setScalar(scale);model.position.set(-center.x*scale,-bounds.min.y*scale,-center.z*scale);
+      model.traverse(node=>{if(node.isMesh){node.frustumCulled=false;const mats=Array.isArray(node.material)?node.material:[node.material];mats.forEach(mat=>{if(mat)mat.side=THREE.DoubleSide})}});
+      previewScene.add(model);runtime.model=model;if(textures[side])applyTexture(model,side);
+      if(model.animations?.length){runtime.mixer=new THREE.AnimationMixer(model);runtime.mixer.clipAction(model.animations[0]).setLoop(THREE.LoopRepeat,Infinity).play();}
+      resizePreview();
+    },undefined,error=>console.warn("[Agent preview] FBX unavailable:",file,error));
+    const previewClock=new THREE.Clock();
+    function drawPreview(){if(!runtime.active)return;if(!previewCanvas.isConnected){stopFriendPreview();return}runtime.mixer?.update(Math.min(previewClock.getDelta(),.05));previewRenderer.render(previewScene,previewCamera);runtime.frame=requestAnimationFrame(drawPreview);}
+    drawPreview();
+  }
+  window.addEventListener("sx:preview-agent",event=>previewFriendAgent(event.detail||{}));
+  window.addEventListener("sx:close-friend-profile",stopFriendPreview);
   window.addEventListener("sx:home-squad",event=>{
     if(event.detail?.members)window.__sxHomeRoster=event.detail.members;
     updateLayout();
