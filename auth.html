@@ -21,6 +21,7 @@ input:focus{border-color:#377fff;box-shadow:0 0 0 3px rgba(55,127,255,.12)}
 button.primary{width:100%;height:50px;margin-top:18px;border:0;border-radius:10px;background:#327cff;color:#fff;font-weight:900;cursor:pointer}
 button.primary:disabled{opacity:.55;cursor:wait}
 .msg{min-height:22px;margin-top:12px;font-size:13px;color:#ff8793}.msg.ok{color:#66d99a}
+.guest-button{width:100%;height:44px;margin-top:9px;border:1px solid #ffffff1e;border-radius:10px;background:#ffffff08;color:#c8d5e4;font-weight:850;letter-spacing:.5px;cursor:pointer}.guest-button:hover{background:#ffffff12;border-color:#ffffff35}.guest-button:disabled{opacity:.55;cursor:wait}
 .note{margin-top:16px;color:#68768a;font-size:11px;text-align:center;line-height:1.45}
 .success{display:none}.success.show{display:block}.success-id{margin:18px 0;padding:18px;border:1px solid rgba(76,141,255,.25);background:#0b1422;border-radius:12px;text-align:center}.success-id .small{font-size:11px;color:#7d8ca0}.success-id strong{display:block;font-size:28px;letter-spacing:1px;margin-top:5px}
 .copy{margin-top:10px;border:1px solid rgba(255,255,255,.12);background:#121b28;color:#fff;border-radius:9px;padding:10px 14px;cursor:pointer}
@@ -46,11 +47,11 @@ button.primary:disabled{opacity:.55;cursor:wait}
       <div class="auth-art__title">ГОТОВИЙ ДО БОЮ?</div>
       <p class="auth-art__copy">Зайди в акаунт, збери команду та виходь на арену. Твій наступний раунд починається тут.</p>
     </div>
-    <div class="auth-art__mark">BROWSER EDITION · FROST UI</div>
+    
   </aside>
   <div id="authView">
     <div class="brand"><h1>STANDOFF<span style="color:#4c8dff">X</span></h1></div>
-    <div class="subtitle">Тактичний browser FPS</div>
+    
 
     <div class="tabs">
       <button class="tab active" id="loginTab">Вхід</button>
@@ -65,15 +66,16 @@ button.primary:disabled{opacity:.55;cursor:wait}
       <div class="field">
         <label>ПАРОЛЬ</label>
         <div class="password-wrap">
-          <input id="password" autocomplete="current-password" type="password" minlength="6" maxlength="128" placeholder="Мінімум 6 символів">
+          <input id="password" autocomplete="current-password" type="password" minlength="1" maxlength="128" placeholder="Пароль" required>
           <button class="toggle" id="togglePass" type="button">Показати</button>
         </div>
       </div>
       <div id="nicknameField" class="field" style="display:none">
         <label>НІК</label>
-        <input id="nickname" autocomplete="nickname" maxlength="24" placeholder="3–24 символи">
+        <input id="nickname" autocomplete="nickname" minlength="1" maxlength="24" placeholder="Нік">
       </div>
       <button class="primary" id="submit">УВІЙТИ</button>
+      <button class="guest-button" id="guestButton" type="button">УВІЙТИ ЯК ГОСТЬ</button>
     </form>
     <div id="msg" class="msg"></div>
     <div class="note" id="note">Вхід виконується тільки за Player ID + пароль. ID видається автоматично під час реєстрації.</div>
@@ -104,7 +106,9 @@ function setMode(next){
   $("idLabel").textContent="PLAYER ID";
   $("identity").style.display="block";
   $("identity").required=mode==="login";
-  $("identity").placeholder=mode==="login"?"7-значний Player ID":"ID буде створено автоматично";
+  $("password").required=true;
+  $("nickname").required=mode==="register";
+  $("identity").placeholder=mode==="login"?"Player ID":"ID буде створено автоматично";
   $("submit").textContent=mode==="login"?"УВІЙТИ":"СТВОРИТИ АКАУНТ";
   $("note").textContent=mode==="login"
     ?"Вхід тільки за Player ID та паролем."
@@ -126,12 +130,16 @@ $("form").onsubmit=async e=>{
   const btn=$("submit"); btn.disabled=true; $("msg").textContent=""; $("msg").className="msg";
   try{
     const playerId=$("identity").value.trim().replace(/^ID_/i,"");
-    if(mode==="login" && playerId!=="Dev_01" && !/^\d{6,10}$/.test(playerId)){
-      throw new Error("Введи Player ID із 6–10 цифр.");
+    const password=$("password").value;
+    if(!password)throw new Error("Введи пароль.");
+    if(mode==="login" && playerId!=="Dev_01" && !/^\d{6,10}$/.test(playerId) && !/^GUEST-[A-F0-9]{6}$/i.test(playerId)){
+      throw new Error("Введи коректний Player ID.");
     }
+    const nickname=$("nickname").value.trim();
+    if(mode==="register"&&!nickname)throw new Error("Введи нік.");
     const payload=mode==="login"
-      ? {id:playerId,password:$("password").value}
-      : {nickname:$("nickname").value.trim(),password:$("password").value};
+      ? {id:playerId,password}
+      : {nickname,password};
 
     const r=await fetch(mode==="login"?"/api/login":"/api/register",{
       method:"POST",
@@ -155,6 +163,22 @@ $("form").onsubmit=async e=>{
     $("msg").textContent=err.message;
   }finally{
     btn.disabled=false;
+  }
+};
+
+
+$("guestButton").onclick=async()=>{
+  const button=$("guestButton");
+  button.disabled=true;
+  $("msg").textContent="";
+  try{
+    const response=await fetch("/api/guest",{method:"POST",credentials:"same-origin"});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.message||"Не вдалося створити гостьовий профіль.");
+    location.href=data.redirect||"/game";
+  }catch(error){
+    $("msg").textContent=error.message||"Не вдалося увійти як гість.";
+    button.disabled=false;
   }
 };
 
