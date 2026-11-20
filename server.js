@@ -2540,10 +2540,13 @@ function finishMatch(io, matchId) {
     const won = match.mode === "allies" || match.mode === "team_fight_3v3"
       ? Boolean(winningTeam && player.team === winningTeam)
       : highestScore > 0 && player.score === highestScore;
+    ensureUserShape(user);
     const gold = won ? 10 : 2;
     const xp = 50 + player.score * 20;
     user.gold = (Number(user.gold) || 0) + gold;
     user.XP = (Number(user.XP) || 0) + xp;
+    user.stats.matches+=1;
+    if(won)user.stats.wins+=1;else user.stats.losses+=1;
 
     if (player.socketId) {
       io.to(player.socketId).emit("show_results", {
@@ -3549,6 +3552,11 @@ function handleTeamShot(io, match, shooter, data) {
   if (killed) {
     best.deaths += 1; shooter.kills += 1; shooter.score += 1;
     if (match.mode === "allies") shooter.cash = Math.min(16000, (Number(shooter.cash) || 0) + 300);
+    const killerAccount=users.find(user=>user.id===shooter.userId);
+    const victimAccount=users.find(user=>user.id===best.userId);
+    if(killerAccount){ensureUserShape(killerAccount);killerAccount.stats.kills+=1;}
+    if(victimAccount){ensureUserShape(victimAccount);victimAccount.stats.deaths+=1;}
+    saveUsers();
   }
 
   io.to(match.id).emit("player_hit", {
