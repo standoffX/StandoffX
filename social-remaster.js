@@ -197,6 +197,7 @@ function renderLobby(lobby){
  if(!lobby){setClosed(lobbyModal);return}
  byId("sxLobbyStatus").textContent=String((lobby.members||[]).length);
  const members=Array.isArray(lobby.members)?lobby.members:[];
+ members.forEach(function(member){pendingInvites.delete(String(member.userId))});
  const owner=String(lobby.ownerId)===String(me?.id);
  byId("sxLobbyBody").innerHTML='<div class="sx-modal-note">'+esc(lobby.modeName||lobby.mode||"МАТЧ")+' · '+esc(lobby.mapName||lobby.map||"ZONE 9")+' · '+members.length+'/'+lobby.maxPlayers+'</div><div class="sx-lobby-members">'+members.map(function(member){
   return '<div class="sx-lobby-member"><img src="'+avatar(member)+'" alt=""><span><b>'+esc(member.nickname||"PLAYER")+'</b><small>'+(String(member.userId)===String(lobby.ownerId)?"ЛІДЕР":"УЧАСНИК")+'</small></span><em>'+(member.connected===false?"OFFLINE":"ONLINE")+'</em></div>';
@@ -220,6 +221,11 @@ function bindSocket(){
  socketRef.on("lobby_closed",function(){renderLobby(null)});
  socketRef.on("lobby_invite_result",function(data){setOutgoingInvite(data);if(data?.message)notify(data.message)});
  socketRef.on("lobby_invite_cancel_result",function(data){if(data?.userId)pendingInvites.delete(String(data.userId));if(data?.message)notify(data.message)});
+ socketRef.on("lobby_invite_response_received",function(data){
+  if(data?.userId)pendingInvites.delete(String(data.userId));
+  if(data?.accepted)addNotice("Запрошення прийнято",(data.nickname||"Друг")+" приєднався до лобі.","✓","ВІДКРИТИ",function(){window.sxOpenLobby()});
+  else addNotice("Запрошення відхилено",(data.nickname||"Друг")+" не приєднався до лобі.","×","ЗРОЗУМІЛО",function(){});
+ });
  socketRef.on("lobby_invite_received",function(data){
   if(!data?.lobbyId)return;
   addNotice("Запрошення до лобі",(data.inviterNickname||"Друг")+" запросив тебе до "+(data.modeName||"матчу")+".","♟","ВІДКРИТИ",function(){
