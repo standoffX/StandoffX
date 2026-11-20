@@ -39,7 +39,7 @@ function rowFriend(row){
  const name=row.dataset.friendName||row.querySelector(".home-friend-copy b")?.textContent||row.querySelector("b")?.textContent||cached.nickname||"PLAYER";
  const image=row.querySelector("img")?.src||cached.playerAvatar||"/avatars/default.jpg";
  const stateText=String(row.querySelector(".muted")?.textContent||"").toUpperCase();
- const status=row.classList.contains("is-online")||Boolean(cached.status)||(stateText.includes("В МЕРЕЖІ")&&!stateText.includes("НЕ В МЕРЕЖІ"));
+ const status=row.classList.contains("is-online")?true:(stateText.includes("НЕ В МЕРЕЖІ")?false:(stateText.includes("В МЕРЕЖІ")?true:Boolean(cached.status)));
  return Object.assign({},cached,{id:id,nickname:name,playerAvatar:image,status:status});
 }
 function hideFriendMenu(){if(menu)menu.classList.remove("open");contextFriend=null}
