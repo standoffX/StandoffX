@@ -30,6 +30,10 @@ const game = read("play2.html");
 const mobileCss = read("mobile-game.css");
 const lobbyCss = read("lobby-remaster.css");
 const mobileJs = read("mobile-game.js");
+const menuRemasterJs = read("menu-remaster.js");
+const socialJs = read("social-remaster.js");
+const socialCss = read("social-remaster.css");
+const gameplayRemasterJs = read("gameplay-remaster.js");
 const manifest = JSON.parse(read("manifest.webmanifest"));
 const admin = read("admin.html");
 const auth = read("auth.html");
@@ -45,7 +49,11 @@ for (const file of htmlFiles) {
   console.log("OK " + file + " scripts: " + scripts.length);
 }
 new vm.Script(mobileJs, { filename: "mobile-game.js" });
-console.log("OK mobile-game.js syntax");
+new vm.Script(menuRemasterJs, { filename: "menu-remaster.js" });
+new vm.Script(socialJs, { filename: "social-remaster.js" });
+new vm.Script(gameplayRemasterJs, { filename: "gameplay-remaster.js" });
+console.log("OK mobile-game.js, menu-remaster.js, social-remaster.js and gameplay-remaster.js syntax");
+assert.ok(socialCss.includes("#sxChatModal") && socialCss.includes("#sxFriendMenu"));
 
 // Account, session and database safety invariants.
 assert.match(server, /function requireAuth\(req, res, next\)/);
@@ -199,7 +207,28 @@ assert.match(mobileCss, /#authNote/);
 assert.doesNotMatch(auth, /UUID|uuid|createdUuid|copyUuid/);
 assert.doesNotMatch(admin, /fAdmin/);
 assert.match(auth, /@media\(max-width:560px\)/);
-assert.match(auth, /Player ID із 6–10 цифр/);
+assert.match(auth, /minlength="1"/);
+assert.match(auth, /id="guestButton"/);
+assert.match(auth, /fetch\("\/api\/guest"/);
+assert.match(server, /app\.post\("\/api\/guest"/);
+assert.match(server, /GUEST_SESSION_TTL_MS/);
+assert.match(server, /nickname: "Гість"/);
+assert.match(server, /password\.length < 1/);
+assert.match(server, /\{1,24\}/);
+assert.match(server, /app\.get\("\/api\/profile\/:id"/);
+assert.match(server, /app\.post\("\/api\/clans\/invite"/);
+for (const event of ["edit_msg","delete_msg","react_msg","lobby_invite_cancel"]) assert.match(server, new RegExp('socket\\.on\\("\\'+event+'\\\"'));
+assert.match(menu, /id="sxChatDock"/);
+assert.match(menu, /id="sxLobbyDock"/);
+assert.doesNotMatch(menu, /data-view="lobby"/);
+assert.match(socialJs, /data-sx-action/);
+assert.match(socialJs, /openProfile/);
+assert.match(socialJs, /openChat/);
+assert.match(socialJs, /private_message_notification/);
+assert.match(socialJs, /lobby_invite_cancel/);
+assert.match(socialJs, /edit_msg/);
+assert.match(socialJs, /delete_msg/);
+assert.match(socialJs, /react_msg/);
 assert.match(mobileCss, /home-hero-copy/);
 assert.match(mobileCss, /coming-soon-tag/);
 
