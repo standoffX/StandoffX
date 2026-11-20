@@ -2738,9 +2738,10 @@ if(canvas&&hero){
   const manager=new THREE.LoadingManager();
   manager.setURLModifier(url=>{
     const value=String(url||"").replace(/\\/g,"/");
-    const marker=value.search(/[a-z]:\\//i);
-    if(marker>=0){
-      const filename=value.slice(marker).split("/").pop().split(/[?#]/)[0];
+    const parts=value.split("/");
+    const driveIndex=parts.findIndex(part=>/^[a-z]:$/i.test(part));
+    if(driveIndex>=0){
+      const filename=parts[parts.length-1].split(/[?#]/)[0];
       if(/^[a-z0-9 _().-]+\.tga$/i.test(filename))return base+encodeURIComponent(filename);
     }
     return url;
