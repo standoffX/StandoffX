@@ -1381,6 +1381,10 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
               <div><b id="sxStatLosses">0</b><small>ПОРАЗКИ</small></div>
               <div><b id="sxStatMatches">0</b><small>МАТЧІ</small></div>
             </div>
+            <div class="sx-side-mmr">
+              <div><span>COMPETITIVE</span><b id="compMmr">1000 MMR</b></div>
+              <div><span>ALLIES</span><b id="alliesMmr">1000 MMR</b></div>
+            </div>
             <div class="sx-side-note">ТВОЯ ІГРОВА СТАТИСТИКА</div>
           </section>
           <section class="sx-side-view" data-sx-side-view="inventory" hidden>
@@ -1752,7 +1756,7 @@ async function api(url,opt={}){
   const o={...opt,credentials:"same-origin",headers:{...(opt.headers||{})}};
   if(o.body&&typeof o.body==="string")o.headers["Content-Type"]="application/json";
   const r=await fetch(url,o),d=await r.json().catch(()=>({}));
-  if(!r.ok)throw Error(d.message||"Помилка запиту");
+  if(!r.ok){const error=new Error(d.message||"Помилка запиту");error.status=r.status;throw error;}
   return d;
 }
 function canTest(){return Boolean(me&&(me.isTester||me.id==="Dev_01"))}
@@ -1811,8 +1815,8 @@ function render(){
   $("rankText").textContent="BRONZE I";
   $("xpText").textContent=(me.XP||0)+" XP";
   $("rankProgress").style.width=((me.XP||0)%1000)/10+"%";
-  $("compMmr").textContent=String(me.MMRCompetitive||1000)+" MMR";
-  $("alliesMmr").textContent=String(me.MMRAllies||1000)+" MMR";
+  const compMmrNode=$("compMmr");if(compMmrNode)compMmrNode.textContent=String(me.MMRCompetitive||1000)+" MMR";
+  const alliesMmrNode=$("alliesMmr");if(alliesMmrNode)alliesMmrNode.textContent=String(me.MMRAllies||1000)+" MMR";
   $("clanName").textContent=me.clan||"НЕМАЄ";
   $("avatar").src=me.playerAvatar||"/avatars/default.jpg";
   $("homePlayerAvatar").src=me.playerAvatar||"/avatars/default.jpg";
@@ -2720,7 +2724,19 @@ async function refreshAtlasIndicator(){}
     }
     if(!canTest()){testGameplayMode="real";localStorage.setItem("sx_test_gameplay","real")}
     render();renderHomeSquadRoster(currentLobby);settings();initSocialSocket();loadFriends();loadClan();loadInventory();loadMarket();refreshAtlasIndicator();
-  }catch{location.href="/"}
+  }catch(error){
+    console.error("[MENU INIT] Не вдалося ініціалізувати меню:",error);
+    if(error?.status===401||error?.status===403){location.replace("/");return;}
+    const message=String(error?.message||error||"Невідома помилка");
+    const content=document.querySelector(".content");
+    if(content){
+      let panel=document.getElementById("sxMenuInitError");
+      if(!panel){panel=document.createElement("section");panel.id="sxMenuInitError";panel.className="sx-menu-init-error";content.prepend(panel);}
+      panel.innerHTML="<b>НЕ ВДАЛОСЯ ЗАВАНТАЖИТИ МЕНЮ</b><p></p><button type=\"button\" id=\"sxMenuInitRetry\">ПОВТОРИТИ</button>";
+      panel.querySelector("p").textContent=message;
+      panel.querySelector("button").addEventListener("click",()=>location.reload());
+    }
+  }
 })();
 </script>
 <script type="importmap">
