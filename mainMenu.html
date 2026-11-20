@@ -2793,6 +2793,7 @@ if(canvas&&hero){
       texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
       textures[side]=texture;
       for(const actor of actors.values())if(actor.side===side&&actor.model)applyTexture(actor.model,side);
+      if(friendPreviewRuntime?.side===side&&friendPreviewRuntime.model)applyTexture(friendPreviewRuntime.model,side);
     },undefined,error=>console.warn("[Lobby agent] Texture unavailable:",file,error));
   }
   loadSideTexture("T","OTCChA_D.tga");
@@ -2937,7 +2938,7 @@ function clearActor(actor){
     previewScene.add(new THREE.HemisphereLight(0xd9e9f5,0x24313d,2.05));
     const previewKey=new THREE.DirectionalLight(0xffead7,2.25);previewKey.position.set(-3.2,5,4);previewScene.add(previewKey);
     const previewRim=new THREE.DirectionalLight(0x75b7e2,1.25);previewRim.position.set(3,2.5,-4);previewScene.add(previewRim);
-    const runtime={active:true,renderer:previewRenderer,scene:previewScene,camera:previewCamera,model:null,mixer:null,frame:0,resizeObserver:null};
+    const runtime={active:true,renderer:previewRenderer,scene:previewScene,camera:previewCamera,model:null,mixer:null,frame:0,resizeObserver:null,side:side};
     friendPreviewRuntime=runtime;
     function resizePreview(){if(!runtime.active)return;const width=previewCanvas.clientWidth||340,height=previewCanvas.clientHeight||210;previewRenderer.setSize(width,height,false);previewCamera.aspect=width/height;previewCamera.updateProjectionMatrix();}
     runtime.resizeObserver=new ResizeObserver(resizePreview);runtime.resizeObserver.observe(previewCanvas);resizePreview();
