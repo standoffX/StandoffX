@@ -542,6 +542,9 @@ function ensureUserShape(user) {
   }
   user.createdAt=Number(user.createdAt)||Date.now();
   user.isGuest=Boolean(user.isGuest);
+  user.agentSide = user.agentSide === "CT" ? "CT" : "T";
+  const validAgentAnimations = new Set(["Excited", "Talking On Phone", "Illegal Elbow Punch"]);
+  user.agentAnimation = validAgentAnimations.has(user.agentAnimation) ? user.agentAnimation : "Excited";
   user.equippedSkins = user.equippedSkins && typeof user.equippedSkins === "object" && !Array.isArray(user.equippedSkins) ? user.equippedSkins : {};
   user.softerIntroBoxClaimed = Boolean(user.softerIntroBoxClaimed);
   user.XP = Number(user.XP) || 0;
@@ -761,6 +764,8 @@ app.use((req, res, next) => {
 // Never expose server code, account JSON, database snapshots, or admin/menu HTML via static hosting.
 const BLOCKED_STATIC_DIRS = new Set([".git", ".github", "node_modules", "scripts", "data"]);
 const PROTECTED_STATIC_PAGES = new Set(["admin.html", "mainmenu.html"]);
+// Only explicitly public browser bundles may be served from the repository root.
+const PUBLIC_ROOT_SCRIPTS = new Set(["menu-remaster.js", "social-remaster.js", "mobile-game.js", "gameplay-remaster.js"]);
 app.use((req, res, next) => {
   let pathname = req.path;
   try {
@@ -777,7 +782,7 @@ app.use((req, res, next) => {
   const normalized = path.posix.normalize("/" + pathname.replace(/\\/g, "/")).replace(/^\/+/, "");
   const segments = normalized.split("/").filter(Boolean);
   const rootName = (segments[0] || "").toLowerCase();
-  const privateRootFile = segments.length === 1 && /\.(?:json|js|md|lock|ya?ml|env)$/i.test(rootName);
+  const privateRootFile = segments.length === 1 && /\.(?:json|js|md|lock|ya?ml|env)$/i.test(rootName) && !PUBLIC_ROOT_SCRIPTS.has(rootName);
   const blockedDirectory = segments.some(segment => BLOCKED_STATIC_DIRS.has(segment.toLowerCase()));
   const protectedPage = segments.length === 1 && PROTECTED_STATIC_PAGES.has(rootName);
   if (privateRootFile || blockedDirectory || protectedPage) return res.status(404).end();
@@ -953,6 +958,7 @@ app.post("/api/guest", loginRateLimit, (req, res) => {
     id,uuid:crypto.randomUUID(),nickname:"Гість",
     playerAvatar:"/avatars/default.jpg",createdAt:Date.now(),
     isGuest:true,isAdmin:false,isTester:false,isBanned:false,isVerified:false,
+    agentSide:"T",agentAnimation:"Excited",
     status:false,XP:0,gold:0,clan:null,MMRCompetitive:1000,MMRAllies:1000,
     stats:{kills:0,deaths:0,wins:0,losses:0,matches:0},
     friendsList:[],incomingRequests:[],incomingClanInvites:[],blocked:[],usedPromos:[],
@@ -1072,6 +1078,16 @@ app.post("/api/settings/keybinds", requireAuth, (req, res) => {
   res.json({ success: true, keybinds });
 });
 
+app.post("/api/settings/agent", requireAuth, (req, res) => {
+  const side = req.body?.side === "CT" ? "CT" : "T";
+  const allowedAnimations = new Set(["Excited", "Talking On Phone", "Illegal Elbow Punch"]);
+  const animation = allowedAnimations.has(req.body?.animation) ? req.body.animation : "Excited";
+  req.user.agentSide = side;
+  req.user.agentAnimation = animation;
+  saveUsers();
+  res.json({ success: true, agentSide: side, agentAnimation: animation });
+});
+
 app.get("/api/user-data", requireAuth, (req, res) => {
   const target = findUser(req.query.id || req.user.id);
   if (!target) return res.status(404).json({ success: false, message: "Користувача не знайдено." });
@@ -1111,6 +1127,7 @@ app.get("/api/profile/:id", requireAuth, (req, res) => {
     isGuest:Boolean(target.isGuest),isVerified:Boolean(target.isVerified),isBanned:Boolean(target.isBanned),
     createdAt:Number(target.createdAt)||null,XP:Number(target.XP)||0,
     MMRCompetitive:Number(target.MMRCompetitive)||1000,MMRAllies:Number(target.MMRAllies)||1000,
+    agentSide:target.agentSide==="CT"?"CT":"T",agentAnimation:["Excited","Talking On Phone","Illegal Elbow Punch"].includes(target.agentAnimation)?target.agentAnimation:"Excited",
     clan:clan?{tag:clan.tag,name:clan.name,avatar:clan.avatar||"/avatars/default.jpg",memberCount:users.filter(user=>user.clan===clan.tag).length}:null,
     stats:{kills,deaths,kd:(kills/Math.max(1,deaths)).toFixed(2),wins:Number(stats.wins)||0,losses:Number(stats.losses)||0,matches:Number(stats.matches)||0}
   }});
