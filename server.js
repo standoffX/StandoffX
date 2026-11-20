@@ -4683,8 +4683,9 @@ io.on("connection", socket => {
     if(!row){row={emoji:reaction,users:[]};message.reactions.push(row);}
     row.users=Array.isArray(row.users)?row.users:[];
     const userId=String(user.id);
+    const alreadyReacted=row.users.some(value=>String(value)===userId);
     row.users=row.users.filter(value=>String(value)!==userId);
-    if(!message.reactions.some(item=>item!==row&&item.emoji===reaction))row.users.push(userId);
+    if(!alreadyReacted)row.users.push(userId);
     message.reactions=message.reactions.filter(item=>Array.isArray(item.users)&&item.users.length>0);
     saveMessages();
     io.to(room).emit("msg_reaction",{id:message.id,reactions:message.reactions});
