@@ -1297,6 +1297,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 <link rel="stylesheet" href="/mobile-game.css">
 <link rel="stylesheet" href="/lobby-remaster.css?v=20261031-05">
 <link rel="stylesheet" href="/menu-remaster.css?v=1">
+<link rel="stylesheet" href="/social-remaster.css?v=1">
 </head>
 <body class="lobby-screen">
 <div class="app">
@@ -1310,7 +1311,6 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
     <button data-view="market" title="Ринок"><svg viewBox="0 0 24 24"><path d="M5 9h14l-1 11H6zM8 9V7a4 4 0 0 1 8 0v2"/></svg></button>
     <button data-view="clan" title="Клан"><svg viewBox="0 0 24 24"><path d="m12 3 8 3v5c0 5-3 8-8 10-5-2-8-5-8-10V6z"/></svg></button>
     <button data-view="friends" title="Друзі"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="10" r="2.3"/><path d="M3 20c.8-4 2.8-6 6-6s5.2 2 6 6M15 15c2.5 0 4.3 1.6 5 5"/></svg></button>
-    <button data-view="lobby" title="Лобі"><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 20c.5-4 2.4-6 5.5-6s5.1 2 5.6 6M14 15c3.3-.8 6.2 1 7.2 4.5"/></svg></button>
   </nav>
   <div class="rail-bottom">
     <button data-view="stats" title="Статистика"><svg viewBox="0 0 24 24"><path d="M5 19V9M12 19V5M19 19v-8"/></svg></button>
@@ -1336,8 +1336,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
         <div class="home-self-card"><img id="homePlayerAvatar" src="/avatars/default.jpg" alt=""><div><b id="homePlayerNick">PLAYER</b><small id="homePlayerStatus">ОНЛАЙН · У МЕНЮ</small><span>ID <strong id="homePlayerId">—</strong></span></div><i></i></div>
         <div class="home-friends-title"><span>ДРУЗІ</span><small id="homeOnlineCount">0 ОНЛАЙН</small></div>
         <div id="homeFriendsPreview" class="home-friends-list"><div class="muted">Завантажуємо список друзів…</div></div>
-        <button class="home-invite-btn" id="homeInviteBtn" type="button">＋ ЗНАЙТИ / ЗАПРОСИТИ ДРУЗІВ</button>
-        <div class="home-squad-note">Збери команду перед стартом матчу.</div>
+        <button class="home-invite-btn" id="homeInviteBtn" type="button">＋ ДОДАТИ ДРУГА</button>
       </div>
     </aside>
     <section class="home-hero panel" aria-label="Головне ігрове меню">
@@ -1359,10 +1358,15 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
            <button type="button" data-home-agent-animation="Illegal Elbow Punch"><span>03</span><b>УДАР ЛІКТЕМ</b></button>
          </div>
        </div>
-      <div class="home-squad-bar" aria-label="Загін гравців"><div class="home-squad-head"><span>ЗАГІН</span><small id="homeSquadStatus">СОЛО</small><small id="homeSquadCount">1 / 4</small></div><div id="homeSquadRoster" class="home-squad-roster" aria-live="polite"></div></div>
-      <div class="home-hero-copy">
-        <div class="home-hero-overline"><span class="hero-live-dot"></span> STANDOFFX <span class="hero-separator">/</span> TACTICAL COMBAT</div>
-        <h1>STANDOFF<em>X</em></h1>
+      <div class="home-social-dock" aria-label="Соціальні функції">
+        <button id="sxChatDock" type="button" title="Повідомлення" aria-label="Повідомлення">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-5 4v-4.5a2.5 2.5 0 0 1-1-2z"/><path d="M8 8h8M8 11.5h5"/></svg>
+          <i id="sxChatUnread" class="sx-unread-dot" hidden></i>
+        </button>
+        <button id="sxLobbyDock" type="button" title="Відкрити лобі" aria-label="Відкрити лобі" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 20c.5-4 2.4-6 5.5-6s5.1 2 5.6 6M14 15c3.3-.8 6.2 1 7.2 4.5"/></svg>
+          <i id="sxLobbyStatus"></i>
+        </button>
       </div>
       <div class="playarea">
         <div class="playwrap">
@@ -1759,15 +1763,13 @@ function renderMapSelection(){
   if(label)label.textContent=MAPS[selectedMap]||MAPS[allowed[0]];
 }
 function show(view){
+  if(view==="chat"){window.sxOpenMessages?.();return}
+  if(view==="lobby"){window.sxOpenLobby?.();return}
   document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("active",s.id===view));
   document.querySelectorAll(".rail button[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
   $("title") && ($("title").textContent=view.toUpperCase());
   if(view==="profile")refreshProfileIdentity();
   if(view==="friends")loadFriends();
-  if(view==="lobby"){
-    loadFriends();loadLobbyFriends();
-    if(socialSocket?.connected)socialSocket.emit("lobby_state_request");
-  }
   if(view==="clan")loadClan();
   if(view==="store")loadSofterStore();
   if(view==="inventory")loadInventory();
@@ -2087,9 +2089,9 @@ function renderHomeFriendsPreview(friends){
   const online=list.filter(friend=>Boolean(friend.status)).sort((a,b)=>String(a.nickname||"").localeCompare(String(b.nickname||""),"uk"));
   const offline=list.filter(friend=>!friend.status).sort((a,b)=>String(a.nickname||"").localeCompare(String(b.nickname||""),"uk"));
   const count=$("homeOnlineCount");
-  if(count)count.textContent=online.length+" ОНЛАЙН · "+offline.length+" ОФЛАЙН";
+  if(count)count.textContent=online.length+" В МЕРЕЖІ · "+offline.length+" ОФЛАЙН";
   if(!list.length){
-    root.innerHTML="<div class='muted'>Друзів поки немає. Знайди гравців і створи команду.</div>";
+    root.innerHTML="<div class='muted'>Друзів поки немає.</div>";
     return;
   }
   const renderGroup=(title,items,isOnline)=>{
@@ -2097,22 +2099,18 @@ function renderHomeFriendsPreview(friends){
     const rows=items.map(friend=>{
       const avatar=esc(friend.playerAvatar||friend.avatar||"/avatars/default.jpg");
       const nick=esc(friend.nickname||"PLAYER");
-      const state=isOnline?"ONLINE":"OFFLINE";
+      const state=isOnline?"В МЕРЕЖІ":"НЕ В МЕРЕЖІ";
       const onlineClass=isOnline?" is-online":"";
-      const disabled=!isOnline||(Boolean(currentLobby)&&currentLobby.members.length>=currentLobby.maxPlayers);
-      const invite=isOnline
-        ?"<button class='home-friend-invite' data-home-invite='"+esc(friend.id)+"' aria-label='Запросити "+nick+"' "+(disabled?"disabled":"")+">+</button>"
-        :"<button class='home-friend-invite' type='button' disabled aria-label='Гравець не в мережі'>·</button>";
-      return "<div class='home-friend"+onlineClass+"'><img src='"+avatar+"' alt=''><div class='home-friend-copy'><b>"+nick+"</b><small>"+state+"</small></div><i class='home-online'></i>"+invite+"</div>";
+      return "<div class='home-friend"+onlineClass+"' data-friend-id='"+esc(friend.id)+"' data-friend-name='"+nick+"'><img src='"+avatar+"' alt=''><div class='home-friend-copy'><b>"+nick+"</b><small>"+state+"</small></div><i class='home-online'></i><button class='home-friend-invite sx-friend-menu-trigger' type='button' data-friend-menu='"+esc(friend.id)+"' aria-label='Дії з "+nick+"'>···</button></div>";
     }).join("");
     return "<section class='home-presence-group'><div class='home-presence-heading'><span>"+title+"</span><span class='presence-count'>"+items.length+"</span></div>"+rows+"</section>";
   };
-  root.innerHTML=renderGroup("В МЕРЕЖІ",online,true)+renderGroup("НЕ В МЕРЕЖІ",offline,false);
+  root.innerHTML=renderGroup("ОНЛАЙН",online,true)+renderGroup("ОФЛАЙН",offline,false);
 }
 async function loadFriends(){
   try{
     const f=await api("/api/get-my-friends"),i=await api("/api/friends/incoming",{method:"POST",body:"{}"});
-    $("friendsList").innerHTML=f.friends.map(x=>"<div class='row'><div><b>"+esc(x.nickname)+"</b><div class='muted'>ID "+esc(cleanId(x.id))+"</div></div><div class='actions'><span class='muted'>"+(x.status?"ONLINE":"OFFLINE")+"</span>"+(currentLobby?"<button class='secondary' data-lobby-invite='"+esc(x.id)+"' "+(!x.status||currentLobby.members.length>=currentLobby.maxPlayers?"disabled":"")+">ЗАПРОСИТИ</button>":"<button class='secondary' data-open-lobby>ЛОБІ</button>")+"</div></div>").join("")||"<div class='muted'>Немає друзів.</div>";
+    $("friendsList").innerHTML=f.friends.map(x=>"<div class='row sx-friend-row' data-friend-id='"+esc(x.id)+"'><div><b>"+esc(x.nickname)+"</b><div class='muted'>"+(x.status?"В МЕРЕЖІ":"НЕ В МЕРЕЖІ")+"</div></div><div class='actions'><button class='secondary' data-friend-menu='"+esc(x.id)+"' type='button' aria-label='Дії з "+esc(x.nickname)+"'>···</button></div></div>").join("")||"<div class='muted'>Немає друзів.</div>";
     $("incoming").innerHTML=i.incoming.map(x=>"<div class='row'><div><b>"+esc(x.nickname)+"</b><div class='muted'>ID "+esc(cleanId(x.id))+"</div></div><div class='actions'><button class='primary' data-friend-action='accept' data-id='"+esc(x.id)+"'>✓</button><button class='secondary' data-friend-action='decline' data-id='"+esc(x.id)+"'>×</button></div></div>").join("")||"<div class='muted'>Немає заявок.</div>";
     renderLobbyFriends(f.friends);
     renderHomeFriendsPreview(f.friends);
@@ -2913,6 +2911,7 @@ function clearActor(actor){
 }
 </script>
 <script src="/menu-remaster.js" defer></script>
+<script src="/social-remaster.js" defer></script>
 <script src="/mobile-game.js" defer></script>
 </body>
 </html>
