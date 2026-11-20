@@ -11,7 +11,7 @@ const guest=()=>Boolean(typeof me!=="undefined"&&me&&me.isGuest);
 let socketRef=null,friendMap=new Map(),activeFriend=null,chatMessages=[],chatDialogs=[],unread=new Map(),pendingInvites=new Map(),activeLobby=null,clanInvite=null,chatOpen=false,editingId=null,noticeId=0,contextFriend=null;
 const menu=byId("sxFriendMenu"),chatModal=byId("sxChatModal"),profileModal=byId("sxPlayerProfileModal"),lobbyModal=byId("sxLobbyModal"),clanModal=byId("sxClanInviteModal"),noticeStack=byId("sxNoticeStack");
 const setOpen=(node)=>node&&node.classList.add("show");
-const setClosed=(node)=>node&&node.classList.remove("show");
+const setClosed=(node)=>{if(!node)return;node.classList.remove("show");if(node===profileModal)window.dispatchEvent(new Event("sx:close-friend-profile"))};
 
 function addNotice(title,body,icon,actionText,action){
  const id="sxNotice"+(++noticeId),card=document.createElement("div");
@@ -73,8 +73,10 @@ function renderProfile(profile){
  '<div class="sx-stat"><strong>'+(Number(stats.losses)||0)+'</strong><small>ПОРАЗКИ</small></div>'+
  '<div class="sx-stat"><strong>'+(Number(stats.matches)||0)+'</strong><small>МАТЧІ</small></div>'+
  '</div><div class="sx-modal-note" style="margin-top:10px">MMR: '+(Number(profile.MMRCompetitive)||1000)+' · СОЮЗНИКИ: '+(Number(profile.MMRAllies)||1000)+'</div>'+
+ '<section class="sx-profile-agent"><header><b>АГЕНТ ГРАВЦЯ</b><span>'+((profile.agentSide==="CT")?"CT · ЗАХИСТ":"T · АТАКА")+' · '+esc(profile.agentAnimation||"Excited")+'</span></header><canvas id="sxFriendAgentCanvas" aria-label="3D-агент гравця"></canvas></section>'+
  '<div class="sx-profile-actions"><button type="button" data-profile-message="'+esc(profile.id)+'">ПОВІДОМЛЕННЯ</button>'+
  (canClan?'<button type="button" class="primary" data-profile-clan="'+esc(profile.id)+'">ЗАПРОСИТИ ДО КЛАНУ</button>':"")+'</div>';
+ window.dispatchEvent(new CustomEvent("sx:preview-agent",{detail:profile}));
 }
 async function openProfile(id){
  setOpen(profileModal);
