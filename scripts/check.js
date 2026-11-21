@@ -151,7 +151,7 @@ assert.match(menu, /id="logout"/);
 assert.match(menu, /id="inventoryGold"/);
 assert.match(menu, /id="sxInventoryGold"/);
 assert.doesNotMatch(menu, /id="(?:gold|softerGold|statsGold|profileGold)"/);
-assert.match(menu, /social-remaster\.js\?v=2/);
+assert.match(menu, /social-remaster\.js\?v=3/);
 assert.match(menu, /menu-remaster\.js\?v=2/);
 assert.match(server, /if \(user\) return res\.redirect\(303, "\/game"\)/);
 assert.match(menu, /\$\("homeSquadRoster"\)\?\.addEventListener/);
