@@ -867,6 +867,8 @@ const upload = multer({
 app.get("/", (req, res) => {
   const user = requestUser(req);
   if (user?.isBanned && user.id !== ADMIN_ID) return res.redirect("/banned");
+  // A valid HttpOnly session cookie should enter the game without showing auth again.
+  if (user) return res.redirect(303, "/game");
   res.sendFile(path.join(ROOT, "auth.html"));
 });
 app.get("/banned", (_req, res) => {
