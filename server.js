@@ -2585,9 +2585,9 @@ function finishMatch(io, matchId) {
     const xp = 50 + player.score * 20;
     user.gold = (Number(user.gold) || 0) + gold;
     user.XP = (Number(user.XP) || 0) + xp;
-    user.stats.matches+=1;
-    if(won)user.stats.wins+=1;else user.stats.losses+=1;
     const draw=(match.mode==="allies"||match.mode==="team_fight_3v3")?!winningTeam:(highestScore<=0);
+    user.stats.matches+=1;
+    if(won)user.stats.wins+=1;else if(!draw)user.stats.losses+=1;
     user.matchHistory.unshift({
       matchId:match.id,date:Date.now(),mode:match.mode,modeName:match.modeName,map:match.map,
       result:draw?"draw":won?"win":"loss",team:player.team||"",score:Number(player.score)||0,
