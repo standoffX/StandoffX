@@ -2540,6 +2540,63 @@ async function loadSofterStore(){
     $("softerCollectionGrid").innerHTML=(d.skins||[]).map(x=>softerItemCard(x,true)).join("");
   }catch(error){$("softerStoreStatus").textContent=error.message||"Колекція тимчасово недоступна."}
 }
+
+function drawStatsLineChart(canvasId,rows){
+  const canvas=$(canvasId);if(!canvas)return;
+  const width=Math.max(240,canvas.clientWidth||360),height=Math.max(150,canvas.clientHeight||190),dpr=Math.min(window.devicePixelRatio||1,2);
+  canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);
+  const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
+  const pad={left:30,right:12,top:14,bottom:26},plotW=width-pad.left-pad.right,plotH=height-pad.top-pad.bottom;
+  ctx.strokeStyle="rgba(190,210,220,.12)";ctx.fillStyle="#82949d";ctx.font="9px system-ui";
+  for(let row=0;row<=4;row++){const y=pad.top+plotH*row/4;ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(width-pad.right,y);ctx.stroke();ctx.fillText(String(4-row),5,y+3)}
+  const values=[...rows].reverse().map(row=>({v:Number(row.kills||0)/Math.max(1,Number(row.deaths||0)),date:row.date}));
+  if(!values.length){ctx.fillStyle="#83939b";ctx.textAlign="center";ctx.fillText("Графік з’явиться після першого матчу",width/2,height/2);return}
+  const points=values.map((row,index)=>({x:pad.left+(values.length===1?plotW/2:plotW*index/(values.length-1)),y:pad.top+plotH*(1-Math.min(4,row.v)/4)}));
+  ctx.strokeStyle="#79d9a0";ctx.lineWidth=2;ctx.beginPath();points.forEach((point,index)=>index?ctx.lineTo(point.x,point.y):ctx.moveTo(point.x,point.y));ctx.stroke();
+  ctx.fillStyle="#a9efbd";points.forEach(point=>{ctx.beginPath();ctx.arc(point.x,point.y,3,0,Math.PI*2);ctx.fill()});
+  ctx.fillStyle="#82949d";ctx.textAlign="center";
+  points.forEach((point,index)=>{if(values.length<=6||index===0||index===values.length-1||index%Math.ceil(values.length/5)===0){const date=new Date(values[index].date||Date.now());ctx.fillText(date.toLocaleDateString("uk-UA",{day:"2-digit",month:"2-digit"}),point.x,height-7)}});
+}
+function drawStatsCombatChart(canvasId,rows){
+  const canvas=$(canvasId);if(!canvas)return;
+  const width=Math.max(240,canvas.clientWidth||360),height=Math.max(150,canvas.clientHeight||190),dpr=Math.min(window.devicePixelRatio||1,2);
+  canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);
+  const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,width,height);
+  const pad={left:24,right:10,top:12,bottom:20},plotW=width-pad.left-pad.right,plotH=height-pad.top-pad.bottom;
+  const recent=[...rows].slice(0,12).reverse(),max=Math.max(4,...recent.flatMap(row=>[Number(row.kills)||0,Number(row.deaths)||0]));
+  ctx.strokeStyle="rgba(190,210,220,.12)";ctx.fillStyle="#82949d";
+  for(let row=0;row<=4;row++){const y=pad.top+plotH*row/4;ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(width-pad.right,y);ctx.stroke()}
+  if(!recent.length){ctx.textAlign="center";ctx.fillText("Немає записів",width/2,height/2);return}
+  const group=plotW/recent.length,barW=Math.max(3,Math.min(11,group*.28));
+  recent.forEach((row,index)=>{
+    const center=pad.left+group*(index+.5),killH=(Number(row.kills)||0)/max*plotH,deathsH=(Number(row.deaths)||0)/max*plotH;
+    ctx.fillStyle="#75dca0";ctx.fillRect(center-barW-1,pad.top+plotH-killH,barW,killH);
+    ctx.fillStyle="#e39b87";ctx.fillRect(center+1,pad.top+plotH-deathsH,barW,deathsH);
+  });
+}
+async function loadDetailedStats(){
+  const root=$("sxMatchHistory");if(!root)return;
+  root.innerHTML="<div class='muted'>Завантажуємо статистику…</div>";
+  try{
+    const data=await api("/api/stats/details"),stats=data.stats||{},agent=data.agent||{},history=Array.isArray(data.history)?data.history:[];
+    const fields={sxDetailKd:stats.kd||"0.00",sxDetailKills:stats.kills||0,sxDetailDeaths:stats.deaths||0,sxDetailWins:stats.wins||0,sxDetailWinRate:(stats.winRate||0)+"%",sxDetailMatches:stats.matches||0};
+    Object.entries(fields).forEach(([id,value])=>{const node=$(id);if(node)node.textContent=String(value)});
+    $("sxStatsUpdated").textContent=history.length?history.length+" ЗАПИСІВ · ОСТАННІ МАТЧІ":"ІСТОРІЯ НАКОПИЧУЄТЬСЯ";
+    $("sxHistoryCount").textContent=history.length+" ЗАПИСІВ";
+    $("sxDetailAgentSide").textContent=agent.side==="CT"?"CT · ЗАХИСТ":"T · АТАКА";
+    const labels={"Excited":"ГОТОВНІСТЬ","Talking On Phone":"ПО ТЕЛЕФОНУ","Illegal Elbow Punch":"УДАР ЛІКТЕМ"};
+    $("sxDetailAgentAnimation").textContent=labels[agent.animation]||"ГОТОВНІСТЬ";
+    const usage=Object.entries(agent.usage||{}).sort((a,b)=>b[1]-a[1]);
+    $("sxDetailAgentUsage").textContent=usage.length?usage.map(([name,count])=>name+" — "+count+" матч.").join(" · "):"Історія агента почне накопичуватися після наступних матчів.";
+    root.innerHTML=history.map(row=>{
+      const result=row.result==="win"?"ПЕРЕМОГА":row.result==="draw"?"НІЧИЯ":"ПОРАЗКА",kind=row.result==="win"?"win":row.result==="draw"?"draw":"loss";
+      const date=new Date(Number(row.date)||Date.now()).toLocaleString("uk-UA",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});
+      return "<article class='sx-match-row'><div class='sx-match-result "+kind+"'>"+result+"</div><div class='sx-match-main'><b>"+esc(row.modeName||row.mode||"МАТЧ")+" · "+esc(row.map||"ZONE 9")+"</b><small>"+date+" · "+(row.agentSide==="CT"?"CT":"T")+" · "+esc(labels[row.agentAnimation]||"ГОТОВНІСТЬ")+"</small></div><div class='sx-match-score'><b>"+(Number(row.kills)||0)+" / "+(Number(row.deaths)||0)+"</b><small>K / D</small></div><div class='sx-match-xp'>+"+(Number(row.xp)||0)+" XP</div></article>";
+    }).join("")||"<div class='sx-history-empty'><b>ІСТОРІЯ ЩЕ ПОРОЖНЯ</b><span>Результати матчів, графіки K/D та агенти з’являться після завершення наступної гри.</span></div>";
+    drawStatsLineChart("sxStatsKdChart",history);drawStatsCombatChart("sxStatsCombatChart",history);
+  }catch(error){root.innerHTML="<div class='muted'>Не вдалося завантажити статистику: "+esc(error.message)+"</div>"}
+}
+
 async function loadInventory(){
   try{
     const d=await api("/api/inventory/my",{method:"POST",body:"{}"});
