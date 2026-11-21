@@ -142,6 +142,7 @@
     $("settingsBack")?.addEventListener("click",()=>window.sxShowMenuView?.("home"));
     $("profileSettingsBtn")?.addEventListener("click",()=>window.sxShowMenuView?.("settings"));
     $("adminSettingsBtn")?.addEventListener("click",openAdminPanel);
+    $("adminSettingsBtn")?.addEventListener("click",openAdminPanel);
     addSectionBackButtons();
     document.addEventListener("click",event=>{
       const back=event.target.closest("[data-menu-back]");
