@@ -107,3 +107,20 @@
  .sx-profile-stats{gap:5px}.sx-stat{padding:8px 4px}.sx-stat strong{font-size:14px}
 }
 @media(prefers-reduced-motion:reduce){.sx-notice{animation:none}}
+
+
+/* Social windows are built by social-remaster.js and must sit above the menu dock. */
+.sx-social-modal{z-index:1300!important}
+.sx-social-modal .modalbox{color:#e8eef0!important}
+#sxFriendMenu{z-index:1350!important}
+#sxNoticeStack{z-index:1400!important}
+#sxChatModal .sx-chat-header .close{min-width:72px!important;padding:5px 9px!important;font-size:8px!important;font-weight:950!important}
+#sxChatModal .sx-chat-header .close:hover,
+.sx-social-modal .modalhead .close:hover{border-color:#70df69!important;color:#9ce895!important}
+.sx-social-modal .modalbox [data-sx-close]{cursor:pointer}
+@media(max-width:680px){
+ .sx-social-modal{padding:7px!important}
+ .sx-social-modal:not(#sxChatModal) .modalbox{max-width:calc(100vw - 14px)!important;max-height:92dvh!important}
+ #sxChatModal .sx-chat-header{padding:0 9px!important}
+ #sxChatModal .sx-chat-header .close{min-width:65px!important}
+}
