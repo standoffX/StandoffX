@@ -2,6 +2,39 @@
 (function(){
 "use strict";
 const byId=id=>document.getElementById(id);
+function ensureSocialShell(){
+ if(byId("sxFriendMenu"))return;
+ const html=`
+ <div id="sxNoticeStack" aria-live="polite"></div>
+ <div id="sxFriendMenu" role="menu" aria-label="Дії з другом">
+  <div class="sx-context-person"><img id="sxContextAvatar" src="/avatars/default.jpg" alt=""><div><b id="sxContextName">PLAYER</b><small id="sxContextStatus">НЕ В МЕРЕЖІ</small></div></div>
+  <button type="button" data-sx-action="lobby"><span class="sx-menu-icon">♟</span><span id="sxContextLobbyLabel">ЗАПРОСИТИ ДО ЛОБІ</span></button>
+  <button type="button" data-sx-action="profile"><span class="sx-menu-icon">◉</span><span>ПРОФІЛЬ ГРАВЦЯ</span></button>
+  <button type="button" data-sx-action="clan"><span class="sx-menu-icon">♜</span><span>ЗАПРОСИТИ ДО КЛАНУ</span></button>
+  <div class="sx-menu-separator"></div>
+  <button type="button" data-sx-action="message"><span class="sx-menu-icon">✉</span><span>НАПИСАТИ ПОВІДОМЛЕННЯ</span></button>
+ </div>
+ <div id="sxPlayerProfileModal" class="modal sx-social-modal" role="dialog" aria-modal="true" aria-label="Профіль гравця">
+  <div class="modalbox"><div class="modalhead"><span>ПРОФІЛЬ ГРАВЦЯ</span><button class="close" type="button" data-sx-close="sxPlayerProfileModal" aria-label="Назад">←</button></div><div id="sxPlayerProfileBody"></div></div>
+ </div>
+ <div id="sxChatModal" class="modal sx-social-modal" role="dialog" aria-modal="true" aria-label="Повідомлення">
+  <div class="modalbox">
+   <header class="sx-chat-header"><b>ПОВІДОМЛЕННЯ</b><button class="close" type="button" data-sx-close="sxChatModal" aria-label="Назад">← НАЗАД</button></header>
+   <div class="sx-chat-layout">
+    <aside class="sx-chat-sidebar"><div class="sx-chat-sidebar-head">ДІАЛОГИ</div><input id="sxChatSearch" class="sx-chat-search" type="search" placeholder="Пошук друга"><div id="sxChatDialogs" class="sx-chat-dialogs"></div></aside>
+    <section class="sx-chat-thread"><div id="sxChatThreadHead" class="sx-chat-thread-head"><div class="sx-chat-empty">Обери друга, щоб відкрити переписку</div></div><div id="sxChatMessages" class="sx-chat-messages"><div class="sx-chat-empty">Тут будуть твої повідомлення.</div></div><div class="sx-chat-composer"><textarea id="sxMessageInput" maxlength="2000" rows="2" placeholder="Напиши повідомлення…" disabled></textarea><button id="sxSendMessage" type="button" disabled>НАДІСЛАТИ</button></div></section>
+   </div>
+  </div>
+ </div>
+ <div id="sxClanInviteModal" class="modal sx-social-modal" role="dialog" aria-modal="true" aria-label="Запрошення до клану">
+  <div class="modalbox"><div class="modalhead"><span>ЗАПРОШЕННЯ ДО КЛАНУ</span><button class="close" type="button" data-sx-close="sxClanInviteModal" aria-label="Назад">←</button></div><div id="sxClanInviteBody"></div><div class="sx-profile-actions"><button type="button" id="sxClanDecline">ВІДХИЛИТИ</button><button type="button" class="primary" id="sxClanAccept">ПРИЙНЯТИ</button></div></div>
+ </div>
+ <div id="sxLobbyModal" class="modal sx-social-modal" role="dialog" aria-modal="true" aria-label="Лобі">
+  <div class="modalbox"><div class="modalhead"><span>ТВОЄ ЛОБІ</span><button class="close" type="button" data-sx-close="sxLobbyModal" aria-label="Назад">← НАЗАД</button></div><div id="sxLobbyBody"></div></div>
+ </div>`;
+ document.body.insertAdjacentHTML("beforeend",html);
+}
+ensureSocialShell();
 const esc=value=>String(value==null?"":value).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]});
 const avatar=user=>esc(user&&user.playerAvatar||"/avatars/default.jpg");
 const notify=message=>{if(typeof notifyToast==="function")notifyToast(message);else console.info("[SOCIAL]",message)};
@@ -14,6 +47,7 @@ const setOpen=(node)=>node&&node.classList.add("show");
 const setClosed=(node)=>{if(!node)return;node.classList.remove("show");if(node===profileModal)window.dispatchEvent(new Event("sx:close-friend-profile"))};
 
 function addNotice(title,body,icon,actionText,action){
+ if(!noticeStack)return;
  const id="sxNotice"+(++noticeId),card=document.createElement("div");
  card.className="sx-notice";card.id=id;
  card.innerHTML='<div class="sx-notice-icon">'+esc(icon||"✉")+'</div><div class="sx-notice-copy"><b>'+esc(title)+'</b><small>'+esc(body)+'</small></div><button type="button" data-notice-action>'+esc(actionText||"ВІДКРИТИ")+'</button><button type="button" class="sx-notice-close" aria-label="Закрити">×</button>';
@@ -44,14 +78,17 @@ function rowFriend(row){
 }
 function hideFriendMenu(){if(menu)menu.classList.remove("open");contextFriend=null}
 function showFriendMenu(friend,x,y){
+ if(!friend||!menu)return;
  contextFriend=friend;
- byId("sxContextAvatar").src=friend.playerAvatar||"/avatars/default.jpg";
- byId("sxContextName").textContent=friend.nickname||"PLAYER";
- byId("sxContextStatus").textContent=friend.status?"В МЕРЕЖІ":"НЕ В МЕРЕЖІ";
+ const image=byId("sxContextAvatar"),name=byId("sxContextName"),status=byId("sxContextStatus"),label=byId("sxContextLobbyLabel");
+ if(image)image.src=friend.playerAvatar||"/avatars/default.jpg";
+ if(name)name.textContent=friend.nickname||"PLAYER";
+ if(status)status.textContent=friend.status?"В МЕРЕЖІ":"НЕ В МЕРЕЖІ";
  const invitePending=pendingInvites.has(String(friend.id));
- byId("sxContextLobbyLabel").textContent=invitePending?"Відмінити запрошення":"Запросити до лобі";
- menu.querySelector('[data-sx-action="lobby"]').disabled=!invitePending&&(!friend.status||guest());
- menu.querySelector('[data-sx-action="clan"]').disabled=guest()||!me?.clan;
+ if(label)label.textContent=invitePending?"Відмінити запрошення":"Запросити до лобі";
+ const lobbyAction=menu.querySelector('[data-sx-action="lobby"]'),clanAction=menu.querySelector('[data-sx-action="clan"]');
+ if(lobbyAction)lobbyAction.disabled=!invitePending&&(!friend.status||guest());
+ if(clanAction)clanAction.disabled=guest()||!me?.clan;
  menu.style.left=Math.max(8,Math.min(x,window.innerWidth-236))+"px";
  menu.style.top=Math.max(8,Math.min(y,window.innerHeight-245))+"px";
  menu.classList.add("open");
@@ -82,7 +119,7 @@ async function openProfile(id){
  setOpen(profileModal);
  byId("sxPlayerProfileBody").innerHTML='<div class="sx-modal-note">Завантаження профілю…</div>';
  try{const data=await apiGet("/api/profile/"+encodeURIComponent(id));renderProfile(data.profile)}
- catch(error){byId("sxPlayerProfileBody").innerHTML='<div class="sx-modal-note">'+esc(error.message)+'</div>'}
+ catch(error){if(profileBody)profileBody.innerHTML='<div class="sx-modal-note">'+esc(error.message)+'</div>'}
 }
 async function inviteClan(id){
  if(guest())return notify("Гостьовий профіль не може запрошувати до клану.");
@@ -91,8 +128,9 @@ async function inviteClan(id){
  catch(error){notify(error.message)}
 }
 function renderDialogs(){
- const root=byId("sxChatDialogs");
- const q=String(byId("sxChatSearch").value||"").trim().toLowerCase();
+ const root=byId("sxChatDialogs"),search=byId("sxChatSearch");
+ if(!root)return;
+ const q=String(search?.value||"").trim().toLowerCase();
  const filtered=chatDialogs.filter(function(friend){return String(friend.nickname||"").toLowerCase().includes(q)||String(friend.id||"").toLowerCase().includes(q)});
  root.innerHTML=filtered.map(function(friend){
   const id=String(friend.id),count=unread.get(id)||0;
@@ -336,13 +374,13 @@ function openLobbyModal(){
  if(activeLobby){renderLobby(activeLobby);setOpen(lobbyModal);return}
  ensureSocket();socketRef?.emit("lobby_state_request");notify("Ти зараз не в лобі.");
 }
-byId("sxChatDock").addEventListener("click",function(){openMessages()});
-byId("sxLobbyDock").addEventListener("click",openLobbyModal);
-byId("sxChatSearch").addEventListener("input",renderDialogs);
-byId("sxSendMessage").addEventListener("click",sendMessage);
-byId("sxMessageInput").addEventListener("keydown",function(event){if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();sendMessage()}});
-byId("sxClanAccept").addEventListener("click",function(){respondClanInvite(true)});
-byId("sxClanDecline").addEventListener("click",function(){respondClanInvite(false)});
+byId("sxChatDock")?.addEventListener("click",function(){openMessages()});
+byId("sxLobbyDock")?.addEventListener("click",openLobbyModal);
+byId("sxChatSearch")?.addEventListener("input",renderDialogs);
+byId("sxSendMessage")?.addEventListener("click",sendMessage);
+byId("sxMessageInput")?.addEventListener("keydown",function(event){if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();sendMessage()}});
+byId("sxClanAccept")?.addEventListener("click",function(){respondClanInvite(true)});
+byId("sxClanDecline")?.addEventListener("click",function(){respondClanInvite(false)});
 window.addEventListener("keydown",function(event){if(event.key==="Escape"){hideFriendMenu();if(chatOpen){setClosed(chatModal);chatOpen=false;if(activeFriend&&socketRef?.connected)socketRef.emit("leave_chat",{friendId:activeFriend.id});activeFriend=null;chatMessages=[]}}});
 window.sxOpenMessages=openMessages;
 window.sxOpenLobby=openLobbyModal;
