@@ -1817,6 +1817,7 @@ function show(view){
   if(view==="store")loadSofterStore();
   if(view==="inventory")loadInventory();
   if(view==="market")loadMarket();
+  if(view==="stats-detail")loadDetailedStats();
 }
 window.sxShowMenuView=show;
 async function refreshProfileIdentity(){
@@ -1832,6 +1833,7 @@ function render(){
   const id=cleanId(me.id);
   window.__sxHomePlayerId=String(me.id||"");
   const topIdNode=$("topId");if(topIdNode)topIdNode.textContent="ID "+id;
+  if(!canTest()&&testGameplayMode!=="real"){testGameplayMode="real";localStorage.setItem("sx_test_gameplay","real");}
 
   const goldLabel=(Number(me.gold)||0).toLocaleString("uk-UA")+" G";
   const inventoryGold=$("inventoryGold"),sideGold=$("sxInventoryGold");
@@ -1861,9 +1863,9 @@ function render(){
   $("statsXP").textContent=me.XP||0;
   $("statsComp").textContent=me.MMRCompetitive||1000;$("statsAllies").textContent=me.MMRAllies||1000;
   $("verifiedMark").textContent=me.isVerified?"✓ VERIFIED":"";
-  $("adminBtn").style.display=me.isAdmin===true?"grid":"none";
+  const adminWrap=$("sxAdminSettingsWrap");if(adminWrap)adminWrap.hidden=me.isAdmin!==true;
   const testerSwitch=$("testerGameplaySwitch");
-  if(testerSwitch)testerSwitch.style.display=selectedMode==="training"?"none":"flex";
+  if(testerSwitch)testerSwitch.style.display=canTest()&&selectedMode!=="training"?"flex":"none";
   const testerKeybinds=$("testKeybindSettings");
   if(testerKeybinds)testerKeybinds.style.display=canTest()?"block":"none";
   $("passXp").textContent=(me.XP||0)%1000+" / 1000 XP";
@@ -1872,16 +1874,16 @@ function render(){
   updateReconnectButton();
 }
 function renderMode(){
-  if(selectedMode==="training"&&!canTest()){selectedMode="allies";selectedMap="ZONE_9";localStorage.setItem("sx_mode",selectedMode);localStorage.setItem("sx_map",selectedMap)}
+  if(!canTest()&&testGameplayMode!=="real"){testGameplayMode="real";localStorage.setItem("sx_test_gameplay","real");}
   const testerSwitch=document.querySelector(".tester-mode-switch");
-  if(testerSwitch)testerSwitch.style.display=selectedMode!=="training"?"":"none";
+  if(testerSwitch)testerSwitch.style.display=canTest()&&selectedMode!=="training"?"":"none";
   document.querySelectorAll(".modebtn[data-mode]").forEach(b=>{
     b.classList.toggle("active",b.dataset.mode===selectedMode);
-    b.style.display=b.dataset.mode==="training"&&!canTest()?"none":"";
+    b.style.display="";
   });
   document.querySelectorAll("[data-test-gameplay]").forEach(b=>{const active=b.dataset.testGameplay===testGameplayMode;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active));});
   const publicMode=MODES[selectedMode]||MODES.allies;
-  const gameplayLabel=selectedMode==="training"?"ТРЕНУВАННЯ · СОЛО":testGameplayMode==="prototype"?"БОТИ":"ГРАВЦІ";
+  const gameplayLabel=selectedMode==="training"?"ТРЕНУВАННЯ · СОЛО":(canTest()&&testGameplayMode==="prototype"?"ПРОТОТИП · БОТИ":"ГРАВЦІ");
   $("selectedModeText").textContent=selectedMode==="training"?gameplayLabel:gameplayLabel+" · "+publicMode;
   if($("confirmModeBtn"))$("confirmModeBtn").textContent=selectedMode==="training"?"ЗАПУСТИТИ ТРЕНУВАННЯ":testGameplayMode==="real"?"ЗНАЙТИ ГРАВЦІВ":"ЗАПУСТИТИ З БОТАМИ";
   renderMapSelection();
@@ -1902,7 +1904,6 @@ document.querySelectorAll("[data-map]").forEach(button=>button.addEventListener(
 }));
 document.querySelectorAll(".modebtn[data-mode]").forEach(b=>b.addEventListener("click",()=>{
   const next=b.dataset.mode;
-  if(next==="training"&&!canTest()){notifyToast("Тренування доступне лише тестерам.");return}
   if(!["allies","team_fight","team_fight_3v3","training"].includes(next))return;
   selectedMode=next;localStorage.setItem("sx_mode",selectedMode);
   selectedMap="ZONE_9";
@@ -1910,7 +1911,7 @@ document.querySelectorAll(".modebtn[data-mode]").forEach(b=>b.addEventListener("
   renderMode();renderMapSelection();
 }));
 document.querySelectorAll("[data-test-gameplay]").forEach(b=>b.addEventListener("click",()=>{
-  if(selectedMode==="training")return;
+  if(!canTest()||selectedMode==="training")return;
   testGameplayMode=b.dataset.testGameplay==="real"?"real":"prototype";
   localStorage.setItem("sx_test_gameplay",testGameplayMode);
   renderMode();
@@ -2025,12 +2026,11 @@ function createRealtimeSocket(){
 }
 function openPlay(){
   if(selectedMode==="training"){
-    if(!canTest()){notifyToast("Тренування доступне лише тестерам.");return}
     if(searching)return;
     searching=true;
     $("searchModal").classList.add("show");
     $("searchTitle").textContent="ЗАПУСК ТРЕНУВАННЯ";
-    $("searchMode").textContent=(MAPS[selectedMap]||selectedMap)+" · СОЛО / ЛИШЕ ТЕСТЕРИ";
+    $("searchMode").textContent=(MAPS[selectedMap]||selectedMap)+" · СОЛО";
     $("queue").textContent="СОЛО";
     $("searchText").textContent="Завантажуємо вибрану карту без підбору гравців, ботів або інших учасників.";
     renderWaitPlayers([{nickname:me.nickname,userId:me.id,playerAvatar:me.playerAvatar,connected:true}]);
@@ -2056,7 +2056,7 @@ function openPlay(){
     socket.emit("start_training",{mode:"training",map:selectedMap,gameMode:selectedMode,side:localStorage.getItem("sx-agent-side")==="T"?"T":"CT"});
     return;
   }
-  if(testGameplayMode==="prototype"){
+  if(testGameplayMode==="prototype"&&canTest()){
     if(searching)return;
     searching=true;
     $("searchModal").classList.add("show");
