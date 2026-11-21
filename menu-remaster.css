@@ -437,3 +437,118 @@ body.lobby-screen #home .home-layout>.profile-col .sx-side-tabs{position:relativ
  body.lobby-screen #home .home-layout>.home-hero{height:42dvh!important;min-height:260px!important}
  .sx-section-back{padding:5px 7px!important;font-size:7px!important}
 }
+
+
+/* Full-height three-panel lobby, detailed stats, clan cards and account tools. */
+body.lobby-screen .app{height:100dvh!important;min-height:0!important;overflow:hidden!important}
+body.lobby-screen .shell{height:100dvh!important;min-height:0!important;padding-bottom:0!important;overflow:hidden!important}
+body.lobby-screen .topbar{height:38px!important;min-height:38px!important;flex:0 0 38px!important;padding:0 15px!important}
+body.lobby-screen .content{height:calc(100dvh - 38px)!important;min-height:0!important;flex:1 1 auto!important;overflow:auto!important;padding:8px 10px 76px!important;overscroll-behavior:contain!important}
+body.lobby-screen #home.screen.active{display:flex!important;flex-direction:column!important;height:100%!important;min-height:0!important;overflow:visible!important}
+body.lobby-screen #home .home-layout{
+ flex:1 1 auto!important;display:grid!important;
+ grid-template-columns:minmax(205px,min(21vw,255px)) minmax(0,1fr) minmax(220px,min(22vw,270px))!important;
+ grid-template-rows:minmax(0,1fr)!important;grid-template-areas:"friends hero profile"!important;
+ height:100%!important;min-height:0!important;max-height:none!important;overflow:hidden!important;
+ gap:10px!important;align-items:stretch!important
+}
+body.lobby-screen #home .home-layout>.home-friends{grid-area:friends!important;display:flex!important;min-width:0!important;min-height:0!important;height:100%!important;overflow:hidden!important}
+body.lobby-screen #home .home-layout>.home-hero{grid-area:hero!important;min-width:0!important;min-height:0!important;height:100%!important;overflow:hidden!important}
+body.lobby-screen #home .home-layout>.profile-col{grid-area:profile!important;display:flex!important;flex-direction:column!important;min-width:0!important;min-height:0!important;height:100%!important;overflow:hidden!important}
+body.lobby-screen #home .home-layout>.promo-col,body.lobby-screen #home .home-layout>.passpanel{display:none!important}
+body.lobby-screen #home>.homefooter{display:none!important}
+body.lobby-screen #home .profile-col .panelbody{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;min-height:0!important;overflow:auto!important;padding:12px!important}
+body.lobby-screen #home .profile-col .profiletop{grid-template-columns:52px minmax(0,1fr)!important;gap:9px!important}
+body.lobby-screen #home .profile-col .avatar{width:52px!important;height:52px!important}
+body.lobby-screen #home .sx-side-content{flex:1 1 auto!important;min-height:0!important}
+body.lobby-screen #home .sx-side-footer{flex:0 0 auto!important;margin-top:10px!important}
+body.lobby-screen .rail{bottom:9px!important}
+#home .sx-clan-quick-stats{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important;margin-top:8px!important}
+#home .sx-clan-quick-stats>div{display:grid!important;gap:4px!important;place-content:center!important;min-width:0!important;min-height:48px!important;padding:5px 2px!important;border:1px solid #ffffff14!important;border-radius:4px!important;background:#1a2329!important;text-align:center!important}
+#home .sx-clan-quick-stats b{font-size:13px!important;color:#e7eff2!important;font-weight:1000!important;font-variant-numeric:tabular-nums!important}
+#home .sx-clan-quick-stats small{font-size:6.5px!important;color:#899ba3!important;font-weight:900!important;letter-spacing:.5px!important}
+#home .sx-clan-short-desc{display:-webkit-box!important;overflow:hidden!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;margin:8px 1px 2px!important;color:#93a2a9!important;font-size:8px!important;line-height:1.45!important}
+#home .sx-side-view[data-sx-side-view="clan"] .sx-side-action{margin-top:6px!important}
+#home .sx-side-action{min-height:31px!important}
+#home .sx-detail-open{min-height:34px!important;padding:7px 11px!important;border-radius:4px!important;font-size:8px!important;font-weight:950!important;letter-spacing:.6px!important}
+#stats-detail.screen.active{display:block!important;height:100%!important;min-height:0!important;overflow:auto!important;padding-bottom:18px!important}
+#stats-detail .sectionhead{display:flex!important;align-items:center!important;gap:10px!important}
+#stats-detail .sectionhead .pill{margin-left:auto!important;font-size:7px!important}
+.sx-detail-overview{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:8px!important;margin:0 0 10px!important}
+.sx-detail-overview article{display:grid!important;align-content:center!important;gap:5px!important;min-width:0!important;min-height:76px!important;padding:10px!important;border:1px solid #ffffff17!important;border-radius:5px!important;background:linear-gradient(145deg,#1d292f,#121a20)!important}
+.sx-detail-overview small{font-size:7px!important;color:#8fa1a9!important;font-weight:950!important;letter-spacing:.7px!important}
+.sx-detail-overview b{font-size:21px!important;color:#ecf3f5!important;font-weight:1000!important;font-variant-numeric:tabular-nums!important}
+.sx-detail-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;margin-bottom:10px!important}
+.sx-chart-panel,.sx-agent-history-panel,.sx-history-panel{min-width:0!important;overflow:hidden!important;border:1px solid #ffffff18!important;border-radius:5px!important;background:linear-gradient(145deg,#1b252b,#12191e)!important}
+.sx-chart-panel>header,.sx-agent-history-panel>header,.sx-history-panel>header{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:8px!important;min-height:38px!important;padding:0 12px!important;border-bottom:1px solid #ffffff14!important;background:#ffffff04!important}
+.sx-chart-panel>header b,.sx-agent-history-panel>header b,.sx-history-panel>header b{font-size:8px!important;color:#dfe8eb!important;font-weight:1000!important;letter-spacing:.8px!important}
+.sx-chart-panel>header small,.sx-agent-history-panel>header small,.sx-history-panel>header small{font-size:6.5px!important;color:#81929a!important;font-weight:900!important;letter-spacing:.6px!important;text-align:right!important}
+.sx-chart-panel canvas{display:block!important;width:100%!important;height:185px!important}
+.sx-chart-legend{display:flex!important;gap:14px!important;padding:0 12px 9px!important;color:#91a2a9!important;font-size:7px!important;font-weight:900!important}
+.sx-chart-legend span{display:flex!important;align-items:center!important;gap:5px!important}
+.sx-chart-legend i{display:inline-block!important;width:7px!important;height:7px!important;border-radius:2px!important}
+.sx-chart-legend i.kills{background:#75dca0!important}.sx-chart-legend i.deaths{background:#e39b87!important}
+.sx-agent-history-panel{margin-bottom:10px!important}
+.sx-agent-history-content{display:flex!important;align-items:center!important;gap:16px!important;padding:12px!important}
+.sx-agent-mini{display:flex!important;align-items:center!important;gap:9px!important;min-width:160px!important}
+.sx-agent-mini-icon{display:grid!important;place-items:center!important;width:40px!important;height:40px!important;border:1px solid #70df694d!important;border-radius:4px!important;background:#70df6915!important;color:#a6efa0!important;font-size:17px!important;font-weight:1000!important}
+.sx-agent-mini b{display:block!important;color:#e7eff2!important;font-size:9px!important}
+.sx-agent-mini small{display:block!important;margin-top:4px!important;color:#8ea0a8!important;font-size:7px!important}
+.sx-agent-usage{color:#a3b2b8!important;font-size:8px!important;line-height:1.7!important}
+.sx-history-panel{margin-bottom:16px!important}
+.sx-match-history{display:grid!important;gap:0!important}
+.sx-match-row{display:grid!important;grid-template-columns:90px minmax(0,1fr) 66px 54px!important;align-items:center!important;gap:9px!important;min-width:0!important;padding:9px 11px!important;border-bottom:1px solid #ffffff10!important;background:#ffffff01!important}
+.sx-match-row:last-child{border-bottom:0!important}
+.sx-match-result{font-size:7px!important;font-weight:1000!important;letter-spacing:.7px!important}
+.sx-match-result.win{color:#83e5a4!important}.sx-match-result.loss{color:#e59c91!important}.sx-match-result.draw{color:#d8c27e!important}
+.sx-match-main{min-width:0!important}
+.sx-match-main b{display:block!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;color:#dfe8eb!important;font-size:8px!important}
+.sx-match-main small{display:block!important;margin-top:4px!important;color:#80939b!important;font-size:7px!important}
+.sx-match-score{text-align:center!important}
+.sx-match-score b{display:block!important;color:#e2edf0!important;font-size:10px!important;font-variant-numeric:tabular-nums!important}
+.sx-match-score small{display:block!important;margin-top:2px!important;color:#81929a!important;font-size:6px!important}
+.sx-match-xp{text-align:right!important;color:#a9e3aa!important;font-size:8px!important;font-weight:950!important}
+.sx-history-empty{display:grid!important;gap:7px!important;place-content:center!important;min-height:115px!important;padding:20px!important;text-align:center!important}
+.sx-history-empty b{color:#dce7e9!important;font-size:9px!important;letter-spacing:.7px!important}
+.sx-history-empty span{max-width:440px!important;color:#8799a1!important;font-size:8px!important;line-height:1.5!important}
+.sx-clan-metrics{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:8px!important;margin:12px 0!important}
+.sx-clan-metrics article{display:grid!important;place-content:center!important;gap:5px!important;min-height:62px!important;padding:8px 5px!important;border:1px solid #ffffff17!important;border-radius:4px!important;background:linear-gradient(145deg,#202d34,#141d23)!important;text-align:center!important}
+.sx-clan-metrics b{font-size:17px!important;color:#e8f0f2!important;font-weight:1000!important;font-variant-numeric:tabular-nums!important}
+.sx-clan-metrics small{font-size:6.5px!important;color:#8da0a8!important;font-weight:950!important;letter-spacing:.5px!important}
+#clan .clan-own-card{display:grid!important;grid-template-columns:108px minmax(0,1fr)!important;gap:16px!important;padding:16px!important;margin-bottom:12px!important;border:1px solid #ffffff1b!important;border-radius:6px!important;background:linear-gradient(135deg,#1d2a31,#121a20)!important}
+#clan .clan-own-avatar img{width:100%!important;aspect-ratio:1!important;object-fit:cover!important;border:1px solid #ffffff25!important;border-radius:5px!important}
+#clan .clan-own-main h2{font-size:16px!important;color:#edf4f5!important}
+#clan .clan-own-main>p{font-size:9px!important;color:#9aaab0!important;line-height:1.5!important}
+#clan .clan-member-actions{display:flex!important;flex-wrap:wrap!important;gap:4px!important}
+#clan .clan-member-actions button{font-size:7px!important;padding:5px 7px!important}
+.sx-settings-admin{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;margin:14px 0 4px!important;padding:12px!important;border:1px solid #ffffff20!important;border-radius:5px!important;background:linear-gradient(120deg,#1e2b31,#131a20)!important}
+.sx-settings-admin[hidden]{display:none!important}
+.sx-settings-admin b{display:block!important;color:#e3ecef!important;font-size:9px!important;letter-spacing:.8px!important}
+.sx-settings-admin small{display:block!important;margin-top:4px!important;color:#899ba3!important;font-size:7px!important}
+.sx-settings-admin button{min-height:34px!important;padding:7px 11px!important;border:1px solid #70df6955!important;background:#70df6912!important;color:#b2ecaa!important;font-size:8px!important;font-weight:950!important}
+@media(max-width:1100px) and (min-width:761px){
+ body.lobby-screen #home .home-layout{grid-template-columns:minmax(180px,22vw) minmax(0,1fr) minmax(190px,23vw)!important;gap:7px!important}
+ body.lobby-screen #home .profile-col .panelbody{padding:8px!important}
+ #home .sx-side-tab span{font-size:5.5px!important}
+ .sx-detail-overview{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media(max-width:760px){
+ body.lobby-screen .topbar{height:32px!important;min-height:32px!important;flex-basis:32px!important}
+ body.lobby-screen .content{height:calc(100dvh - 32px)!important;padding:5px 7px 68px!important}
+ body.lobby-screen #home .home-layout{grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(260px,43dvh) minmax(145px,auto) minmax(230px,auto)!important;grid-template-areas:"hero" "friends" "profile"!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;gap:8px!important}
+ body.lobby-screen #home .home-layout>.home-hero{grid-area:hero!important;height:43dvh!important;min-height:260px!important}
+ body.lobby-screen #home .home-layout>.home-friends{grid-area:friends!important;height:auto!important;min-height:145px!important}
+ body.lobby-screen #home .home-layout>.profile-col{grid-area:profile!important;height:auto!important;min-height:230px!important;overflow:visible!important}
+ body.lobby-screen #home .profile-col .panelbody{overflow:visible!important}
+ .sx-detail-overview{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important}
+ .sx-detail-overview article{min-height:60px!important;padding:7px!important}
+ .sx-detail-overview b{font-size:17px!important}
+ .sx-detail-grid{grid-template-columns:1fr!important}
+ .sx-agent-history-content{align-items:flex-start!important;flex-direction:column!important;gap:8px!important}
+ .sx-match-row{grid-template-columns:65px minmax(0,1fr) 54px!important;gap:6px!important;padding:8px 7px!important}
+ .sx-match-xp{display:none!important}
+ #clan .clan-own-card{grid-template-columns:68px minmax(0,1fr)!important;gap:9px!important;padding:9px!important}
+ .sx-clan-metrics{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:5px!important}
+ .sx-settings-admin{align-items:flex-start!important;flex-direction:column!important}
+ .sx-settings-admin button{width:100%!important}
+}
