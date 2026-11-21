@@ -106,12 +106,31 @@
     if(frame)frame.src="about:blank";
   }
 
+  function addSectionBackButtons(){
+    document.querySelectorAll(".screen:not(#home)").forEach(screen=>{
+      if(screen.id==="settings"||screen.querySelector("[data-menu-back]"))return;
+      const head=screen.querySelector(".sectionhead");
+      if(!head)return;
+      const button=document.createElement("button");
+      button.type="button";button.className="secondary sx-section-back";button.dataset.menuBack="home";
+      button.textContent="← НАЗАД";
+      button.setAttribute("aria-label","Повернутися до головного меню");
+      head.insertBefore(button,head.firstChild);
+    });
+  }
+
   function start(){
     document.querySelectorAll("[data-sx-side-tab]").forEach(button=>{
       button.addEventListener("click",()=>setRightTab(button.dataset.sxSideTab));
     });
     $("sxOpenClanPage")?.addEventListener("click",()=>window.sxShowMenuView?.("clan"));
     $("settingsBack")?.addEventListener("click",()=>window.sxShowMenuView?.("home"));
+    $("profileSettingsBtn")?.addEventListener("click",()=>window.sxShowMenuView?.("settings"));
+    addSectionBackButtons();
+    document.addEventListener("click",event=>{
+      const back=event.target.closest("[data-menu-back]");
+      if(back){event.preventDefault();window.sxShowMenuView?.(back.dataset.menuBack||"home");}
+    });
     window.sxOpenAdminPanel=openAdminPanel;
     window.addEventListener("keydown",event=>{if(event.key==="Escape")closeAdminPanel()});
     window.addEventListener("sx:user-updated",event=>{
