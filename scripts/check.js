@@ -155,7 +155,7 @@ assert.match(menu, /id="stats-detail"/);
 assert.match(menu, /id="sxStatsKdChart"/);
 assert.match(menu, /id="sxStatsCombatChart"/);
 assert.match(menu, /sxOpenDetailedStats/);
-assert.match(menu, /friendSearch").addEventListener\("keydown"/);
+assert.ok(menu.includes('$("friendSearch").addEventListener("keydown"'));
 assert.match(menu, /id="adminSettingsBtn"/);
 assert.doesNotMatch(menu, /id="adminBtn"/);
 assert.match(menu, /data-view="settings"/);
