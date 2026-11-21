@@ -1311,7 +1311,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
     <button id="sxLobbyDock" type="button" title="Лобі" aria-label="Лобі" hidden><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 20c.5-4 2.4-6 5.5-6s5.1 2 5.6 6M14 15c3.3-.8 6.2 1 7.2 4.5"/></svg><i id="sxLobbyStatus"></i></button>
   </nav>
   <div class="rail-bottom">
-    <button id="adminBtn" data-view="admin" title="Admin" aria-label="Admin" style="display:none"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="m8 12 2.5 2.5L16 9"/></svg></button>
+    <button data-view="settings" title="Налаштування" aria-label="Налаштування"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 13.5 21 14l-1-3-2 .6a7 7 0 0 0-2-1.2L15.7 5h-3.4L12 7.1a7 7 0 0 0-2 1.2l-2-.6-1 3 2 .6a7 7 0 0 0 0 2.5l-2 .6 1 3 2-.6a7 7 0 0 0 2 1.2l.3 2.1h3.4l.3-2.1a7 7 0 0 0 2-1.2l2 .6 1-3-2-.6a7 7 0 0 0 0-2.5z"/></svg></button>
   </div>
 </aside>
 
@@ -1365,6 +1365,12 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
               <div class="sx-side-emblem">♜</div>
               <div><b id="clanName">НЕМАЄ</b><small id="sxClanSub">ТИ ЩЕ НЕ В КЛАНІ</small></div>
             </div>
+            <div class="sx-clan-quick-stats">
+              <div><b id="sxClanLevel">—</b><small>РІВЕНЬ</small></div>
+              <div><b id="sxClanMembers">0/0</b><small>УЧАСНИКИ</small></div>
+              <div><b id="sxClanOnline">0</b><small>ОНЛАЙН</small></div>
+            </div>
+            <p class="sx-clan-short-desc" id="sxClanDescription">Створи клан або знайди команду.</p>
             <button type="button" class="secondary sx-side-action" id="sxOpenClanPage">ВІДКРИТИ КЛАН</button>
           </section>
           <section class="sx-side-view" data-sx-side-view="stats" hidden>
@@ -1381,6 +1387,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
               <div><span>ALLIES</span><b id="alliesMmr">1000 MMR</b></div>
             </div>
             <div class="sx-side-note">ТВОЯ ІГРОВА СТАТИСТИКА</div>
+            <button type="button" class="secondary sx-side-action" id="sxOpenDetailedStats">ДЕТАЛЬНА СТАТИСТИКА ↗</button>
           </section>
           <section class="sx-side-view" data-sx-side-view="inventory" hidden>
             <div class="sx-inventory-balance"><span>БАЛАНС</span><b id="sxInventoryGold">0 G</b></div>
@@ -1496,7 +1503,25 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 
 <section id="market" class="screen"><div class="sectionhead"><h2>РИНОК</h2><button class="secondary" id="refreshMarket">ОНОВИТИ</button></div><div id="marketList" class="list"></div></section>
 
-<section id="stats" class="screen"><div class="sectionhead"><h2>СТАТИСТИКА</h2></div><div class="cardgrid"><div class="statcard"><small>XP</small><strong id="statsXP">0</strong></div><div class="statcard"><small>COMPETITIVE MMR</small><strong id="statsComp">1000</strong></div><div class="statcard"><small>ALLIES MMR</small><strong id="statsAllies">1000</strong></div></div></section>
+<section id="stats" class="screen"><div class="sectionhead"><h2>СТАТИСТИКА</h2><button type="button" class="primary sx-detail-open" data-open-detailed-stats>ДЕТАЛЬНА СТАТИСТИКА ↗</button></div><div class="cardgrid"><div class="statcard"><small>XP</small><strong id="statsXP">0</strong></div><div class="statcard"><small>COMPETITIVE MMR</small><strong id="statsComp">1000</strong></div><div class="statcard"><small>ALLIES MMR</small><strong id="statsAllies">1000</strong></div></div></section>
+
+<section id="stats-detail" class="screen">
+  <div class="sectionhead"><h2>ДЕТАЛЬНА СТАТИСТИКА</h2><span class="pill" id="sxStatsUpdated">ОНОВЛЮЄТЬСЯ ПІСЛЯ МАТЧІВ</span></div>
+  <div class="sx-detail-overview">
+    <article><small>K/D</small><b id="sxDetailKd">0.00</b></article>
+    <article><small>ВБИВСТВА</small><b id="sxDetailKills">0</b></article>
+    <article><small>СМЕРТІ</small><b id="sxDetailDeaths">0</b></article>
+    <article><small>ПЕРЕМОГИ</small><b id="sxDetailWins">0</b></article>
+    <article><small>ВІДСОТОК ПЕРЕМОГ</small><b id="sxDetailWinRate">0%</b></article>
+    <article><small>МАТЧІ</small><b id="sxDetailMatches">0</b></article>
+  </div>
+  <div class="sx-detail-grid">
+    <section class="panel sx-chart-panel"><header><b>K/D · ІСТОРІЯ МАТЧІВ</b><small>ОСТАННІ 12 МАТЧІВ</small></header><canvas id="sxStatsKdChart" aria-label="Графік співвідношення вбивств і смертей"></canvas></section>
+    <section class="panel sx-chart-panel"><header><b>ВБИВСТВА / СМЕРТІ</b><small>ОСТАННІ 12 МАТЧІВ</small></header><canvas id="sxStatsCombatChart" aria-label="Графік вбивств і смертей"></canvas><div class="sx-chart-legend"><span><i class="kills"></i> ВБИВСТВА</span><span><i class="deaths"></i> СМЕРТІ</span></div></section>
+  </div>
+  <section class="panel sx-agent-history-panel"><header><b>АГЕНТ</b><small>ПОТОЧНИЙ ВИБІР ТА ВИКОРИСТАННЯ В МАТЧАХ</small></header><div class="sx-agent-history-content"><div class="sx-agent-mini"><div class="sx-agent-mini-icon">A</div><div><b id="sxDetailAgentSide">T · АТАКА</b><small id="sxDetailAgentAnimation">ГОТОВНІСТЬ</small></div></div><div class="sx-agent-usage" id="sxDetailAgentUsage">Статистика агента збиратиметься після наступних матчів.</div></div></section>
+  <section class="panel sx-history-panel"><header><b>ІСТОРІЯ МАТЧІВ</b><small id="sxHistoryCount">0 ЗАПИСІВ</small></header><div id="sxMatchHistory" class="sx-match-history"></div></section>
+</section>
 
 <section id="settings" class="screen"><div class="sectionhead"><button class="secondary" id="settingsBack" type="button">← ГОЛОВНЕ МЕНЮ</button><h2>НАЛАШТУВАННЯ</h2></div><div class="panel panelbody"><h3 style="margin:0 0 8px">ТЕМА ІНТЕРФЕЙСУ</h3><div class="muted">Обери один із трьох неонових стилів. Вибір зберігається на цьому пристрої.</div><div class="theme-picker"><button class="theme-option" data-theme-choice="cyan">01 · CYBER CYAN</button><button class="theme-option" data-theme-choice="violet">02 · NEON VIOLET</button><button class="theme-option" data-theme-choice="red">03 · RED ALERT</button></div><div id="desktopControlsSettings"><h3>КЕРУВАННЯ ПК</h3><label>Чутливість миші <input id="sens" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">ADS <input id="ads" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">Розмір прицілу <input id="crossSize" type="range" min="8" max="36" step="1" style="width:100%"></label><label style="display:block;margin-top:16px">Відстань між рисками <input id="crossGap" type="range" min="0" max="12" step="1" style="width:100%"></label><div class="crosshair-settings-row"><div class="crosshair-preview-box"><span>ПЕРЕГЛЯД</span><div id="crosshairPreview" class="crosshair-display style-classic" aria-hidden="true"><i class="crosshair-arm top"></i><i class="crosshair-arm right"></i><i class="crosshair-arm bottom"></i><i class="crosshair-arm left"></i><i class="crosshair-dot"></i></div></div><div class="crosshair-settings-controls"><label>ФОРМА <select id="crossStyle"><option value="classic">Класичний</option><option value="thin">Тонкий</option><option value="dot">Крапка</option><option value="circle">Коло</option></select></label><label style="display:block;margin-top:10px">КОЛІР <input id="crossColor" type="color" value="#63ff91" style="width:100%;height:38px"></label></div></div>
 <div class="crosshair-presets" aria-label="Швидкі пресети прицілу">
@@ -1551,7 +1576,9 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
   <div class="keybind-row"><span>Вийти з матчу до лобі</span><button type="button" class="secondary keybind-button" data-bind-action="menu">M</button></div>
 </div>
 <button id="resetKeybinds" type="button" class="secondary" style="margin-top:12px">СКИНУТИ ПРИВ’ЯЗКИ</button>
-<div id="keybindStatus" class="muted" role="status" style="margin-top:8px"></div></div></div></section>
+<div id="keybindStatus" class="muted" role="status" style="margin-top:8px"></div></div>
+<div class="sx-settings-admin" id="sxAdminSettingsWrap" hidden><div><b>АДМІНІСТРУВАННЯ</b><small>Керування акаунтами, економікою та доступами</small></div><button type="button" class="secondary" id="adminSettingsBtn">ВІДКРИТИ АДМІНКУ ↗</button></div>
+</div></section>
 
 </main>
 </div>
@@ -1561,7 +1588,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
   <button class="modebtn active" data-mode="allies"><strong>СОЮЗНИКИ · 2 НА 2</strong><span class="mode-desc">Раунди · атака / захист · бомба</span></button>
   <button class="modebtn" data-mode="team_fight"><strong>КБ · 1 НА 1 НА 1</strong><span class="mode-desc">Кожен сам за себе · три гравці</span></button>
   <button class="modebtn" data-mode="team_fight_3v3"><strong>КОМАНДНИЙ БІЙ · 3 НА 3</strong><span class="mode-desc">Дві команди · шість гравців</span></button>
-  <button class="modebtn" data-mode="training"><strong>ТРЕНУВАННЯ</strong><span class="mode-desc">Соло · тільки тестери</span></button>
+  <button class="modebtn" data-mode="training"><strong>ТРЕНУВАННЯ</strong><span class="mode-desc">Соло · доступно всім · без ботів</span></button>
 </div><div id="testerGameplaySwitch" class="tester-mode-switch" role="group" aria-label="Тип гри">
   <span class="tester-mode-label">ТИП ГРИ</span>
   <div class="tester-mode-segment">
