@@ -61,6 +61,9 @@ assert.match(menuRemasterCss, /sx-admin-overlay/);
 assert.match(menuRemasterCss, /three home panels visible/);
 assert.match(menuRemasterCss, /sx-profile-account-actions/);
 assert.match(menuRemasterCss, /sx-section-back/);
+assert.match(menuRemasterCss, /Full-height three-panel lobby/);
+assert.match(menuRemasterCss, /sx-detail-overview/);
+assert.match(menuRemasterCss, /sx-clan-metrics/);
 assert.match(menuRemasterCss, /floating navigation dock/);
 
 // Account, session and database safety invariants.
@@ -114,7 +117,11 @@ assert.match(server, /socket\.on\("start_training"/);
 assert.match(server, /training: \{ id: "training", name: "TRAINING", map: "ZONE_9"/);
 assert.match(server, /bot: null,/);
 assert.doesNotMatch(server, /bot: mode === "field_test"/);
-assert.match(server, /if \(!canUseTesterModes\(user\)\)[\s\S]{0,180}training_error/);
+assert.doesNotMatch(server, /Усі тренувальні та тестові режими доступні лише тестерам/);
+assert.match(server, /Прототипи матчів із ботами доступні лише тестерам/);
+assert.match(server, /session\.mode !== "training" \|\| session\.prototype/);
+assert.match(server, /app\.get\("\/api\/stats\/details"/);
+assert.match(server, /user\.matchHistory\.unshift\(/);
 
 // Main menu: three battle modes, solo tester training, one map, no old map picker.
 for (const mode of ["allies", "team_fight", "team_fight_3v3", "training"]) {
@@ -143,6 +150,18 @@ assert.match(menu, /data-sx-side-tab="clan"/);
 assert.match(menu, /data-sx-side-tab="stats"/);
 assert.match(menu, /data-sx-side-tab="inventory"/);
 assert.match(menu, /data-sx-side-tab="market"/);
+assert.match(menu, /async function loadDetailedStats\(\)/);
+assert.match(menu, /id="stats-detail"/);
+assert.match(menu, /id="sxStatsKdChart"/);
+assert.match(menu, /id="sxStatsCombatChart"/);
+assert.match(menu, /sxOpenDetailedStats/);
+assert.match(menu, /friendSearch").addEventListener\("keydown"/);
+assert.match(menu, /id="adminSettingsBtn"/);
+assert.doesNotMatch(menu, /id="adminBtn"/);
+assert.match(menu, /data-view="settings"/);
+assert.match(menu, /sx-clan-metrics/);
+assert.match(menu, /menu-remaster\.css\?v=3/);
+assert.match(menu, /menu-remaster\.js\?v=3/);
 assert.doesNotMatch(menu, /id="guestQuickBtn"/);
 assert.match(auth, /id="guestButton"/);
 assert.match(menu, /id="settingsBack"/);
