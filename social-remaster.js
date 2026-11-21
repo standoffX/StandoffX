@@ -196,7 +196,7 @@ async function openChat(id){
  chatMessages=[];editingId=null;chatOpen=true;
  setOpen(chatModal);
  unread.delete(friendId);refreshUnread();renderDialogs();renderThreadHeader();renderMessages();
- byId("sxMessageInput").disabled=false;byId("sxSendMessage").disabled=false;
+ const messageInput=byId("sxMessageInput"),sendButton=byId("sxSendMessage");if(messageInput)messageInput.disabled=false;if(sendButton)sendButton.disabled=false;
  ensureSocket();
  const join=function(){if(socketRef?.connected)socketRef.emit("join_chat",{friendId:friendId})};
  if(socketRef?.connected)join();else socketRef?.once("connect",join);
@@ -218,7 +218,8 @@ function sendMessage(){
 }
 function showClanInvite(invite){
  clanInvite=invite;
- byId("sxClanInviteBody").innerHTML='<div class="sx-clan-invite-details"><img src="'+esc(invite.avatar||"/avatars/default.jpg")+'" alt=""><div><b>'+esc(invite.clanName||invite.tag||"КЛАН")+'</b><small>Запросив '+esc(invite.fromNickname||"ГРАВЕЦЬ")+' · ['+esc(invite.tag||"")+']</small></div></div><div class="sx-modal-note">Після прийняття ти станеш учасником цього клану.</div>';
+ const clanBody=byId("sxClanInviteBody");if(!clanBody||!clanModal)return;
+ clanBody.innerHTML='<div class="sx-clan-invite-details"><img src="'+esc(invite.avatar||"/avatars/default.jpg")+'" alt=""><div><b>'+esc(invite.clanName||invite.tag||"КЛАН")+'</b><small>Запросив '+esc(invite.fromNickname||"ГРАВЕЦЬ")+' · ['+esc(invite.tag||"")+']</small></div></div><div class="sx-modal-note">Після прийняття ти станеш учасником цього клану.</div>';
  setOpen(clanModal);
 }
 async function respondClanInvite(accept){
@@ -238,13 +239,15 @@ async function loadClanInvites(){
 function renderLobby(lobby){
  activeLobby=lobby||null;
  const dock=byId("sxLobbyDock");
+ if(!dock)return;
  dock.hidden=!lobby;
  if(!lobby){setClosed(lobbyModal);return}
- byId("sxLobbyStatus").textContent=String((lobby.members||[]).length);
+ const lobbyStatus=byId("sxLobbyStatus");if(lobbyStatus)lobbyStatus.textContent=String((lobby.members||[]).length);
+ const lobbyBody=byId("sxLobbyBody");if(!lobbyBody)return;
  const members=Array.isArray(lobby.members)?lobby.members:[];
  members.forEach(function(member){pendingInvites.delete(String(member.userId))});
  const owner=String(lobby.ownerId)===String(me?.id);
- byId("sxLobbyBody").innerHTML='<div class="sx-modal-note">'+esc(lobby.modeName||lobby.mode||"МАТЧ")+' · '+esc(lobby.mapName||lobby.map||"ZONE 9")+' · '+members.length+'/'+lobby.maxPlayers+'</div><div class="sx-lobby-members">'+members.map(function(member){
+ lobbyBody.innerHTML='<div class="sx-modal-note">'+esc(lobby.modeName||lobby.mode||"МАТЧ")+' · '+esc(lobby.mapName||lobby.map||"ZONE 9")+' · '+members.length+'/'+lobby.maxPlayers+'</div><div class="sx-lobby-members">'+members.map(function(member){
   return '<div class="sx-lobby-member"><img src="'+avatar(member)+'" alt=""><span><b>'+esc(member.nickname||"PLAYER")+'</b><small>'+(String(member.userId)===String(lobby.ownerId)?"ЛІДЕР":"УЧАСНИК")+'</small></span><em>'+(member.connected===false?"OFFLINE":"ONLINE")+'</em></div>';
  }).join("")+'</div><div class="sx-lobby-actions">'+(owner?'<button class="primary" type="button" id="sxLobbyStart">ПОЧАТИ МАТЧ</button>':"")+'<button type="button" id="sxLobbyLeave">ВИЙТИ З ЛОБІ</button></div>';
  byId("sxLobbyStart")?.addEventListener("click",function(){if(!socketRef?.connected)return notify("Немає з'єднання з лобі.");socketRef.emit("lobby_start_match",{fillWithBots:true});setClosed(lobbyModal)});
@@ -361,12 +364,12 @@ document.addEventListener("click",function(event){
  const chatProfile=event.target.closest("[data-chat-profile]");
  if(chatProfile){openProfile(chatProfile.dataset.chatProfile);return}
  const edit=event.target.closest("[data-edit]");
- if(edit){editingId=edit.dataset.edit;renderMessages();byId("sxChatMessages").querySelector('[data-edit-input="'+CSS.escape(editingId)+'"]')?.focus();return}
+ if(edit){editingId=edit.dataset.edit;renderMessages();byId("sxChatMessages")?.querySelector('[data-edit-input="'+CSS.escape(editingId)+'"]')?.focus();return}
  const editCancel=event.target.closest("[data-edit-cancel]");
  if(editCancel){editingId=null;renderMessages();return}
  const editSave=event.target.closest("[data-edit-save]");
  if(editSave){
-  const id=editSave.dataset.editSave,input=byId("sxChatMessages").querySelector('[data-edit-input="'+CSS.escape(id)+'"]'),text=String(input?.value||"").trim();
+  const id=editSave.dataset.editSave,input=byId("sxChatMessages")?.querySelector('[data-edit-input="'+CSS.escape(id)+'"]'),text=String(input?.value||"").trim();
   if(!text)return notify("Повідомлення не може бути порожнім.");
   socketRef?.emit("edit_msg",{toId:activeFriend?.id,messageId:id,text:text});editingId=null;return;
  }
