@@ -188,8 +188,8 @@ $("copyId").onclick=async()=>{
 };
 $("continueBtn").onclick=()=>location.href="/game";
 
-fetch("/api/me",{credentials:"same-origin"})
-  .then(r=>{if(r.ok)location.href="/game"})
+fetch("/api/me",{credentials:"same-origin",cache:"no-store"})
+  .then(r=>{if(r.ok)location.replace("/game")})
   .catch(()=>{});
 </script>
 </body>
