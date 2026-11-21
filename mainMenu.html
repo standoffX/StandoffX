@@ -1486,7 +1486,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
       <div class="softer-pills"><span>8 УНІКАЛЬНИХ ПРЕДМЕТІВ</span><span>П'ЯТЬ РІВНІВ РІДКОСТІ</span><span>Є НА РИНКУ</span></div>
     </div>
     <div class="softer-box-card"><div><div class="softer-kicker">CONTAINER · 001</div><h3>SOFTER BOX</h3><div class="muted">Перший бокс колекції. Відкрий його, щоб отримати один випадковий скін Softer.</div></div>
-      <div class="box-visual"><div class="softer-box-art"></div></div><div class="softer-price-row"><strong id="softerGold">0 G</strong><button class="primary" id="softerBoxButton" type="button">ОТРИМАТИ БОКС</button></div>
+      <div class="box-visual"><div class="softer-box-art"></div></div><div class="softer-price-row"><button class="primary" id="softerBoxButton" type="button">ОТРИМАТИ БОКС</button></div>
     </div>
   </div>
   <div id="softerStoreStatus" role="status" aria-live="polite">Завантаження колекції…</div><div id="softerDropRates"></div>
@@ -1496,7 +1496,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 
 <section id="market" class="screen"><div class="sectionhead"><h2>РИНОК</h2><button class="secondary" id="refreshMarket">ОНОВИТИ</button></div><div id="marketList" class="list"></div></section>
 
-<section id="stats" class="screen"><div class="sectionhead"><h2>СТАТИСТИКА</h2></div><div class="cardgrid"><div class="statcard"><small>XP</small><strong id="statsXP">0</strong></div><div class="statcard"><small>GOLD</small><strong id="statsGold">0</strong></div><div class="statcard"><small>COMPETITIVE MMR</small><strong id="statsComp">1000</strong></div><div class="statcard"><small>ALLIES MMR</small><strong id="statsAllies">1000</strong></div></div></section>
+<section id="stats" class="screen"><div class="sectionhead"><h2>СТАТИСТИКА</h2></div><div class="cardgrid"><div class="statcard"><small>XP</small><strong id="statsXP">0</strong></div><div class="statcard"><small>COMPETITIVE MMR</small><strong id="statsComp">1000</strong></div><div class="statcard"><small>ALLIES MMR</small><strong id="statsAllies">1000</strong></div></div></section>
 
 <section id="settings" class="screen"><div class="sectionhead"><button class="secondary" id="settingsBack" type="button">← ГОЛОВНЕ МЕНЮ</button><h2>НАЛАШТУВАННЯ</h2></div><div class="panel panelbody"><h3 style="margin:0 0 8px">ТЕМА ІНТЕРФЕЙСУ</h3><div class="muted">Обери один із трьох неонових стилів. Вибір зберігається на цьому пристрої.</div><div class="theme-picker"><button class="theme-option" data-theme-choice="cyan">01 · CYBER CYAN</button><button class="theme-option" data-theme-choice="violet">02 · NEON VIOLET</button><button class="theme-option" data-theme-choice="red">03 · RED ALERT</button></div><div id="desktopControlsSettings"><h3>КЕРУВАННЯ ПК</h3><label>Чутливість миші <input id="sens" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">ADS <input id="ads" type="range" min=".2" max="3" step=".1" style="width:100%"></label><label style="display:block;margin-top:16px">Розмір прицілу <input id="crossSize" type="range" min="8" max="36" step="1" style="width:100%"></label><label style="display:block;margin-top:16px">Відстань між рисками <input id="crossGap" type="range" min="0" max="12" step="1" style="width:100%"></label><div class="crosshair-settings-row"><div class="crosshair-preview-box"><span>ПЕРЕГЛЯД</span><div id="crosshairPreview" class="crosshair-display style-classic" aria-hidden="true"><i class="crosshair-arm top"></i><i class="crosshair-arm right"></i><i class="crosshair-arm bottom"></i><i class="crosshair-arm left"></i><i class="crosshair-dot"></i></div></div><div class="crosshair-settings-controls"><label>ФОРМА <select id="crossStyle"><option value="classic">Класичний</option><option value="thin">Тонкий</option><option value="dot">Крапка</option><option value="circle">Коло</option></select></label><label style="display:block;margin-top:10px">КОЛІР <input id="crossColor" type="color" value="#63ff91" style="width:100%;height:38px"></label></div></div>
 <div class="crosshair-presets" aria-label="Швидкі пресети прицілу">
@@ -2507,7 +2507,6 @@ async function loadSofterStore(){
   try{
     const d=await api("/api/collection/softer");
     softerCanClaimStarterBox=Boolean(d.canClaimStarterBox);
-    $("softerGold").textContent=(Number(d.gold)||0)+" G";
     $("softerBoxButton").textContent=softerCanClaimStarterBox?"ОТРИМАТИ ПЕРШИЙ БОКС · БЕЗКОШТОВНО":"КУПИТИ BOX · "+(Number(d.box?.price)||100)+" G";
     $("softerStoreStatus").textContent="У тебе в інвентарі: "+(Number(d.ownedBoxes)||0)+" SOFTER BOX · Перша коробка на акаунт безкоштовна.";
     $("softerDropRates").textContent="Шанси випадіння: "+(d.dropRates||[]).map(x=>x.rarity+" "+x.chance).join(" · ");
