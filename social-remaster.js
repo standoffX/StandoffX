@@ -94,12 +94,13 @@ function showFriendMenu(friend,x,y){
  menu.classList.add("open");
 }
 function renderProfile(profile){
+ const profileBody=byId("sxPlayerProfileBody");if(!profileBody)return;
  const stats=profile.stats||{},clan=profile.clan;
  let clanHtml=clan
  ?'<div class="sx-profile-clan"><img src="'+esc(clan.avatar||"/avatars/default.jpg")+'" alt=""><div><b>'+esc(clan.name||clan.tag)+'</b><small>['+esc(clan.tag)+'] · '+(Number(clan.memberCount)||0)+' УЧАСНИКІВ</small></div></div>'
  :'<div class="sx-profile-clan"><div><b>БЕЗ КЛАНУ</b><small>Гравець поки не вступив до клану</small></div></div>';
  const canClan=Boolean(me&&me.clan&&!profile.isGuest&&String(me.id)!==String(profile.id));
- byId("sxPlayerProfileBody").innerHTML=
+ profileBody.innerHTML=
  '<div class="sx-profile-head"><img src="'+avatar(profile)+'" alt=""><div><b>'+esc(profile.nickname||"PLAYER")+(profile.isGuest?" · ГОСТЬ":"")+'</b><small>ID '+esc(profile.id)+(profile.isGuest?" · ТИМЧАСОВИЙ":"")+'</small><small>РІВЕНЬ '+Math.max(1,Math.floor((Number(profile.XP)||0)/1000)+1)+' · '+(Number(profile.XP)||0)+' XP</small></div></div>'+
  clanHtml+
  '<div class="sx-profile-stats">'+
@@ -116,10 +117,11 @@ function renderProfile(profile){
  window.dispatchEvent(new CustomEvent("sx:preview-agent",{detail:profile}));
 }
 async function openProfile(id){
+ const profileBody=byId("sxPlayerProfileBody");if(!profileBody||!profileModal)return;
  setOpen(profileModal);
- byId("sxPlayerProfileBody").innerHTML='<div class="sx-modal-note">Завантаження профілю…</div>';
+ profileBody.innerHTML='<div class="sx-modal-note">Завантаження профілю…</div>';
  try{const data=await apiGet("/api/profile/"+encodeURIComponent(id));renderProfile(data.profile)}
- catch(error){if(profileBody)profileBody.innerHTML='<div class="sx-modal-note">'+esc(error.message)+'</div>'}
+ catch(error){profileBody.innerHTML='<div class="sx-modal-note">'+esc(error.message)+'</div>'}
 }
 async function inviteClan(id){
  if(guest())return notify("Гостьовий профіль не може запрошувати до клану.");
@@ -154,12 +156,14 @@ async function loadDialogs(){
 }
 function renderThreadHeader(){
  const root=byId("sxChatThreadHead");
+ if(!root)return;
  if(!activeFriend){root.innerHTML='<div class="sx-chat-empty">Обери друга, щоб відкрити переписку</div>';return}
  root.innerHTML='<img src="'+avatar(activeFriend)+'" alt=""><div><b>'+esc(activeFriend.nickname||"PLAYER")+'</b><small>'+(activeFriend.status?"В МЕРЕЖІ":"НЕ В МЕРЕЖІ")+'</small></div><button class="close" type="button" style="margin-left:auto" data-chat-profile="'+esc(activeFriend.id)+'" title="Профіль">◉</button>';
 }
 const reactions=["👍","❤️","😂","😮","😢","🔥","👏"];
 function renderMessages(){
  const root=byId("sxChatMessages");
+ if(!root)return;
  if(!activeFriend){root.innerHTML='<div class="sx-chat-empty">Тут будуть твої повідомлення.</div>';return}
  if(!chatMessages.length){root.innerHTML='<div class="sx-chat-empty">Переписка порожня. Напиши першим.</div>';return}
  const nearBottom=root.scrollHeight-root.scrollTop-root.clientHeight<100;
@@ -206,7 +210,8 @@ async function openMessages(){
 }
 function sendMessage(){
  if(!activeFriend||!socketRef?.connected)return notify("Немає з'єднання з чатом.");
- const input=byId("sxMessageInput"),text=String(input.value||"").trim();
+ const input=byId("sxMessageInput");if(!input)return;
+ const text=String(input.value||"").trim();
  if(!text)return;
  socketRef.emit("send_msg",{toId:activeFriend.id,text:text});
  input.value="";input.focus();
