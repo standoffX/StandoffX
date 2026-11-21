@@ -58,7 +58,7 @@ assert.ok(socialCss.includes("#sxChatModal") && socialCss.includes("#sxFriendMen
 assert.match(menuRemasterCss, /sx-side-tabs/);
 assert.match(menuRemasterCss, /sx-settings-open/);
 assert.match(menuRemasterCss, /sx-admin-overlay/);
-assert.match(menuRemasterCss, /three panels visible/);
+assert.match(menuRemasterCss, /three home panels visible/);
 assert.match(menuRemasterCss, /sx-profile-account-actions/);
 assert.match(menuRemasterCss, /sx-section-back/);
 assert.match(menuRemasterCss, /floating navigation dock/);
