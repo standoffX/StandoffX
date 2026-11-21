@@ -1296,8 +1296,8 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="/mobile-game.css">
 <link rel="stylesheet" href="/lobby-remaster.css?v=20261031-05">
-<link rel="stylesheet" href="/menu-remaster.css?v=1">
-<link rel="stylesheet" href="/social-remaster.css?v=1">
+<link rel="stylesheet" href="/menu-remaster.css?v=2">
+<link rel="stylesheet" href="/social-remaster.css?v=2">
 </head>
 <body class="lobby-screen">
 <div class="app">
@@ -1311,7 +1311,6 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
     <button id="sxLobbyDock" type="button" title="Лобі" aria-label="Лобі" hidden><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 20c.5-4 2.4-6 5.5-6s5.1 2 5.6 6M14 15c3.3-.8 6.2 1 7.2 4.5"/></svg><i id="sxLobbyStatus"></i></button>
   </nav>
   <div class="rail-bottom">
-    <button data-view="settings" title="Налаштування" aria-label="Налаштування"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 13.5 21 14l-1 3-2-.6a7 7 0 0 1-2 1.2l-.3 2.1h-3.4L12 17.6a7 7 0 0 1-2-1.2l-2 .6-1-3 2-.5a7 7 0 0 1 0-2.5l-2-.6 1-3 2 .6a7 7 0 0 1 2-1.2l.3-2.1h3.4l.3 2.1a7 7 0 0 1 2 1.2l2-.6 1 3-2 .6a7 7 0 0 1 0 2.5z"/></svg></button>
     <button id="adminBtn" data-view="admin" title="Admin" aria-label="Admin" style="display:none"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6z"/><path d="m8 12 2.5 2.5L16 9"/></svg></button>
   </div>
 </aside>
@@ -1319,10 +1318,6 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 <div class="shell">
 <header class="topbar">
   <div class="topbrand">STANDOFF<b>X</b></div>
-  <div id="gold" class="pill">0 G</div>
-  <button class="secondary sx-guest-quick" id="guestQuickBtn" type="button">УВІЙТИ ЯК ГОСТЬ</button>
-  <div id="topId" class="pill">0000000</div>
-  <button class="secondary" id="logout">ВИЙТИ</button>
 </header>
 
 <main class="content">
@@ -1388,6 +1383,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
             <div class="sx-side-note">ТВОЯ ІГРОВА СТАТИСТИКА</div>
           </section>
           <section class="sx-side-view" data-sx-side-view="inventory" hidden>
+            <div class="sx-inventory-balance"><span>БАЛАНС</span><b id="sxInventoryGold">0 G</b></div>
             <div class="sx-empty-state"><span>▣</span><b>ІНВЕНТАР ПОРОЖНІЙ</b><small>Предмети з’являться тут після отримання.</small></div>
           </section>
           <section class="sx-side-view" data-sx-side-view="market" hidden>
@@ -1443,7 +1439,9 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
 <section id="profile" class="screen">
   <div class="sectionhead"><h2>ПРОФІЛЬ</h2></div>
   <div class="panel panelbody"><div class="profiletop"><img id="profileAvatar" class="avatar" src="/avatars/default.jpg" alt=""><div><div class="nick" id="profilePageNick"></div><div class="playerid">PLAYER ID: <b id="profilePageId"></b></div><button id="copyId" class="secondary" style="margin-top:8px">СКОПІЮВАТИ ID</button></div></div>
-  <div class="cardgrid" style="margin-top:14px"><div class="statcard"><small>XP</small><strong id="profileXP">0</strong></div><div class="statcard"><small>GOLD</small><strong id="profileGold">0</strong></div><div class="statcard"><small>COMPETITIVE</small><strong id="profileComp">1000</strong></div><div class="statcard"><small>ALLIES</small><strong id="profileAllies">1000</strong></div></div></div>
+  <div class="cardgrid" style="margin-top:14px"><div class="statcard"><small>XP</small><strong id="profileXP">0</strong></div><div class="statcard"><small>COMPETITIVE</small><strong id="profileComp">1000</strong></div><div class="statcard"><small>ALLIES</small><strong id="profileAllies">1000</strong></div></div>
+  <div class="sx-profile-account-actions"><button class="secondary" id="profileSettingsBtn" type="button">⚙ НАЛАШТУВАННЯ</button><button class="secondary sx-logout-action" id="logout" type="button">ВИЙТИ З АКАУНТА</button></div>
+  </div>
 </section>
 
 <section id="friends" class="screen"><div class="sectionhead"><h2>ДРУЗІ</h2><button class="secondary" data-open-lobby>ВІДКРИТИ ЛОБІ</button></div><div class="panel panelbody"><div class="inputrow"><input id="friendSearch" placeholder="Нік або ID"><button class="primary" id="findFriend">ЗНАЙТИ</button></div><div id="friendResult"></div><h3>ДРУЗІ</h3><div id="friendsList" class="list"></div><h3 style="margin-top:18px">ЗАЯВКИ</h3><div id="incoming" class="list"></div></div></section>
@@ -1494,7 +1492,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
   <div id="softerStoreStatus" role="status" aria-live="polite">Завантаження колекції…</div><div id="softerDropRates"></div>
   <h3 style="margin:18px 0 10px">SOFTER COLLECTION · FIRST LIGHT</h3><div id="softerCollectionGrid"></div>
 </section>
-<section id="inventory" class="screen"><div class="sectionhead"><h2>ІНВЕНТАР</h2><span class="pill" id="invCount">0 ITEMS</span></div><div id="inventoryList" class="cardgrid"></div></section>
+<section id="inventory" class="screen"><div class="sectionhead"><h2>ІНВЕНТАР</h2><span class="pill" id="inventoryGold">0 G</span><span class="pill" id="invCount">0 ITEMS</span></div><div id="inventoryList" class="cardgrid"></div></section>
 
 <section id="market" class="screen"><div class="sectionhead"><h2>РИНОК</h2><button class="secondary" id="refreshMarket">ОНОВИТИ</button></div><div id="marketList" class="list"></div></section>
 
@@ -1806,9 +1804,12 @@ function render(){
   window.dispatchEvent(new CustomEvent("sx:user-updated",{detail:me}));
   const id=cleanId(me.id);
   window.__sxHomePlayerId=String(me.id||"");
-  $("topId").textContent="ID "+id;
-  const guestButton=$("guestQuickBtn");if(guestButton){guestButton.textContent=me.isGuest?"ГОСТЬ АКТИВНИЙ":"УВІЙТИ ЯК ГОСТЬ";guestButton.disabled=Boolean(me.isGuest);}
-  $("gold").textContent=(me.gold||0)+" G";
+  const topIdNode=$("topId");if(topIdNode)topIdNode.textContent="ID "+id;
+
+  const goldLabel=(Number(me.gold)||0).toLocaleString("uk-UA")+" G";
+  const inventoryGold=$("inventoryGold"),sideGold=$("sxInventoryGold");
+  if(inventoryGold)inventoryGold.textContent=goldLabel;
+  if(sideGold)sideGold.textContent=goldLabel;
   $("profileNick").textContent=me.nickname||"PLAYER";
   $("profileId").textContent=id;
   $("profileLevel").textContent="LEVEL "+Math.max(1,Math.floor((me.XP||0)/1000)+1);
@@ -1828,9 +1829,9 @@ function render(){
   $("profilePageId").textContent=id;
   
   renderMapSelection();
-  $("profileXP").textContent=me.XP||0;$("profileGold").textContent=me.gold||0;
+  $("profileXP").textContent=me.XP||0;
   $("profileComp").textContent=me.MMRCompetitive||1000;$("profileAllies").textContent=me.MMRAllies||1000;
-  $("statsXP").textContent=me.XP||0;$("statsGold").textContent=me.gold||0;
+  $("statsXP").textContent=me.XP||0;
   $("statsComp").textContent=me.MMRCompetitive||1000;$("statsAllies").textContent=me.MMRAllies||1000;
   $("verifiedMark").textContent=me.isVerified?"✓ VERIFIED":"";
   $("adminBtn").style.display=me.isAdmin===true?"grid":"none";
@@ -1944,7 +1945,7 @@ $("saveAvatarBtn").addEventListener("click",async()=>{
   }catch(error){notifyToast(error.message)}
 });
 $("logout").addEventListener("click",async()=>{try{await api("/api/logout",{method:"POST"})}catch{}location.href="/"});
-$("guestQuickBtn")?.addEventListener("click",async event=>{const button=event.currentTarget;button.disabled=true;try{const data=await api("/api/guest",{method:"POST"});location.href=data.redirect||"/game"}catch(error){button.disabled=false;notifyToast(error.message||"Не вдалося увійти як гість.")}});
+
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click",()=>$(b.dataset.close).classList.remove("show")));
 $("cancelSearch").addEventListener("click",cancelSearch);
 $("refreshClan").addEventListener("click",loadClan);
