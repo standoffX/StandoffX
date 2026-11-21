@@ -43,6 +43,11 @@
     if(!user?.clan){
       label.textContent="НЕМАЄ";
       sub.textContent="ТИ ЩЕ НЕ В КЛАНІ";
+      const level=$("sxClanLevel"),members=$("sxClanMembers"),online=$("sxClanOnline"),description=$("sxClanDescription");
+      if(level)level.textContent="—";
+      if(members)members.textContent="0/0";
+      if(online)online.textContent="0";
+      if(description)description.textContent="Ти ще не в клані. Створи свій або знайди команду.";
       summary?.classList.add("is-empty");
       return;
     }
@@ -55,8 +60,18 @@
       if(!response.ok)throw new Error(data.message||"Помилка запиту");
       if(request!==clanRequest)return;
       if(!data.clan){label.textContent="НЕМАЄ";sub.textContent="ТИ ЩЕ НЕ В КЛАНІ";summary?.classList.add("is-empty");return}
+      const memberRows=Array.isArray(data.members)?data.members:[];
+      const memberCount=Number(data.clan.memberCount)||memberRows.length;
+      const memberLimit=Number(data.clan.memberLimit)||30;
+      const onlineCount=memberRows.filter(member=>member.online).length;
+      const level=$("sxClanLevel"),members=$("sxClanMembers"),online=$("sxClanOnline"),description=$("sxClanDescription");
+      if(level)level.textContent=String(Number(data.clan.level)||1);
+      if(members)members.textContent=memberCount+"/"+memberLimit;
+      if(online)online.textContent=String(onlineCount);
+      if(description)description.textContent=String(data.clan.description||"Клан без опису.");
       label.textContent=data.clan.name||"["+data.clan.tag+"]";
-      sub.textContent="["+data.clan.tag+"] · "+Number(data.members?.length||data.clan.memberCount||0)+" УЧАСНИКІВ";
+      sub("["+data.clan.tag+"] · "+onlineCount+" ОНЛАЙН · "+String(data.myRole||"member").toUpperCase());
+      summary?.classList.remove("is-empty");
     }catch(error){
       if(request===clanRequest)sub.textContent="КЛАН НЕДОСТУПНИЙ";
     }
@@ -126,6 +141,7 @@
     $("sxOpenClanPage")?.addEventListener("click",()=>window.sxShowMenuView?.("clan"));
     $("settingsBack")?.addEventListener("click",()=>window.sxShowMenuView?.("home"));
     $("profileSettingsBtn")?.addEventListener("click",()=>window.sxShowMenuView?.("settings"));
+    $("adminSettingsBtn")?.addEventListener("click",openAdminPanel);
     addSectionBackButtons();
     document.addEventListener("click",event=>{
       const back=event.target.closest("[data-menu-back]");
