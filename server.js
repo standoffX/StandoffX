@@ -516,7 +516,7 @@ function findUser(idOrNickname, options = {}) {
 
 function publicUser(user) {
   if (!user) return null;
-  const { password, passwordHash, uuid, messages: privateMessages, friendRequests, incomingClanInvites: privateClanInvites, authSessions, ...safe } = user;
+  const { password, passwordHash, uuid, messages: privateMessages, friendRequests, incomingClanInvites: privateClanInvites, authSessions, matchHistory: privateMatchHistory, ...safe } = user;
   safe.friendsList = Array.isArray(user.friendsList) ? user.friendsList : [];
   safe.incomingRequests = Array.isArray(user.incomingRequests) ? user.incomingRequests : [];
   safe.blocked = Array.isArray(user.blocked) ? user.blocked : [];
@@ -540,6 +540,12 @@ function ensureUserShape(user) {
   for(const key of ["kills","deaths","wins","losses","matches"]){
     user.stats[key]=Math.max(0,Math.floor(Number(user.stats[key])||0));
   }
+  user.matchHistory=Array.isArray(user.matchHistory)?user.matchHistory.filter(item=>item&&typeof item==="object").slice(0,60).map(item=>({
+    matchId:cleanText(item.matchId,100),date:Math.max(0,Number(item.date)||0),mode:cleanText(item.mode,32),modeName:cleanText(item.modeName,48),map:normalizeMapId(item.map),
+    result:["win","loss","draw"].includes(item.result)?item.result:"loss",team:cleanText(item.team,8),score:Math.max(0,Math.floor(Number(item.score)||0)),
+    kills:Math.max(0,Math.floor(Number(item.kills)||0)),deaths:Math.max(0,Math.floor(Number(item.deaths)||0)),xp:Math.max(0,Math.floor(Number(item.xp)||0)),gold:Math.max(0,Math.floor(Number(item.gold)||0)),
+    agentSide:item.agentSide==="CT"?"CT":"T",agentAnimation:["Excited","Talking On Phone","Illegal Elbow Punch"].includes(item.agentAnimation)?item.agentAnimation:"Excited"
+  })) : [];
   user.createdAt=Number(user.createdAt)||Date.now();
   user.isGuest=Boolean(user.isGuest);
   user.agentSide = user.agentSide === "CT" ? "CT" : "T";
@@ -1133,6 +1139,19 @@ app.get("/api/profile/:id", requireAuth, (req, res) => {
     clan:clan?{tag:clan.tag,name:clan.name,avatar:clan.avatar||"/avatars/default.jpg",memberCount:users.filter(user=>user.clan===clan.tag).length}:null,
     stats:{kills,deaths,kd:(kills/Math.max(1,deaths)).toFixed(2),wins:Number(stats.wins)||0,losses:Number(stats.losses)||0,matches:Number(stats.matches)||0}
   }});
+});
+
+app.get("/api/stats/details", requireAuth, (req, res) => {
+  ensureUserShape(req.user);
+  const history=req.user.matchHistory.slice(0,60);
+  const animationCounts={};
+  for(const row of history){
+    const key=(row.agentSide||"T")+" · "+(row.agentAnimation||"Excited");
+    animationCounts[key]=(animationCounts[key]||0)+1;
+  }
+  const kills=Number(req.user.stats.kills)||0,deaths=Number(req.user.stats.deaths)||0;
+  const matches=Number(req.user.stats.matches)||0,wins=Number(req.user.stats.wins)||0;
+  res.json({success:true,stats:{kills,deaths,kd:(kills/Math.max(1,deaths)).toFixed(2),wins,losses:Number(req.user.stats.losses)||0,matches,winRate:matches?Number((wins/matches*100).toFixed(1)):0,xp:Number(req.user.XP)||0,mmrCompetitive:Number(req.user.MMRCompetitive)||1000,mmrAllies:Number(req.user.MMRAllies)||1000},agent:{side:req.user.agentSide,animation:req.user.agentAnimation,historyCount:history.length,usage:animationCounts},history});
 });
 
 app.post("/api/search-user", requireAuth, (req, res) => {
@@ -2568,6 +2587,14 @@ function finishMatch(io, matchId) {
     user.XP = (Number(user.XP) || 0) + xp;
     user.stats.matches+=1;
     if(won)user.stats.wins+=1;else user.stats.losses+=1;
+    const draw=(match.mode==="allies"||match.mode==="team_fight_3v3")?!winningTeam:(highestScore<=0);
+    user.matchHistory.unshift({
+      matchId:match.id,date:Date.now(),mode:match.mode,modeName:match.modeName,map:match.map,
+      result:draw?"draw":won?"win":"loss",team:player.team||"",score:Number(player.score)||0,
+      kills:Number(player.kills)||0,deaths:Number(player.deaths)||0,xp,gold,
+      agentSide:user.agentSide,agentAnimation:user.agentAnimation
+    });
+    if(user.matchHistory.length>60)user.matchHistory.length=60;
 
     if (player.socketId) {
       io.to(player.socketId).emit("show_results", {
@@ -3736,11 +3763,7 @@ io.on("connection", socket => {
     const user = socket.user;
     const mode = cleanText(data?.mode, 32);
     const cfg = TESTER_MODE_CONFIGS[mode];
-    if (!cfg) return socket.emit("training_error", { message: "Невідомий тестовий режим." });
-    if (!canUseTesterModes(user)) {
-      return socket.emit("training_error", { message: "Усі тренувальні та тестові режими доступні лише тестерам." });
-    }
-
+    if (!cfg) return socket.emit("training_error", { message: "Невідомий режим тренування." });
     const prototype = false;
     const gameMode = ["allies", "team_fight", "team_fight_3v3"].includes(data?.gameMode) ? data.gameMode : "team_fight";
     const previous = trainingSessions.get(user.id);
@@ -3818,8 +3841,8 @@ io.on("connection", socket => {
   socket.on("join_training", data => {
     const user = socket.user;
     const session = trainingSessions.get(user.id);
-    if (!session || (!canUseTesterModes(user) && (session.mode !== "field_test" || session.prototype))) {
-      return socket.emit("kick_to_menu", { reason: "Прототип доступний лише тестерам." });
+    if (!session || (!canUseTesterModes(user) && (session.mode !== "training" || session.prototype))) {
+      return socket.emit("kick_to_menu", { reason: "Ця тестова сесія недоступна." });
     }
     if (session.id !== cleanText(data?.trainingId, 100)) {
       return socket.emit("kick_to_menu", { reason: "Тренувальну сесію не знайдено." });
@@ -4185,6 +4208,10 @@ io.on("connection", socket => {
     const user = socket.user;
     if (!user || (user.isBanned && user.id !== ADMIN_ID)) {
       socket.emit("auth_required");
+      return;
+    }
+    if (!canUseTesterModes(user)) {
+      socket.emit("search_error", { message: "Прототипи матчів із ботами доступні лише тестерам." });
       return;
     }
     if (playerMatch(user.uuid || user.id)) {
