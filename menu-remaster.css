@@ -372,3 +372,68 @@ body.lobby-screen .content{padding-bottom:78px!important}
  body.lobby-screen .railnav{gap:2px!important}
  body.lobby-screen .content{padding-bottom:70px!important}
 }
+
+
+/* Keep the three home panels visible and constrained to the available viewport. */
+body.lobby-screen #home .home-layout{
+ display:grid!important;
+ grid-template-columns:minmax(205px, min(22vw,248px)) minmax(280px,1fr) minmax(205px,min(21vw,236px))!important;
+ grid-template-rows:minmax(0,1fr)!important;
+ grid-template-areas:"friends hero profile"!important;
+ gap:clamp(7px,1vw,14px)!important;
+ width:100%!important;max-width:100%!important;min-width:0!important;
+ height:100%!important;min-height:0!important;max-height:calc(100dvh - 120px)!important;
+ overflow:hidden!important;align-items:stretch!important
+}
+body.lobby-screen #home .home-layout>.home-friends,
+body.lobby-screen #home .home-layout>.home-hero,
+body.lobby-screen #home .home-layout>.profile-col{
+ min-width:0!important;min-height:0!important;max-width:100%!important;height:100%!important
+}
+body.lobby-screen #home .home-layout>.profile-col{display:flex!important;overflow:hidden!important}
+body.lobby-screen #home .profile-col .panelbody{overflow:auto!important;overscroll-behavior:contain!important}
+body.lobby-screen #home .sx-side-tabs{margin-top:12px!important}
+body.lobby-screen #home .sx-side-content{min-width:0!important}
+body.lobby-screen #home .profile-col .profiletop{min-width:0!important;grid-template-columns:50px minmax(0,1fr)!important}
+body.lobby-screen #home .profile-col .avatar{width:50px!important;height:50px!important}
+body.lobby-screen #home .sx-side-footer{margin-top:10px!important}
+#home .sx-inventory-balance{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;padding:9px 10px!important;margin-bottom:8px!important;border:1px solid #ffffff18!important;border-radius:4px!important;background:#1b2429!important}
+#home .sx-inventory-balance span{font-size:7px!important;color:#8b9ba1!important;font-weight:950!important;letter-spacing:1px!important}
+#home .sx-inventory-balance b{font-size:12px!important;color:#e8d28c!important;font-weight:1000!important;font-variant-numeric:tabular-nums!important}
+body.lobby-screen #home .home-layout>.profile-col .sx-side-tabs{position:relative!important;top:0!important}
+.sx-profile-account-actions{display:flex!important;flex-wrap:wrap!important;gap:8px!important;margin-top:18px!important;padding-top:14px!important;border-top:1px solid #ffffff18!important}
+.sx-profile-account-actions button{min-height:39px!important;flex:1 1 180px!important;padding:9px 12px!important;border:1px solid #ffffff22!important;border-radius:4px!important;background:#ffffff08!important;color:#dfe7e9!important;font-size:9px!important;font-weight:950!important;letter-spacing:.6px!important}
+.sx-profile-account-actions button:hover{border-color:#70df6966!important;background:#70df6910!important}
+.sx-profile-account-actions .sx-logout-action{border-color:#f07c7c44!important;color:#f2a0a0!important;background:#f07c7c09!important}
+.sx-section-back{flex:0 0 auto!important;min-height:32px!important;margin-right:10px!important;padding:6px 10px!important;border:1px solid #ffffff20!important;border-radius:3px!important;background:#ffffff08!important;color:#b7c5ca!important;font-size:8px!important;font-weight:950!important;letter-spacing:.5px!important}
+.sx-section-back:hover{border-color:#70df6966!important;color:#a7eb9f!important}
+#settingsBack{margin-right:8px!important}
+#inventory .sectionhead #inventoryGold{margin-left:auto!important;color:#e8d28c!important}
+#topId,#gold,.sx-guest-quick{display:none!important}
+@media(min-width:761px) and (max-width:1080px){
+ body.lobby-screen #home .home-layout{
+  grid-template-columns:minmax(185px,22vw) minmax(230px,1fr) minmax(185px,22vw)!important;
+  gap:7px!important
+ }
+ body.lobby-screen #home .profile-col .panelbody{padding:9px!important}
+ body.lobby-screen #home .sx-side-tab span{font-size:5.5px!important}
+}
+@media(max-width:760px){
+ body.lobby-screen #home .home-layout{
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:minmax(270px,45dvh) minmax(150px,auto) minmax(220px,auto)!important;
+  grid-template-areas:"hero" "friends" "profile"!important;
+  max-height:none!important;height:auto!important;min-height:0!important;overflow:visible!important
+ }
+ body.lobby-screen #home .home-layout>.home-hero{grid-area:hero!important;min-height:270px!important;height:45dvh!important}
+ body.lobby-screen #home .home-layout>.home-friends{grid-area:friends!important;min-height:150px!important;height:auto!important}
+ body.lobby-screen #home .home-layout>.profile-col{grid-area:profile!important;display:flex!important;min-height:220px!important;height:auto!important;overflow:visible!important}
+ body.lobby-screen #home .profile-col .panelbody{overflow:visible!important}
+ body.lobby-screen #home .sx-side-tabs{margin-top:8px!important}
+ .sx-profile-account-actions{margin-top:12px!important}
+}
+@media(max-width:430px){
+ body.lobby-screen #home .home-layout{grid-template-rows:minmax(260px,42dvh) minmax(145px,auto) minmax(220px,auto)!important}
+ body.lobby-screen #home .home-layout>.home-hero{height:42dvh!important;min-height:260px!important}
+ .sx-section-back{padding:5px 7px!important;font-size:7px!important}
+}
