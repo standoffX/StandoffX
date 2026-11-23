@@ -1310,9 +1310,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
     <button id="sxChatDock" title="Повідомлення" aria-label="Повідомлення"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-5 4v-4.5a2.5 2.5 0 0 1-1-2z"/><path d="M8 8h8M8 11.5h5"/></svg><i id="sxChatUnread" class="sx-unread-dot" hidden></i></button>
     <button id="sxLobbyDock" type="button" title="Лобі" aria-label="Лобі" hidden><svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 20c.5-4 2.4-6 5.5-6s5.1 2 5.6 6M14 15c3.3-.8 6.2 1 7.2 4.5"/></svg><i id="sxLobbyStatus"></i></button>
   </nav>
-  <div class="rail-bottom">
-    <button data-view="settings" title="Налаштування" aria-label="Налаштування"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 13.5 21 14l-1-3-2 .6a7 7 0 0 0-2-1.2L15.7 5h-3.4L12 7.1a7 7 0 0 0-2 1.2l-2-.6-1 3 2 .6a7 7 0 0 0 0 2.5l-2 .6 1 3 2-.6a7 7 0 0 0 2 1.2l.3 2.1h3.4l.3-2.1a7 7 0 0 0 2-1.2l2 .6 1-3-2-.6a7 7 0 0 0 0-2.5z"/></svg></button>
-  </div>
+
 </aside>
 
 <div class="shell">
@@ -1358,6 +1356,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
           <button class="sx-side-tab" type="button" data-sx-side-tab="inventory" aria-selected="false" title="Інвентар"><svg viewBox="0 0 24 24"><path d="M4 8h16v12H4zM7 8V5h10v3M9 13h6"/></svg><span>ІНВЕНТАР</span></button>
           <button class="sx-side-tab" type="button" data-sx-side-tab="market" aria-selected="false" title="Ринок"><svg viewBox="0 0 24 24"><path d="M4 9h16l-1.2 11H5.2zM8 9V7a4 4 0 0 1 8 0v2"/></svg><span>РИНОК</span></button>
           <button class="sx-side-tab" type="button" data-sx-side-tab="agent" aria-selected="false" title="Агент"><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="3.2"/><path d="M5 21c.8-4.4 3-6.6 7-6.6s6.2 2.2 7 6.6"/></svg><span>АГЕНТ</span></button>
+          <button class="sx-side-tab" type="button" data-sx-side-tab="settings" aria-selected="false" title="Налаштування"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 13.5 21 14l-1-3-2 .6a7 7 0 0 0-2-1.2L15.7 5h-3.4L12 7.1a7 7 0 0 0-2 1.2l-2-.6-1 3 2 .6a7 7 0 0 0 0 2.5l-2 .6 1 3 2-.6a7 7 0 0 0 2 1.2l.3 2.1h3.4l.3-2.1a7 7 0 0 0 2-1.2l2 .6 1-3-2-.6a7 7 0 0 0 0-2.5z"/></svg><span>НАЛАШТ.</span></button>
         </div>
         <div class="sx-side-content">
           <section class="sx-side-view active" data-sx-side-view="clan">
@@ -1409,6 +1408,7 @@ button{transition:background-color .14s ease,border-color .14s ease,transform .1
               <button type="button" data-home-agent-animation="Illegal Elbow Punch"><span>03</span><b>УДАР ЛІКТЕМ</b></button>
             </div>
           </section>
+          <section class="sx-side-view sx-settings-side-view" data-sx-side-view="settings" hidden></section>
         </div>
         <div class="homefooter sx-side-footer"><span>STANDOFFX</span><button class="secondary" id="openProfile" type="button">ПРОФІЛЬ ↗</button></div>
       </div>
@@ -2025,8 +2025,8 @@ $("lobbyFriends").addEventListener("click",e=>{
 function createRealtimeSocket(){
   return io({
     withCredentials:true,
-    transports:["websocket"],
-    upgrade:false,
+    transports:["polling","websocket"],
+    upgrade:true,
     reconnection:true,
     reconnectionAttempts:Infinity,
     reconnectionDelay:800,
