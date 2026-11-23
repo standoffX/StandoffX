@@ -4450,6 +4450,20 @@ io.on("connection", socket => {
       player.spawn = { ...point };
       player.pos = { ...point };
       if (Number.isFinite(rotY)) player.rotY = rotY;
+      socket.to(match.id).volatile.emit("enemy_moved", {
+        id: socket.id,
+        userId: player.userId,
+        nickname: player.nickname,
+        role: player.role,
+        team: player.team,
+        hp: player.hp,
+        x: point.x,
+        y: point.y,
+        z: point.z,
+        rotY: Number.isFinite(rotY) ? rotY : (player.rotY || 0),
+        anim: player.anim || "Idle",
+        score: player.score || 0
+      });
       return;
     }
 
