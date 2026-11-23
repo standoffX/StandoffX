@@ -568,3 +568,25 @@ body.lobby-screen .rail{bottom:9px!important}
 #home .sx-settings-side-view .layout-editor-grid{grid-template-columns:minmax(0,1fr)!important}
 #home .sx-settings-side-view #layoutStage{max-width:250px!important;margin:auto!important}
 @media(max-width:760px){#home .sx-side-tabs{grid-template-columns:repeat(6,minmax(0,1fr))!important}#home .sx-side-tab span{font-size:6px!important}#home .sx-settings-side-view{max-height:38vh!important}}
+
+/* Floating navigation only: no full-width bottom rectangle. */
+.rail{background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;pointer-events:none!important;padding:0 10px!important;justify-content:center!important}
+.railnav{flex:0 1 auto!important;width:max-content!important;max-width:calc(100vw - 20px)!important;overflow-x:auto!important;padding:4px 7px!important;gap:5px!important;background:#101519df!important;border:1px solid #ffffff20!important;border-radius:7px!important;box-shadow:0 7px 24px #0007!important;backdrop-filter:blur(9px)!important;pointer-events:auto!important}
+.railnav button{flex:0 0 42px!important;width:42px!important}
+.rail-bottom{display:none!important}
+#home .profile-col .panelbody{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;min-height:0!important;overflow:hidden!important}
+#home .sx-side-content{flex:1 1 auto!important;min-height:0!important;overflow:auto!important;overscroll-behavior:contain!important;scrollbar-width:thin!important;scrollbar-color:#ffffff28 transparent!important}
+#home .sx-settings-side-view{max-height:none!important;overflow:visible!important;padding:0 2px 2px!important}
+#home .sx-settings-side-view>.panel.panelbody{min-height:0!important;overflow:visible!important}
+#home .sx-settings-side-view .layout-help,#home .sx-settings-side-view .muted{display:none!important}
+#home .sx-settings-side-view .layout-editor{margin-top:10px!important}
+#home .sx-settings-side-view .layout-editor-head{margin-bottom:8px!important}
+#home .sx-settings-side-view .layout-editor-grid{gap:9px!important}
+#home .sx-settings-side-view .layout-stage{max-width:210px!important;min-height:210px!important;margin:0 auto 8px!important}
+#home .sx-settings-side-view .individual-size-list{gap:5px!important}
+#home .sx-settings-side-view .individual-size-list label{margin:3px 0!important}
+#home .sx-settings-side-view .crosshair-presets button{font-size:7px!important;min-height:28px!important;padding:5px!important}
+#home .sx-settings-actions{position:sticky!important;bottom:0!important;z-index:3!important;display:flex!important;justify-content:space-between!important;gap:8px!important;margin:12px -9px -9px!important;padding:9px!important;background:#12191ff2!important;border-top:1px solid #ffffff1b!important}
+#home .sx-settings-actions button{min-height:32px!important;padding:6px 10px!important;font-size:8px!important}
+#home .sx-settings-actions .sx-settings-exit{margin-left:auto!important;border-color:#e47a7a55!important;color:#f0a5a5!important}
+@media(max-width:760px){.rail{height:62px!important;min-height:62px!important}.railnav{max-width:calc(100vw - 14px)!important}#home .sx-side-content{overflow:auto!important}#home .sx-settings-side-view .layout-stage{max-width:180px!important;min-height:180px!important}}
