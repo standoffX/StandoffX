@@ -2918,6 +2918,8 @@ function zone9FindPlanFloor(point,referenceY=0,radius=28){
   const target=zone9PlanPoint(point);
   if(!target)return null;
   const maxDelta=Math.max(28,zone9Bounds.max.y-zone9Bounds.min.y+12);
+  const direct=zone9FloorAt(target.x,target.z,referenceY,maxDelta);
+  if(direct!==null)return {x:target.x,z:target.z,y:direct};
   let best=null,bestScore=Infinity;
   const step=4;
   for(let dx=-radius;dx<=radius;dx+=step){
@@ -3039,8 +3041,12 @@ function buildZone9RadarBase(){
       toneMapped:false
     });
   };
-  let previousTarget=null,previousViewport=new THREE.Vector4(),previousScissor=new THREE.Vector4();
-  let previousClearColor=new THREE.Color(),previousClearAlpha=1;
+  const previousTarget=renderer.getRenderTarget();
+  const previousViewport=renderer.getViewport(new THREE.Vector4());
+  const previousScissor=renderer.getScissor(new THREE.Vector4());
+  const previousScissorTest=renderer.getScissorTest();
+  const previousClearColor=renderer.getClearColor(new THREE.Color());
+  const previousClearAlpha=renderer.getClearAlpha();
   const previousAutoClear=renderer.autoClear;
   const previousToneMapping=renderer.toneMapping;
   try{
@@ -3056,11 +3062,6 @@ function buildZone9RadarBase(){
     });
     scene.remove(zone9Root);
     radarScene.add(zone9Root);
-    previousTarget=renderer.getRenderTarget();
-    renderer.getViewport(previousViewport);
-    renderer.getScissor(previousScissor);
-    previousClearColor.copy(renderer.getClearColor(new THREE.Color()));
-    previousClearAlpha=renderer.getClearAlpha();
     renderer.autoClear=true;
     renderer.toneMapping=THREE.NoToneMapping;
     renderer.setRenderTarget(target);
@@ -3088,7 +3089,7 @@ function buildZone9RadarBase(){
     zone9RadarBase=null;
   }finally{
     if(zone9Root.parent===radarScene)radarScene.remove(zone9Root);
-    scene.add(zone9Root);
+    if(zone9Root.parent!==scene)scene.add(zone9Root);
     saved.forEach(({node,original,replacement})=>{
       node.material=original;
       if(Array.isArray(replacement))replacement.forEach(material=>material.dispose());
@@ -3097,7 +3098,8 @@ function buildZone9RadarBase(){
     renderer.setRenderTarget(previousTarget);
     renderer.setViewport(previousViewport);
     renderer.setScissor(previousScissor);
-    renderer.setScissorTest(false);
+    renderer.setScissor(previousScissor);
+    renderer.setScissorTest(previousScissorTest);
     renderer.setClearColor(previousClearColor,previousClearAlpha);
     renderer.autoClear=previousAutoClear;
     renderer.toneMapping=previousToneMapping;
@@ -3739,7 +3741,7 @@ function drawRadarSite(ctx,id,point,mapX,mapY,full,color){
 function drawTacticalMaps(){
   if(!player)return;
   const now=performance.now();
-  if(selectedMap==="ZONE_9"&&zone9RadarBase)updateEnemyLastSeen(now);
+  if(selectedMap==="ZONE_9"&&zone9Root)updateEnemyLastSeen(now);
   const fallbackLimit=worldLimit();
   const bounds=zone9Bounds||new THREE.Box3(
     new THREE.Vector3(-fallbackLimit,0,-fallbackLimit),
