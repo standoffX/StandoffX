@@ -2042,7 +2042,18 @@ async function loadKnifeSkinTemplate(skinId){
 }
 async function loadRemoteWeapon(url,targetLength,weaponId){
   const manager=new THREE.LoadingManager();
-  manager.addHandler(/\\.tga$/i,new TGALoader(manager));
+  manager.addHandler(/\.tga$/i,new TGALoader(manager));
+  const fallbackTextureNames=new Set(["p350_d.png","awmf_ds.png","m1014_d_0.png"]);
+  manager.setURLModifier(url=>{
+    const normalized=String(url||"").replace(/\\/g,"/");
+    let basename=normalized.split("/").pop()||"";
+    try{basename=decodeURIComponent(basename)}catch{}
+    if(fallbackTextureNames.has(basename.toLowerCase())){
+      console.info("[WEAPONS] Replacing missing texture with generated base material:",basename);
+      return weaponBaseTexture(weaponId).image.toDataURL("image/png");
+    }
+    return url;
+  });
   const loader=new FBXLoader(manager);
   const model=await loader.loadAsync(url);
   return normalizeWeaponModel(model,targetLength,weaponId);
@@ -2993,6 +3004,7 @@ function buildZone9TacticalMarkers(){
     ctx.fillStyle="#ffffff";ctx.font="bold 50px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(site.id,96,48);
     const texture=new THREE.CanvasTexture(labelCanvas);texture.colorSpace=THREE.SRGBColorSpace;
     const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false}));
+    sprite.raycast=()=>{};
     sprite.scale.set(5.2,2.6,1);sprite.position.y=3.1;marker.add(sprite);
     root.add(marker);
   }
@@ -3470,6 +3482,14 @@ function attachTacticalAgent(model,color){
 function loadTacticalAgentModel(){
   const manager=new THREE.LoadingManager();
   const tgaLoader=new TGALoader(manager);
+  manager.addHandler(/\.tga$/i,tgaLoader);
+  manager.setURLModifier(url=>{
+    const normalized=String(url||"").replace(/\\/g,"/");
+    let basename=normalized.split("/").pop()||"";
+    try{basename=decodeURIComponent(basename)}catch{}
+    const textures={"otccha_d.tga":"OTCChA_D.tga","fsb_a_d.tga":"FSB_A_D.tga"};
+    return textures[basename.toLowerCase()]?TACTICAL_AGENT_BASE+textures[basename.toLowerCase()]:url;
+  });
   const textureJobs=[
     ["T","OTCChA_D.tga"],
     ["CT","FSB_A_D.tga"]
@@ -3718,6 +3738,7 @@ function updateEnemyLastSeen(now){
     zone9VisibilityRaycaster.set(origin,direction);
     zone9VisibilityRaycaster.near=.35;
     zone9VisibilityRaycaster.far=Math.max(.2,distance-.8);
+    zone9VisibilityRaycaster.camera=camera;
     const blocked=zone9VisibilityRaycaster.intersectObject(zone9Root,true).length>0;
     zone9VisibilityRaycaster.far=Infinity;
     if(!blocked){
@@ -5270,26 +5291,24 @@ addEventListener("resize",()=>{
   renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?0.9:isLowEndDevice?0.82:selectedMap==="ZONE_9"?1.05:1.3));
 });
 
-let connectedToGameplay=socket.connected;
-socket.on("connect",()=>{
+function joinGameplaySession(){
+  if(isLeavingMatch||!socket.connected)return;
   setLoadingDetail("connectionLoadStatus","ПІДКЛЮЧЕНО","done");
-  if(isLeavingMatch){connectedToGameplay=true;return}
-  if(!connectedToGameplay){connectedToGameplay=true;return}
   if(isTrainingMode)socket.emit("join_training",{trainingId});
   else socket.emit("join_room",{matchId,userId:myId});
   if(matchPhase==="game"&&mapLoadFinished){
     $("overlay").style.display="none";
     $("overlayText").textContent="З’єднання відновлено.";
   }
-});
+}
+socket.on("connect",joinGameplaySession);
 
 $("progress").style.width="4%";
 loadHeldWeapon();
 loadTacticalAgentModel();
 loadPlayerSkinLoadout();
 loadMap();
-if(isTrainingMode)socket.emit("join_training",{trainingId});
-else socket.emit("join_room",{matchId,userId:myId});
+if(socket.connected)joinGameplaySession();
 animate();
 </script>
 <script src="/gameplay-remaster.js" defer></script>
