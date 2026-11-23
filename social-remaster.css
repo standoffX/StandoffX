@@ -156,3 +156,7 @@
 .sx-message-menu>button[data-message-action]:hover{background:#ffffff0c;color:#94e18d}
 .sx-message-menu>button.danger{color:#f1a0a0}
 .sx-chat-message textarea{cursor:text}
+
+/* Keep friend context actions inside the viewport; the script flips the anchor upward. */
+#sxFriendMenu{max-height:calc(100dvh - 16px);overflow:auto;overscroll-behavior:contain}
+#sxFriendMenu.open{visibility:visible}
