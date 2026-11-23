@@ -5,95 +5,372 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>StandoffX Admin</title>
 <style>
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#080d13;color:#edf3fa;font-family:Inter,Arial,sans-serif}body{background:radial-gradient(circle at 80% 10%,#17273a 0,#080d13 45%,#06090e 100%)}
-button,input,select{font:inherit}button{cursor:pointer}.top{height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;background:#0c131c;border-bottom:1px solid #ffffff0d;position:sticky;top:0;z-index:10}.brand{font-weight:950;letter-spacing:1px}.brand b{color:#4e8dff}.topright{display:flex;gap:8px;align-items:center}.pill{padding:8px 11px;border-radius:7px;background:#091017;border:1px solid #ffffff0d;color:#aeb9c8;font-size:12px}
-main{max-width:1450px;margin:auto;padding:22px}.stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}.stat{padding:16px;border:1px solid #ffffff0d;background:#101822;border-radius:9px}.stat small{color:#728197}.stat strong{display:block;font-size:27px;margin-top:5px}
-.tabs{display:flex;gap:7px;margin:18px 0 12px;flex-wrap:wrap}.tab{border:1px solid #ffffff0d;background:#101822;color:#8492a5;border-radius:6px;padding:10px 14px}.tab.active{background:#1a2b43;color:#fff;border-color:#4e8dff}
-.panel{display:none}.panel.active{display:block}.toolbar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}.toolbar input{flex:1;min-width:230px}
-input,select{background:#080d13;color:#fff;border:1px solid #ffffff14;border-radius:7px;padding:10px;outline:none}input:focus,select:focus{border-color:#4e8dff}
-.card{background:#101822;border:1px solid #ffffff0d;border-radius:9px;padding:16px}.table{overflow:auto}.table table{width:100%;border-collapse:collapse}.table th,.table td{padding:10px 8px;text-align:left;border-bottom:1px solid #ffffff09;white-space:nowrap;font-size:12px}.muted{color:#748398;font-size:12px}
-.primary,.secondary,.danger{border:0;border-radius:6px;padding:9px 13px;font-weight:800}.primary{background:#327cff;color:#fff}.secondary{background:#172230;color:#d9e3ef;border:1px solid #ffffff0e}.danger{background:#8f3043;color:#fff}.ok{color:#5fda94}.warn{color:#efc263}
-.editor{display:grid;grid-template-columns:1.25fr .75fr;gap:12px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field label{display:block;color:#78879a;font-size:11px;margin-bottom:5px}.checkrow{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px}.check{display:flex;align-items:center;gap:7px;color:#bdc8d5;font-size:12px}.check input{width:auto}
-.clanlist{display:grid;gap:8px}.clanrow{padding:13px;background:#0b1118;border:1px solid #ffffff09;border-radius:7px}.clanrow b{font-size:13px}.notice{padding:10px 12px;background:#0b1420;border:1px solid #234264;border-radius:7px;color:#8eb7eb;font-size:12px;margin-bottom:12px}
-@media(max-width:900px){.stats{grid-template-columns:repeat(3,1fr)}.editor{grid-template-columns:1fr}}@media(max-width:600px){main{padding:12px}.top{padding:0 12px}.stats{grid-template-columns:repeat(2,1fr)}.formgrid{grid-template-columns:1fr}}
+:root{color-scheme:dark;--bg:#0b1015;--panel:#141c23;--panel2:#19232c;--line:#ffffff16;--muted:#8c9ba5;--text:#edf3f4;--accent:#73dc7b;--blue:#75baff;--danger:#ec8585}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,"Nunito Sans",system-ui,sans-serif}
+body{background:radial-gradient(ellipse at 80% 0,#1a2b37 0,transparent 46%),var(--bg)}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.top{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:54px;padding:0 18px;background:#0b1117ed;border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}
+.brand{font-size:11px;font-weight:1000;letter-spacing:1.4px}.brand b{color:var(--accent)}
+.topright{display:flex;align-items:center;gap:7px}
+.pill{padding:7px 9px;border:1px solid var(--line);border-radius:4px;background:#111a21;color:#aebbc1;font-size:8px;font-weight:850;letter-spacing:.6px}
+button{border:1px solid var(--line);border-radius:4px;padding:8px 11px;background:#1b2730;color:#dfe8eb;font-size:8px;font-weight:950;letter-spacing:.6px}
+button:hover{border-color:#73dc7b77;color:#bdf2c1}
+button:disabled{opacity:.38;cursor:not-allowed}
+.primary{background:#75dc7b;border-color:#75dc7b;color:#102014}
+.danger{color:#f1a4a4;border-color:#d9797940;background:#d9797910}
+main{max-width:1480px;margin:0 auto;padding:15px}
+.stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin-bottom:10px}
+.stat{min-width:0;padding:10px 11px;border:1px solid var(--line);border-radius:5px;background:linear-gradient(145deg,#18232b,#11191f)}
+.stat small{display:block;color:#81939c;font-size:7px;font-weight:950;letter-spacing:.8px}
+.stat strong{display:block;margin-top:5px;color:#edf4f5;font-size:19px;font-weight:1000;font-variant-numeric:tabular-nums}
+.workspace{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(230px,.65fr);gap:10px;align-items:start}
+.card{min-width:0;border:1px solid var(--line);border-radius:5px;background:#121a20}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.card-head b{font-size:9px;letter-spacing:1px}
+.toolbar{display:flex;gap:6px;padding:9px;border-bottom:1px solid var(--line)}
+.toolbar input{flex:1;min-width:90px}
+input,select,textarea{min-width:0;padding:8px 9px;border:1px solid #ffffff20;border-radius:4px;outline:0;background:#0c1319;color:#edf3f4;font-size:10px}
+input:focus,select:focus,textarea:focus{border-color:#73dc7b}
+.table-wrap{max-height:calc(100dvh - 250px);min-height:240px;overflow:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 9px;border-bottom:1px solid #ffffff0d;text-align:left;white-space:nowrap;font-size:9px}
+th{position:sticky;top:0;z-index:1;background:#172129;color:#8fa0a9;font-size:7px;letter-spacing:.7px}
+tbody tr{cursor:context-menu}
+tbody tr:hover{background:#ffffff08}
+tbody tr.selected{background:#70dc7b12;box-shadow:inset 2px 0 var(--accent)}
+tbody tr.master td:first-child:after{content:" MASTER";color:#9fceff;font-size:6px;font-weight:900}
+.status{color:#8ca1aa}
+.yes{color:#85e49b}.no{color:#73818a}.banned{color:#f29b9b}
+.row-action{padding:4px 7px;font-size:12px;line-height:1}
+.selected-body{padding:12px}
+.selected-title{display:flex;align-items:center;gap:9px;min-width:0;margin-bottom:10px}
+.avatar{width:37px;height:37px;flex:0 0 37px;border:1px solid var(--line);border-radius:4px;object-fit:cover;background:#0a1117}
+.selected-title b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.selected-title small{display:block;margin-top:4px;color:var(--muted);font-size:8px}
+.field-list{display:grid;gap:5px}
+.field-line{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:7px 8px;border:1px solid #ffffff10;border-radius:3px;background:#0e151b}
+.field-line span{color:#8d9ca3;font-size:8px}
+.field-line b{max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px}
+.quick-actions{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.quick-actions button{flex:1 1 45%;font-size:7px}
+.empty{padding:25px 12px;color:#829199;font-size:9px;text-align:center}
+.lower{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+details.card>summary{padding:10px 12px;cursor:pointer;color:#cbd7db;font-size:9px;font-weight:950;letter-spacing:.7px}
+.details-body{padding:10px;border-top:1px solid var(--line)}
+.clan-list{display:grid;gap:6px}
+.clan-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;border:1px solid #ffffff10;border-radius:3px;background:#0e151b}
+.clan-row b{font-size:9px}.clan-row small{display:block;margin-top:3px;color:var(--muted);font-size:7px}
+.clan-actions{display:flex;gap:4px}.clan-actions button{padding:5px 7px;font-size:7px}
+pre{max-height:280px;overflow:auto;margin:0;padding:8px;color:#aebec4;font:8px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.context-menu{position:fixed;z-index:100;display:none;width:190px;max-height:calc(100dvh - 16px);overflow:auto;padding:6px;border:1px solid #ffffff27;border-radius:5px;background:#172129f5;box-shadow:0 16px 44px #000b;backdrop-filter:blur(12px)}
+.context-menu.open{display:block}
+.context-menu button{display:block;width:100%;padding:8px 9px;border:0;background:transparent;text-align:left;font-size:8px}
+.context-menu button:hover{background:#ffffff0b}
+.context-menu button.danger{color:#f0a0a0}
+.context-menu .separator{height:1px;margin:4px 2px;background:#ffffff18}
+.modal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:14px;background:#02070cce;backdrop-filter:blur(8px)}
+.modal.open{display:flex}
+.modal-card{width:min(430px,96vw);max-height:90dvh;overflow:auto;padding:16px;border:1px solid #ffffff22;border-radius:6px;background:#151f27;box-shadow:0 22px 70px #000c}
+.modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:13px}
+.modal-head b{font-size:10px;letter-spacing:1px}
+.close{width:28px;height:28px;padding:0;font-size:15px}
+.modal-fields{display:grid;gap:10px}
+.modal-fields label{display:grid;gap:5px;color:#9eacb2;font-size:8px;font-weight:850;letter-spacing:.4px}
+.modal-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:15px}
+.notice{min-height:16px;margin-top:8px;color:#e5c17e;font-size:8px}
+body.embedded .top{min-height:45px}
+body.embedded main{padding:10px}
+@media(max-width:900px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.workspace{grid-template-columns:minmax(0,1fr)}.table-wrap{max-height:55dvh}.lower{grid-template-columns:1fr}}
+@media(max-width:520px){main{padding:8px}.top{padding:0 9px;flex-wrap:wrap}.topright{gap:4px}.pill{font-size:7px;padding:6px}.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.stat{padding:8px}.stat strong{font-size:16px}th,td{padding:7px 6px;font-size:8px}}
 </style>
-<link rel="stylesheet" href="/ui.css">
 </head>
-<body class="admin-screen">
-<header class="top"><div class="brand">STANDOFF<b>X</b> // ADMIN</div><div class="topright"><div id="storage" class="pill">ATLAS...</div><button class="primary" id="atlasCheck">PING ATLAS</button><button class="secondary" id="back">МЕНЮ</button></div></header>
+<body>
+<header class="top">
+ <div class="brand">STANDOFF<b>X</b> <span style="color:#80929b">/ ADMIN</span></div>
+ <div class="topright"><div id="storage" class="pill">ATLAS…</div><button id="atlasCheck">ATLAS</button><button class="primary" id="refresh">ОНОВИТИ</button><button id="back">← МЕНЮ</button></div>
+</header>
 <main>
-<div class="stats">
-<div class="stat"><small>USERS</small><strong id="usersN">—</strong></div><div class="stat"><small>ONLINE</small><strong id="onlineN">—</strong></div><div class="stat"><small>CLANS</small><strong id="clansN">—</strong></div><div class="stat"><small>MARKET</small><strong id="marketN">—</strong></div><div class="stat"><small>MESSAGES</small><strong id="messagesN">—</strong></div><div class="stat"><small>TESTERS</small><strong id="testersN">—</strong></div>
-</div>
-<div class="tabs"><button class="tab active" data-tab="users">USERS</button><button class="tab" data-tab="editor">EDITOR</button><button class="tab" data-tab="clans">CLANS</button><button class="tab" data-tab="database">DATABASE</button></div>
-
-<section id="usersPanel" class="panel active"><div class="toolbar"><input id="search" placeholder="Пошук nickname / ID"><button class="primary" id="newUser">НОВИЙ</button><button class="secondary" id="refresh">ОНОВИТИ</button></div><div class="card table"><table><thead><tr><th>ID</th><th>NICK</th><th>GOLD</th><th>XP</th><th>CLAN</th><th>TESTER</th><th>ADMIN</th><th>BAN</th><th></th></tr></thead><tbody id="rows"></tbody></table></div></section>
-
-<section id="editorPanel" class="panel">
-<div id="editorNotice" class="notice">Обери користувача або створи нового.</div>
-<div class="editor"><div class="card"><div class="formgrid">
-<div class="field"><label>ID</label><input id="fId"></div><div class="field"><label>NICKNAME</label><input id="fNick"></div>
-<div class="field"><label>NEW PASSWORD</label><input id="fPassword" type="password" placeholder="Не змінювати"></div><div class="field"><label>GOLD</label><input id="fGold" type="number" min="0"></div>
-<div class="field"><label>XP</label><input id="fXP" type="number" min="0"></div><div class="field"><label>COMPETITIVE MMR</label><input id="fComp" type="number" min="0"></div>
-<div class="field"><label>ALLIES MMR</label><input id="fAllies" type="number" min="0"></div><div class="field"><label>CLAN</label><select id="fClan"><option value="">Без клану</option></select></div>
-</div>
-<div class="checkrow"><label class="check"><input id="fBan" type="checkbox"> BAN</label><label class="check"><input id="fVerified" type="checkbox"> VERIFIED</label><label class="check"><input id="fTester" type="checkbox"> TESTER</label></div>
-<div style="display:flex;gap:8px;margin-top:15px"><button class="primary" id="saveUser">СОХРАНИТЬ</button><button class="danger" id="deleteUser">УДАЛИТЬ</button></div></div>
-<div class="card"><h3 style="margin-top:0">ACCOUNT</h3><div id="selectedInfo" class="muted">—</div><p class="muted" style="line-height:1.5">Only the configured master account can access or manage this panel.</p></div></div>
-</section>
-
-<section id="clansPanel" class="panel"><div class="card"><h2 style="margin-top:0">КЛАНЫ</h2><div id="clanList" class="clanlist"></div></div></section>
-<section id="databasePanel" class="panel"><div class="card"><pre id="dump" style="white-space:pre-wrap;overflow:auto;max-height:70vh"></pre></div></section>
+ <section class="stats">
+  <div class="stat"><small>USER</small><strong id="usersN">—</strong></div><div class="stat"><small>ONLINE</small><strong id="onlineN">—</strong></div><div class="stat"><small>CLAN</small><strong id="clansN">—</strong></div><div class="stat"><small>MARKET</small><strong id="marketN">—</strong></div><div class="stat"><small>MESSAGES</small><strong id="messagesN">—</strong></div><div class="stat"><small>TESTER</small><strong id="testersN">—</strong></div>
+ </section>
+ <section class="workspace">
+  <div class="card">
+   <div class="card-head"><b>КОРИСТУВАЧІ</b><button class="primary" id="newUser">＋ НОВИЙ</button></div>
+   <div class="toolbar"><input id="search" type="search" placeholder="Пошук ID або nickname"><button id="clearSearch">×</button></div>
+   <div class="table-wrap"><table><thead><tr><th>ID</th><th>NICK</th><th>GOLD</th><th>XP</th><th>CLAN</th><th>FLAGS</th><th></th></tr></thead><tbody id="rows"><tr><td colspan="7" class="empty">Завантаження…</td></tr></tbody></table></div>
+  </div>
+  <aside class="card">
+   <div class="card-head"><b>ВИБРАНИЙ АКАУНТ</b><button id="clearSelection">×</button></div>
+   <div id="selectedBody" class="selected-body"><div class="empty">Вибери користувача або клацни правою кнопкою.</div></div>
+  </aside>
+ </section>
+ <section class="lower">
+  <details class="card"><summary>КЛАНИ <span id="clanCount"></span></summary><div class="details-body"><div id="clanList" class="clan-list"></div></div></details>
+  <details class="card"><summary>DATABASE</summary><div class="details-body"><button id="dumpRefresh">ОНОВИТИ DUMP</button><pre id="dump">Відкрий розділ, щоб завантажити дані.</pre></div></details>
+ </section>
 </main>
-
+<div id="userMenu" class="context-menu" role="menu">
+ <button data-user-action="edit">ЗМІНИТИ ПОЛЕ…</button>
+ <button data-user-action="ban" id="userMenuBan">ЗАБАНИТИ</button>
+ <button data-user-action="tester" id="userMenuTester">TESTER ON/OFF</button>
+ <button data-user-action="verified" id="userMenuVerified">VERIFIED ON/OFF</button>
+ <div class="separator"></div>
+ <button data-user-action="delete" class="danger">ВИДАЛИТИ АКАУНТ</button>
+</div>
+<div id="fieldModal" class="modal" aria-hidden="true">
+ <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="fieldTitle">
+  <div class="modal-head"><b id="fieldTitle">ЗМІНИТИ ПОЛЕ</b><button class="close" data-close="fieldModal">×</button></div>
+  <div class="modal-fields"><label>ПОЛЕ<select id="fieldName"><option value="nickname">Nickname</option><option value="id">Player ID</option><option value="password">Пароль</option><option value="gold">Gold</option><option value="XP">XP</option><option value="MMRCompetitive">Competitive MMR</option><option value="MMRAllies">Allies MMR</option><option value="clan">Клан</option><option value="isBanned">Ban</option><option value="isVerified">Verified</option><option value="isTester">Tester</option></select></label><label id="fieldValueLabel">НОВЕ ЗНАЧЕННЯ<div id="fieldValueWrap"><input id="fieldValue" autocomplete="off"></div></label></div>
+  <div id="fieldNotice" class="notice"></div>
+  <div class="modal-actions"><button data-close="fieldModal">СКАСУВАТИ</button><button class="primary" id="saveField">ЗБЕРЕГТИ</button></div>
+ </section>
+</div>
+<div id="createModal" class="modal" aria-hidden="true">
+ <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="createTitle">
+  <div class="modal-head"><b id="createTitle">НОВИЙ АКАУНТ</b><button class="close" data-close="createModal">×</button></div>
+  <div class="modal-fields"><label>NICKNAME<input id="createNick" maxlength="24"></label><label>PLAYER ID <small>Необов'язково — буде згенерований</small><input id="createId" inputmode="numeric"></label><label>ПАРОЛЬ<input id="createPassword" type="password" minlength="6"></label></div>
+  <div id="createNotice" class="notice"></div>
+  <div class="modal-actions"><button data-close="createModal">СКАСУВАТИ</button><button class="primary" id="createSave">СТВОРИТИ</button></div>
+ </section>
+</div>
 <script>
 const $=id=>document.getElementById(id);
-let users=[],clans={},selectedId=null,creating=false;
-const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const cleanId=id=>String(id||"").replace(/^ID_/i,"");
-async function api(url,opt={}){const o={...opt,credentials:"same-origin",headers:{...(opt.headers||{})}};if(o.body&&typeof o.body==="string")o.headers["Content-Type"]="application/json";const r=await fetch(url,o),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.message||"Запит не виконано");return d}
-function setTab(name){document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===name));$("usersPanel").classList.toggle("active",name==="users");$("editorPanel").classList.toggle("active",name==="editor");$("clansPanel").classList.toggle("active",name==="clans");$("databasePanel").classList.toggle("active",name==="database")}
-function fillClanOptions(){$("fClan").innerHTML="<option value=''>Без клану</option>"+Object.values(clans).map(c=>"<option value='"+esc(c.tag)+"'>["+esc(c.tag)+"] "+esc(c.name)+"</option>").join("")}
-function fillEditor(u){creating=!u;selectedId=u?.id||null;$("editorNotice").textContent=creating?"Створення нового аккаунта":"Редагування: "+(u?.nickname||"");$("fId").value=creating?"":cleanId(u.id);$("fNick").value=creating?"":u.nickname||"";$("fPassword").value="";$("fGold").value=creating?0:u.gold||0;$("fXP").value=creating?0:u.XP||0;$("fComp").value=creating?1000:u.MMRCompetitive||1000;$("fAllies").value=creating?1000:u.MMRAllies||1000;$("fClan").value=creating?"":(u.clan||"");$("fBan").checked=creating?false:Boolean(u.isBanned);$("fVerified").checked=creating?false:Boolean(u.isVerified);$("fTester").checked=creating?false:Boolean(u.isTester);$("deleteUser").style.display=creating?"none":"inline-block";$("selectedInfo").textContent=creating?"Новий аккаунт":("Status: "+(u.status?"ONLINE":"OFFLINE")+" · ID "+cleanId(u.id));setTab("editor")}
-function renderUsers(){const q=$("search").value.toLowerCase();$("rows").innerHTML=users.filter(u=>(String(u.id)+" "+String(u.nickname)).toLowerCase().includes(q)).map(u=>"<tr><td>"+esc(cleanId(u.id))+"</td><td>"+esc(u.nickname)+"</td><td>"+u.gold+"</td><td>"+u.XP+"</td><td>"+esc(u.clan||"—")+"</td><td>"+(u.isTester?"✓":"—")+"</td><td>"+(u.isAdmin?"✓":"—")+"</td><td>"+(u.isBanned?"<span class='warn'>YES</span>":"—")+"</td><td><button class='secondary' data-edit='"+esc(u.id)+"'>EDIT</button></td></tr>").join("")||"<tr><td colspan='9' class='muted'>Нічого не знайдено.</td></tr>"}
-function renderClans(){$("clanList").innerHTML=Object.values(clans).map(c=>{const members=users.filter(u=>u.clan===c.tag);const names=members.map(u=>esc(u.nickname)+" <span class='muted'>("+esc(cleanId(u.id))+")</span>").join(", ")||"<span class='muted'>Немає учасників</span>";return "<div class='clanrow'><b>"+esc(c.name)+" ["+esc(c.tag)+"]</b><div class='muted' style='margin:5px 0'>"+members.length+"/"+(c.memberLimit||30)+" · owner "+esc(cleanId(c.ownerId))+"</div><div style='margin-bottom:10px'>"+names+"</div><div class='toolbar'><button class='secondary' data-clan-admin='edit' data-tag='"+esc(c.tag)+"'>РЕДАГУВАТИ</button><button class='danger' data-clan-admin='delete' data-tag='"+esc(c.tag)+"'>ВИДАЛИТИ КЛАН</button></div></div>"}).join("")||"<div class='muted'>Кланів немає.</div>"}
-async function load(){const o=await api("/api/admin/overview");$("usersN").textContent=o.users;$("onlineN").textContent=o.online;$("clansN").textContent=o.clans;$("marketN").textContent=o.market;$("messagesN").textContent=o.messages??"—";$("testersN").textContent=(o.testers??"—");$("storage").textContent=o.atlas?.connected?"ATLAS CONNECTED":(o.atlas?.state==="not_configured"?"ATLAS NOT CONFIGURED":"ATLAS: "+(o.atlas?.state||o.storage));const d=await api("/api/admin/database");users=d.users||[];clans=d.clans||{};fillClanOptions();renderUsers();renderClans()}
-$("clanList").addEventListener("click",async e=>{
-  const button=e.target.closest("[data-clan-admin]");
-  if(!button)return;
-  const tag=String(button.dataset.tag||"").toUpperCase();
-  const clan=clans[tag];
-  if(!clan)return;
-  if(button.dataset.clanAdmin==="edit"){
-    const name=prompt("Назва клану (3–24 символи):",clan.name);
-    if(name===null)return;
-    const description=prompt("Опис клану (до 120 символів):",clan.description||"");
-    if(description===null)return;
-    const memberLimit=prompt("Ліміт учасників (5–50):",String(clan.memberLimit||30));
-    if(memberLimit===null)return;
-    try{
-      await api("/api/admin/clans/update",{method:"POST",body:JSON.stringify({tag,name,description,memberLimit:Number(memberLimit)})});
-      await load();
-      alert("Клан оновлено.");
-    }catch(error){alert(error.message)}
-    return;
-  }
-  if(button.dataset.clanAdmin==="delete"){
-    if(!confirm("Видалити клан ["+tag+"] і прибрати його учасників із клану?"))return;
-    try{
-      await api("/api/admin/clans/delete",{method:"POST",body:JSON.stringify({tag})});
-      await load();
-      alert("Клан видалено.");
-    }catch(error){alert(error.message)}
-  }
+const embedded=new URLSearchParams(location.search).has("embedded");
+if(embedded)document.body.classList.add("embedded");
+let users=[],clans={},selectedId=null,menuUserId=null;
+const esc=value=>String(value==null?"":value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const cleanId=value=>String(value||"").replace(/^ID_/i,"");
+async function api(url,options){
+ const init={...(options||{}),credentials:"same-origin",headers:{...((options&&options.headers)||{})}};
+ if(init.body&&typeof init.body==="string")init.headers["Content-Type"]="application/json";
+ const response=await fetch(url,init);
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok)throw new Error(data.message||("HTTP "+response.status));
+ return data;
+}
+function setModal(id,open){const node=$(id);if(!node)return;node.classList.toggle("open",Boolean(open));node.setAttribute("aria-hidden",String(!open))}
+function selectUser(id){
+ selectedId=String(id||"");
+ const user=users.find(item=>String(item.id)===selectedId);
+ document.querySelectorAll("#rows tr[data-user-id]").forEach(row=>row.classList.toggle("selected",row.dataset.userId===selectedId));
+ renderSelected(user);
+}
+function renderSelected(user){
+ const root=$("selectedBody");
+ if(!user){root.innerHTML='<div class="empty">Вибери користувача або клацни правою кнопкою.</div>';return}
+ const flags=[user.isAdmin?"ADMIN":null,user.isTester?"TESTER":null,user.isVerified?"VERIFIED":null,user.isBanned?"BANNED":null].filter(Boolean).join(" · ")||"NORMAL";
+ root.innerHTML='<div class="selected-title"><img class="avatar" src="'+esc(user.playerAvatar||"/avatars/default.jpg")+'" alt=""><div><b>'+esc(user.nickname||"PLAYER")+'</b><small>ID '+esc(cleanId(user.id))+' · '+(user.status?"ONLINE":"OFFLINE")+'</small></div></div>'+
+ '<div class="field-list">'+
+ fieldRow("GOLD",user.gold)+fieldRow("XP",user.XP)+fieldRow("COMP MMR",user.MMRCompetitive)+fieldRow("ALLIES MMR",user.MMRAllies)+fieldRow("CLAN",user.clan||"—")+fieldRow("FLAGS",flags)+
+ '</div><div class="quick-actions"><button data-card-action="edit">ЗМІНИТИ ПОЛЕ</button><button data-card-action="ban" class="'+(user.isBanned?"":"danger")+'">'+(user.isBanned?"РОЗБАНИТИ":"ЗАБАНИТИ")+'</button></div>';
+}
+function fieldRow(label,value){return '<div class="field-line"><span>'+esc(label)+'</span><b>'+esc(value==null?"—":value)+'</b></div>'}
+function renderUsers(){
+ const query=$("search").value.trim().toLowerCase();
+ const filtered=users.filter(user=>(String(user.id)+" "+String(user.nickname||"")).toLowerCase().includes(query));
+ $("rows").innerHTML=filtered.map(user=>{
+  const flags=[user.isAdmin?"ADMIN":null,user.isTester?"TESTER":null,user.isVerified?"✓":null,user.isBanned?"BAN":null].filter(Boolean).join(" · ")||"—";
+  return '<tr data-user-id="'+esc(user.id)+'" class="'+(user.id===selectedId?"selected ":"")+(user.isAdmin?"master":"")+'"><td>'+esc(cleanId(user.id))+'</td><td>'+esc(user.nickname)+'</td><td>'+Number(user.gold||0)+'</td><td>'+Number(user.XP||0)+'</td><td>'+esc(user.clan||"—")+'</td><td class="'+(user.isBanned?"banned":user.isTester?"yes":"status")+'">'+esc(flags)+'</td><td><button class="row-action" data-user-menu="'+esc(user.id)+'" aria-label="Дії">⋯</button></td></tr>';
+ }).join("")||'<tr><td colspan="7" class="empty">Нічого не знайдено.</td></tr>';
+ $("usersN").textContent=String(users.length);
+ $("clanCount").textContent=Object.keys(clans).length?"· "+Object.keys(clans).length:"";
+}
+function renderClans(){
+ const root=$("clanList");
+ root.innerHTML=Object.values(clans).map(clan=>{
+  const members=users.filter(user=>user.clan===clan.tag).length;
+  return '<div class="clan-row"><div><b>'+esc(clan.name)+' ['+esc(clan.tag)+']</b><small>'+members+'/'+Number(clan.memberLimit||30)+' · owner '+esc(cleanId(clan.ownerId))+'</small></div><div class="clan-actions"><button data-clan-edit="'+esc(clan.tag)+'">EDIT</button><button class="danger" data-clan-delete="'+esc(clan.tag)+'">×</button></div></div>';
+ }).join("")||'<div class="empty">Кланів немає.</div>';
+}
+function positionPopup(node,x,y){
+ node.classList.add("open");node.style.visibility="hidden";node.style.left="8px";node.style.top="8px";
+ const box=node.getBoundingClientRect(),left=Math.max(8,Math.min(Number(x)||8,innerWidth-box.width-8));
+ let top=(Number(y)||8)+8;
+ if(top+box.height>innerHeight-8&&Number(y)-box.height-8>=8)top=Number(y)-box.height-8;
+ top=Math.max(8,Math.min(top,innerHeight-box.height-8));
+ node.style.left=left+"px";node.style.top=top+"px";node.style.visibility="";
+}
+function openUserMenu(id,x,y){
+ const user=users.find(item=>String(item.id)===String(id));if(!user)return;
+ selectUser(user.id);menuUserId=String(user.id);
+ $("userMenuBan").textContent=user.isBanned?"РОЗБАНИТИ":"ЗАБАНИТИ";
+ $("userMenuTester").textContent=user.isTester?"TESTER OFF":"TESTER ON";
+ $("userMenuVerified").textContent=user.isVerified?"VERIFIED OFF":"VERIFIED ON";
+ const protectedMaster=Boolean(user.isAdmin);
+ ["userMenuBan","userMenuTester"].forEach(id=>{$(id).disabled=protectedMaster});
+ $("userMenu").querySelector('[data-user-action="delete"]').disabled=protectedMaster;
+ positionPopup($("userMenu"),x,y);
+}
+function hideUserMenu(){$("userMenu").classList.remove("open");menuUserId=null}
+function fieldDefinition(field){
+ const definitions={
+  nickname:{label:"NICKNAME",type:"text"},
+  id:{label:"PLAYER ID",type:"text"},
+  password:{label:"НОВИЙ ПАРОЛЬ",type:"password"},
+  gold:{label:"GOLD",type:"number"},
+  XP:{label:"XP",type:"number"},
+  MMRCompetitive:{label:"COMPETITIVE MMR",type:"number"},
+  MMRAllies:{label:"ALLIES MMR",type:"number"},
+  clan:{label:"CLAN",type:"clan"},
+  isBanned:{label:"BAN",type:"boolean"},
+  isVerified:{label:"VERIFIED",type:"boolean"},
+  isTester:{label:"TESTER",type:"boolean"}
+ };
+ return definitions[field]||definitions.nickname;
+}
+function setFieldControl(field){
+ const definition=fieldDefinition(field),user=users.find(item=>String(item.id)===String(selectedId));
+ $("fieldValueLabel").firstChild.textContent=definition.label;
+ let control="";
+ if(definition.type==="boolean"){
+  control='<select id="fieldValue"><option value="false">OFF</option><option value="true">ON</option></select>';
+ }else if(definition.type==="clan"){
+  control='<select id="fieldValue"><option value="">БЕЗ КЛАНУ</option>'+Object.values(clans).map(clan=>'<option value="'+esc(clan.tag)+'">['+esc(clan.tag)+'] '+esc(clan.name)+'</option>').join("")+'</select>';
+ }else{
+  control='<input id="fieldValue" type="'+definition.type+'" autocomplete="off" '+(definition.type==="number"?'min="0" step="1"':definition.type==="password"?'minlength="6"':"")+' placeholder="'+(definition.type==="password"?"Новий пароль":"")+'">';
+ }
+ $("fieldValueWrap").innerHTML=control;
+ const input=$("fieldValue");
+ if(!input)return;
+ if(definition.type==="boolean")input.value=String(Boolean(user&&user[field]));
+ else if(definition.type==="clan")input.value=user?.clan||"";
+ else if(definition.type==="password")input.value="";
+ else input.value=String(user?.[field]??"");
+}
+function openFieldEditor(field){
+ if(!selectedId)return;
+ $("fieldName").value=field||"nickname";
+ setFieldControl($("fieldName").value);
+ $("fieldNotice").textContent="";
+ $("fieldTitle").textContent="АКАУНТ · "+esc(users.find(item=>String(item.id)===String(selectedId))?.nickname||cleanId(selectedId));
+ setModal("fieldModal",true);
+ $("fieldName").focus();
+}
+async function saveField(){
+ const field=$("fieldName").value,definition=fieldDefinition(field),input=$("fieldValue");
+ if(!selectedId||!input)return;
+ let value=input.value;
+ if(definition.type==="boolean")value=value==="true";
+ else if(definition.type==="number"){
+  value=Number(value);
+  if(!Number.isFinite(value)||value<0){$("fieldNotice").textContent="Введи невід’ємне число.";return}
+ }
+ if(definition.type==="password"&&String(value).length<6){$("fieldNotice").textContent="Пароль має містити щонайменше 6 символів.";return}
+ if(definition.type==="text"&&!String(value).trim()){$("fieldNotice").textContent="Поле не може бути порожнім.";return}
+ $("saveField").disabled=true;
+ try{
+  const payload={userId:selectedId};payload[field]=value;
+  const result=await api("/api/admin/users/update",{method:"POST",body:JSON.stringify(payload)});
+  const id=String(result.user?.id||selectedId);
+  setModal("fieldModal",false);await load();selectUser(id);
+ }catch(error){$("fieldNotice").textContent=error.message}
+ finally{$("saveField").disabled=false}
+}
+async function quickChange(field,value){
+ if(!selectedId)return;
+ const payload={userId:selectedId};payload[field]=value;
+ try{const result=await api("/api/admin/users/update",{method:"POST",body:JSON.stringify(payload)});const id=String(result.user?.id||selectedId);await load();selectUser(id)}
+ catch(error){alert(error.message)}
+}
+async function load(){
+ const [overview,database]=await Promise.all([api("/api/admin/overview"),api("/api/admin/database")]);
+ $("onlineN").textContent=String(overview.online??"—");
+ $("clansN").textContent=String(overview.clans??"—");
+ $("marketN").textContent=String(overview.market??"—");
+ $("messagesN").textContent=String(overview.messages??"—");
+ $("testersN").textContent=String(overview.testers??"—");
+ $("storage").textContent=overview.atlas?.connected?"ATLAS CONNECTED":(overview.atlas?.state==="not_configured"?"ATLAS NOT CONFIGURED":"ATLAS "+String(overview.atlas?.state||overview.storage||"UNKNOWN").toUpperCase());
+ users=database.users||[];clans=database.clans||{};
+ renderUsers();renderClans();
+ if(selectedId)selectUser(selectedId);
+ if($("dump").textContent!=="Відкрий розділ, щоб завантажити дані.")$("dump").textContent=JSON.stringify(database,null,2);
+}
+async function createUser(){
+ const nickname=$("createNick").value.trim(),password=$("createPassword").value,id=$("createId").value.trim();
+ if(!nickname||password.length<6){$("createNotice").textContent="Nickname і пароль від 6 символів обов’язкові.";return}
+ $("createSave").disabled=true;
+ try{
+  const result=await api("/api/admin/users/create",{method:"POST",body:JSON.stringify({nickname,password,id})});
+  setModal("createModal",false);$("createNick").value="";$("createPassword").value="";$("createId").value="";
+  selectedId=String(result.user.id);await load();selectUser(selectedId);
+ }catch(error){$("createNotice").textContent=error.message}
+ finally{$("createSave").disabled=false}
+}
+async function deleteUser(){
+ const user=users.find(item=>String(item.id)===String(selectedId));
+ if(!user||user.isAdmin)return;
+ if(!confirm("Видалити акаунт "+user.nickname+"?"))return;
+ try{await api("/api/admin/users/"+encodeURIComponent(selectedId),{method:"DELETE"});selectedId=null;await load();selectUser(null)}
+ catch(error){alert(error.message)}
+}
+async function editClan(tag){
+ const clan=clans[tag];if(!clan)return;
+ const name=prompt("Назва клану:",clan.name);if(name===null)return;
+ const description=prompt("Опис:",clan.description||"");if(description===null)return;
+ const memberLimit=prompt("Ліміт учасників 5–50:",String(clan.memberLimit||30));if(memberLimit===null)return;
+ try{await api("/api/admin/clans/update",{method:"POST",body:JSON.stringify({tag,name,description,memberLimit:Number(memberLimit)})});await load()}
+ catch(error){alert(error.message)}
+}
+async function deleteClan(tag){
+ if(!confirm("Видалити клан ["+tag+"]?"))return;
+ try{await api("/api/admin/clans/delete",{method:"POST",body:JSON.stringify({tag})});await load()}
+ catch(error){alert(error.message)}
+}
+$("rows").addEventListener("click",event=>{
+ const menuButton=event.target.closest("[data-user-menu]");
+ if(menuButton){event.stopPropagation();const rect=menuButton.getBoundingClientRect();openUserMenu(menuButton.dataset.userMenu,rect.left,rect.bottom);return}
+ const row=event.target.closest("tr[data-user-id]");if(row)selectUser(row.dataset.userId);
 });
-$("search").oninput=renderUsers;$("refresh").onclick=()=>load().catch(e=>alert(e.message));$("newUser").onclick=()=>fillEditor(null);
-$("rows").addEventListener("click",e=>{const b=e.target.closest("[data-edit]");if(b){const u=users.find(x=>String(x.id)===String(b.dataset.edit));if(u)fillEditor(u)}});
-document.querySelectorAll(".tab").forEach(b=>b.onclick=async()=>{setTab(b.dataset.tab);if(b.dataset.tab==="database")$("dump").textContent=JSON.stringify(await api("/api/admin/database"),null,2)});
-$("saveUser").onclick=async()=>{try{const payload={id:$("fId").value.trim(),nickname:$("fNick").value.trim(),password:$("fPassword").value,gold:Number($("fGold").value),XP:Number($("fXP").value),MMRCompetitive:Number($("fComp").value),MMRAllies:Number($("fAllies").value),clan:$("fClan").value,isBanned:$("fBan").checked,isVerified:$("fVerified").checked,isTester:$("fTester").checked};const d=creating?await api("/api/admin/users/create",{method:"POST",body:JSON.stringify(payload)}):await api("/api/admin/users/update",{method:"POST",body:JSON.stringify({...payload,userId:selectedId})});selectedId=d.user.id;creating=false;await load();fillEditor(users.find(u=>u.id===selectedId)||d.user);alert("Збережено")}catch(e){alert(e.message)}};
-$("deleteUser").onclick=async()=>{if(creating||!selectedId)return;if(!confirm("Видалити "+selectedId+"?"))return;try{await api("/api/admin/users/"+encodeURIComponent(selectedId),{method:"DELETE"});selectedId=null;await load();fillEditor(null)}catch(e){alert(e.message)}};
-$("atlasCheck").onclick=async()=>{const b=$("atlasCheck");b.disabled=true;b.textContent="CHECKING...";try{const d=await api("/api/admin/atlas/check",{method:"POST",body:"{}"});$("storage").textContent=d.status?.connected?"ATLAS CONNECTED":"ATLAS ERROR";alert(d.message||"Atlas checked");}catch(e){$("storage").textContent="ATLAS ERROR";alert(e.message)}finally{b.disabled=false;b.textContent="PING ATLAS";load().catch(()=>{})}};
-$("back").onclick=()=>location.href="/game";load().catch(()=>location.href="/");
+$("rows").addEventListener("contextmenu",event=>{
+ const row=event.target.closest("tr[data-user-id]");if(!row)return;
+ event.preventDefault();openUserMenu(row.dataset.userId,event.clientX,event.clientY);
+});
+$("userMenu").addEventListener("click",async event=>{
+ const action=event.target.closest("[data-user-action]");if(!action||!menuUserId)return;
+ const id=menuUserId,user=users.find(item=>String(item.id)===String(id)),name=action.dataset.userAction;
+ hideUserMenu();selectUser(id);
+ if(name==="edit"){openFieldEditor("nickname");return}
+ if(name==="delete"){await deleteUser();return}
+ if(name==="ban"){await quickChange("isBanned",!user.isBanned);return}
+ if(name==="tester"){await quickChange("isTester",!user.isTester);return}
+ if(name==="verified"){await quickChange("isVerified",!user.isVerified);return}
+});
+$("selectedBody").addEventListener("click",event=>{
+ const button=event.target.closest("[data-card-action]");if(!button)return;
+ if(button.dataset.cardAction==="edit")openFieldEditor("nickname");
+ if(button.dataset.cardAction==="ban"){const user=users.find(item=>String(item.id)===String(selectedId));if(user)quickChange("isBanned",!user.isBanned)}
+});
+$("fieldName").addEventListener("change",()=>setFieldControl($("fieldName").value));
+$("saveField").addEventListener("click",saveField);
+$("createSave").addEventListener("click",createUser);
+$("newUser").addEventListener("click",()=>{ $("createNotice").textContent="";setModal("createModal",true);$("createNick").focus() });
+$("deleteUser")?.addEventListener("click",deleteUser);
+$("search").addEventListener("input",renderUsers);
+$("clearSearch").addEventListener("click",()=>{$("search").value="";renderUsers()});
+$("refresh").addEventListener("click",()=>load().catch(error=>alert(error.message)));
+$("clearSelection").addEventListener("click",()=>{selectedId=null;selectUser(null)});
+$("dumpRefresh").addEventListener("click",()=>api("/api/admin/database").then(data=>$("dump").textContent=JSON.stringify(data,null,2)).catch(error=>alert(error.message)));
+$("clanList").addEventListener("click",event=>{
+ const edit=event.target.closest("[data-clan-edit]"),remove=event.target.closest("[data-clan-delete]");
+ if(edit)editClan(edit.dataset.clanEdit);else if(remove)deleteClan(remove.dataset.clanDelete);
+});
+$("atlasCheck").addEventListener("click",async()=>{
+ const button=$("atlasCheck");button.disabled=true;
+ try{const data=await api("/api/admin/atlas/check",{method:"POST",body:"{}"});$("storage").textContent=data.status?.connected?"ATLAS CONNECTED":"ATLAS "+String(data.status?.state||"ERROR").toUpperCase();await load()}
+ catch(error){$("storage").textContent="ATLAS ERROR";alert(error.message)}
+ finally{button.disabled=false}
+});
+$("back").addEventListener("click",()=>{
+ if(embedded&&window.parent!==window)window.parent.postMessage({type:"sx:admin-close"},location.origin);
+ else location.href="/game";
+});
+document.querySelectorAll("[data-close]").forEach(button=>button.addEventListener("click",()=>setModal(button.dataset.close,false)));
+document.querySelectorAll(".modal").forEach(modal=>modal.addEventListener("click",event=>{if(event.target===modal)setModal(modal.id,false)}));
+document.addEventListener("click",event=>{if(!event.target.closest("#userMenu")&&!event.target.closest("#rows"))hideUserMenu()});
+document.addEventListener("keydown",event=>{if(event.key==="Escape"){hideUserMenu();document.querySelectorAll(".modal.open").forEach(modal=>setModal(modal.id,false))}});
+load().catch(error=>{$("storage").textContent="ACCESS / ATLAS ERROR";$("rows").innerHTML='<tr><td colspan="7" class="empty">'+esc(error.message)+'</td></tr>'});
 </script>
 </body>
 </html>
