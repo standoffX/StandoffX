@@ -185,7 +185,7 @@ assert.match(menu, /function animationFor\(person,index\)/);
 assert.doesNotMatch(menu, /profilePageUuid|copyUuid|UUID:|UUID /);
 assert.doesNotMatch(menu, /window\.__sxHomeOnlineFriends|isPreviewFriend/);
 assert.match(menu, /const members=realMembers\.length\?realMembers:\[selfMember\]/);
-assert.match(menu, /me\.isAdmin\s*===\s*true/);
+assert.match(menu, /me\.isAdmin!==true/);
 assert.match(menu, /roster\.slice\(0,6\)/);
 assert.match(menu, /localStorage\.setItem\("sx-agent-animation"/);
 assert.match(menu, /lobby-remaster\.css\?v=/);
