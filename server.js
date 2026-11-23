@@ -2625,10 +2625,15 @@ function respawnPlayer(match, player) {
   player.anim = "Idle";
 }
 
+const ZONE9_PLAN_HALF_WIDTH = 105;
+const ZONE9_PLAN_HALF_DEPTH = 140;
+const zone9PlanWorldPoint = (u, v) => ({
+  x: (Number(u) - .5) * ZONE9_PLAN_HALF_WIDTH * 2,
+  z: (Number(v) - .5) * ZONE9_PLAN_HALF_DEPTH * 2
+});
 const ZONE9_BOMB_SITES = Object.freeze({
-  // Normalized positions from the supplied Zone 9 plan (world bounds are centred at 0, ±140).
-  A: Object.freeze({ x: -92, z: -45 }),
-  B: Object.freeze({ x: 78, z: -36 })
+  A: Object.freeze(zone9PlanWorldPoint(.17, .34)),
+  B: Object.freeze(zone9PlanWorldPoint(.78, .37))
 });
 
 function alliesSide(match, team) {
@@ -2816,10 +2821,10 @@ function startAlliesRound(io, match, initial = false) {
     action: null,
     explodeTimer: null
   };
-  // Team start areas follow the supplied top-down Zone 9 plan; the client snaps to the nearest real GLB floor.
+  // T starts lower-left; CT starts at the top of the supplied plan. The client snaps to the actual GLB floor.
   const sideSpawns = {
-    attack: [{x:-78,y:0,z:115},{x:-72,y:0,z:108}],
-    defense: [{x:-48,y:0,z:-120},{x:-42,y:0,z:-113}]
+    attack: [{...zone9PlanWorldPoint(.22,.91),y:0},{...zone9PlanWorldPoint(.25,.88),y:0}],
+    defense: [{...zone9PlanWorldPoint(.33,.07),y:0},{...zone9PlanWorldPoint(.36,.10),y:0}]
   };
   const teamIndices = { A: 0, B: 0 };
   for (const player of match.players) {
