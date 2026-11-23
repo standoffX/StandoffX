@@ -37,6 +37,7 @@ function ensureSocialShell(){
 ensureSocialShell();
 const esc=value=>String(value==null?"":value).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]});
 const avatar=user=>esc(user&&user.playerAvatar||"/avatars/default.jpg");
+const nowTime=value=>{const date=new Date(value);return Number.isFinite(date.getTime())?date.toLocaleTimeString("uk-UA",{hour:"2-digit",minute:"2-digit"}):""};
 const notify=message=>{if(typeof notifyToast==="function")notifyToast(message);else console.info("[SOCIAL]",message)};
 const apiGet=async url=>{const r=await fetch(url,{credentials:"same-origin"});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||"Не вдалося завантажити дані.");return d};
 const apiPost=async(url,body)=>{const r=await fetch(url,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||"Не вдалося виконати дію.");return d};
@@ -67,11 +68,11 @@ function rememberFriends(rows){
 }
 function rowFriend(row){
  if(!row)return null;
- const id=String(row.dataset.friendId||"");
+ const id=String(row.dataset.friendId||row.dataset.playerId||"");
  if(!id)return null;
  const cached=friendMap.get(id)||{};
- const name=row.dataset.friendName||row.querySelector(".home-friend-copy b")?.textContent||row.querySelector("b")?.textContent||cached.nickname||"PLAYER";
- const image=row.querySelector("img")?.src||cached.playerAvatar||"/avatars/default.jpg";
+ const name=row.dataset.friendName||row.dataset.playerName||row.querySelector(".home-friend-copy b")?.textContent||row.querySelector("b")?.textContent||cached.nickname||"PLAYER";
+ const image=row.dataset.playerAvatar||row.querySelector("img")?.src||cached.playerAvatar||"/avatars/default.jpg";
  const stateText=String(row.querySelector(".muted")?.textContent||"").toUpperCase();
  const status=row.classList.contains("is-online")?true:(stateText.includes("НЕ В МЕРЕЖІ")?false:(stateText.includes("В МЕРЕЖІ")?true:Boolean(cached.status)));
  return Object.assign({},cached,{id:id,nickname:name,playerAvatar:image,status:status});
@@ -89,6 +90,9 @@ function showFriendMenu(friend,x,y){
  const lobbyAction=menu.querySelector('[data-sx-action="lobby"]'),clanAction=menu.querySelector('[data-sx-action="clan"]');
  if(lobbyAction)lobbyAction.disabled=!invitePending&&(!friend.status||guest());
  if(clanAction)clanAction.disabled=guest()||!me?.clan;
+ const friendActionButton=menu.querySelector('[data-sx-action="friend"]');
+ const alreadyFriend=friendMap.has(String(friend.id))||(Array.isArray(me?.friendsList)&&me.friendsList.map(String).includes(String(friend.id)));
+ if(friendActionButton){friendActionButton.disabled=guest()||alreadyFriend||String(friend.id)===String(me?.id||"");friendActionButton.textContent=alreadyFriend?"ВЖЕ ДРУЗІ":"ДОДАТИ ДО ДРУЗІВ";}
  menu.style.left=Math.max(8,Math.min(x,window.innerWidth-236))+"px";
  menu.style.top=Math.max(8,Math.min(y,window.innerHeight-245))+"px";
  menu.classList.add("open");
@@ -101,6 +105,7 @@ function renderProfile(profile){
  :'<div class="sx-profile-clan"><div><b>БЕЗ КЛАНУ</b><small>Гравець поки не вступив до клану</small></div></div>';
  const canClan=Boolean(me&&me.clan&&!profile.isGuest&&String(me.id)!==String(profile.id));
  profileBody.innerHTML=
+ '<div class="sx-player-profile-layout"><div class="sx-player-profile-info">'+
  '<div class="sx-profile-head"><img src="'+avatar(profile)+'" alt=""><div><b>'+esc(profile.nickname||"PLAYER")+(profile.isGuest?" · ГОСТЬ":"")+'</b><small>ID '+esc(profile.id)+(profile.isGuest?" · ТИМЧАСОВИЙ":"")+'</small><small>РІВЕНЬ '+Math.max(1,Math.floor((Number(profile.XP)||0)/1000)+1)+' · '+(Number(profile.XP)||0)+' XP</small></div></div>'+
  clanHtml+
  '<div class="sx-profile-stats">'+
@@ -110,8 +115,8 @@ function renderProfile(profile){
  '<div class="sx-stat"><strong>'+(Number(stats.wins)||0)+'</strong><small>ПЕРЕМОГИ</small></div>'+
  '<div class="sx-stat"><strong>'+(Number(stats.losses)||0)+'</strong><small>ПОРАЗКИ</small></div>'+
  '<div class="sx-stat"><strong>'+(Number(stats.matches)||0)+'</strong><small>МАТЧІ</small></div>'+
- '</div><div class="sx-modal-note" style="margin-top:10px">MMR: '+(Number(profile.MMRCompetitive)||1000)+' · СОЮЗНИКИ: '+(Number(profile.MMRAllies)||1000)+'</div>'+
- '<section class="sx-profile-agent"><header><b>АГЕНТ ГРАВЦЯ</b><span>'+((profile.agentSide==="CT")?"CT · ЗАХИСТ":"T · АТАКА")+' · '+esc(profile.agentAnimation||"Excited")+'</span></header><canvas id="sxFriendAgentCanvas" aria-label="3D-агент гравця"></canvas></section>'+
+ '</div><div class="sx-modal-note sx-profile-mmr">MMR: '+(Number(profile.MMRCompetitive)||1000)+' · СОЮЗНИКИ: '+(Number(profile.MMRAllies)||1000)+'</div></div>'+
+ '<section class="sx-profile-agent"><header><b>АГЕНТ ГРАВЦЯ</b><span>'+((profile.agentSide==="CT")?"CT · ЗАХИСТ":"T · АТАКА")+' · '+esc(profile.agentAnimation||"Excited")+'</span></header><canvas id="sxFriendAgentCanvas" aria-label="3D-агент гравця"></canvas></section></div>'+
  '<div class="sx-profile-actions"><button type="button" data-profile-message="'+esc(profile.id)+'">ПОВІДОМЛЕННЯ</button>'+
  (canClan?'<button type="button" class="primary" data-profile-clan="'+esc(profile.id)+'">ЗАПРОСИТИ ДО КЛАНУ</button>':"")+'</div>';
  window.dispatchEvent(new CustomEvent("sx:preview-agent",{detail:profile}));
@@ -330,6 +335,7 @@ function inviteLobby(id){
 }
 function friendAction(action){
  const friend=contextFriend;hideFriendMenu();if(!friend)return;
+ if(action==="friend"){apiPost("/api/friends/request",{toId:friend.id}).then(data=>notify(data.message||"Заявку в друзі надіслано.")).catch(error=>notify(error.message||"Не вдалося додати гравця."));return;}
  if(action==="profile")openProfile(friend.id);
  if(action==="message")openChat(friend.id);
  if(action==="clan")inviteClan(friend.id);
@@ -339,7 +345,7 @@ function openFriendRow(row,x,y){
  const friend=rowFriend(row);if(friend)showFriendMenu(friend,x,y);
 }
 document.addEventListener("contextmenu",function(event){
- const row=event.target.closest("[data-friend-id]");
+ const row=event.target.closest("[data-friend-id],[data-player-id]");
  if(!row)return;
  event.preventDefault();openFriendRow(row,event.clientX,event.clientY);
 });
@@ -394,6 +400,7 @@ window.sxOpenMessages=openMessages;
 window.sxOpenLobby=openLobbyModal;
 window.sxOpenChat=openChat;
 window.sxOpenPlayerProfile=openProfile;
+window.sxOpenPlayerContextMenu=(player,x,y)=>{if(!player)return;const friend=Object.assign({},player,{id:String(player.id||player.userId||""),nickname:player.nickname||"PLAYER",playerAvatar:player.playerAvatar||"/avatars/default.jpg",status:player.status!==false});if(!friend.id)return;showFriendMenu(friend,Number(x)||12,Number(y)||12)};
 window.sxRefreshSocial=loadDialogs;
 function start(){
  ensureSocket();
