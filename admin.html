@@ -164,7 +164,7 @@ function renderSelected(user){
  root.innerHTML='<div class="selected-title"><img class="avatar" src="'+esc(user.playerAvatar||"/avatars/default.jpg")+'" alt=""><div><b>'+esc(user.nickname||"PLAYER")+'</b><small>ID '+esc(cleanId(user.id))+' · '+(user.status?"ONLINE":"OFFLINE")+'</small></div></div>'+
  '<div class="field-list">'+
  fieldRow("GOLD",user.gold)+fieldRow("XP",user.XP)+fieldRow("COMP MMR",user.MMRCompetitive)+fieldRow("ALLIES MMR",user.MMRAllies)+fieldRow("CLAN",user.clan||"—")+fieldRow("FLAGS",flags)+
- '</div><div class="quick-actions"><button data-card-action="edit">ЗМІНИТИ ПОЛЕ</button><button data-card-action="ban" class="'+(user.isBanned?"":"danger")+'">'+(user.isBanned?"РОЗБАНИТИ":"ЗАБАНИТИ")+'</button></div>';
+ '</div><div class="muted" style="margin-top:10px">ПКМ по рядку — дії з акаунтом</div>';
 }
 function fieldRow(label,value){return '<div class="field-line"><span>'+esc(label)+'</span><b>'+esc(value==null?"—":value)+'</b></div>'}
 function renderUsers(){
@@ -336,11 +336,6 @@ $("userMenu").addEventListener("click",async event=>{
  if(name==="ban"){await quickChange("isBanned",!user.isBanned);return}
  if(name==="tester"){await quickChange("isTester",!user.isTester);return}
  if(name==="verified"){await quickChange("isVerified",!user.isVerified);return}
-});
-$("selectedBody").addEventListener("click",event=>{
- const button=event.target.closest("[data-card-action]");if(!button)return;
- if(button.dataset.cardAction==="edit")openFieldEditor("nickname");
- if(button.dataset.cardAction==="ban"){const user=users.find(item=>String(item.id)===String(selectedId));if(user)quickChange("isBanned",!user.isBanned)}
 });
 $("fieldName").addEventListener("change",()=>setFieldControl($("fieldName").value));
 $("saveField").addEventListener("click",saveField);
