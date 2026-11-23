@@ -135,12 +135,23 @@
   }
 
   function start(){
+    const settingsScreen=$("settings");
+    const settingsView=document.querySelector('[data-sx-side-view="settings"]');
+    if(settingsScreen&&settingsView){
+      const settingsHeading=settingsScreen.querySelector(":scope > .sectionhead");
+      const settingsPanel=settingsScreen.querySelector(":scope > .panel.panelbody");
+      if(settingsHeading)settingsView.appendChild(settingsHeading);
+      if(settingsPanel)settingsView.appendChild(settingsPanel);
+      settingsScreen.hidden=true;
+    }
     document.querySelectorAll("[data-sx-side-tab]").forEach(button=>{
       button.addEventListener("click",()=>setRightTab(button.dataset.sxSideTab));
     });
     $("sxOpenClanPage")?.addEventListener("click",()=>window.sxShowMenuView?.("clan"));
-    $("settingsBack")?.addEventListener("click",()=>window.sxShowMenuView?.("home"));
-    $("profileSettingsBtn")?.addEventListener("click",()=>window.sxShowMenuView?.("settings"));
+    $("settingsBack")?.addEventListener("click",()=>setRightTab("clan"));
+    $("profileSettingsBtn")?.addEventListener("click",()=>{window.sxShowMenuView?.("home");setRightTab("settings")});
+    const originalShow=window.sxShowMenuView;
+    if(originalShow)window.sxShowMenuView=view=>{if(view==="settings"){originalShow("home");setRightTab("settings");return}originalShow(view)};
     $("adminSettingsBtn")?.addEventListener("click",openAdminPanel);
     $("adminSettingsBtn")?.addEventListener("click",openAdminPanel);
     addSectionBackButtons();
