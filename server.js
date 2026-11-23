@@ -2823,8 +2823,8 @@ function startAlliesRound(io, match, initial = false) {
   };
   // T starts lower-left; CT starts at the top of the supplied plan. The client snaps to the actual GLB floor.
   const sideSpawns = {
-    attack: [{...zone9PlanWorldPoint(.22,.91),y:0},{...zone9PlanWorldPoint(.25,.88),y:0}],
-    defense: [{...zone9PlanWorldPoint(.33,.07),y:0},{...zone9PlanWorldPoint(.36,.10),y:0}]
+    attack: [{...zone9PlanWorldPoint(.22,.86),y:0},{...zone9PlanWorldPoint(.25,.83),y:0}],
+    defense: [{...zone9PlanWorldPoint(.27,.07),y:0},{...zone9PlanWorldPoint(.30,.10),y:0}]
   };
   const teamIndices = { A: 0, B: 0 };
   for (const player of match.players) {
