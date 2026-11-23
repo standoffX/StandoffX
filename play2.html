@@ -2134,6 +2134,7 @@ const COLLISION_CELL_SIZE=8;
 const COLLISION_PLAYER_RADIUS=.38;
 let collisionGrid=new Map();
 let lastTacticalMapDraw=0;
+let lastEnemySightCheck=0;
 let isCrouching=false;
 let isFullMapOpen=false;
 let isLeavingMatch=false;
@@ -3741,7 +3742,7 @@ function drawRadarSite(ctx,id,point,mapX,mapY,full,color){
 function drawTacticalMaps(){
   if(!player)return;
   const now=performance.now();
-  if(selectedMap==="ZONE_9"&&zone9Root)updateEnemyLastSeen(now);
+  if(selectedMap==="ZONE_9"&&zone9Root&&now-lastEnemySightCheck>=220){updateEnemyLastSeen(now);lastEnemySightCheck=now}
   const fallbackLimit=worldLimit();
   const bounds=zone9Bounds||new THREE.Box3(
     new THREE.Vector3(-fallbackLimit,0,-fallbackLimit),
