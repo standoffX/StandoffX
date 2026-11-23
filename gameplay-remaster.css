@@ -50,3 +50,35 @@
  .hud .top-right #timer{font-size:11px!important}
  #score{top:7px!important;right:7px!important;left:auto!important;padding:6px 7px!important;font-size:7px!important}
 }
+
+/* Bottom team strip: visible player identities and right-click actions. */
+.squad-strip{position:absolute!important;top:auto!important;bottom:12px!important;left:50%!important;transform:translateX(-50%)!important;display:flex!important;flex-wrap:nowrap!important;gap:6px!important;align-items:center!important;justify-content:center!important;width:max-content!important;max-width:min(96vw,980px)!important;overflow-x:auto!important;overflow-y:hidden!important;padding:6px!important;background:#070d14d9!important;border:1px solid #8ca8bd32!important;border-radius:6px!important;backdrop-filter:blur(9px)!important;pointer-events:auto!important;z-index:24!important;scrollbar-width:thin!important}
+.squad-avatar{position:relative!important;display:flex!important;align-items:center!important;gap:7px!important;width:116px!important;min-width:116px!important;height:48px!important;flex:0 0 116px!important;padding:5px!important;border:1px solid #9bb4c75e!important;border-radius:4px!important;background:#101923f2!important;overflow:hidden!important;cursor:context-menu!important}
+.squad-avatar img{width:34px!important;height:34px!important;flex:0 0 34px!important;object-fit:cover!important;border-radius:3px!important}
+.squad-avatar .squad-player-meta{display:flex!important;flex-direction:column!important;justify-content:center!important;min-width:0!important;gap:4px!important}
+.squad-avatar .squad-avatar-name{position:static!important;display:block!important;max-width:65px!important;padding:0!important;background:transparent!important;font-size:9px!important;font-weight:900!important;text-align:left!important}
+.squad-avatar .squad-player-id{display:block!important;color:#8fa2af!important;font-size:7px!important;line-height:1.1!important;white-space:nowrap!important}
+.squad-avatar.is-me{border-color:#70df69!important;box-shadow:0 0 0 1px #70df6944!important}
+.squad-avatar:hover{border-color:#70df69!important;background:#17251d!important}
+#sxPauseMenu{position:fixed;inset:0;z-index:1500;display:none;align-items:center;justify-content:center;padding:18px;background:#05090edb;backdrop-filter:blur(12px)}
+#sxPauseMenu.open{display:flex}
+.sx-pause-card{width:min(440px,94vw);max-height:88dvh;overflow:auto;padding:22px;background:linear-gradient(145deg,#1a242d,#0c131a);border:1px solid #8faec52e;border-radius:8px;box-shadow:0 26px 90px #000b;color:#edf5fa}
+.sx-pause-kicker{color:#83a0b2;font-size:9px;font-weight:900;letter-spacing:2px}
+.sx-pause-card h2{margin:7px 0 18px;font-size:25px;letter-spacing:2px}
+.sx-pause-main-actions{display:grid;gap:8px}
+.sx-pause-main-actions button,.sx-pause-settings-head button{min-height:42px;padding:10px 13px;border:1px solid #829aab42;border-radius:4px;background:#ffffff09;color:#dce7ee;font-size:10px;font-weight:900;letter-spacing:.6px;cursor:pointer}
+.sx-pause-main-actions button:hover,.sx-pause-settings-head button:hover{border-color:#70df69;color:#bdf2b7}
+.sx-pause-main-actions .sx-pause-primary{background:#70df69;border-color:#70df69;color:#101810}
+#sxPauseSettings{margin-top:17px;padding-top:14px;border-top:1px solid #ffffff1b}
+.sx-pause-settings-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.sx-pause-settings-head b{font-size:10px;letter-spacing:1px}
+.sx-pause-settings-head button{min-height:29px;padding:5px 8px;font-size:8px}
+#sxPauseSettings label{display:block;margin:12px 0;color:#c8d6df;font-size:8px;font-weight:900;letter-spacing:.6px}
+#sxPauseSettings output{float:right;color:#70df69;font-variant-numeric:tabular-nums}
+#sxPauseSettings input[type=range]{display:block;width:100%;margin-top:9px;accent-color:#70df69}
+#sxPauseSettings select{display:block;width:100%;margin-top:7px;padding:8px;border:1px solid #ffffff25;border-radius:3px;background:#0d151c;color:#e4edf3}
+.sx-pause-settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#sxPauseCrossColor{display:block;width:100%;height:34px;margin-top:7px;border:1px solid #ffffff25;background:#0d151c}
+.sx-pause-cross-preview{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px;border:1px solid #ffffff19;background:#070d13;border-radius:3px;color:#9aadb9;font-size:8px;font-weight:900}
+#sxPauseCrossPreview{margin:0 auto}
+@media(max-width:800px){.squad-strip{bottom:66px!important;max-width:96vw!important;justify-content:flex-start!important;gap:4px!important;padding:4px!important}.squad-avatar{width:104px!important;min-width:104px!important;flex-basis:104px!important;height:43px!important;padding:4px!important}.squad-avatar img{width:29px!important;height:29px!important;flex-basis:29px!important}.squad-avatar .squad-avatar-name{max-width:58px!important;font-size:8px!important}.squad-avatar .squad-player-id{font-size:6px!important}.sx-pause-card{padding:17px}.sx-pause-card h2{font-size:21px}}
