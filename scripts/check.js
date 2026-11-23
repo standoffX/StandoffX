@@ -307,7 +307,8 @@ assert.doesNotMatch(admin, /class="tabs"/);
 assert.match(socialJs, /id="sxMessageMenu"/);
 assert.match(socialJs, /function showMessageMenu/);
 assert.match(socialJs, /data-message-react/);
-assert.doesNotMatch(socialJs.slice(socialJs.indexOf("function renderMessages(){"),socialJs.indexOf("\\nfunction hideMessageMenu")), /sx-msg-actions|data-react=/);
+const messageRenderer=socialJs.slice(socialJs.indexOf("function renderMessages(){"),socialJs.indexOf("function hideMessageMenu"));
+assert.doesNotMatch(messageRenderer, /sx-msg-actions|data-react=/);
 assert.match(socialCss, /\.sx-message-menu/);
 assert.match(game, /fallbackTextureNames/);
 assert.match(game, /p350_d\.png/);
@@ -315,5 +316,8 @@ assert.match(game, /awmf_ds\.png/);
 assert.match(game, /m1014_d_0\.png/);
 assert.match(game, /zone9VisibilityRaycaster\.camera=camera/);
 assert.match(game, /function joinGameplaySession\(\)/);
+assert.match(game, /manager\.addHandler\(\/\\\.tga\$\/i/);
+assert.match(game, /zone9VisibilityRaycaster\.camera=camera/);
+assert.match(admin, /postMessage\(\{type:\s*"sx:admin-close"/);
 
 console.log("OK StandoffX Zone 9, 2v2/FFA/3v3, admin context editor, chat menus, FBX/TGA fallbacks and mobile landscape invariants");
