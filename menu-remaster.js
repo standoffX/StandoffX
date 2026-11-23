@@ -70,7 +70,7 @@
       if(online)online.textContent=String(onlineCount);
       if(description)description.textContent=String(data.clan.description||"Клан без опису.");
       label.textContent=data.clan.name||"["+data.clan.tag+"]";
-      sub("["+data.clan.tag+"] · "+onlineCount+" ОНЛАЙН · "+String(data.myRole||"member").toUpperCase());
+      sub.textContent="["+data.clan.tag+"] · "+onlineCount+" ОНЛАЙН · "+String(data.myRole||"member").toUpperCase();
       summary?.classList.remove("is-empty");
     }catch(error){
       if(request===clanRequest)sub.textContent="КЛАН НЕДОСТУПНИЙ";
@@ -149,10 +149,10 @@
     });
     $("sxOpenClanPage")?.addEventListener("click",()=>window.sxShowMenuView?.("clan"));
     $("settingsBack")?.addEventListener("click",()=>setRightTab("clan"));
+    $("settingsExit")?.addEventListener("click",()=>{$("logout")?.click()});
     $("profileSettingsBtn")?.addEventListener("click",()=>{window.sxShowMenuView?.("home");setRightTab("settings")});
     const originalShow=window.sxShowMenuView;
     if(originalShow)window.sxShowMenuView=view=>{if(view==="settings"){originalShow("home");setRightTab("settings");return}originalShow(view)};
-    $("adminSettingsBtn")?.addEventListener("click",openAdminPanel);
     $("adminSettingsBtn")?.addEventListener("click",openAdminPanel);
     addSectionBackButtons();
     document.addEventListener("click",event=>{
@@ -161,6 +161,7 @@
     });
     window.sxOpenAdminPanel=openAdminPanel;
     window.addEventListener("keydown",event=>{if(event.key==="Escape")closeAdminPanel()});
+    window.addEventListener("message",event=>{if(event.origin===location.origin&&event.data?.type==="sx:admin-close")closeAdminPanel()});
     window.addEventListener("sx:user-updated",event=>{
       updateStats(event.detail||window.__sxMenuUser);
       updateClan();
