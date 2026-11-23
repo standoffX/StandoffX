@@ -2905,7 +2905,7 @@ function snapPlayerToZone9Floor(searchNearby=false){
   const referenceY=Number(player.position.y)||0;
   let floor=zone9FloorAt(x,z,referenceY,searchNearby?18:3.2);
   if(floor===null&&searchNearby){
-    const preferredSide=myTeam==="B"||(!myTeam&&localStorage.getItem("sx-agent-side")==="T")?"T":"CT";
+    const preferredSide=(attackingTeam&&myTeam===attackingTeam)?"T":((defendingTeam&&myTeam===defendingTeam)?"CT":(myTeam==="B"||(!myTeam&&localStorage.getItem("sx-agent-side")==="T")?"T":"CT"));
     let best=null,bestScore=Infinity;
     const offsets=[[0,0],[2,0],[-2,0],[0,2],[0,-2],[3,3],[3,-3],[-3,3],[-3,-3],[5,0],[-5,0],[0,5],[0,-5],[7,0],[-7,0],[0,7],[0,-7],[9,0],[-9,0],[0,9],[0,-9]];
     for(const [ox,oz] of offsets){
@@ -2920,7 +2920,7 @@ function snapPlayerToZone9Floor(searchNearby=false){
     if(best){x=best.x;z=best.z;floor=best.y}
   }
   if(floor===null&&searchNearby){
-    const preferredSide=myTeam==="B"||(!myTeam&&localStorage.getItem("sx-agent-side")==="T")?"T":"CT";
+    const preferredSide=(attackingTeam&&myTeam===attackingTeam)?"T":((defendingTeam&&myTeam===defendingTeam)?"CT":(myTeam==="B"||(!myTeam&&localStorage.getItem("sx-agent-side")==="T")?"T":"CT"));
     const sign=preferredSide==="T"?1:-1;
     const extentX=Math.min(112,Math.max(28,Math.min(Math.abs(zone9Bounds.min.x),Math.abs(zone9Bounds.max.x))-8));
     const extentZ=Math.min(112,Math.max(28,Math.min(Math.abs(zone9Bounds.min.z),Math.abs(zone9Bounds.max.z))-8));
