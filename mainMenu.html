@@ -2132,7 +2132,10 @@ function openPlay(){
       :"Очікуємо інших гравців...";
   });
   socket.on("match_found",d=>{
+    searching=false;
+    $("searchModal").classList.remove("show");
     sessionStorage.setItem("myPlayerId",d.userId);sessionStorage.removeItem("myPlayerUUID");sessionStorage.setItem("currentMatchId",d.matchId);
+    sessionStorage.removeItem("trainingId");
     sessionStorage.setItem("selectedMap",d.map||selectedMap);sessionStorage.setItem("selectedMode",d.mode||selectedMode);
     try{localStorage.setItem("sx_active_match",JSON.stringify({matchId:d.matchId,userId:d.userId,map:d.map||selectedMap,mode:d.mode||selectedMode,updatedAt:Date.now()}))}catch{}
     location.href="/play2.html";
