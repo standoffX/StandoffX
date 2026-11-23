@@ -9,7 +9,8 @@ function ensureSocialShell(){
  <div id="sxFriendMenu" role="menu" aria-label="Дії з другом">
   <div class="sx-context-person"><img id="sxContextAvatar" src="/avatars/default.jpg" alt=""><div><b id="sxContextName">PLAYER</b><small id="sxContextStatus">НЕ В МЕРЕЖІ</small></div></div>
   <button type="button" data-sx-action="lobby"><span class="sx-menu-icon">♟</span><span id="sxContextLobbyLabel">ЗАПРОСИТИ ДО ЛОБІ</span></button>
-  <button type="button" data-sx-action="profile"><span class="sx-menu-icon">◉</span><span>ПРОФІЛЬ ГРАВЦЯ</span></button>
+  <button type="button" data-sx-action="friend"><span class="sx-menu-icon">＋</span><span>ДОДАТИ ДО ДРУЗІВ</span></button>
+  <button type="button" data-sx-action="profile"><span class="sx-menu-icon">◉</span><span>ПЕРЕГЛЯНУТИ СТАТИСТИКУ</span></button>
   <button type="button" data-sx-action="clan"><span class="sx-menu-icon">♜</span><span>ЗАПРОСИТИ ДО КЛАНУ</span></button>
   <div class="sx-menu-separator"></div>
   <button type="button" data-sx-action="message"><span class="sx-menu-icon">✉</span><span>НАПИСАТИ ПОВІДОМЛЕННЯ</span></button>
