@@ -15,6 +15,21 @@ function ensureSocialShell(){
   <div class="sx-menu-separator"></div>
   <button type="button" data-sx-action="message"><span class="sx-menu-icon">✉</span><span>НАПИСАТИ ПОВІДОМЛЕННЯ</span></button>
  </div>
+ <div id="sxMessageMenu" class="sx-message-menu" role="menu" aria-label="Дії з повідомленням">
+  <div class="sx-message-menu-title" id="sxMessageMenuTitle">ПОВІДОМЛЕННЯ</div>
+  <div class="sx-message-reactions">
+   <button type="button" data-message-react="👍">👍</button>
+   <button type="button" data-message-react="❤️">❤️</button>
+   <button type="button" data-message-react="😂">😂</button>
+   <button type="button" data-message-react="😮">😮</button>
+   <button type="button" data-message-react="😢">😢</button>
+   <button type="button" data-message-react="🔥">🔥</button>
+   <button type="button" data-message-react="👏">👏</button>
+  </div>
+  <div class="sx-message-menu-separator" id="sxMessageOwnerSeparator" hidden></div>
+  <button type="button" data-message-action="edit" id="sxMessageEdit" hidden>ЗМІНИТИ</button>
+  <button type="button" data-message-action="delete" id="sxMessageDelete" class="danger" hidden>ВИДАЛИТИ</button>
+ </div>
  <div id="sxPlayerProfileModal" class="modal sx-social-modal" role="dialog" aria-modal="true" aria-label="Профіль гравця">
   <div class="modalbox"><div class="modalhead"><span>ПРОФІЛЬ ГРАВЦЯ</span><button class="close" type="button" data-sx-close="sxPlayerProfileModal" aria-label="Назад">←</button></div><div id="sxPlayerProfileBody"></div></div>
  </div>
@@ -43,8 +58,8 @@ const notify=message=>{if(typeof notifyToast==="function")notifyToast(message);e
 const apiGet=async url=>{const r=await fetch(url,{credentials:"same-origin"});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||"Не вдалося завантажити дані.");return d};
 const apiPost=async(url,body)=>{const r=await fetch(url,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||"Не вдалося виконати дію.");return d};
 const guest=()=>Boolean(typeof me!=="undefined"&&me&&me.isGuest);
-let socketRef=null,friendMap=new Map(),activeFriend=null,chatMessages=[],chatDialogs=[],unread=new Map(),pendingInvites=new Map(),activeLobby=null,clanInvite=null,chatOpen=false,editingId=null,noticeId=0,contextFriend=null;
-const menu=byId("sxFriendMenu"),chatModal=byId("sxChatModal"),profileModal=byId("sxPlayerProfileModal"),lobbyModal=byId("sxLobbyModal"),clanModal=byId("sxClanInviteModal"),noticeStack=byId("sxNoticeStack");
+let socketRef=null,friendMap=new Map(),activeFriend=null,chatMessages=[],chatDialogs=[],unread=new Map(),pendingInvites=new Map(),activeLobby=null,clanInvite=null,chatOpen=false,editingId=null,noticeId=0,contextFriend=null,contextMessageId=null;
+const menu=byId("sxFriendMenu"),messageMenu=byId("sxMessageMenu"),chatModal=byId("sxChatModal"),profileModal=byId("sxPlayerProfileModal"),lobbyModal=byId("sxLobbyModal"),clanModal=byId("sxClanInviteModal"),noticeStack=byId("sxNoticeStack");
 const setOpen=(node)=>node&&node.classList.add("show");
 const setClosed=(node)=>{if(!node)return;node.classList.remove("show");if(node===profileModal)window.dispatchEvent(new Event("sx:close-friend-profile"))};
 
@@ -94,9 +109,15 @@ function showFriendMenu(friend,x,y){
  const friendActionButton=menu.querySelector('[data-sx-action="friend"]');
  const alreadyFriend=friendMap.has(String(friend.id))||(Array.isArray(me?.friendsList)&&me.friendsList.map(String).includes(String(friend.id)));
  if(friendActionButton){friendActionButton.disabled=guest()||alreadyFriend||String(friend.id)===String(me?.id||"");friendActionButton.textContent=alreadyFriend?"ВЖЕ ДРУЗІ":"ДОДАТИ ДО ДРУЗІВ";}
- menu.style.left=Math.max(8,Math.min(x,window.innerWidth-236))+"px";
- menu.style.top=Math.max(8,Math.min(y,window.innerHeight-245))+"px";
  menu.classList.add("open");
+ menu.style.visibility="hidden";
+ menu.style.left="8px";menu.style.top="8px";
+ const bounds=menu.getBoundingClientRect();
+ const left=Math.max(8,Math.min(Number(x)||8,window.innerWidth-bounds.width-8));
+ let top=(Number(y)||8)+8;
+ if(top+bounds.height>window.innerHeight-8&&Number(y)-bounds.height-8>=8)top=Number(y)-bounds.height-8;
+ top=Math.max(8,Math.min(top,window.innerHeight-bounds.height-8));
+ menu.style.left=left+"px";menu.style.top=top+"px";menu.style.visibility="";
 }
 function renderProfile(profile){
  const profileBody=byId("sxPlayerProfileBody");if(!profileBody)return;
@@ -171,23 +192,48 @@ function renderMessages(){
  const root=byId("sxChatMessages");
  if(!root)return;
  if(!activeFriend){root.innerHTML='<div class="sx-chat-empty">Тут будуть твої повідомлення.</div>';return}
- if(!chatMessages.length){root.innerHTML='<div class="sx-chat-empty">Переписка порожня. Напиши першим.</div>';return}
+ if(!chatMessages.length){root.innerHTML='<div class="sx-chat-empty">Переписка порожня.</div>';return}
  const nearBottom=root.scrollHeight-root.scrollTop-root.clientHeight<100;
  root.innerHTML=chatMessages.map(function(message){
   const mine=String(message.senderId)===String(me?.id),deleted=Boolean(message.deleted),editing=String(editingId||"")===String(message.id);
   const reactionRows=Array.isArray(message.reactions)?message.reactions:[];
-  const reactionHtml=reactionRows.map(function(row){return '<button type="button" data-react="'+esc(row.emoji)+'" data-message="'+esc(message.id)+'">'+esc(row.emoji)+' '+(row.users||[]).length+'</button>'}).join("");
-  const actions=deleted?"":(mine?'<button type="button" data-edit="'+esc(message.id)+'">ЗМІНИТИ</button><button type="button" data-delete="'+esc(message.id)+'">ВИДАЛИТИ</button>':"")+reactions.slice(0,3).map(function(emoji){return '<button type="button" data-react="'+emoji+'" data-message="'+esc(message.id)+'">'+emoji+'</button>'}).join("");
+  const reactionHtml=reactionRows.map(function(row){
+   return '<span class="sx-reaction-chip">'+esc(row.emoji)+' '+(row.users||[]).length+'</span>';
+  }).join("");
   let body;
   if(editing){
    body='<textarea data-edit-input="'+esc(message.id)+'">'+esc(message.text||"")+'</textarea><div class="sx-chat-edit-actions"><button type="button" data-edit-cancel="'+esc(message.id)+'">СКАСУВАТИ</button><button class="save" type="button" data-edit-save="'+esc(message.id)+'">ЗБЕРЕГТИ</button></div>';
   }else{
    body='<p>'+(deleted?"Повідомлення видалено":esc(message.text||""))+'</p>';
   }
-  return '<article class="sx-chat-message'+(mine?" mine":"")+(deleted?" deleted":"")+'"><div>'+body+'</div><div class="sx-msg-meta">'+esc(nowTime(message.time))+(message.editedAt&&!deleted?" · ред.":"")+'</div>'+(reactionHtml?'<div class="sx-reactions">'+reactionHtml+'</div>':"")+(actions?'<div class="sx-msg-actions">'+actions+'</div>':"")+'</article>';
+  return '<article class="sx-chat-message'+(mine?" mine":"")+(deleted?" deleted":"")+'" data-message-id="'+esc(message.id)+'" data-message-owner="'+(mine?"true":"false")+'"><div>'+body+'</div><div class="sx-msg-meta">'+esc(nowTime(message.time))+(message.editedAt&&!deleted?" · ред.":"")+'</div>'+(reactionHtml?'<div class="sx-reactions">'+reactionHtml+'</div>':"")+'</article>';
  }).join("");
  if(nearBottom)root.scrollTop=root.scrollHeight;
 }
+function hideMessageMenu(){
+ if(messageMenu)messageMenu.classList.remove("open");
+ contextMessageId=null;
+}
+function showMessageMenu(messageId,x,y){
+ const message=chatMessages.find(item=>String(item.id)===String(messageId));
+ if(!message||!messageMenu)return;
+ contextMessageId=String(message.id);
+ const mine=String(message.senderId)===String(me?.id);
+ const ownerSeparator=byId("sxMessageOwnerSeparator"),edit=byId("sxMessageEdit"),remove=byId("sxMessageDelete"),title=byId("sxMessageMenuTitle");
+ if(title)title.textContent=mine?"МОЄ ПОВІДОМЛЕННЯ":"ПОВІДОМЛЕННЯ";
+ if(ownerSeparator)ownerSeparator.hidden=!mine||Boolean(message.deleted);
+ if(edit)edit.hidden=!mine||Boolean(message.deleted);
+ if(remove)remove.hidden=!mine||Boolean(message.deleted);
+ messageMenu.classList.add("open");
+ messageMenu.style.visibility="hidden";messageMenu.style.left="8px";messageMenu.style.top="8px";
+ const bounds=messageMenu.getBoundingClientRect();
+ const left=Math.max(8,Math.min(Number(x)||8,window.innerWidth-bounds.width-8));
+ let top=(Number(y)||8)+8;
+ if(top+bounds.height>window.innerHeight-8&&Number(y)-bounds.height-8>=8)top=Number(y)-bounds.height-8;
+ top=Math.max(8,Math.min(top,window.innerHeight-bounds.height-8));
+ messageMenu.style.left=left+"px";messageMenu.style.top=top+"px";messageMenu.style.visibility="";
+}
+
 function leaveActiveChat(){
  if(activeFriend&&socketRef?.connected)socketRef.emit("leave_chat",{friendId:activeFriend.id});
  activeFriend=null;chatMessages=[];editingId=null;
@@ -346,11 +392,35 @@ function openFriendRow(row,x,y){
  const friend=rowFriend(row);if(friend)showFriendMenu(friend,x,y);
 }
 document.addEventListener("contextmenu",function(event){
+ const messageRow=event.target.closest("#sxChatMessages .sx-chat-message[data-message-id]");
+ if(messageRow){
+  event.preventDefault();hideFriendMenu();
+  showMessageMenu(messageRow.dataset.messageId,event.clientX,event.clientY);
+  return;
+ }
  const row=event.target.closest("[data-friend-id],[data-player-id]");
  if(!row)return;
- event.preventDefault();openFriendRow(row,event.clientX,event.clientY);
+ event.preventDefault();hideMessageMenu();openFriendRow(row,event.clientX,event.clientY);
 });
 document.addEventListener("click",function(event){
+ const messageReaction=event.target.closest("#sxMessageMenu [data-message-react]");
+ if(messageReaction&&contextMessageId){
+  socketRef?.emit("react_msg",{toId:activeFriend?.id,messageId:contextMessageId,emoji:messageReaction.dataset.messageReact});
+  hideMessageMenu();return;
+ }
+ const messageAction=event.target.closest("#sxMessageMenu [data-message-action]");
+ if(messageAction&&contextMessageId){
+  const action=messageAction.dataset.messageAction,id=contextMessageId;
+  hideMessageMenu();
+  if(action==="edit"){
+   editingId=id;renderMessages();
+   byId("sxChatMessages")?.querySelector('[data-edit-input="'+CSS.escape(id)+'"]')?.focus();
+  }else if(action==="delete"&&window.confirm("Видалити це повідомлення для обох учасників?")){
+   socketRef?.emit("delete_msg",{toId:activeFriend?.id,messageId:id});
+  }
+  return;
+ }
+ if(!event.target.closest("#sxMessageMenu"))hideMessageMenu();
  const menuTrigger=event.target.closest("[data-friend-menu]");
  if(menuTrigger){const row=menuTrigger.closest("[data-friend-id]");const rect=menuTrigger.getBoundingClientRect();openFriendRow(row,rect.left,rect.bottom+4);return}
  const action=event.target.closest("#sxFriendMenu [data-sx-action]");
@@ -396,7 +466,7 @@ byId("sxSendMessage")?.addEventListener("click",sendMessage);
 byId("sxMessageInput")?.addEventListener("keydown",function(event){if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();sendMessage()}});
 byId("sxClanAccept")?.addEventListener("click",function(){respondClanInvite(true)});
 byId("sxClanDecline")?.addEventListener("click",function(){respondClanInvite(false)});
-window.addEventListener("keydown",function(event){if(event.key==="Escape"){hideFriendMenu();if(chatOpen){setClosed(chatModal);chatOpen=false;if(activeFriend&&socketRef?.connected)socketRef.emit("leave_chat",{friendId:activeFriend.id});activeFriend=null;chatMessages=[]}}});
+window.addEventListener("keydown",function(event){if(event.key==="Escape"){hideFriendMenu();hideMessageMenu();if(chatOpen){setClosed(chatModal);chatOpen=false;if(activeFriend&&socketRef?.connected)socketRef.emit("leave_chat",{friendId:activeFriend.id});activeFriend=null;chatMessages=[]}}});
 window.sxOpenMessages=openMessages;
 window.sxOpenLobby=openLobbyModal;
 window.sxOpenChat=openChat;
