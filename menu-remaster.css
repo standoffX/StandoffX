@@ -552,3 +552,19 @@ body.lobby-screen .rail{bottom:9px!important}
  .sx-settings-admin{align-items:flex-start!important;flex-direction:column!important}
  .sx-settings-admin button{width:100%!important}
 }
+
+/* Six compact player tabs; the complete settings panel now lives in this row. */
+#home .sx-side-tabs{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:2px!important}
+#home .sx-side-tab{min-width:0!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important;padding:6px 1px!important}
+#home .sx-side-tab svg{width:15px!important;height:15px!important;flex:0 0 15px!important}
+#home .sx-side-tab span{font-size:6.5px!important;letter-spacing:.2px!important;white-space:nowrap!important}
+#home .sx-settings-side-view{min-height:0!important;max-height:clamp(210px,42vh,460px)!important;overflow:auto!important;overscroll-behavior:contain!important;padding-right:3px!important;scrollbar-width:thin!important;scrollbar-color:#ffffff28 transparent!important}
+#home .sx-settings-side-view>.sectionhead{display:flex!important;align-items:center!important;gap:8px!important;margin:0 0 8px!important;padding:0!important}
+#home .sx-settings-side-view>.sectionhead h2{font-size:10px!important}
+#home .sx-settings-side-view>.panel.panelbody{padding:9px!important;background:transparent!important;border:0!important;box-shadow:none!important}
+#home .sx-settings-side-view h3{font-size:9px!important;margin:9px 0 6px!important}
+#home .sx-settings-side-view label{font-size:8px!important}
+#home .sx-settings-side-view .layout-editor{margin-top:12px!important}
+#home .sx-settings-side-view .layout-editor-grid{grid-template-columns:minmax(0,1fr)!important}
+#home .sx-settings-side-view #layoutStage{max-width:250px!important;margin:auto!important}
+@media(max-width:760px){#home .sx-side-tabs{grid-template-columns:repeat(6,minmax(0,1fr))!important}#home .sx-side-tab span{font-size:6px!important}#home .sx-settings-side-view{max-height:38vh!important}}
