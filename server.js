@@ -2626,8 +2626,9 @@ function respawnPlayer(match, player) {
 }
 
 const ZONE9_BOMB_SITES = Object.freeze({
-  A: Object.freeze({ x: 48, z: 70 }),
-  B: Object.freeze({ x: -72, z: -40 })
+  // Normalized positions from the supplied Zone 9 plan (world bounds are centred at 0, ±140).
+  A: Object.freeze({ x: -92, z: -45 }),
+  B: Object.freeze({ x: 78, z: -36 })
 });
 
 function alliesSide(match, team) {
@@ -2815,11 +2816,10 @@ function startAlliesRound(io, match, initial = false) {
     action: null,
     explodeTimer: null
   };
-  // Reposition allies on Zone 9 side anchors every round.
+  // Team start areas follow the supplied top-down Zone 9 plan; the client snaps to the nearest real GLB floor.
   const sideSpawns = {
-    // Zone 9: T is north-east (+X,-Z); CT is south-west (-X,+Z).
-    attack: [{x:92,y:0,z:-92},{x:86,y:0,z:-92}],
-    defense: [{x:-92,y:0,z:92},{x:-86,y:0,z:92}]
+    attack: [{x:-78,y:0,z:115},{x:-72,y:0,z:108}],
+    defense: [{x:-48,y:0,z:-120},{x:-42,y:0,z:-113}]
   };
   const teamIndices = { A: 0, B: 0 };
   for (const player of match.players) {
