@@ -586,7 +586,7 @@ html,body{font-family:Inter,"Nunito",system-ui,-apple-system,"Segoe UI",sans-ser
   <div id="squadStrip" class="squad-strip" aria-label="Учасники матчу"></div>
 </div>
 <div id="radarWrap" aria-label="Радар команди"><canvas id="radarCanvas" width="220" height="220"></canvas><span>TEAM RADAR</span></div>
-<div id="fullMapOverlay" aria-label="Повна карта" style="display:none"><div id="fullMapPanel"><div id="fullMapTitle">TACTICAL MAP <span>F — УТРИМУВАТИ</span></div><canvas id="fullMapCanvas" width="1000" height="760"></canvas><div id="fullMapLegend"><span class="legend-me">● ТИ</span><span class="legend-team">● СОЮЗНИКИ</span><span class="legend-wall">■ СТІНИ / УКРИТТЯ</span></div></div></div>
+<div id="fullMapOverlay" aria-label="Повна карта" style="display:none"><div id="fullMapPanel"><div id="fullMapTitle">TACTICAL MAP <span>F — УТРИМУВАТИ</span></div><canvas id="fullMapCanvas" width="1000" height="760"></canvas><div id="fullMapLegend"><span class="legend-me">● ТИ</span><span class="legend-team">● СОЮЗНИКИ</span><span style="color:#ff637a">◎ ОСТАННІЙ КОНТАКТ</span><span class="legend-wall">■ СТІНИ / УКРИТТЯ</span></div></div></div>
 
 
 <div id="sxPauseMenu" aria-hidden="true">
@@ -813,8 +813,10 @@ const loader=new GLTFLoader();
 const mapObjects=[];
 let zone9Root=null;
 let zone9Bounds=null;
+let zone9RadarBase=null;
 let zone9AssetState="not-loaded";
 const zone9GroundRaycaster=new THREE.Raycaster();
+const zone9VisibilityRaycaster=new THREE.Raycaster();
 const zone9GroundDown=new THREE.Vector3(0,-1,0);
 const zone9GroundCache=new Map();
 const HILL_TOWN_MANIFEST_URL="https://3dassets.dev/api/v1/packs/tactical-shooter-hill-town";
@@ -2899,45 +2901,55 @@ function zone9FloorAt(x,z,referenceY=0,maxDelta=4){
   }
   return bestY;
 }
+
+
+const ZONE9_PLAN = Object.freeze({
+  A:{u:.17,v:.34},
+  B:{u:.78,v:.37},
+  CT:{u:.33,v:.07},
+  T:{u:.22,v:.91}
+});
+function zone9PlanPoint(point){
+  if(!zone9Bounds)return null;
+  const size=zone9Bounds.getSize(new THREE.Vector3());
+  return {x:zone9Bounds.min.x+size.x*point.u,z:zone9Bounds.min.z+size.z*point.v};
+}
+function zone9FindPlanFloor(point,referenceY=0,radius=28){
+  const target=zone9PlanPoint(point);
+  if(!target)return null;
+  const maxDelta=Math.max(28,zone9Bounds.max.y-zone9Bounds.min.y+12);
+  let best=null,bestScore=Infinity;
+  const step=4;
+  for(let dx=-radius;dx<=radius;dx+=step){
+    for(let dz=-radius;dz<=radius;dz+=step){
+      const distance=Math.hypot(dx,dz);
+      if(distance>radius)continue;
+      const x=target.x+dx,z=target.z+dz;
+      const floor=zone9FloorAt(x,z,referenceY,maxDelta);
+      if(floor===null)continue;
+      const score=distance+Math.abs(floor-referenceY)*.12;
+      if(score<bestScore){bestScore=score;best={x,z,y:floor}}
+    }
+  }
+  return best;
+}
+
 function snapPlayerToZone9Floor(searchNearby=false){
   if(!player||!zone9Root||!zone9Bounds||selectedMap!=="ZONE_9")return false;
-  let x=player.position.x,z=player.position.z;
   const referenceY=Number(player.position.y)||0;
-  let floor=zone9FloorAt(x,z,referenceY,searchNearby?18:3.2);
-  if(floor===null&&searchNearby){
-    const preferredSide=(attackingTeam&&myTeam===attackingTeam)?"T":((defendingTeam&&myTeam===defendingTeam)?"CT":(myTeam==="B"||(!myTeam&&localStorage.getItem("sx-agent-side")==="T")?"T":"CT"));
-    let best=null,bestScore=Infinity;
-    const offsets=[[0,0],[2,0],[-2,0],[0,2],[0,-2],[3,3],[3,-3],[-3,3],[-3,-3],[5,0],[-5,0],[0,5],[0,-5],[7,0],[-7,0],[0,7],[0,-7],[9,0],[-9,0],[0,9],[0,-9]];
-    for(const [ox,oz] of offsets){
-      const candidateX=x+ox,candidateZ=z+oz;
-      const sameQuadrant=preferredSide==="CT"?(candidateX<0&&candidateZ>0):(candidateX>0&&candidateZ<0);
-      if(!sameQuadrant)continue;
-      const candidateFloor=zone9FloorAt(candidateX,candidateZ,referenceY,22);
-      if(candidateFloor===null)continue;
-      const score=Math.hypot(ox,oz)+Math.abs(candidateFloor-referenceY)*.12;
-      if(score<bestScore){bestScore=score;best={x:candidateX,z:candidateZ,y:candidateFloor}}
-    }
-    if(best){x=best.x;z=best.z;floor=best.y}
-  }
-  if(floor===null&&searchNearby){
-    const preferredSide=(attackingTeam&&myTeam===attackingTeam)?"T":((defendingTeam&&myTeam===defendingTeam)?"CT":(myTeam==="B"||(!myTeam&&localStorage.getItem("sx-agent-side")==="T")?"T":"CT"));
-    const sign=preferredSide==="T"?1:-1;
-    const extentX=Math.min(112,Math.max(28,Math.min(Math.abs(zone9Bounds.min.x),Math.abs(zone9Bounds.max.x))-8));
-    const extentZ=Math.min(112,Math.max(28,Math.min(Math.abs(zone9Bounds.min.z),Math.abs(zone9Bounds.max.z))-8));
-    let best=null,bestScore=Infinity;
-    for(let ix=2;ix<=extentX;ix+=8){
-      for(let iz=2;iz<=extentZ;iz+=8){
-        const candidateX=sign*ix,candidateZ=-sign*iz;
-        const candidateFloor=zone9FloorAt(candidateX,candidateZ,referenceY,Math.max(38,zone9Bounds.max.y-zone9Bounds.min.y+12));
-        if(candidateFloor===null)continue;
-        const score=Math.hypot(candidateX-x,candidateZ-z)+Math.abs(candidateFloor-referenceY)*.18;
-        if(score<bestScore){bestScore=score;best={x:candidateX,z:candidateZ,y:candidateFloor}}
-      }
-    }
-    if(best){x=best.x;z=best.z;floor=best.y}
+  let x=player.position.x,z=player.position.z;
+  let floor=zone9FloorAt(x,z,referenceY,searchNearby?28:3.2);
+  if(searchNearby){
+    const isAttacking=myTeam&&attackingTeam&&String(myTeam)===String(attackingTeam);
+    const isDefending=myTeam&&defendingTeam&&String(myTeam)===String(defendingTeam);
+    const fallbackSide=localStorage.getItem("sx-agent-side")==="T"?"T":"CT";
+    const side=isTrainingMode?fallbackSide:(isAttacking?"T":(isDefending?"CT":fallbackSide));
+    const anchor=isTrainingMode?{u:.50,v:.52}:ZONE9_PLAN[side];
+    const candidate=zone9FindPlanFloor(anchor,referenceY,34);
+    if(candidate){x=candidate.x;z=candidate.z;floor=candidate.y}
   }
   if(floor===null){
-    console.warn("[Zone 9] Ground surface not found at player position",x,z,referenceY);
+    console.warn("[Zone 9] No walkable floor near the selected spawn",x,z,referenceY);
     return false;
   }
   player.position.set(x,floor+.045,z);
@@ -2953,32 +2965,145 @@ let zone9TacticalMarkers=null;
 function buildZone9TacticalMarkers(){
   if(!zone9Root||zone9TacticalMarkers)return;
   const root=new THREE.Group();root.name="Zone9TacticalMarkers";
-  const sites=[{id:"A",x:48,z:70,color:0xf0b34f},{id:"B",x:-72,z:-40,color:0x63b7ff}];
+  const sites=[
+    {id:"A",plan:ZONE9_PLAN.A,color:0xf0b34f},
+    {id:"B",plan:ZONE9_PLAN.B,color:0x63b7ff}
+  ];
   for(const site of sites){
-    const floor=zone9FloorAt(site.x,site.z,0,60);
-    if(floor===null)continue;
-    const marker=new THREE.Group();marker.position.set(site.x,floor+.08,site.z);
+    const point=zone9FindPlanFloor(site.plan,0,16);
+    if(!point)continue;
+    const marker=new THREE.Group();marker.position.set(point.x,point.y+.08,point.z);
     const ring=new THREE.Mesh(
       new THREE.TorusGeometry(5.2,.13,8,48),
-      new THREE.MeshStandardMaterial({color:site.color,emissive:site.color,emissiveIntensity:.75,roughness:.42,metalness:.15})
+      new THREE.MeshBasicMaterial({color:site.color,transparent:true,opacity:.9})
     );
     ring.rotation.x=Math.PI/2;ring.position.y=.08;marker.add(ring);
     const inner=new THREE.Mesh(
       new THREE.CircleGeometry(4.8,40),
-      new THREE.MeshBasicMaterial({color:site.color,transparent:true,opacity:.12,depthWrite:false,side:THREE.DoubleSide})
+      new THREE.MeshBasicMaterial({color:site.color,transparent:true,opacity:.1,depthWrite:false,side:THREE.DoubleSide})
     );
     inner.rotation.x=-Math.PI/2;inner.position.y=.045;marker.add(inner);
-    const labelCanvas=document.createElement("canvas");labelCanvas.width=256;labelCanvas.height=128;
+    const labelCanvas=document.createElement("canvas");labelCanvas.width=192;labelCanvas.height=96;
     const ctx=labelCanvas.getContext("2d");
-    ctx.fillStyle="rgba(7,13,20,.88)";ctx.fillRect(18,20,220,88);
-    ctx.strokeStyle="#"+site.color.toString(16).padStart(6,"0");ctx.lineWidth=5;ctx.strokeRect(18,20,220,88);
-    ctx.fillStyle="#ffffff";ctx.font="bold 66px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("SITE "+site.id,128,66);
+    ctx.fillStyle="rgba(7,13,20,.88)";ctx.fillRect(12,12,168,72);
+    ctx.strokeStyle="#"+site.color.toString(16).padStart(6,"0");ctx.lineWidth=4;ctx.strokeRect(12,12,168,72);
+    ctx.fillStyle="#ffffff";ctx.font="bold 50px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(site.id,96,48);
     const texture=new THREE.CanvasTexture(labelCanvas);texture.colorSpace=THREE.SRGBColorSpace;
     const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false}));
-    sprite.scale.set(6.8,3.4,1);sprite.position.y=3.4;marker.add(sprite);
+    sprite.scale.set(5.2,2.6,1);sprite.position.y=3.1;marker.add(sprite);
     root.add(marker);
   }
   zone9Root.add(root);zone9TacticalMarkers=root;
+}
+
+
+function buildZone9RadarBase(){
+  if(!zone9Root||!zone9Bounds||zone9RadarBase)return;
+  const size=zone9Bounds.getSize(new THREE.Vector3());
+  if(size.x<=0||size.z<=0)return;
+  const height=isLowEndDevice||isMobileDevice?480:720;
+  const aspect=size.x/size.z;
+  const width=Math.max(320,Math.min(900,Math.round(height*aspect)));
+  const target=new THREE.WebGLRenderTarget(width,height,{
+    format:THREE.RGBAFormat,
+    minFilter:THREE.LinearFilter,
+    magFilter:THREE.LinearFilter,
+    depthBuffer:true,
+    stencilBuffer:false
+  });
+  const radarScene=new THREE.Scene();
+  radarScene.background=new THREE.Color(0x0b141b);
+  const center=zone9Bounds.getCenter(new THREE.Vector3());
+  const depth=Math.max(size.x,size.z);
+  const radarCamera=new THREE.OrthographicCamera(
+    -size.x*.535,size.x*.535,size.z*.535,-size.z*.535,
+    .1,depth*5+100
+  );
+  radarCamera.up.set(0,0,-1);
+  radarCamera.position.set(center.x,zone9Bounds.max.y+depth*2+10,center.z);
+  radarCamera.lookAt(center.x,center.y,center.z);
+  radarCamera.updateProjectionMatrix();
+  radarCamera.updateMatrixWorld(true);
+  const saved=[];
+  const radarMaterial=(original,geometry)=>{
+    const base=original?.color?original.color.clone():new THREE.Color(0x82949d);
+    base.lerp(new THREE.Color(0x91a3aa),.32);
+    return new THREE.MeshBasicMaterial({
+      color:base,
+      map:original?.map||null,
+      alphaMap:original?.alphaMap||null,
+      alphaTest:Math.max(.02,Number(original?.alphaTest)||0),
+      side:THREE.DoubleSide,
+      vertexColors:Boolean(geometry?.attributes?.color),
+      depthWrite:true,
+      toneMapped:false
+    });
+  };
+  let previousTarget=null,previousViewport=new THREE.Vector4(),previousScissor=new THREE.Vector4();
+  let previousClearColor=new THREE.Color(),previousClearAlpha=1;
+  const previousAutoClear=renderer.autoClear;
+  const previousToneMapping=renderer.toneMapping;
+  try{
+    zone9Root.updateMatrixWorld(true);
+    zone9Root.traverse(node=>{
+      if(!node.isMesh||!node.geometry)return;
+      const original=node.material;
+      const replacement=Array.isArray(original)
+        ?original.map(material=>radarMaterial(material,node.geometry))
+        :radarMaterial(original,node.geometry);
+      saved.push({node,original,replacement});
+      node.material=replacement;
+    });
+    scene.remove(zone9Root);
+    radarScene.add(zone9Root);
+    previousTarget=renderer.getRenderTarget();
+    renderer.getViewport(previousViewport);
+    renderer.getScissor(previousScissor);
+    previousClearColor.copy(renderer.getClearColor(new THREE.Color()));
+    previousClearAlpha=renderer.getClearAlpha();
+    renderer.autoClear=true;
+    renderer.toneMapping=THREE.NoToneMapping;
+    renderer.setRenderTarget(target);
+    renderer.setViewport(0,0,width,height);
+    renderer.setScissorTest(false);
+    renderer.setClearColor(0x0b141b,1);
+    renderer.clear(true,true,true);
+    renderer.render(radarScene,radarCamera);
+    const pixels=new Uint8Array(width*height*4);
+    renderer.readRenderTargetPixels(target,0,0,width,height,pixels);
+    const canvas=document.createElement("canvas");
+    canvas.width=width;canvas.height=height;
+    const ctx=canvas.getContext("2d",{willReadFrequently:false});
+    const image=ctx.createImageData(width,height);
+    const rowBytes=width*4;
+    for(let y=0;y<height;y++){
+      const source=(height-1-y)*rowBytes;
+      image.data.set(pixels.subarray(source,source+rowBytes),y*rowBytes);
+    }
+    ctx.putImageData(image,0,0);
+    zone9RadarBase=canvas;
+    console.info("[Zone 9 Radar] Top-down GLB raster created",width,height,"world",size.x.toFixed(1),size.z.toFixed(1));
+  }catch(error){
+    console.warn("[Zone 9 Radar] Could not rasterize GLB; using collision fallback",error);
+    zone9RadarBase=null;
+  }finally{
+    if(zone9Root.parent===radarScene)radarScene.remove(zone9Root);
+    scene.add(zone9Root);
+    saved.forEach(({node,original,replacement})=>{
+      node.material=original;
+      if(Array.isArray(replacement))replacement.forEach(material=>material.dispose());
+      else replacement.dispose();
+    });
+    renderer.setRenderTarget(previousTarget);
+    renderer.setViewport(previousViewport);
+    renderer.setScissor(previousScissor);
+    renderer.setScissorTest(false);
+    renderer.setClearColor(previousClearColor,previousClearAlpha);
+    renderer.autoClear=previousAutoClear;
+    renderer.toneMapping=previousToneMapping;
+    target.dispose();
+    zone9Root.updateMatrixWorld(true);
+  }
 }
 function buildZone9Map(){
   if(mapLoadFinished||zone9AssetState==="loading")return;
@@ -3048,6 +3173,7 @@ function buildZone9Map(){
       zone9Bounds=new THREE.Box3().setFromObject(root);
       zone9GroundCache.clear();
       zone9AssetState="loaded";mapLoaded=true;mapLoadFinished=true;
+      buildZone9RadarBase();
       buildZone9TacticalMarkers();
       $("progress").style.width="100%";
       setLoadingDetail("mapLoadStatus","ZONE 9 · ГОТОВО","done");
@@ -3571,70 +3697,189 @@ function moveWithCollision(direction,distance){
     if(penaltyZ===0||penaltyZ<currentAfterX-.001)player.position.z=nz;
   }
 }
+
+function radarEnemyIsTeammate(enemy){
+  return Boolean(myTeam!=null&&enemy?.team!=null&&String(enemy.team)===String(myTeam));
+}
+function updateEnemyLastSeen(now){
+  if(!player||!zone9Root||isTrainingMode)return;
+  camera.updateMatrixWorld(true);
+  const origin=camera.position.clone();
+  Object.values(enemies).forEach(enemy=>{
+    if(!enemy||enemy.hp<=0||radarEnemyIsTeammate(enemy))return;
+    const target=enemy.pos.clone().add(new THREE.Vector3(0,1.05,0));
+    const distance=origin.distanceTo(target);
+    if(distance>105||distance<1)return;
+    const projected=target.clone().project(camera);
+    if(projected.z< -1||projected.z>1||Math.abs(projected.x)>1.02||Math.abs(projected.y)>1.02)return;
+    const direction=target.clone().sub(origin).normalize();
+    zone9VisibilityRaycaster.set(origin,direction);
+    zone9VisibilityRaycaster.near=.35;
+    zone9VisibilityRaycaster.far=Math.max(.2,distance-.8);
+    const blocked=zone9VisibilityRaycaster.intersectObject(zone9Root,true).length>0;
+    zone9VisibilityRaycaster.far=Infinity;
+    if(!blocked){
+      enemy.lastSeenPos=enemy.pos.clone();
+      enemy.lastSeenAt=now;
+    }
+  });
+}
+function drawRadarSite(ctx,id,point,mapX,mapY,full,color){
+  const x=mapX(point.x),y=mapY(point.z),radius=full?10:4;
+  ctx.save();
+  ctx.fillStyle=color;ctx.strokeStyle="#07111a";ctx.lineWidth=full?3:1.5;
+  ctx.beginPath();ctx.arc(x,y,radius,0,Math.PI*2);ctx.fill();ctx.stroke();
+  if(full){
+    ctx.font="900 16px Arial";ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillStyle="#06111a";ctx.fillText(id,x,y+.5);
+    ctx.font="900 13px Arial";ctx.fillStyle="#eaf4f8";ctx.fillText("SITE "+id,x,y+22);
+  }
+  ctx.restore();
+}
 function drawTacticalMaps(){
   if(!player)return;
-  const limit=worldLimit();
+  const now=performance.now();
+  if(selectedMap==="ZONE_9"&&zone9RadarBase)updateEnemyLastSeen(now);
+  const fallbackLimit=worldLimit();
+  const bounds=zone9Bounds||new THREE.Box3(
+    new THREE.Vector3(-fallbackLimit,0,-fallbackLimit),
+    new THREE.Vector3(fallbackLimit,0,fallbackLimit)
+  );
+  const mapSize=bounds.getSize(new THREE.Vector3());
+  const minX=bounds.min.x,minZ=bounds.min.z;
+  const safeW=Math.max(1,mapSize.x),safeD=Math.max(1,mapSize.z);
+  const plan=key=>zone9PlanPoint(ZONE9_PLAN[key]);
+  const siteA=zone9Bounds?plan("A"):{x:-92,z:-45};
+  const siteB=zone9Bounds?plan("B"):{x:78,z:-36};
+  const spawnCT=zone9Bounds?plan("CT"):{x:-48,z:-120};
+  const spawnT=zone9Bounds?plan("T"):{x:-78,z:115};
   const draw=(canvas,full)=>{
     if(!canvas)return;
     const ctx=canvas.getContext("2d"),w=canvas.width,h=canvas.height;
     ctx.clearRect(0,0,w,h);
-    ctx.fillStyle="#081722";ctx.fillRect(0,0,w,h);
-    const cx=w/2,cy=h/2,margin=full?36:0,range=full?limit:44;
-    const mapX=x=>full?margin+(x+limit)/(2*limit)*(w-margin*2):cx+(x-player.position.x)/range*(w*.9);
-    const mapY=z=>full?margin+(z+limit)/(2*limit)*(h-margin*2):cy+(z-player.position.z)/range*(h*.9);
+    ctx.fillStyle="#07111a";ctx.fillRect(0,0,w,h);
+    const margin=full?38:0,cx=w/2,cy=h/2,range=54;
+    let mapX,mapY,scale,left,top,mapW,mapH;
+    if(full){
+      scale=Math.min((w-margin*2)/safeW,(h-margin*2)/safeD);
+      mapW=safeW*scale;mapH=safeD*scale;
+      left=(w-mapW)/2;top=(h-mapH)/2;
+      mapX=x=>left+(x-minX)*scale;
+      mapY=z=>top+(z-minZ)*scale;
+    }else{
+      scale=Math.min(w*.9/(range*2),h*.9/(range*2));
+      mapX=x=>cx+(x-player.position.x)*scale;
+      mapY=z=>cy+(z-player.position.z)*scale;
+    }
     ctx.save();
-    if(!full){ctx.beginPath();ctx.arc(cx,cy,Math.min(w,h)*.47,0,Math.PI*2);ctx.clip()}
-    ctx.strokeStyle="#a4cde018";ctx.lineWidth=1;
-    const gridN=full?10:8;
-    for(let i=0;i<=gridN;i++){
-      const x=margin+(w-margin*2)*i/gridN,y=margin+(h-margin*2)*i/gridN;
-      ctx.beginPath();ctx.moveTo(x,margin);ctx.lineTo(x,h-margin);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(margin,y);ctx.lineTo(w-margin,y);ctx.stroke();
+    if(!full){
+      ctx.beginPath();ctx.arc(cx,cy,Math.min(w,h)*.47,0,Math.PI*2);ctx.clip();
     }
-    ctx.fillStyle="#a4b6c34a";
-    for(const bounds of collisionBoxes){
-      const centerX=(bounds.min.x+bounds.max.x)/2,centerZ=(bounds.min.z+bounds.max.z)/2;
-      let x,y,bw,bh;
-      if(full){
-        x=mapX(bounds.min.x);y=mapY(bounds.min.z);
-        bw=Math.max(1,(bounds.max.x-bounds.min.x)/(2*limit)*(w-margin*2));
-        bh=Math.max(1,(bounds.max.z-bounds.min.z)/(2*limit)*(h-margin*2));
-      }else{
-        if(Math.abs(centerX-player.position.x)>range+12||Math.abs(centerZ-player.position.z)>range+12)continue;
-        x=mapX(bounds.min.x);y=mapY(bounds.min.z);
-        bw=Math.max(1,(bounds.max.x-bounds.min.x)/range*(w*.9));
-        bh=Math.max(1,(bounds.max.z-bounds.min.z)/range*(h*.9));
+    if(zone9RadarBase){
+      const baseLeft=full?left:mapX(minX);
+      const baseTop=full?top:mapY(minZ);
+      ctx.imageSmoothingEnabled=true;
+      ctx.drawImage(zone9RadarBase,baseLeft,baseTop,safeW*scale,safeD*scale);
+    }else{
+      ctx.fillStyle="#101c25";
+      ctx.fillRect(full?left:mapX(minX),full?top:mapY(minZ),safeW*scale,safeD*scale);
+      ctx.fillStyle="#70838d88";
+      for(const box of collisionBoxes){
+        const x=mapX(box.min.x),y=mapY(box.min.z);
+        const bw=Math.max(1,(box.max.x-box.min.x)*scale);
+        const bh=Math.max(1,(box.max.z-box.min.z)*scale);
+        ctx.fillRect(x,y,bw,bh);
       }
-      ctx.fillRect(x,y,bw,bh);
     }
-    // Radar reveals own position and teammates only; enemies are intentionally hidden.
-    for(const e of Object.values(enemies)){
-      if(!e||e.hp<=0||!myTeam||e.team!==myTeam)continue;
-      if(!full&&(Math.abs(e.pos.x-player.position.x)>range||Math.abs(e.pos.z-player.position.z)>range))continue;
-      const x=full?mapX(e.pos.x):mapX(e.pos.x),y=full?mapY(e.pos.z):mapY(e.pos.z);
-      ctx.beginPath();ctx.arc(x,y,full?7:5,0,Math.PI*2);
-      ctx.fillStyle=e.connected===false?"#a2adbb":"#6eb5ff";ctx.fill();
-      if(full){ctx.fillStyle="#d7efff";ctx.font="bold 14px Arial";ctx.fillText("ALLY",x+10,y+4)}
+    ctx.strokeStyle="#bad0dc22";ctx.lineWidth=1;
+    const gridStep=20;
+    const startX=Math.floor((full?minX:player.position.x-range)/gridStep)*gridStep;
+    const endX=full?bounds.max.x:player.position.x+range;
+    const startZ=Math.floor((full?minZ:player.position.z-range)/gridStep)*gridStep;
+    const endZ=full?bounds.max.z:player.position.z+range;
+    for(let x=startX;x<=endX;x+=gridStep){
+      const px=mapX(x);ctx.beginPath();ctx.moveTo(px,full?top:0);ctx.lineTo(px,full?top+mapH:h);ctx.stroke();
     }
-    let px=full?mapX(player.position.x):cx,py=full?mapY(player.position.z):cy;
+    for(let z=startZ;z<=endZ;z+=gridStep){
+      const py=mapY(z);ctx.beginPath();ctx.moveTo(full?left:0,py);ctx.lineTo(full?left+mapW:w,py);ctx.stroke();
+    }
+    // Bombsites and the two team starts follow the top-down plan supplied for Zone 9.
+    drawRadarSite(ctx,"A",siteA,mapX,mapY,full,"#e9b85d");
+    drawRadarSite(ctx,"B",siteB,mapX,mapY,full,"#6bbdff");
+    if(full){
+      ctx.font="900 12px Arial";ctx.textAlign="center";ctx.textBaseline="bottom";
+      ctx.fillStyle="#8ad0ff";ctx.fillText("CT START",mapX(spawnCT.x),mapY(spawnCT.z)-10);
+      ctx.fillStyle="#f2c16e";ctx.fillText("T START",mapX(spawnT.x),mapY(spawnT.z)-10);
+      ctx.fillStyle="#8ad0ff";ctx.beginPath();ctx.arc(mapX(spawnCT.x),mapY(spawnCT.z),6,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#f2c16e";ctx.beginPath();ctx.arc(mapX(spawnT.x),mapY(spawnT.z),6,0,Math.PI*2);ctx.fill();
+    }
+    // Teammates are shown live; opponents are only shown at their last visible position.
+    for(const enemy of Object.values(enemies)){
+      if(!enemy||enemy.hp<=0)continue;
+      const teammate=radarEnemyIsTeammate(enemy);
+      if(teammate){
+        const x=mapX(enemy.pos.x),y=mapY(enemy.pos.z);
+        if(!full&&(Math.abs(x-cx)>w*.48||Math.abs(y-cy)>h*.48))continue;
+        ctx.save();ctx.fillStyle=enemy.connected===false?"#b7c2cc":"#73baff";ctx.strokeStyle="#07111a";ctx.lineWidth=full?3:1.5;
+        ctx.beginPath();ctx.arc(x,y,full?7:4.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+        if(full){ctx.font="900 12px Arial";ctx.fillStyle="#e2f2ff";ctx.textAlign="left";ctx.fillText(enemy.nickname||"ALLY",x+11,y+4)}
+        ctx.restore();
+        continue;
+      }
+      if(!enemy.lastSeenPos||!enemy.lastSeenAt)continue;
+      const age=Math.max(0,now-enemy.lastSeenAt);
+      if(age>30000)continue;
+      const x=mapX(enemy.lastSeenPos.x),y=mapY(enemy.lastSeenPos.z);
+      if(!full&&(Math.abs(x-cx)>w*.48||Math.abs(y-cy)>h*.48))continue;
+      const alpha=Math.max(.25,1-age/34000);
+      ctx.save();ctx.globalAlpha=alpha;
+      ctx.strokeStyle="#ff637a";ctx.fillStyle="#ff637a";ctx.lineWidth=full?3:2;
+      ctx.beginPath();ctx.arc(x,y,full?8:5,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x,y-(full?6:4));ctx.lineTo(x+(full?6:4),y);ctx.lineTo(x,y+(full?6:4));ctx.lineTo(x-(full?6:4),y);ctx.closePath();ctx.fill();
+      if(full){ctx.font="900 12px Arial";ctx.textAlign="left";ctx.fillStyle="#ffc0ca";ctx.fillText("LAST "+Math.ceil(age/1000)+"s",x+13,y+4)}
+      ctx.restore();
+    }
+    const px=full?mapX(player.position.x):cx,py=full?mapY(player.position.z):cy;
     ctx.save();ctx.translate(px,py);ctx.rotate(-camera.rotation.y);
-    ctx.beginPath();ctx.moveTo(0,-(full?12:9));ctx.lineTo(full?7:5,full?8:6);ctx.lineTo(0,full?5:4);ctx.lineTo(full?-7:-5,full?8:6);ctx.closePath();
-    ctx.fillStyle="#57f1bd";ctx.shadowColor="#57f1bd";ctx.shadowBlur=full?12:8;ctx.fill();ctx.restore();
-    if(full){ctx.strokeStyle="#5af0bd";ctx.lineWidth=2;ctx.strokeRect(margin,margin,w-margin*2,h-margin*2)}
+    ctx.beginPath();ctx.moveTo(0,-(full?13:8));ctx.lineTo(full?8:5,full?9:6);ctx.lineTo(0,full?5:4);ctx.lineTo(full?-8:-5,full?9:6);ctx.closePath();
+    ctx.fillStyle="#57f1bd";ctx.strokeStyle="#062017";ctx.lineWidth=full?2:1;ctx.shadowColor="#57f1bd";ctx.shadowBlur=full?12:8;ctx.fill();ctx.stroke();ctx.restore();
+    if(full){
+      ctx.strokeStyle="#7fa8bb88";ctx.lineWidth=2;ctx.strokeRect(left,top,mapW,mapH);
+      ctx.font="900 11px Arial";ctx.fillStyle="#d6e8f1";ctx.textAlign="left";ctx.fillText("ZONE 9",margin,22);
+    }
     ctx.restore();
   };
   draw($("radarCanvas"),false);
   if(isFullMapOpen)draw($("fullMapCanvas"),true);
 }
+
 function setFullMapOpen(open){
   isFullMapOpen=Boolean(open);
   $("fullMapOverlay").style.display=isFullMapOpen?"flex":"none";
   if(isFullMapOpen)drawTacticalMaps();
 }
 $("mapBtn").addEventListener("click",e=>{e.preventDefault();e.stopPropagation();setFullMapOpen(!isFullMapOpen)});
-document.addEventListener("keydown",e=>{if(e.code==="KeyF"&&!e.repeat){if(nearestDroppedItem())return;e.preventDefault();setFullMapOpen(true)}});
-document.addEventListener("keyup",e=>{if(e.code==="KeyF")setFullMapOpen(false)});
-document.addEventListener("visibilitychange",()=>{if(document.hidden)setFullMapOpen(false)});
+let fullMapFDown=false,fullMapOpenedByHold=false,pendingFPickup=false,fullMapHoldTimer=null;
+document.addEventListener("keydown",e=>{
+  if(e.code!=="KeyF"||e.repeat||isPauseMenuOpen)return;
+  e.preventDefault();
+  fullMapFDown=true;fullMapOpenedByHold=false;
+  pendingFPickup=Boolean(nearestDroppedItem());
+  fullMapHoldTimer=setTimeout(()=>{
+    if(!fullMapFDown)return;
+    pendingFPickup=false;fullMapOpenedByHold=true;setFullMapOpen(true);
+  },170);
+});
+document.addEventListener("keyup",e=>{
+  if(e.code!=="KeyF")return;
+  fullMapFDown=false;
+  if(fullMapHoldTimer){clearTimeout(fullMapHoldTimer);fullMapHoldTimer=null}
+  if(fullMapOpenedByHold){setFullMapOpen(false);fullMapOpenedByHold=false}
+  else if(pendingFPickup){pendingFPickup=false;tryPickupNearbyItem()}
+});
+document.addEventListener("visibilitychange",()=>{
+  if(document.hidden){fullMapFDown=false;pendingFPickup=false;fullMapOpenedByHold=false;if(fullMapHoldTimer)clearTimeout(fullMapHoldTimer);fullMapHoldTimer=null;setFullMapOpen(false)}
+});
 function sendMove(force=false){
   const now=performance.now();
   if(!force&&now-lastMoveSend<80)return;
@@ -4073,7 +4318,6 @@ addEventListener("keydown",e=>{
   if(e.code==="Digit7"){e.preventDefault();selectWeapon("sniper");return}
   if(e.code==="Digit8"){e.preventDefault();selectWeapon("deagle");return}
   if(e.code==="KeyG"){e.preventDefault();dropCurrentItem();return}
-  if(e.code==="KeyF"&&nearestDroppedItem()){e.preventDefault();tryPickupNearbyItem();return}
   if(e.code==="KeyE"){e.preventDefault();interactWithNearestDoor();return}
   const binds=readTrainingBinds();
   if(e.code===binds.menu){e.preventDefault();pauseToMenu();return}
@@ -4189,6 +4433,7 @@ function populatePauseSettings(){
 function openPauseMenu(){
   if(isLeavingMatch||matchPhase==="finished")return;
   isPauseMenuOpen=true;
+  setFullMapOpen(false);
   keys.w=keys.a=keys.s=keys.d=keys.shift=false;
   fireHeld=false;jumpQueued=false;isCrouching=false;
   try{controls.unlock()}catch{}
