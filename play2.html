@@ -4936,6 +4936,7 @@ socket.on("connect_error",err=>{
   console.warn("[Socket.IO] Gameplay connection failed; retrying.",err?.message||err);
 });
 socket.on("disconnect",()=>{
+  lastGameplayJoinSocketId=null;
   matchJoined=false;
   clientReadySent=false;
   keys.w=keys.a=keys.s=keys.d=keys.shift=false;isCrouching=false;
@@ -5291,8 +5292,12 @@ addEventListener("resize",()=>{
   renderer.setPixelRatio(Math.min(devicePixelRatio||1,isMobileDevice?0.9:isLowEndDevice?0.82:selectedMap==="ZONE_9"?1.05:1.3));
 });
 
+let lastGameplayJoinSocketId=null;
 function joinGameplaySession(){
   if(isLeavingMatch||!socket.connected)return;
+  const socketId=socket.id||"connected";
+  if(lastGameplayJoinSocketId===socketId)return;
+  lastGameplayJoinSocketId=socketId;
   setLoadingDetail("connectionLoadStatus","ПІДКЛЮЧЕНО","done");
   if(isTrainingMode)socket.emit("join_training",{trainingId});
   else socket.emit("join_room",{matchId,userId:myId});
