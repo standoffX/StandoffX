@@ -1255,7 +1255,8 @@ app.get("/api/clans", requireAuth, (_req, res) => {
   res.json({ success: true, clans: list });
 });
 
-app.get("/api/clans/:tag", requireAuth, (req, res) => {
+app.get("/api/clans/:tag", requireAuth, (req, res, next) => {
+  if (String(req.params.tag || "").toLowerCase() === "invites") return next();
   const tag = cleanText(req.params.tag, 5).toUpperCase();
   const clan = clans[tag];
   if (!clan) return res.status(404).json({ success: false, message: "Клан не знайдено." });
@@ -2624,7 +2625,7 @@ function respawnPlayer(match, player) {
   player.anim = "Idle";
 }
 
-const SANDSTONE_BOMB_SITES = Object.freeze({
+const ZONE9_BOMB_SITES = Object.freeze({
   A: Object.freeze({ x: 48, z: 70 }),
   B: Object.freeze({ x: -72, z: -40 })
 });
@@ -2634,7 +2635,7 @@ function alliesSide(match, team) {
 }
 
 function playerNearBombSite(player, site, radius = 5.2) {
-  const center = SANDSTONE_BOMB_SITES[site];
+  const center = ZONE9_BOMB_SITES[site];
   return Boolean(center && player && Math.hypot(player.pos.x - center.x, player.pos.z - center.z) <= radius);
 }
 
@@ -2909,7 +2910,7 @@ function startAlliesRound(io, match, initial = false) {
       if (current.prototypeBotMatch && bomb.state === "carried" && bomb.botPlantAt && Date.now() >= bomb.botPlantAt) {
         const carrier = current.players.find(p => p.userId === bomb.carrierUserId);
         if (carrier?.isBot && carrier.team === current.attackingTeam) {
-          const site = Object.entries(SANDSTONE_BOMB_SITES).sort((a, b) =>
+          const site = Object.entries(ZONE9_BOMB_SITES).sort((a, b) =>
             Math.hypot(carrier.pos.x - a[1].x, carrier.pos.z - a[1].z) -
             Math.hypot(carrier.pos.x - b[1].x, carrier.pos.z - b[1].z)
           )[0]?.[0] || "A";
@@ -4422,6 +4423,42 @@ io.on("connection", socket => {
       // The reconnecting player receives the current round/intermission state above.
     } else {
       startMatchWhenReady(io, match);
+    }
+  });
+
+  socket.on("zone9_spawn_sync", data => {
+    const point = {
+      x: Number(data?.x),
+      y: Number(data?.y),
+      z: Number(data?.z)
+    };
+    const rotY = Number(data?.rotY);
+    if (!Number.isFinite(point.x) || !Number.isFinite(point.y) || !Number.isFinite(point.z)) return;
+    if (Math.abs(point.x) > 135 || Math.abs(point.z) > 135 || point.y < -4 || point.y > 48) return;
+
+    const matchId = cleanText(data?.matchId, 100);
+    const match = matchId ? activeMatches.get(matchId) : Array.from(activeMatches.values()).find(current =>
+      (current.map || current.mapId || current.selectedMap) === "ZONE_9" &&
+      current.players?.some(candidate => candidate.socketId === socket.id && String(candidate.userId) === String(socket.user?.id))
+    );
+    if (match && normalizeMapId(match.map || match.mapId || match.selectedMap) === "ZONE_9") {
+      const player = match.players.find(candidate =>
+        (candidate.uuid ? candidate.uuid === socket.user?.uuid : String(candidate.userId) === String(socket.user?.id)) &&
+        candidate.socketId === socket.id
+      );
+      if (!player) return;
+      player.spawn = { ...point };
+      player.pos = { ...point };
+      if (Number.isFinite(rotY)) player.rotY = rotY;
+      return;
+    }
+
+    const session = trainingSessions.get(socket.user?.id);
+    if (session && session.socketId === socket.id && session.id === cleanText(data?.trainingId, 100) &&
+        normalizeMapId(session.map) === "ZONE_9") {
+      session.spawnPosition = { ...point };
+      session.playerPos = { ...point };
+      if (Number.isFinite(rotY)) session.playerRotY = rotY;
     }
   });
 
