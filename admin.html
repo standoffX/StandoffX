@@ -327,7 +327,7 @@ function renderUsers(){
  const filtered=users.filter(user=>(String(user.id)+" "+String(user.nickname||"")+" "+String(user.uuid||"")).toLowerCase().includes(query));
  $("rows").innerHTML=filtered.map(user=>{
   const flags=[user.isAdmin?"ADMIN":null,user.isTester?"TESTER":null,user.isVerified?"✓":null,user.isBanned?"BAN":null].filter(Boolean).join(" · ")||"—";
-  return '<tr data-user-id="'+esc(user.id)+'" class="'+(String(user.id)===selectedId?"selected ":"")+(user.isAdmin?"master":"")+'"><td>'+copyCell(cleanId(user.id))+'</td><td>'+copyCell(user.nickname)+'</td><td>'+copyCell(Number(user.gold||0))+'</td><td>'+copyCell(Number(user.XP||0))+'</td><td>'+copyCell(user.clan||"—")+'</td><td class="'+(user.isBanned?"banned":user.isTester?"yes":"status")+'">'+copyCell(flags)+'</td><td><button class="row-action" data-user-menu="'+esc(user.id)+'" aria-label="Дії">⋯</button></td></tr>';
+  return '<tr data-user-id="'+esc(user.id)+'" class="'+(String(user.id)===selectedId?"selected ":"")+(user.isMasterAccount?"master":"")+'"><td>'+copyCell(cleanId(user.id))+'</td><td>'+copyCell(user.nickname)+'</td><td>'+copyCell(Number(user.gold||0))+'</td><td>'+copyCell(Number(user.XP||0))+'</td><td>'+copyCell(user.clan||"—")+'</td><td class="'+(user.isBanned?"banned":user.isTester?"yes":"status")+'">'+copyCell(flags)+'</td><td><button class="row-action" data-user-menu="'+esc(user.id)+'" aria-label="Дії">⋯</button></td></tr>';
  }).join("")||'<tr><td colspan="7" class="empty">'+(users.length?"Нічого не знайдено.":"Список користувачів порожній.")+'</td></tr>';
  $("usersN").textContent=String(users.length);$("visibleN").textContent=String(filtered.length);
  $("clanCount").textContent=Object.keys(clans).length?"· "+Object.keys(clans).length:"";
