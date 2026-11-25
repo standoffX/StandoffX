@@ -25,14 +25,17 @@
     requesting=true;attempted=true;
     try{
       const root=document.documentElement;
+      const pending=[];
       if(!document.fullscreenElement){
         const full=root.requestFullscreen||root.webkitRequestFullscreen;
-        if(full){try{await full.call(root,{navigationUI:"hide"})}catch{}}
+        if(full){try{pending.push(Promise.resolve(full.call(root,{navigationUI:"hide"})).catch(()=>{}))}catch{}}
       }
       const orientation=screen.orientation;
       if(orientation&&typeof orientation.lock==="function"){
-        try{await orientation.lock("landscape")}catch{}
+        // Invoke the lock during the same user activation as requestFullscreen.
+        try{pending.push(Promise.resolve(orientation.lock("landscape")).catch(()=>{}))}catch{}
       }
+      if(pending.length)await Promise.all(pending);
     }finally{
       requesting=false;
       update();
