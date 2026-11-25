@@ -524,6 +524,12 @@ function publicUser(user) {
   return safe;
 }
 
+// Admin-only projection: exposes UUID for support and account management,
+// while still excluding password hashes, sessions and private tokens.
+function adminPublicUser(user) {
+  return { ...publicUser(user), uuid: String(user?.uuid || "") };
+}
+
 function ensureUserShape(user) {
   user.nickname = cleanText(user.nickname, 24) || "PLAYER";
   user.id = normalizeId(user.id);
@@ -4964,7 +4970,11 @@ app.post("/api/admin/atlas/check", requireAdmin, async (_req, res) => {
 });
 
 app.get("/api/admin/users", requireAdmin, (_req, res) => {
-  res.json({ success: true, users: users.map(publicUser) });
+  res.json({ success: true, users: users.map(adminPublicUser) });
+});
+
+app.get("/api/admin/clans", requireAdmin, (_req, res) => {
+  res.json({ success: true, clans });
 });
 
 app.post("/api/admin/users/update", requireAdmin, (req, res) => {
@@ -5029,6 +5039,36 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
 
   if (req.body.clan !== undefined) u.clan = nextClan || null;
 
+  if (req.body.agentSide !== undefined) {
+    if (!["T", "CT"].includes(req.body.agentSide)) {
+      return res.status(400).json({ success: false, message: "Agent side має бути T або CT." });
+    }
+    u.agentSide = req.body.agentSide;
+  }
+  if (req.body.agentAnimation !== undefined) {
+    const allowedAnimations = ["Excited", "Talking On Phone", "Illegal Elbow Punch"];
+    if (!allowedAnimations.includes(req.body.agentAnimation)) {
+      return res.status(400).json({ success: false, message: "Невідома анімація агента." });
+    }
+    u.agentAnimation = req.body.agentAnimation;
+  }
+  if (req.body.stats !== undefined) {
+    const statsInput = req.body.stats;
+    if (!statsInput || typeof statsInput !== "object" || Array.isArray(statsInput)) {
+      return res.status(400).json({ success: false, message: "Некоректний блок статистики." });
+    }
+    const statKeys = ["kills", "deaths", "wins", "losses", "matches"];
+    for (const key of statKeys) {
+      if (statsInput[key] === undefined) continue;
+      const value = Number(statsInput[key]);
+      if (!Number.isFinite(value) || value < 0 || value > 1000000000) {
+        return res.status(400).json({ success: false, message: "Некоректне значення статистики: " + key });
+      }
+      u.stats = u.stats && typeof u.stats === "object" ? u.stats : {};
+      u.stats[key] = Math.floor(value);
+    }
+  }
+
   replaceUserIdReferences(oldId, u.id);
 
   if (req.body.clan !== undefined && previousClanForMove && previousClanForMove !== u.clan && clans[previousClanForMove]) {
@@ -5089,7 +5129,7 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
   saveMessages();
   saveMarket();
 
-  res.json({ success: true, user: publicUser(u) });
+  res.json({ success: true, user: adminPublicUser(u) });
 });
 
 app.post("/api/admin/users/create", requireAdmin, (req, res) => {
@@ -5124,7 +5164,7 @@ app.post("/api/admin/users/create", requireAdmin, (req, res) => {
   users.push(user);
   inventory[id] = [];
   saveUsers(); saveInventory();
-  res.json({ success:true, user:publicUser(user) });
+  res.json({ success:true, user:adminPublicUser(user) });
 });
 
 app.delete("/api/admin/users/:id", requireAdmin, (req, res) => {
@@ -5212,7 +5252,7 @@ app.post("/api/admin/clans/delete", transactionRateLimit, requireAdmin, (req, re
 });
 
 app.get("/api/admin/database", requireAdmin, (_req, res) => {
-  res.json({ success: true, storage: mongoDb ? "MongoDB Atlas" : (JSON_FALLBACK_ENABLED && !mongoStatus.configured ? "JSON fallback (local dev)" : "MongoDB Atlas (disconnected)"), users: users.map(publicUser), clans, messages, inventory, market });
+  res.json({ success: true, storage: mongoDb ? "MongoDB Atlas" : (JSON_FALLBACK_ENABLED && !mongoStatus.configured ? "JSON fallback (local dev)" : "MongoDB Atlas (disconnected)"), users: users.map(adminPublicUser), clans, messages, inventory, market });
 });
 
 app.use((err, _req, res, _next) => {
