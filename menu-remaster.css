@@ -590,3 +590,72 @@ body.lobby-screen .rail{bottom:9px!important}
 #home .sx-settings-actions button{min-height:32px!important;padding:6px 10px!important;font-size:8px!important}
 #home .sx-settings-actions .sx-settings-exit{margin-left:auto!important;border-color:#e47a7a55!important;color:#f0a5a5!important}
 @media(max-width:760px){.rail{height:62px!important;min-height:62px!important}.railnav{max-width:calc(100vw - 14px)!important}#home .sx-side-content{overflow:auto!important}#home .sx-settings-side-view .layout-stage{max-width:180px!important;min-height:180px!important}}
+
+
+/* Phone landscape layout: keep the main destinations visible without page scrolling. */
+@media (pointer:coarse) and (orientation:landscape) and (max-height:620px){
+ html,body,body.lobby-screen,.app,body.lobby-screen .app{width:100%!important;height:100dvh!important;min-height:0!important;overflow:hidden!important}
+ body.lobby-screen .topbar{height:34px!important;min-height:34px!important;flex:0 0 34px!important;padding:0 10px!important}
+ body.lobby-screen .topbrand{font-size:9px!important}
+ body.lobby-screen .topbar .pill{padding:4px 7px!important;font-size:8px!important}
+ body.lobby-screen .shell{height:100dvh!important;padding-bottom:0!important;overflow:hidden!important}
+ body.lobby-screen .content{height:calc(100dvh - 34px)!important;min-height:0!important;padding:5px 7px 58px!important;overflow:hidden!important}
+ body.lobby-screen #home.screen.active{height:100%!important;min-height:0!important;overflow:hidden!important}
+ body.lobby-screen #home .home-layout{
+   display:grid!important;grid-template-columns:minmax(145px,21vw) minmax(0,1fr) minmax(155px,22vw)!important;
+   grid-template-rows:minmax(0,1fr)!important;grid-template-areas:"friends hero profile"!important;
+   width:100%!important;height:100%!important;min-height:0!important;max-height:100%!important;
+   gap:6px!important;overflow:hidden!important
+ }
+ body.lobby-screen #home .home-layout>.home-friends,
+ body.lobby-screen #home .home-layout>.home-hero,
+ body.lobby-screen #home .home-layout>.profile-col{display:flex!important;min-width:0!important;min-height:0!important;height:100%!important;overflow:hidden!important}
+ body.lobby-screen #home .home-friends{grid-area:friends!important}
+ body.lobby-screen #home .home-hero{grid-area:hero!important}
+ body.lobby-screen #home .profile-col{grid-area:profile!important;flex-direction:column!important}
+ body.lobby-screen #home .home-friends .panelhead,
+ body.lobby-screen #home .profile-col .panelhead{height:28px!important;min-height:28px!important;padding:0 7px!important;font-size:7px!important}
+ body.lobby-screen #home .home-friends-body{gap:5px!important;padding:6px!important;overflow:hidden!important}
+ body.lobby-screen #home .home-self-card{grid-template-columns:27px minmax(0,1fr) 5px!important;gap:5px!important;padding:4px!important}
+ body.lobby-screen #home .home-self-card img{width:27px!important;height:27px!important}
+ body.lobby-screen #home .home-self-card b{font-size:8px!important}
+ body.lobby-screen #home .home-self-card small,
+ body.lobby-screen #home .home-self-card span{font-size:6px!important}
+ body.lobby-screen #home .home-friends-title{font-size:7px!important;padding:2px 0 4px!important}
+ body.lobby-screen #home .home-friends-list{gap:3px!important;overflow:auto!important}
+ body.lobby-screen #home .home-friend{grid-template-columns:23px minmax(0,1fr) 5px 19px!important;gap:4px!important;min-height:31px!important;padding:3px!important}
+ body.lobby-screen #home .home-friend img{width:23px!important;height:23px!important}
+ body.lobby-screen #home .home-friend-copy b{font-size:7px!important}
+ body.lobby-screen #home .home-friend-copy small{font-size:6px!important}
+ body.lobby-screen #home .home-friend-invite{width:19px!important;height:19px!important}
+ body.lobby-screen #home .home-invite-btn{min-height:27px!important;padding:4px!important;font-size:7px!important}
+ body.lobby-screen #home .profile-col .panelbody{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;min-height:0!important;overflow:hidden!important;padding:6px!important}
+ body.lobby-screen #home .profile-col .profiletop{grid-template-columns:34px minmax(0,1fr)!important;gap:6px!important}
+ body.lobby-screen #home .profile-col .avatar{width:34px!important;height:34px!important}
+ body.lobby-screen #home .profile-col .nick{font-size:8px!important;margin:0 0 3px!important}
+ body.lobby-screen #home .profile-col .playerid,
+ body.lobby-screen #home .profile-col .smallplus,
+ body.lobby-screen #home .profile-col .rankrow{font-size:6px!important}
+ body.lobby-screen #home .profile-col .rankline{margin:4px 0 2px!important}
+ body.lobby-screen #home .profile-col .ranks{display:none!important}
+ body.lobby-screen #home .sx-side-tabs{grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:1px!important;margin:6px 0!important}
+ body.lobby-screen #home .sx-side-tab{min-height:32px!important;padding:3px 0!important;gap:2px!important}
+ body.lobby-screen #home .sx-side-tab svg{width:12px!important;height:12px!important}
+ body.lobby-screen #home .sx-side-tab span{font-size:5px!important}
+ body.lobby-screen #home .sx-side-content{flex:1 1 auto!important;min-height:0!important;overflow:auto!important}
+ body.lobby-screen #home .sx-side-view{font-size:8px!important}
+ body.lobby-screen #home .sx-side-footer,
+ body.lobby-screen #home .profile-col>.homefooter{display:none!important;height:0!important;margin:0!important;padding:0!important}
+ body.lobby-screen #home .home-hero .playarea{right:8px!important;bottom:8px!important}
+ body.lobby-screen #home .home-hero .playbutton{width:145px!important;min-width:145px!important;height:38px!important;min-height:38px!important;font-size:10px!important}
+ body.lobby-screen #home .home-hero .home-agent-toggle{left:7px!important;top:7px!important;padding:6px!important;font-size:7px!important}
+ body.lobby-screen #home .home-squad-bar{left:7px!important;bottom:7px!important;width:min(45%,240px)!important}
+ body.lobby-screen .rail{bottom:5px!important;height:43px!important;min-height:43px!important;max-width:calc(100vw - 12px)!important}
+ body.lobby-screen .rail button{flex-basis:34px!important;width:34px!important;min-width:32px!important;height:34px!important}
+ body.lobby-screen .rail button svg{width:16px!important;height:16px!important}
+ body.lobby-screen .railnav{padding:2px 4px!important;gap:2px!important}
+ body.lobby-screen .content{padding-bottom:54px!important}
+}
+@media (pointer:coarse) and (orientation:portrait) and (max-width:760px){
+ body.lobby-screen #home .sx-side-footer{display:none!important}
+}
