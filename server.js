@@ -527,7 +527,11 @@ function publicUser(user) {
 // Admin-only projection: exposes UUID for support and account management,
 // while still excluding password hashes, sessions and private tokens.
 function adminPublicUser(user) {
-  return { ...publicUser(user), uuid: String(user?.uuid || "") };
+  return {
+    ...publicUser(user),
+    uuid: String(user?.uuid || ""),
+    isMasterAccount: Boolean(user && user.id === ADMIN_ID)
+  };
 }
 
 function ensureUserShape(user) {
@@ -567,7 +571,7 @@ function ensureUserShape(user) {
   user.clan = user.clan ? cleanText(user.clan, 5).toUpperCase() : null;
   user.isVerified = Boolean(user.isVerified);
   user.isBanned = user.id === ADMIN_ID ? false : Boolean(user.isBanned);
-  user.isAdmin = user.id === ADMIN_ID;
+  user.isAdmin = user.id === ADMIN_ID ? true : Boolean(user.isAdmin);
   user.isTester = user.id === ADMIN_ID ? true : Boolean(user.isTester);
 }
 
@@ -5031,6 +5035,7 @@ app.post("/api/admin/users/update", requireAdmin, (req, res) => {
   if (req.body.isBanned !== undefined) u.isBanned = Boolean(req.body.isBanned);
   if (req.body.isVerified !== undefined) u.isVerified = Boolean(req.body.isVerified);
   if (!isMaster && req.body.isTester !== undefined) u.isTester = Boolean(req.body.isTester);
+  if (!isMaster && req.body.isAdmin !== undefined) u.isAdmin = Boolean(req.body.isAdmin);
   if (isMaster) {
     u.isAdmin = true;
     u.isTester = true;
