@@ -206,6 +206,9 @@ body.embedded main{padding:10px}
     </label>
 
     <div class="form-section-title">ДОСТУПИ</div>
+    <label class="form-field">ADMIN ACCESS
+     <div class="input-copy"><select id="editAdminRole"><option value="false">OFF</option><option value="true">ON</option></select><button class="copy-btn" type="button" data-copy-target="editAdminRole">⧉</button></div>
+    </label>
     <label class="form-field">BAN
      <div class="input-copy"><select id="editBanned"><option value="false">OFF</option><option value="true">ON</option></select><button class="copy-btn" type="button" data-copy-target="editBanned">⧉</button></div>
     </label>
@@ -217,7 +220,7 @@ body.embedded main{padding:10px}
     </label>
 
     <div class="form-section-title">СИСТЕМНІ ДАНІ · ТІЛЬКИ ПЕРЕГЛЯД</div>
-    <label class="form-field readonly-field">ADMIN
+    <label class="form-field readonly-field">MASTER ACCOUNT
      <div class="input-copy"><input id="editAdmin" readonly><button class="copy-btn" type="button" data-copy-target="editAdmin">⧉</button></div>
     </label>
     <label class="form-field readonly-field">STATUS
@@ -271,7 +274,7 @@ if(embedded)document.body.classList.add("embedded");
 let users=[],clans={},selectedId=null,menuUserId=null,pendingEdit=null,loadSequence=0,dumpLoaded=false,toastTimer=null;
 const esc=value=>String(value==null?"":value).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const cleanId=value=>String(value||"").replace(/^ID_/i,"");
-const labels={id:"Player ID",nickname:"Nickname",password:"Новий пароль",gold:"Gold",XP:"XP",MMRCompetitive:"Competitive MMR",MMRAllies:"Allies MMR",clan:"Клан",agentSide:"Сторона агента",agentAnimation:"Анімація агента",kills:"Kills",deaths:"Deaths",wins:"Wins",losses:"Losses",matches:"Matches",isBanned:"Ban",isVerified:"Verified",isTester:"Tester"};
+const labels={id:"Player ID",nickname:"Nickname",password:"Новий пароль",gold:"Gold",XP:"XP",MMRCompetitive:"Competitive MMR",MMRAllies:"Allies MMR",clan:"Клан",agentSide:"Сторона агента",agentAnimation:"Анімація агента",kills:"Kills",deaths:"Deaths",wins:"Wins",losses:"Losses",matches:"Matches",isAdmin:"Admin",isBanned:"Ban",isVerified:"Verified",isTester:"Tester"};
 async function api(url,options){
  const init={...(options||{}),credentials:"same-origin",headers:{...((options&&options.headers)||{})}};
  if(init.body&&typeof init.body==="string")init.headers["Content-Type"]="application/json";
@@ -349,7 +352,7 @@ function openUserMenu(id,x,y){
  $("userMenuBan").textContent=user.isBanned?"РОЗБАНИТИ":"ЗАБАНИТИ";
  $("userMenuTester").textContent=user.isTester?"TESTER OFF":"TESTER ON";
  $("userMenuVerified").textContent=user.isVerified?"VERIFIED OFF":"VERIFIED ON";
- const protectedMaster=Boolean(user.isAdmin);
+ const protectedMaster=Boolean(user.isMasterAccount);
  ["userMenuBan","userMenuTester"].forEach(key=>{$(key).disabled=protectedMaster});
  $("userMenu").querySelector('[data-user-action="delete"]').disabled=protectedMaster;
  positionPopup($("userMenu"),x,y);
@@ -367,7 +370,7 @@ function fillClanOptions(current){
 function openEditModal(id){
  const user=userById(id);if(!user)return;
  hideUserMenu();selectUser(user.id);
- const master=Boolean(user.isAdmin),stats=user.stats||{};
+ const master=Boolean(user.isMasterAccount),stats=user.stats||{};
  $("editTitle").textContent="РЕДАГУВАННЯ · "+String(user.nickname||cleanId(user.id));
  setEditValue("editId",cleanId(user.id));setEditValue("editUuid",user.uuid||"");
  setEditValue("editNickname",user.nickname||"");setEditValue("editPassword","");
@@ -378,16 +381,17 @@ function openEditModal(id){
  setEditValue("editAnimation",user.agentAnimation||"Excited");
  setEditValue("editKills",Number(stats.kills)||0);setEditValue("editDeaths",Number(stats.deaths)||0);
  setEditValue("editWins",Number(stats.wins)||0);setEditValue("editLosses",Number(stats.losses)||0);setEditValue("editMatches",Number(stats.matches)||0);
- setEditValue("editBanned",String(Boolean(user.isBanned)));setEditValue("editVerified",String(Boolean(user.isVerified)));setEditValue("editTester",String(Boolean(user.isTester)));
- setEditValue("editAdmin",user.isAdmin?"YES":"NO");setEditValue("editStatus",user.status?"ONLINE":"OFFLINE");
+ setEditValue("editAdminRole",String(Boolean(user.isAdmin)));setEditValue("editBanned",String(Boolean(user.isBanned)));setEditValue("editVerified",String(Boolean(user.isVerified)));setEditValue("editTester",String(Boolean(user.isTester)));
+ setEditValue("editAdmin",user.isMasterAccount?"YES":"NO");setEditValue("editStatus",user.status?"ONLINE":"OFFLINE");
  setEditValue("editGuest",user.isGuest?"YES":"NO");
  setEditValue("editCreated",user.createdAt?new Date(Number(user.createdAt)).toLocaleString("uk-UA"):"—");
  setEditValue("editAvatar",user.playerAvatar||"/avatars/default.jpg");
  $("editId").readOnly=master;
  $("editPassword").disabled=master;
+ $("editAdminRole").disabled=master;
  $("editBanned").disabled=master;
  $("editTester").disabled=master;
- $("editHint").textContent=master?"Master-акаунт захищений: ID, пароль, BAN і TESTER не змінюються. UUID завжди лише для перегляду.":"UUID, ADMIN, STATUS та GUEST — лише для перегляду.";
+ $("editHint").textContent=master?"Master-акаунт захищений: ID, пароль, ADMIN, BAN і TESTER не змінюються. UUID завжди лише для перегляду.":"Можна змінити всі поля акаунта, включно з ADMIN. UUID, STATUS і GUEST — лише для перегляду.";
  $("editFormStep").hidden=false;$("editConfirmStep").hidden=true;$("editNotice").textContent="";
  pendingEdit=null;setModal("editModal",true);
 }
@@ -409,9 +413,10 @@ function readEditForm(){
    kills:number("editKills","Kills"),deaths:number("editDeaths","Deaths"),
    wins:number("editWins","Wins"),losses:number("editLosses","Losses"),matches:number("editMatches","Matches")
   },
-  isBanned:user.isAdmin?false:$("editBanned").value==="true",
+  isAdmin:user.isMasterAccount?true:$("editAdminRole").value==="true",
+  isBanned:user.isMasterAccount?false:$("editBanned").value==="true",
   isVerified:$("editVerified").value==="true",
-  isTester:user.isAdmin?true:$("editTester").value==="true"
+  isTester:user.isMasterAccount?true:$("editTester").value==="true"
  };
  if(password&&!user.isAdmin)payload.password=password;
  return payload;
@@ -427,7 +432,7 @@ function buildChanges(payload,user){
   ["id",cleanId(user.id),payload.id],["nickname",user.nickname,payload.nickname],["gold",user.gold,payload.gold],
   ["XP",user.XP,payload.XP],["MMRCompetitive",user.MMRCompetitive,payload.MMRCompetitive],["MMRAllies",user.MMRAllies,payload.MMRAllies],
   ["clan",user.clan||"",payload.clan],["agentSide",user.agentSide,payload.agentSide],["agentAnimation",user.agentAnimation,payload.agentAnimation],
-  ["isBanned",Boolean(user.isBanned),payload.isBanned],["isVerified",Boolean(user.isVerified),payload.isVerified],["isTester",Boolean(user.isTester),payload.isTester]
+  ["isAdmin",Boolean(user.isAdmin),payload.isAdmin],["isBanned",Boolean(user.isBanned),payload.isBanned],["isVerified",Boolean(user.isVerified),payload.isVerified],["isTester",Boolean(user.isTester),payload.isTester]
  ];
  for(const [key,oldValue,newValue] of pairs){
   if(String(oldValue??"")!==String(newValue??""))changes.push({label:valueLabel(key),before:displayValue(key,oldValue),after:displayValue(key,newValue)});
@@ -519,7 +524,7 @@ async function quickChange(id,field,value){
  }catch(error){showToast(error.message)}
 }
 async function deleteUser(id){
- const user=userById(id);if(!user||user.isAdmin)return;
+ const user=userById(id);if(!user||user.isMasterAccount)return;
  if(!window.confirm("Видалити акаунт "+user.nickname+"? Цю дію не можна скасувати."))return;
  try{
   await api("/api/admin/users/"+encodeURIComponent(user.id),{method:"DELETE"});
