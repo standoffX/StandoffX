@@ -592,6 +592,9 @@ body.lobby-screen .rail{bottom:9px!important}
 @media(max-width:760px){.rail{height:62px!important;min-height:62px!important}.railnav{max-width:calc(100vw - 14px)!important}#home .sx-side-content{overflow:auto!important}#home .sx-settings-side-view .layout-stage{max-width:180px!important;min-height:180px!important}}
 
 
+/* Remove the obsolete black footer; settings remain available in the profile tabs. */
+#home .sx-side-footer{display:none!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important}
+
 /* Phone landscape layout: keep the main destinations visible without page scrolling. */
 @media (pointer:coarse) and (orientation:landscape) and (max-height:620px){
  html,body,body.lobby-screen,.app,body.lobby-screen .app{width:100%!important;height:100dvh!important;min-height:0!important;overflow:hidden!important}
